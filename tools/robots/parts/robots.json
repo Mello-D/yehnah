@@ -1,0 +1,560 @@
+{
+ "mark": [
+  "#202020",
+  "#484848",
+  "#707070",
+  "#a0a0a0",
+  "#d8d8d8"
+ ],
+ "ramps": [
+  [
+   "steel",
+   [
+    "#3a3466",
+    "#8a88b0",
+    "#c4c6dc",
+    "#e8eaf6",
+    "#ffffff"
+   ]
+  ],
+  [
+   "steelD",
+   [
+    "#241734",
+    "#2e2157",
+    "#6a6894",
+    "#a8aac8",
+    "#d8daec"
+   ]
+  ],
+  [
+   "copper",
+   [
+    "#261447",
+    "#650d89",
+    "#d40078",
+    "#ff6c11",
+    "#ffc49a"
+   ]
+  ],
+  [
+   "teal",
+   [
+    "#132f48",
+    "#1b677a",
+    "#25aab5",
+    "#2de2e6",
+    "#a1f2f4"
+   ]
+  ],
+  [
+   "red",
+   [
+    "#3d072b",
+    "#790e38",
+    "#c11647",
+    "#fd1d53",
+    "#fe99b2"
+   ]
+  ],
+  [
+   "yellow",
+   [
+    "#261447",
+    "#920075",
+    "#ff6c11",
+    "#f9c80e",
+    "#fdf0b0"
+   ]
+  ],
+  [
+   "violet",
+   [
+    "#380d4f",
+    "#591672",
+    "#791e94",
+    "#a162b4",
+    "#d0b0da"
+   ]
+  ],
+  [
+   "green",
+   [
+    "#132f48",
+    "#1b677a",
+    "#25aab5",
+    "#2de2e6",
+    "#a1f2f4"
+   ]
+  ],
+  [
+   "black",
+   [
+    "#0d0221",
+    "#241734",
+    "#2e2157",
+    "#540d6e",
+    "#791e94"
+   ]
+  ],
+  [
+   "cream",
+   [
+    "#2e2157",
+    "#8a88b0",
+    "#c4c6dc",
+    "#e8eaf6",
+    "#ffffff"
+   ]
+  ],
+  [
+   "wood",
+   [
+    "#350232",
+    "#670148",
+    "#a20162",
+    "#d40078",
+    "#ec8cc2"
+   ]
+  ],
+  [
+   "navy",
+   [
+    "#09174a",
+    "#052769",
+    "#023788",
+    "#4e73ac",
+    "#a6b9d5"
+   ]
+  ],
+  [
+   "mint",
+   [
+    "#1a5c70",
+    "#239fab",
+    "#2de2e6",
+    "#6cebee",
+    "#b6f5f6"
+   ]
+  ],
+  [
+   "pink",
+   [
+    "#3c023a",
+    "#760259",
+    "#bc017e",
+    "#f6019d",
+    "#fb8dd3"
+   ]
+  ],
+  [
+   "sand",
+   [
+    "#650d89",
+    "#ff6c11",
+    "#f9c80e",
+    "#fce693",
+    "#fffbe0"
+   ]
+  ],
+  [
+   "moon",
+   [
+    "#2e2157",
+    "#8a88b0",
+    "#c4c6dc",
+    "#e8eaf6",
+    "#ffffff"
+   ]
+  ]
+ ],
+ "misc": [
+  "#f706cf",
+  "#c0f6f7",
+  "#ff4365",
+  "#073a4a"
+ ],
+ "ink": "#0d0221",
+ "head_top": {
+  "box": 4,
+  "round": 4,
+  "dome": 4,
+  "wide": 5,
+  "tall": 2
+ },
+ "poses": [
+  {
+   "la": "down",
+   "ra": "down"
+  },
+  {
+   "la": "up",
+   "ra": "up"
+  },
+  {
+   "la": "up",
+   "ra": "out",
+   "lean": -1
+  },
+  {
+   "la": "out",
+   "ra": "up",
+   "lean": 1
+  },
+  {
+   "la": "out",
+   "ra": "out",
+   "squat": 1
+  },
+  {
+   "la": "up",
+   "ra": "down",
+   "lean": 1,
+   "lift": 2
+  },
+  {
+   "la": "down",
+   "ra": "up",
+   "lean": -1,
+   "lift": 1
+  },
+  {
+   "la": "up",
+   "ra": "up",
+   "squat": 2
+  },
+  {
+   "la": "wave",
+   "ra": "down",
+   "nod": 1
+  },
+  {
+   "la": "down",
+   "ra": "wave",
+   "nod": 1
+  },
+  {
+   "la": "hips",
+   "ra": "hips",
+   "squat": 1,
+   "shift": -1
+  },
+  {
+   "la": "hips",
+   "ra": "hips",
+   "squat": 1,
+   "shift": 1
+  },
+  {
+   "la": "diag",
+   "ra": "hips",
+   "lean": -1
+  },
+  {
+   "la": "hips",
+   "ra": "diag",
+   "lean": 1
+  },
+  {
+   "la": "wave",
+   "ra": "wave",
+   "squat": 2
+  },
+  {
+   "la": "out",
+   "ra": "out",
+   "lift": 1,
+   "shift": 1
+  }
+ ],
+ "robots": [
+  {
+   "name": "ANALOG",
+   "head": "box",
+   "hr": "steel",
+   "br": "copper",
+   "ac": "red",
+   "em": "record",
+   "ant": "ball",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "std"
+  },
+  {
+   "name": "FM6",
+   "head": "round",
+   "hr": "teal",
+   "br": "steel",
+   "ac": "yellow",
+   "em": "grille",
+   "ant": "twin",
+   "eyes": "visor",
+   "talk": false,
+   "shape": "tall"
+  },
+  {
+   "name": "PHASE",
+   "head": "dome",
+   "hr": "steel",
+   "br": "navy",
+   "ac": "navy",
+   "em": "moon",
+   "ant": "none",
+   "eyes": "sleepy",
+   "talk": false,
+   "shape": "round"
+  },
+  {
+   "name": "LOFI",
+   "head": "box",
+   "hr": "sand",
+   "br": "wood",
+   "ac": "sand",
+   "em": "tape",
+   "ant": "none",
+   "eyes": "pixel",
+   "talk": false,
+   "shape": "squat"
+  },
+  {
+   "name": "VOICE",
+   "head": "dome",
+   "hr": "teal",
+   "br": "violet",
+   "ac": "teal",
+   "em": "speaker",
+   "ant": "twin",
+   "eyes": "dots",
+   "talk": true,
+   "shape": "round"
+  },
+  {
+   "name": "WHEEL",
+   "head": "wide",
+   "hr": "steel",
+   "br": "wood",
+   "ac": "copper",
+   "em": "drawbars",
+   "ant": "leslie",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "squat"
+  },
+  {
+   "name": "DRUM",
+   "head": "dome",
+   "hr": "red",
+   "br": "yellow",
+   "ac": "copper",
+   "em": "drum",
+   "ant": "dish",
+   "eyes": "single",
+   "talk": false,
+   "shape": "squat"
+  },
+  {
+   "name": "NOISE",
+   "head": "wide",
+   "hr": "steel",
+   "br": "black",
+   "ac": "cream",
+   "em": "static",
+   "ant": "rabbit",
+   "eyes": "pixel",
+   "talk": false,
+   "shape": "squat"
+  },
+  {
+   "name": "ANIMAL",
+   "head": "round",
+   "hr": "sand",
+   "br": "pink",
+   "ac": "pink",
+   "em": "paw",
+   "ant": "ears",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "round"
+  },
+  {
+   "name": "JUNO",
+   "head": "box",
+   "hr": "violet",
+   "br": "steel",
+   "ac": "violet",
+   "em": "keys",
+   "ant": "ball",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "std"
+  },
+  {
+   "name": "OMNI",
+   "head": "round",
+   "hr": "mint",
+   "br": "cream",
+   "ac": "mint",
+   "em": "harp",
+   "ant": "halo",
+   "eyes": "sleepy",
+   "talk": false,
+   "shape": "hover"
+  },
+  {
+   "name": "KALIMBA",
+   "head": "box",
+   "hr": "mint",
+   "br": "wood",
+   "ac": "wood",
+   "em": "tines",
+   "ant": "none",
+   "eyes": "single",
+   "talk": false,
+   "shape": "tall"
+  },
+  {
+   "name": "GUITAR",
+   "head": "round",
+   "hr": "copper",
+   "br": "wood",
+   "ac": "red",
+   "em": "guitar",
+   "ant": "bolt",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "std"
+  },
+  {
+   "name": "ACID",
+   "head": "round",
+   "hr": "yellow",
+   "br": "black",
+   "ac": "green",
+   "em": "scope",
+   "ant": "dish",
+   "eyes": "single",
+   "talk": false,
+   "shape": "tracks"
+  },
+  {
+   "name": "DRIFT",
+   "head": "dome",
+   "hr": "navy",
+   "br": "black",
+   "ac": "mint",
+   "em": "bands",
+   "ant": "ball",
+   "eyes": "visor",
+   "talk": false,
+   "shape": "hover"
+  },
+  {
+   "name": "PLAITS",
+   "head": "round",
+   "hr": "pink",
+   "br": "violet",
+   "ac": "pink",
+   "em": "braid",
+   "ant": "twin",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "round"
+  },
+  {
+   "name": "STRINGS",
+   "head": "tall",
+   "hr": "wood",
+   "br": "copper",
+   "ac": "red",
+   "em": "bow",
+   "ant": "none",
+   "eyes": "sleepy",
+   "talk": false,
+   "shape": "tall"
+  },
+  {
+   "name": "VPS",
+   "head": "box",
+   "hr": "navy",
+   "br": "steel",
+   "ac": "pink",
+   "em": "vps",
+   "ant": "dish",
+   "eyes": "visor",
+   "talk": false,
+   "shape": "std"
+  },
+  {
+   "name": "MODAL",
+   "head": "dome",
+   "hr": "yellow",
+   "br": "navy",
+   "ac": "yellow",
+   "em": "bars",
+   "ant": "ball",
+   "eyes": "single",
+   "talk": false,
+   "shape": "tracks"
+  },
+  {
+   "name": "WSEQ",
+   "head": "round",
+   "hr": "sand",
+   "br": "mint",
+   "ac": "navy",
+   "em": "wave",
+   "ant": "none",
+   "eyes": "shades",
+   "talk": false,
+   "shape": "hover"
+  },
+  {
+   "name": "TERRAIN",
+   "head": "wide",
+   "hr": "mint",
+   "br": "wood",
+   "ac": "sand",
+   "em": "bands",
+   "ant": "dish",
+   "eyes": "visor",
+   "talk": false,
+   "shape": "tracks"
+  },
+  {
+   "name": "DIGITAL",
+   "head": "box",
+   "hr": "teal",
+   "br": "pink",
+   "ac": "yellow",
+   "em": "segs",
+   "ant": "twin",
+   "eyes": "visor",
+   "talk": false,
+   "shape": "std"
+  },
+  {
+   "name": "VECTOR",
+   "head": "box",
+   "hr": "violet",
+   "br": "navy",
+   "ac": "yellow",
+   "em": "scope",
+   "ant": "twin",
+   "eyes": "pixel",
+   "talk": false,
+   "shape": "std"
+  },
+  {
+   "name": "HYBRID",
+   "head": "tall",
+   "hr": "copper",
+   "br": "navy",
+   "ac": "mint",
+   "em": "wave",
+   "ant": "bolt",
+   "eyes": "shades",
+   "talk": false,
+   "shape": "std"
+  }
+ ]
+}

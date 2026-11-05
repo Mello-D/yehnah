@@ -1,0 +1,103 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# (Yehnah) the Android apps, built on every push that touches them, each APK as a workflow artifact:
+#   probe  android/probe, the stems app's phase 0 (Yehnah Probe)
+#   linkprobe  android/linkprobe, the big FM-1's step 1 (Yehnah Link Probe: the FM-1 on the probe firmware)
+#   big    android/big, the big FM-1 itself (Yehnah Big: the FM-1 on MENU > SYSTEM > USB TABLET)
+#   stems  android/stems, the stems app (Yehnah Stems): its JVM tests (:core: WAV, latency, mix, ZIP), the USB driver's
+#          test on the runner (usbstream.c against a pretend FM-1), the APK, then its pages on Robolectric
+# On main the site's workflow (emulator.yml) also publishes both next to the installer (app/yehnah-probe.apk,
+# app/yehnah-stems.apk).
+name: android
+on:
+  push:
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: the APK
+        run: gradle -p android/probe assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yehnah-probe
+          path: android/probe/app/build/outputs/apk/debug/app-debug.apk
+  linkprobe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: the APK
+        run: gradle -p android/linkprobe :app:assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yehnah-linkprobe
+          path: android/linkprobe/app/build/outputs/apk/debug/app-debug.apk
+  big:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: the APK
+        run: gradle -p android/big :app:assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yehnah-big
+          path: android/big/app/build/outputs/apk/release/app-release.apk
+  stems:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: the JVM tests (WAV writing, the latency and its shift, the mix, the ZIP)
+        run: gradle -p android/stems -PcoreOnly :core:test --no-daemon
+      - name: the USB driver against a pretend FM-1
+        run: |
+          gcc -std=gnu11 -Wall -Wextra -Werror -O1 -fsanitize=address,undefined \
+            -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
+            android/stems/app/src/test/cpp/usbstream_test.c -o build-usbstream-test
+          ./build-usbstream-test
+      - name: the APK
+        run: gradle -p android/stems :app:assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yehnah-stems
+          path: android/stems/app/build/outputs/apk/debug/app-debug.apk
+      - name: the pages on Robolectric (HOME, EDIT, EXPORT without a phone)
+        run: gradle -p android/stems :app:testDebugUnitTest --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: yehnah-stems-tests
+          path: |
+            android/stems/core/build/reports/tests/test/
+            android/stems/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore

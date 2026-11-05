@@ -1,0 +1,133 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# The site on GitHub Pages: a front page sending to the emulator, and the browser emulator (web/emu) under emu/: the firmware's sources compiled to WebAssembly, on every push to
+# main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
+# installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).
+# (0.6.61) Two channels: the emulator and preview/webapp/installer are main as it is now (to check before anyone
+# installs it); webapp/installer, the one people use, is the version approved in web/STABLE (a commit of main, set by
+# a PR once the preview was checked in the emulator). No web/STABLE yet: main, as before.
+name: emulator
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                 # (web/STABLE's commit: built for the public installer)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install Pillow numpy fonttools
+      - name: generated headers (fonts, icons, palettes, shapes, tables, samples)
+        run: python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.11                # (the version the emulator is tested with)
+      - name: the emulator
+        run: sh web/emu/build.sh
+      # (Yehnah) the installer and the web editor next to the emulator: the package needs JieLi's toolchain (downloaded)
+      # and three files of their AC79 SDK (a partial clone: only those blobs). If any of it fails the emulator still goes up
+      - name: JieLi toolchain and SDK files (cached)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.jieli
+            ~/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          key: jieli-ac79-v1
+      - name: JieLi toolchain and SDK files
+        id: tc
+        continue-on-error: true
+        run: |
+          # gitee resets connections from the runners now and then: retries with backoff; the cache above keeps them
+          retry() { for d in 0 5 15 30 60; do sleep $d; "$@" && return 0; done; return 1; }
+          T=$HOME/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          [ -e "$HOME/.jieli/toolchain" ] || retry sh tools/get_toolchain.sh "$HOME/.jieli"
+          if [ ! -s "$T/uboot.boot" ] || [ ! -s "$T/cfg_tool.bin" ] || [ ! -s "$T/cfg/eq_cfg_hw.bin" ]; then
+            rm -rf "$HOME/fw-AC79_AIoT_SDK"
+            retry git clone --filter=blob:none --no-checkout --depth 1 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+            cd "$HOME/fw-AC79_AIoT_SDK" && git sparse-checkout set --no-cone /cpu/wl82/tools/uboot.boot /cpu/wl82/tools/cfg_tool.bin \
+              /cpu/wl82/tools/cfg/eq_cfg_hw.bin && retry git checkout
+          fi
+          test -s "$T/uboot.boot" && test -s "$T/cfg_tool.bin" && test -s "$T/cfg/eq_cfg_hw.bin"
+      - name: the package, the installer and the editor
+        if: steps.tc.outcome == 'success'
+        continue-on-error: true
+        env:
+          AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
+          JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
+        run: |
+          ver() { sed -n 's/^#define YEHNAH_VERSION "\([^"]*\)".*/\1/p' "$1/firmware/src/yehnah.c" | head -1; }
+          # the preview: main as it is now, next to the emulator that runs it (preview/webapp/installer)
+          python3 tools/build.py
+          V=$(ver .)
+          python3 web/make_site.py build/yehnah.fwsc "${V:-dev}-${GITHUB_SHA::7}-preview" build/site_preview
+          mkdir -p build/emu/preview
+          cp -r build/site_preview/webapp build/site_preview/firmware build/emu/preview/
+          # the public installer: the approved commit (web/STABLE), built from its own sources
+          S=$(tr -d ' \n' < web/STABLE 2>/dev/null || true)
+          PKG=build/yehnah.fwsc; SV=${V:-dev}; SH=${GITHUB_SHA::7}
+          if [ -n "$S" ] && git cat-file -e "$S^{commit}" 2>/dev/null; then
+            git worktree add -f /tmp/stable "$S"
+            (cd /tmp/stable && python3 tools/build.py)
+            PKG=/tmp/stable/build/yehnah.fwsc; SV=$(ver /tmp/stable); SH=${S::7}
+          fi
+          # (0.6.46) the versions the site offers now stay installable (the last few, web/fetch_prev.py)
+          python3 web/fetch_prev.py "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" build/prev || true
+          python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
+          cp -r build/site/webapp build/site/firmware build/emu/
+      # (0.7.9) the stems app's phase-0 probe (android/probe), next to the installer: app/yehnah-probe.apk
+      - uses: actions/setup-java@v4
+        continue-on-error: true
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        continue-on-error: true
+        with:
+          gradle-version: "8.9"
+      - name: the Android probe
+        continue-on-error: true
+        run: |
+          gradle -p android/probe assembleDebug --no-daemon
+          mkdir -p build/emu/app
+          cp android/probe/app/build/outputs/apk/debug/app-debug.apk build/emu/app/yehnah-probe.apk
+      # (Yehnah Stems 1.0) the stems app (android/stems) beside it: app/yehnah-stems.apk
+      - name: the Android stems app
+        continue-on-error: true
+        run: |
+          gradle -p android/stems :app:assembleDebug --no-daemon
+          mkdir -p build/emu/app
+          cp android/stems/app/build/outputs/apk/debug/app-debug.apk build/emu/app/yehnah-stems.apk
+      # (0.8.1) the emulator under emu/ (its links go up one level); the root's page sends there (2026-11-04: the old
+      # landing page gone)
+      - name: the front page and the emulator under emu/
+        run: |
+          mkdir -p build/pages/emu
+          for f in index.html worklet.js stems.js fm1backup.js yehnah.wasm fonts; do
+            if [ -e "build/emu/$f" ]; then mv "build/emu/$f" build/pages/emu/; fi
+          done
+          cp -r build/emu/. build/pages/
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=emu/"><title>Yehnah</title><a href="emu/">Yehnah emulator</a>\n' > build/pages/index.html
+          mkdir -p build/pages/docs && cp docs/cheatsheet-controls.pdf docs/cheatsheet-sound.pdf docs/cheatsheet-controls.png docs/cheatsheet-sound.png build/pages/docs/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
