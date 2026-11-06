@@ -37,6 +37,7 @@ static uint32_t lib_gen(void);
 static int undo_sound(uint32_t k);                 /* (0.6.65) project.c: the sound dice's CANCEL */
 static int project_recall_slot(void);
 static uint32_t chain_prepare(void);
+static uint32_t section_preview(uint32_t s);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
 static int up_load(uint32_t k);
 static uint32_t up_count(void);
@@ -617,6 +618,20 @@ static void chain_play_ui(void)
         ui_say("PATTERN ", b);
     } else {
         ui_message(rc == 1u ? "ADD A SONG ROW" : "STOP FIRST");
+    }
+}
+
+static void section_preview_ui(void)                  /* (2026-11-06) SAVE > PROJECT's PLAY: the section picked, the song untouched */
+{
+    uint32_t s = (uint32_t)song.g[G_SLOT] - 1u, rc = section_preview(s);
+    if (!rc) {
+        ui.force = 1;
+    } else if (rc == 1u) {
+        char b[8] = "A";
+        b[0] = (char)('A' + (s & 3u));
+        ui_say(b, " IS EMPTY");
+    } else {
+        ui_message("STOP FIRST");
     }
 }
 

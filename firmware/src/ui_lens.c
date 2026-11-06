@@ -43,9 +43,16 @@ typedef struct { const nv_t *e; uint8_t n; } ch_t;            /* the entries, ho
 enum { SV_LIB, SV_PROJ, SV_SOUND };
 /* (2026-11-02, NAV-LAYOUT.md) HOME: TRACKS, PRESETS MORPH (from SAVE), MIXER SENDS (from GLO), MACRO (ROUTES' screen;
  * the old MACRO and ENGINE gone), the IDEAS; TRACKS, MACRO and IDEAS are HOME's own (t 0), the others real pages */
+#if FELUCCA_MACROPAGE
 enum { HOME_MACRO = 5, HOME_IDEA = 6 };
+#else
+enum { HOME_MACRO = 99, HOME_IDEA = 5 };               /* (2026-11-06) MACRO hidden: never an entry */
+#endif
 static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV("PRESETS", 0, 1, SV_SOUND), NV("MORPH", 0, 1, SV_SOUND),
-                               NV("MIXER", 0, 2, 0), NV("SENDS", 0, 2, 0), NV(0, "MACRO", 2, 1),
+                               NV("MIXER", 0, 2, 0), NV("SENDS", 0, 2, 0),
+#if FELUCCA_MACROPAGE
+                               NV(0, "MACRO", 2, 1),
+#endif
                                NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
                                NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2)};   /* IDEAS (ideas.c; was Yehnah's GEN) */
 static const nv_t CE_SYN[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("DRIFT", 0, 1, 1),
@@ -163,7 +170,7 @@ static uint32_t nav_cur(void)
     uint32_t sec = nav_sec(), key = nav_key(sec), e = nav_mem(key), k, pass, s;
     const ch_t *c = &CHAINS[key];
     if (sec == SEC_HOME && (ui.home || gen_on()))
-        return gen_on() ? HOME_IDEA + gen_page() : ui.hlv ? HOME_MACRO : 0u;
+        return gen_on() ? HOME_IDEA + gen_page() : ui.hlv && FELUCCA_MACROPAGE ? HOME_MACRO : 0u;   /* (hidden: a forced level 1 reads as TRACKS) */
     s = ((((ui.page * 31u + key) * 131u + e) * 257u + TSEL->eng_req) * 8191u + (uint32_t)(uint16_t)TSEL->p[P_E1]) * 7u +
         sys_load + 1u;
     if (s == ui.nav_sig)

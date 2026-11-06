@@ -2451,6 +2451,8 @@ static void ui_input_frame(void)
         case B_PLAY:
             if (song.playing || chain_busy() || seq_counting())   /* (a count-in: PLAY stops it) */
                 transport_req = 2;
+            else if (!ui.home && cur_page()->graph == GR_SLOTS && save_on())   /* SAVE > PROJECT: preview the section */
+                section_preview_ui();
             else if ((!ui.home && cur_page()->graph == GR_SONG) || live.mode)   /* (the song layer's SONG mode) */
                 chain_play_ui();
             else

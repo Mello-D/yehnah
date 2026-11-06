@@ -137,6 +137,32 @@ static uint32_t chain_prepare(void)
     return 0;
 }
 
+/* (2026-11-06) SAVE > PROJECT's PLAY: section s alone, round and round, the song's rows and the music untouched (the music
+ * is kept as for a song and comes back when stopped). Main loop. 0 = armed, 1 = section empty, 2 = busy */
+static uint32_t section_preview(uint32_t s)
+{
+    s &= 3u;
+    if (transport_busy())
+        return 2;
+    if (!project_used(s) || !proj_import(&proj_scratch, &proj_slot[s], sizeof(project_store_t)))
+        return 1;
+    project_capture(&proj_scratch);
+    chain.kept = (uint8_t)proj_pack(&song_keep, &proj_scratch);
+    chain_defaults(&chain.config);
+    chain.config.count = 1;
+    chain.config.row[0].slot = (uint8_t)s;
+    chain.config.row[0].bars = (uint8_t)section_bars(s);
+    chain.loop = 1;
+    chain.pass = 0;
+    chain.ended = 0;
+    if (song_stage(s, 0))
+        return 1;
+    RING_PUBLISH();
+    chain.armed = 1;
+    transport_req = 1;
+    return 0;
+}
+
 /* section s as the music now, the song's rows kept (a section is a project: its own rows are not the song's) */
 static int section_load(uint32_t s)
 {
