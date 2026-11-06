@@ -318,13 +318,16 @@ static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
             bends |= 1u << k;
     if (harp_prog(t) && !ui.home && cur_page()->graph == GR_PROG)   /* (2026-10-27) SCL > PROG's WRITE: lit while picked */
         wr = 1u << HARP_KWRITE;
-    *glow = chords | plate | latch | bends | wr;
-    *mid = plate & ~down;
-    if (plate) {                                        /* (2026-11-06) the wave: one plate key lit at a time, lowest note up to
-                                                         * the top in 0.75 s and back down (1.5 s round); it stops while a plate
-                                                         * key is down and starts again from the last one hit once all are let go */
+    *glow = chords | latch | bends | wr;               /* (2026-11-06: the plate keys dark; the wave alone lights them) */
+    *mid = 0;
+    if (plate) {                                        /* (2026-11-06) the wave: a bright head running up the plate keys from the
+                                                         * lowest to the top in 0.75 s and back down (1.5 s round), a mid-level
+                                                         * swell either side of it and a dim tail beyond, its place in 1/256 of a
+                                                         * key so the swell slides from key to key; it stops while a plate key is
+                                                         * down and starts again upward from the last one hit once all are let go */
         static uint32_t t0, prev, held, last_i;
-        uint32_t n = (uint32_t)__builtin_popcount(plate), ph, i, nw = down & plate, add = nw & ~prev;
+        uint32_t n = (uint32_t)__builtin_popcount(plate), ph, j = 0, nw = down & plate, add = nw & ~prev;
+        int32_t pos, d;
         prev = nw;
         if (add) {                                      /* the newest hit: its place among the plate's keys */
             for (k = 31u; !((add >> k) & 1u); k--)
@@ -336,15 +339,22 @@ static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
         } else {
             if (held) {                                 /* let go: resume going up from that note */
                 held = 0;
-                t0 = fm1_ms - (n > 1u ? (last_i * 750u + n - 2u) / (n - 1u) : 0u);
+                t0 = fm1_ms - (n > 1u ? last_i * 750u / (n - 1u) : 0u);
             }
             ph = (fm1_ms - t0) % 1500u;
-            i = n > 1u ? (ph < 750u ? ph : 1500u - ph) * (n - 1u) / 750u : 0u;
-            for (k = 0; k < 27u; k++)
-                if (((plate >> k) & 1u) && i-- == 0u) {
-                    wave = 1u << k;
-                    break;
-                }
+            pos = (int32_t)((ph < 750u ? ph : 1500u - ph) * (n - 1u) * 256u / 750u);
+            for (k = 0; k < 27u; k++) {
+                if (!((plate >> k) & 1u))
+                    continue;
+                d = pos - (int32_t)(j++ * 256u);
+                d = d < 0 ? -d : d;
+                if (d < 176)
+                    wave |= 1u << k;
+                else if (d < 400)
+                    *mid |= 1u << k;
+                else if (d < 656)
+                    *glow |= 1u << k;
+            }
         }
     }
     return (chords & ~down) | wave | (t->p[P_AHOLD] ? latch : 0u) | (bends & down) | (ui.act ? wr : 0u);
