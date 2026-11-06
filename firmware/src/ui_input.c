@@ -308,7 +308,7 @@ static uint32_t scale_leds(uint32_t *root)
  * *glow: every key that does something (lit and in the glow: lit; never empty, so the rest dark) */
 static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
 {
-    uint32_t k, plate = 0, chords = 0, bends = 0, down = fm1_in.notes & ~kb_layer, latch = 1u << harp_lk(t), wr = 0;
+    uint32_t k, plate = 0, chords = 0, bends = 0, down = fm1_in.notes & ~kb_layer, latch = 1u << harp_lk(t), wr = 0, wave = 0;
     for (k = 0; k < 27u; k++)
         if (harp_ck(t, k))
             chords |= 1u << k;
@@ -320,7 +320,17 @@ static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
         wr = 1u << HARP_KWRITE;
     *glow = chords | plate | latch | bends | wr;
     *mid = plate & ~down;
-    return (chords & ~down) | (t->p[P_AHOLD] ? latch : 0u) | (bends & down) | (ui.act ? wr : 0u);
+    if (plate) {                                        /* (2026-11-06) the wave: one plate key lit at a time, lowest note up to
+                                                         * the top in 0.75 s and back down (1.5 s round) */
+        uint32_t n = (uint32_t)__builtin_popcount(plate), ph = fm1_ms % 1500u, i;
+        i = (ph < 750u ? ph : 1500u - ph) * (n - 1u) / 750u;
+        for (k = 0; k < 27u; k++)
+            if (((plate >> k) & 1u) && i-- == 0u) {
+                wave = 1u << k;
+                break;
+            }
+    }
+    return (chords & ~down) | wave | (t->p[P_AHOLD] ? latch : 0u) | (bends & down) | (ui.act ? wr : 0u);
 }
 
 /* the key LEDs, bit k = key k: NAME's keys, the layer's map, the DRUM grid, else the keys held and the notes
