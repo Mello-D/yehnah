@@ -317,6 +317,8 @@ static void my_steps(track_t *t)                  /* "recorded" steps */
     t->p[P_SLEN] = 32;
 }
 
+static void sv_tap(uint32_t p);
+static void user_fill(uint32_t n);
 static void go_page(uint32_t graph)               /* the page that draws graph */
 {
     uint32_t i;
@@ -1224,10 +1226,8 @@ static int test_save(void)
     press(B_SAVE);
     bad += check("SAVE opens PROJECTS (its first page, 2026-11-02), nothing armed, no slot written",
                  !ui.home && cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u && !up_used(0));
-    nav_put(SEC_SAVE, "USER"); turn(EN_K4, 1);
-    bad += check("USER: KNOB 4 picks SAVE", cur_page()->graph == GR_USER && ui.act == 4u);
-    press(B_OCTUP);
-    bad += check("SAVE then OCT+ opens NAME (the automatic name), writes nothing yet",
+    sv_tap(8);
+    bad += check("SAVE held + G4 (SAVE SOUND) opens NAME (the automatic name), writes nothing yet",
                  name_on() && nm.kind == NK_USER_SAVE && str_eq(nm.s, nm.ph) && nm.cur == nm.len && !up_used(0));
     press(B_OCTUP);
     {
@@ -1239,17 +1239,17 @@ static int test_save(void)
     }
     press(B_SAVE);                                        /* a SAVE tap on SAVE: TRACKS (held note b) */
     bad += check("SAVE again: HOME's TRACKS (was the next group, SECTIONS)", ui.home && home_level() == 0u);
-    press(B_SAVE); turn(EN_SELECT, 3);
-    bad += check("0.9.2 SELECT onto USER PRESETS from inside: SAVE not armed", cur_page()->graph == GR_USER && ui.act == 0u);
-    turn(EN_SELECT, -2);
-    bad += check("SELECT left: TOOLS (PROJECTS TOOLS ERASE USER SECTIONS ARRANGE)", cur_page()->graph == GR_TOOLS);
+    press(B_SAVE); turn(EN_SELECT, 2);
+    bad += check("(2026-11-06) SAVE's pages: PROJECT, ARRANGE, SONG EDIT (SELECT twice)", cur_page()->graph == GR_SEDIT && ui.act == 0u);
+    turn(EN_SELECT, -1);
+    bad += check("SELECT left: ARRANGE", cur_page()->graph == GR_SONG);
     go_home();
     press(B_SAVE);
     bad += check("SAVE from HOME: its first, PROJECTS, not armed (was USER, armed)",
                  cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u);
-    nav_put(SEC_SAVE, "USER"); turn(EN_K4, 1);
-    press(B_OCTUP);
-    bad += check("direct SAVE still asks before overwriting an occupied slot",
+    TSEL->user = 1;
+    sv_tap(8);
+    bad += check("SAVE SOUND still asks before overwriting an occupied slot",
                  ui.confirm == CF_OVR_USER && up_value(up_rec(0), P_E0) == 5);
     press(B_OCTDN);
     ui_power_on();
@@ -1305,16 +1305,9 @@ static int test_save(void)
     bad += check("KNOB 3 LOAD, OCT+: the project back; LOAD stays picked", trk[0].p[P_LEVEL] != 11 &&
                  trk[0].p[P_LEVEL] == stored_param(0, 0, P_LEVEL) && msg_is("LOADED") && ui.act == 3u);
     /* user presets */
-    for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].graph == GR_USER)
-            break;
-    ui.page = (uint8_t)i;
-    page_entered();
     up_store(4, "OLD");
-    ui.uslot = 4;
-    turn(EN_K4, 1);
-    press(B_OCTUP);
-    bad += check("USER SAVE over a used slot: the OVERWRITE? dialog", ui.confirm == CF_OVR_USER && ui.confirm_trk == 4u);
+    confirm_open(CF_OVR_USER, 4);
+    bad += check("SAVE SOUND over a used slot: the OVERWRITE? dialog", ui.confirm == CF_OVR_USER && ui.confirm_trk == 4u);
     press(B_OCTUP);
     bad += check("YES: NAME with the sound's name (not the old slot's)", name_on() && !str_eq(nm.s, "OLD"));
     press(B_OCTUP);
@@ -1325,13 +1318,28 @@ static int test_save(void)
     }
     song.playing = 1;
     ui.msg_t = 0;
-    turn(EN_K3, 1);                               /* ERASE */
-    press(B_OCTUP);
-    bad += check("USER ERASE while playing: STOP TO SAVE", msg_is("STOP TO SAVE") && up_used(4));
+    sv_tap(9);                                    /* ERASE SOUND */
+    bad += check("ERASE SOUND while playing: STOP TO EDIT", msg_is("STOP TO EDIT") && up_used(4));
     stop_transport();
     return bad;
 }
 
+static void btn_down(uint32_t label);
+static void btn_up(uint32_t label);
+static void key_down(uint32_t k);
+static void key_up(uint32_t k);
+static uint32_t white(uint32_t w);
+static void sv_tap(uint32_t p)                    /* (2026-11-06) SAVE held, white key p of the layer (F3 = 0), let go */
+{
+    frame();                                      /* (the layer's key mask is refreshed each frame: after a dialog closed) */
+    btn_down(B_SAVE); key_down(white(p)); frame();
+    key_up(white(p)); frame(); btn_up(B_SAVE); frame();
+}
+static void user_fill(uint32_t n)                 /* the first n user slots used (a SAVE SOUND lands on the next) */
+{
+    uint32_t k;
+    for (k = 0; k < n; k++) (void)up_store(k, "U");
+}
 static void go_title(const char *title)
 {
     uint32_t i;
@@ -1364,7 +1372,7 @@ static int test_init_system(void)
         macro_v[1] = 77; dx_tone = 0x35u; dx_mot[XM_DPTH] = 50; pfx_lane[3] = 9;
         motion_capture(&trk[1], P_LEVEL, 40);
         sig0 = steps_sig(&trk[0]);
-        go_title("TOOLS"); tools_pick(4); press(B_OCTUP);
+        sv_tap(6);
         ok2 = ui.confirm == CF_INIT_SYS && trk[0].step[2].n == 1u;
         press(B_OCTUP);
         ok2 &= !ui.confirm && msg_is("NEW PROJECT") && chain_config.count == 0u;
@@ -1431,31 +1439,15 @@ static int test_actions(void)
     press(B_OCTDN);
     bad += check("0.9.2 PATTERNS: OCT- back to the SEQ page it is over (was HOME; the octave stays)",
                  !ui.home && cur_page()->fam == FAM_SEQ && cur_page()->graph != GR_PATS && song.octave == 2);
-    /* TOOLS: CLRSQ and INIT are picked, not done, by their knobs */
+    /* (2026-11-06) SAVE held's CLEAR PAT (was SAVE > TOOLS): asks first */
     my_steps(t);
-    go_title("TOOLS");
-    bad += check("TOOLS: nothing picked, OCT+ dark", act_cols() == 15u && act_col() == 0u && oct_leds_seen(0) == 1u);
-    turn(EN_K1, 3);
-    bad += check("KNOB 1 picks CLEAR, the steps stay; OCT+ breathes", ui.act == 1u && !seq_is_empty(t) &&
-                 oct_leds_seen(0) == (1u | OCT_BREATH));
-    turn(EN_K1, -1);
-    bad += check("KNOB 1 left drops it", ui.act == 0u);
-    turn(EN_K3, 1);
-    bad += check("(2026-11-05) TOOLS: each knob its own action (KNOB 3 = CLEAR SONG)", ui.act == 3u);
-    turn(EN_K3, -1);
-    bad += check("  .. KNOB 3 left drops it", ui.act == 0u);
-    turn(EN_K1, -1);
-    turn(EN_K1, 1);
-    press(B_OCTDN);
-    bad += check("OCT- cancels the pick (still on TOOLS)", ui.act == 0u && !ui.home && !seq_is_empty(t));
-    turn(EN_K1, 1);
+    sv_tap(0);
+    bad += check("SAVE held + F3 CLEAR PAT first asks confirmation", ui.confirm == CF_CLEAR_SEQ && !seq_is_empty(t));
     press(B_OCTUP);
-    bad += check("TOOLS CLEAR first asks confirmation", ui.confirm == CF_CLEAR_SEQ && !seq_is_empty(t));
-    press(B_OCTUP);
-    bad += check("OCT+ clears the pattern, the pick dropped", seq_is_empty(t) && msg_is("T1 CLEARED") && str_eq(ui.msg2, "SEQ>TOOLS: CLEAR ALL") && ui.act == 0u);
-    turn(EN_K1, 1);
-    bad += check("nothing to clear: OCT+ dark", oct_leds_seen(0) == 1u);
-    press(B_OCTDN);                                   /* (drops the pick) */
+    bad += check("OCT+ clears the pattern", seq_is_empty(t) && msg_is("T1 CLEARED") && str_eq(ui.msg2, "SEQ>TOOLS: CLEAR ALL"));
+    sv_tap(0);
+    bad += check("nothing to clear: no dialog", !ui.confirm);
+    go_page(GR_SLOTS); ui.act = 0;
     press(B_OCTDN);
     bad += check("OCT- with nothing picked: HOME", ui.home);
     /* the dialogs and the menu */
@@ -2517,16 +2509,11 @@ static int test_chain(void)
     bad += check("SONG (2026-11-05) the NEW row's SECT and BARS knobs set what OCT+ adds; no row yet", chain_config.count == 0 &&
         ui.arr_sect == 1 && ui.arr_bars == 6);
     press(B_OCTUP);
-    bad += check("SONG OCT+ adds the first row, the cursor stays on NEW", chain_config.count == 1 && chain_config.row[0].slot == 1 &&
-        chain_config.row[0].bars == 6 && ui.song_row == 1);
+    bad += check("SONG OCT+ adds the first row, the cursor on it", chain_config.count == 1 && chain_config.row[0].slot == 1 &&
+        chain_config.row[0].bars == 6 && ui.song_row == 0);
     turn(EN_K2, 1); turn(EN_K3, -3); press(B_OCTUP);
-    bad += check("SONG OCT+ again: a second row after it", chain_config.count == 2 && ui.song_row == 2 &&
+    bad += check("SONG OCT+ again: a second row after it", chain_config.count == 2 && ui.song_row == 1 &&
         chain_config.row[1].slot == 2 && chain_config.row[1].bars == 3);
-    turn(EN_K4, -1);
-    bad += check("SONG K4 (ROW) walks onto a row, K2 / K3 then edit it", ui.song_row == 1 && ui.arr_sect == 2 && ui.arr_bars == 3);
-    turn(EN_K2, 1); turn(EN_K3, 1);
-    bad += check("SONG a row's SECT and BARS knobs change that row", chain_config.row[1].slot == 3 && chain_config.row[1].bars == 4 &&
-        chain_config.count == 2);
     turn(EN_K4, 30);
     project_save(0);
     chain_config.count = 1;
@@ -2547,34 +2534,25 @@ static int test_chain(void)
     {   /* (2026-11-05) ARRANGE: OCT+ adds a row (SECT, BARS shown) at the end from NEW, or after the row picked */
         ui.song_row = (uint8_t)old_count; ui.arr_sect = 2; ui.arr_bars = 5;
         press(B_OCTUP);
-        ok = chain_config.count == old_count + 1u && ui.song_row == chain_config.count && chain_config.row[old_count].slot == 2u &&
+        ok = chain_config.count == old_count + 1u && ui.song_row == old_count && chain_config.row[old_count].slot == 2u &&
              chain_config.row[old_count].bars == 5u && !song_idx.scene[song_cur][old_count].on && !transport_req;
-        bad += check("SONG (ARRANGE) OCT+ on NEW adds a row at the end, its section and bars; the cursor stays on NEW; nothing plays", ok);
+        bad += check("SONG (ARRANGE) OCT+ on END adds a row at the end, its section and bars; the cursor on it; nothing plays", ok);
         ui.song_row = 0; ui.arr_sect = 1; ui.arr_bars = 7;
         press(B_OCTUP);
-        ok = chain_config.count == old_count + 2u && ui.song_row == 1u && chain_config.row[1].slot == 1u &&
-             chain_config.row[1].bars == 7u && chain_valid(&chain_config);
-        bad += check("SONG OCT+ on a row inserts after it, that row selected", ok);
+        ok = chain_config.count == old_count + 2u && ui.song_row == 1u && chain_config.row[1].slot == 1u && chain_config.row[1].bars == 7u &&
+             chain_valid(&chain_config);
+        bad += check("SONG STRUCTURE: INSERT (OCT+) adds after the selected row", ok);
         chain_config.count = old_count;
     }
     ui.song_row = (uint8_t)chain_config.count;          /* (0.6.22: + ADD; past it the END row) */
     for (k = chain_config.count; k < CHAIN_ROWS; k++) press(B_OCTUP);
-    bad += check("SONG: + ADD, then END the last row (full: END right after row 16)", ui.song_row == CHAIN_ROWS);
+    bad += check("SONG: + ADD, then END the last row (full: END right after row 16)", ui.song_row == CHAIN_ROWS - 1u);
     bad += check("SONG append row stays bounded at 16", chain_config.count == CHAIN_ROWS && chain_valid(&chain_config));
-    go_title("TOOLS"); tools_pick(3); press(B_OCTUP);
+    sv_tap(1);
     bad += check("CLEAR SONG requires explicit confirmation", ui.confirm == CF_CLEAR_SONG && chain_config.count == CHAIN_ROWS);
     press(B_OCTDN);
     bad += check("cancel preserves the full song", chain_config.count == CHAIN_ROWS);
-    { uint32_t n0 = chain_config.count, pg0 = ui.page;
-    go_title("ARRANGE"); frame();
-    ui.song_row = 0; chain_config.row[0].slot = 0;
-    turn(EN_K2, -1);
-    ok = ui.confirm == CF_DEL_ROW && ui.confirm_trk == 0u;
-    press(B_OCTUP);
-    bad += check("SONG: SECT left of A asks DELETE ROW?, OCT+ deletes it", ok && chain_config.count == n0 - 1u);
-    ui.page = (uint8_t)pg0; ui.force = 1; frame();
-    }
-    tools_pick(3); press(B_OCTUP); press(B_OCTUP);
+    sv_tap(1); press(B_OCTUP);
     bad += check("confirmed CLEAR SONG keeps musical steps", !chain_config.count && !ui.song_row);
     return bad;
 }
@@ -3141,15 +3119,76 @@ static uint32_t nm_black_key(uint32_t f, uint32_t octave)   /* the black key of 
 {
     return key_at(1, f + 5u * octave);
 }
+/* (2026-11-06) SAVE > SONG EDIT: the tracks run down the screen, each broken into the song's parts; K1 the track, K2 the part (on to the
+ * next), K3 / K4 the bars that track sits out of the part, from its start / end; a cut bar is silent on that track only */
+static int test_song_edit(void)
+{
+    int bad = 0, ok;
+    uint32_t i, k, period, n = 32u;
+    ui_power_on();
+    for (k = 0; k < 2u; k++) {
+        for (i = 0; i < NTRK; i++) {
+            track_defaults_steps(&trk[i]);
+            trk[i].p[P_SLEN] = 16;
+            trk[i].step[0] = (step_t){{(uint8_t)(60u + 5u * k), 0, 0, 0}, 1, ST_NOTE, 0, 96, 0, 0};
+        }
+        project_save(k);
+    }
+    chain_defaults(&chain_config);
+    memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
+    chain_config.count = 2;
+    chain_config.row[0] = (chain_row_t){0, 8};
+    chain_config.row[1] = (chain_row_t){1, 2};
+    go_page(GR_SEDIT); ui.song_row = 0; ui.sed_trk = 0; frame();
+    turn(EN_K1, 1);
+    ok = ui.sed_trk == 1u;
+    turn(EN_K1, -5);
+    ok &= ui.sed_trk == 0u;
+    turn(EN_K2, 1);
+    ok &= ui.song_row == 1u;
+    turn(EN_K2, 5);
+    ok &= ui.song_row == 1u;                          /* (the song's end) */
+    turn(EN_K2, -1);
+    ok &= ui.song_row == 0u;
+    turn(EN_K1, 1);                                   /* T2, part 1 */
+    turn(EN_K3, 2); turn(EN_K4, 3);
+    ok &= song_idx.scene[song_cur][0].cut[1][0] == 2u && song_idx.scene[song_cur][0].cut[1][1] == 3u &&
+          !song_idx.scene[song_cur][0].cut[0][0] && !song_idx.scene[song_cur][1].cut[1][0];
+    turn(EN_K3, 50);
+    ok &= song_idx.scene[song_cur][0].cut[1][0] == 4u;  /* (at least one bar left: 8 - 3 - 1) */
+    turn(EN_K3, -2);
+    bad += check("SONG EDIT: K1 the track, K2 the part, K3 / K4 that track's cuts of that part (one bar always left)",
+                 ok && song_idx.scene[song_cur][0].cut[1][0] == 2u);
+    ok = chain_prepare() == 0;
+    events_block(n);
+    ok &= chain.running && chain.row == 0 && chain.cut == 2u;     /* bar 1: T2 sits out (cut start 2) */
+    bad += check("SONG a cut: T2 sits out the first 2 bars of part 1, the others play", ok);
+    period = chain_bar();
+    song_poll();
+    events_block(period - n);                          /* bar 2 */
+    ok = chain.cut == 2u;
+    events_block(period);                              /* bar 3: T2 plays */
+    ok &= chain.remaining == 6u && chain.cut == 0u;
+    events_block(period); events_block(period); events_block(period);   /* bars 4..6 */
+    events_block(period);                              /* bar 7: the last 3 bars cut */
+    ok &= chain.row == 0 && chain.remaining == 2u && chain.cut == 2u;
+    events_block(period); events_block(period);        /* part 2: nothing cut */
+    ok &= chain.row == 1 && chain.cut == 0u;
+    bad += check("  T2 plays bars 3..5, sits out the last 3; the next part cuts nothing", ok);
+    seq_stop();
+    ok = chain.cut == 0u;
+    bad += check("  stopped: nothing cut", ok);
+    return bad;
+}
 static int test_name(void)
 {
     int bad = 0, ok;
     uint32_t i, mo;
     char b[16];
     ui_power_on();
-    go_page(GR_USER);
-    ui.uslot = 2;
-    press(B_OCTUP);                               /* (SAVE picked on entry) */
+    go_page(GR_SLOTS);
+    user_fill(2);
+    sv_tap(8);                                    /* SAVE SOUND: the first free slot, 2 */
     up_auto_name(b, TSEL->eng_req, 2);
     bad += check("NAME: USER SAVE into an empty slot opens NAME, prefilled with the automatic name",
                  name_on() && nm.kind == NK_USER_SAVE && nm.slot == 2u && str_eq(nm.s, b) && nm.cur == nm.len);
@@ -3244,11 +3283,10 @@ static int test_name(void)
     {
         uint32_t page = ui.page;
         press(B_OCTDN);
-        bad += check("  OCT- cancels: nothing written, back on the USER page", !name_on() && !up_used(2) && ui.page == page && !ui.home);
+        bad += check("  OCT- cancels: nothing written, back on its page", !name_on() && !up_used(2) && ui.page == page && !ui.home);
     }
     /* typing a name and saving it */
-    ui.act = 4;
-    press(B_OCTUP);
+    sv_tap(8);
     for (i = 0; i < 12u; i++) nm_tap(nm_black_key(NB_DEL, 0));
     nm_tap(white(1)); nm_tap(white(0)); nm_tap(white(0)); nm_tap(nm_black_key(NB_RIGHT, 0));    /* C B */
     nm_tap(nm_black_key(NB_SPACE, 0)); nm_tap(nm_black_key(NB_MODE, 0)); nm_tap(white(1));        /* " 2" */
@@ -3262,48 +3300,24 @@ static int test_name(void)
     bad += check("  OCT+ stopped: saved as typed, the trailing space dropped (CB 2)", !name_on() && up_used(2) && str_eq(b, "CB 2") &&
                  msg_is("SAVED (NO FLASH)"));
     /* SAVE held does nothing in NAME; the FX layer neither */
-    ui.act = 4; press(B_OCTUP); press(B_OCTUP);   /* (U03 used: OVERWRITE?, YES) */
+    TSEL->user = 3; sv_tap(8); press(B_OCTUP);    /* (U03 used: OVERWRITE?, YES) */
     bad += check("  overwrite: the dialog, then NAME", name_on() && nm.kind == NK_USER_SAVE);
     ui.msg_t = 0;
     hold(B_SAVE);
     btn_down(B_FX); frames(600); ok = !ui.layer; btn_up(B_FX); frame();
-    bad += check("  SAVE held, FX held: nothing in NAME (no undo, no map, no page)", name_on() && ok && cur_page()->graph == GR_USER &&
+    bad += check("  SAVE held, FX held: nothing in NAME (no undo, no map, no page)", name_on() && ok && cur_page()->graph == GR_SLOTS &&
                  !ui.msg_t);
     press(B_OCTDN);
-    /* rename: SAVE + C5 on USER (0.9.2; EDIT until 0.9.1) */
-    ui.uslot = 5;
-    name_key();
-    bad += check("  0.9.2 SAVE + C5 on an empty slot: EMPTY SLOT", !name_on() && msg_is("EMPTY SLOT") && cur_page()->graph == GR_USER);
-    ui.uslot = 2;
-    up_load(2);                                   /* (the sound now comes from U03) */
-    trk[0].p[P_E0] = 33;                          /* an edit: a rename must not store it */
-    name_key();
-    bad += check("  0.9.2 SAVE + C5 on a used slot: NAME (rename) with its name", name_on() && nm.kind == NK_USER_RENAME && str_eq(nm.s, "CB 2"));
-    nm_tap(nm_black_key(NB_DEL, 0));
-    nm_tap(white(10)); nm_tap(white(10));          /* VW: W */
-    press(B_OCTUP);
-    up_name(2, b);
-    bad += check("  OCT+: renamed (CB W), the sound stored there unchanged", !name_on() && str_eq(b, "CB W") &&
-                 up_value(up_rec(2), P_E0) != 33 && msg_is("RENAMED (NO FLASH)"));
-    name_key();
-    for (i = 0; i < 12u; i++) nm_tap(nm_black_key(NB_DEL, 0));
-    press(B_OCTUP);
-    {
-        char au[16];
-        up_name(2, b);
-        up_auto_name(au, up_rec(2)->engine, 2);
-        bad += check("  a name deleted to nothing: the automatic one", str_eq(b, au));
-    }
     /* the sound's own name is the prefill */
     trk[0].user = 3;
-    ui.uslot = 7; ui.act = 4;
-    press(B_OCTUP);
+    sv_tap(8); press(B_OCTUP);                    /* (U03 used: OVERWRITE?, YES) */
     up_name(2, b);
     bad += check("  SAVE of a sound that came from U03: prefilled with U03's name", name_on() && str_eq(nm.s, b));
     press(B_OCTDN);
     /* projects */
     go_page(GR_SLOTS);
     song.g[G_SLOT] = 2;
+    frames(400);                                  /* (the SAVE layer let go: KNOB 1..4 quiet for a moment, #39) */
     turn(EN_K4, 1);
     press(B_OCTUP);
     for (i = 0; i < 4u; i++) { nm_tap(white(7)); nm_tap(white(6)); frames(800); }   /* P N P N .. */
@@ -3806,8 +3820,7 @@ static int test_bughunt_ui(void)
     int bad = 0, ok;
     /* 1: REC in NAME, the menu or a dialog: nothing (PLAY cannot stop the transport there) */
     ui_power_on();
-    go_page(GR_USER); ui.uslot = 3;
-    press(B_OCTUP);                                     /* NAME opens */
+    user_fill(3); sv_tap(8);                            /* NAME opens */
     press(B_REC);
     bad += check("REC in NAME does nothing (no arm, no transport start); NAME stays",
                  name_on() && !song.rec && !transport_req && !song.playing);
@@ -3815,7 +3828,7 @@ static int test_bughunt_ui(void)
     bad += check("REC in ABOUT does nothing (then PLAY: nothing either)", ui.menu && !song.rec && !transport_req);
     ui_power_on();
     up_ui(2, 5);
-    go_page(GR_USER); ui.uslot = 5; press(B_OCTUP);
+    TSEL->user = 6; sv_tap(8);
     press(B_REC);
     ok = ui.confirm == CF_OVR_USER && !song.rec && !transport_req;
     press(B_OCTUP);
@@ -3838,10 +3851,8 @@ static int test_bughunt_ui(void)
     }
     /* 3: USER ERASE asks first (ERASE U02?): OCT- keeps the preset, OCT+ erases it */
     ui_power_on();
-    go_page(GR_USER); ui.uslot = 1;
-    up_ui(2, 1);
-    turn(EN_K1 + 2, 1);                                 /* KNOB 3: ERASE picked */
-    press(B_OCTUP);
+    up_ui(2, 1); TSEL->user = 2;
+    sv_tap(9);                                          /* SAVE held, A4: ERASE SOUND */
     ok = ui.confirm == CF_ERASE_USER && ui.confirm_trk == 1u && up_used(1);
     {
         char a[24], b[24];
@@ -3850,11 +3861,11 @@ static int test_bughunt_ui(void)
     }
     press(B_OCTDN);
     ok &= !ui.confirm && up_used(1);
-    turn(EN_K1 + 2, 1); press(B_OCTUP); press(B_OCTUP);
-    bad += check("USER ERASE: the ERASE U02? dialog; OCT- keeps the preset, OCT+ erases it",
+    sv_tap(9); press(B_OCTUP);
+    bad += check("ERASE SOUND: the ERASE U02? dialog; OCT- keeps the preset, OCT+ erases it",
                  ok && !ui.confirm && !up_used(1));
-    turn(EN_K1 + 2, 1); press(B_OCTUP);
-    bad += check("  an empty slot: no dialog, EMPTY SLOT", !ui.confirm && msg_is("EMPTY SLOT"));
+    sv_tap(9);
+    bad += check("  an empty slot: no dialog, NOTHING TO DO", !ui.confirm && msg_is("NOTHING TO DO"));
     {   /* 4: CHANCE is not STEP: no grid, no key entry, no EDIT clear (its knobs only) */
         uint32_t before;
         step_t s0;
@@ -3899,26 +3910,21 @@ static int test_bughunt_ui(void)
         bad += check("ALGORITHM ignored with a layer's button held; then T2",
                      ok && song.sel == 1u);
     }
-    /* 6: TOOLS: each column its own ready check; nothing to do says so (not STOP TO EDIT) */
+    /* 6: SAVE held's tools: each key its own ready check; nothing to do says so (not STOP TO EDIT) */
     ui_power_on();
-    go_title("TOOLS"); frame();
     chain_defaults(&chain_config);                      /* no song rows */
-    tools_pick(2);                                      /* DELETE ROW */
-    press(B_OCTUP);
-    ok = !ui.confirm && msg_is("NOTHING TO DELETE") && text_w(&AF_S, ui.msg) <= 236 - 106;   /* (fits the header) */
-    tools_pick(3);                                      /* CLEAR SONG */
-    press(B_OCTUP);
-    ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
+    sv_tap(2);                                          /* DELETE ROW */
+    ok = !ui.confirm && msg_is("NOTHING TO DO") && text_w(&AF_S, ui.msg) <= 236 - 106;   /* (fits the header) */
+    sv_tap(1);                                          /* CLEAR SONG */
+    ok &= !ui.confirm && msg_is("NOTHING TO DO");
     track_defaults_steps(TSEL);
     chain_config.count = 1; chain_config.row[0].slot = 0; chain_config.row[0].bars = 1;
-    tools_pick(1);                                      /* CLEAR PAT on an empty track, the song with a row */
-    ok &= !act_ready();
-    press(B_OCTUP);
-    ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
-    tools_pick(3);
-    ok &= act_ready();
-    press(B_OCTUP);
-    bad += check("TOOLS: DELETE ROW / CLEAR SONG / CLEAR PAT with nothing there: NOTHING TO ..; a song: its dialog",
+    ok &= !sv_ok(0);                                    /* CLEAR PAT on an empty track, the song with a row */
+    sv_tap(0);
+    ok &= !ui.confirm && msg_is("NOTHING TO DO");
+    ok &= sv_ok(1);
+    sv_tap(1);
+    bad += check("SAVE held: DELETE ROW / CLEAR SONG / CLEAR PAT with nothing there: NOTHING TO DO; a song: its dialog",
                  ok && ui.confirm == CF_CLEAR_SONG);
     /* 7: REC works in the layers, as PLAY: it arms the track (PLAY starts); the layer stays, no page */
     ok = 1;
@@ -3956,8 +3962,8 @@ static int test_bughunt_ui(void)
     bad += check("SET layers: the OCT LEDs dark; after: the octave; FX: the octave", ok);
     /* 9: no layer hint over NAME (0.9.2: SAVE + C5 renames on USER / PROJECT; EDIT tapped there until 0.9.1) */
     ui_power_on();
-    up_ui(2, 0);
-    go_page(GR_USER); ui.uslot = 0; frame();
+    project_save(0);
+    go_page(GR_SLOTS); song.g[G_SLOT] = 1; frame();
     ui.msg_t = 0;
     name_key();
     ok = name_on() && !frames_layer_hint(HINT_DWELL_MS + 64u);
@@ -4510,7 +4516,7 @@ static int test_bughunt_ui2(void)
     }
     {   /* 5. NAME: PLAY stops a transport started meanwhile (so the name can be saved), never starts it; REC ignored */
         uint32_t ok;
-        ui_power_on(); go_page(GR_USER); ui.uslot = 3; press(B_OCTUP);
+        ui_power_on(); user_fill(3); sv_tap(8);
         ok = name_on();
         press(B_PLAY); frame();
         ok &= !transport_req && !song.playing && name_on();          /* stopped: PLAY starts nothing */
@@ -5970,22 +5976,22 @@ static int test_erase(void)
     song.playing = 0;
     project_save(0); project_save(1);
     chain_config.count = 2; chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 2};
-    go_title("ERASE"); frame();
-    ok = project_used(0) && project_used(1) && cur_page()->graph == GR_ERASE;
+    frame();
+    ok = project_used(0) && project_used(1);
     song.g[G_SLOT] = 2;                                    /* SECT B */
-    turn(EN_K3, 1); press(B_OCTUP);
+    sv_tap(4);                                             /* SAVE held, C4: ERASE SECT */
     ok &= ui.confirm == CF_ERASE_SEC && ui.confirm_trk == 1u && project_used(1);
     press(B_OCTDN);
     ok &= !ui.confirm && project_used(1);
-    turn(EN_K3, 1); press(B_OCTUP); press(B_OCTUP);
-    bad += check("ERASE SECTION: K3 then OCT+ asks, OCT+ erases that section only", ok && !project_used(1) && project_used(0));
-    turn(EN_K4, 1); press(B_OCTUP);
+    sv_tap(4); press(B_OCTUP);
+    bad += check("ERASE SECT: SAVE held + C4 asks, OCT+ erases that section only", ok && !project_used(1) && project_used(0));
+    sv_tap(5);
     ok = ui.confirm == CF_ERASE_PRJ;
     press(B_OCTUP);
-    bad += check("ERASE PROJECT: K4 then OCT+ asks, OCT+ erases all four sections and the song's rows",
+    bad += check("ERASE PROJ: SAVE held + D4 asks, OCT+ erases all four sections and the song's rows",
                  ok && !project_used(0) && !chain_config.count);
     song.playing = 1;
-    turn(EN_K3, 1); press(B_OCTUP);
+    sv_tap(4);
     bad += check("ERASE refuses while playing", !ui.confirm);
     song.playing = 0;
     return bad;
@@ -5993,11 +5999,7 @@ static int test_erase(void)
 #define XS (FELUCCA_FXSCENE ? 1 : 0)                     /* (2026-11-06: FX > SCENE, SAVE > USER FX are in the build or not) */
 static int test_save_lens(void)
 {
-    static const char *const CH[7] = {"PROJECTS", "TOOLS", "ERASE", "USER",
-#if FELUCCA_FXSCENE
-                                      "USER FX",
-#endif
-                                      "SECTIONS", "ARRANGE"};   /* (2026-11-02: PRESETS, MORPH HOME's; PROJECTS first; USER FX after USER) */
+    static const char *const CH[3] = {"PROJECT", "STRUCT", "TRIM"};   /* (2026-11-06: PROJECT, SONG STRUCTURE; 2026-11-02: PRESETS, MORPH HOME's; PROJECTS first; USER FX after USER) */
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
@@ -6005,19 +6007,15 @@ static int test_save_lens(void)
     press(B_SAVE); frame();
     ok = save_on() && save_level() == SV_LIB && cur_page()->graph == GR_SLOTS && ui.act == 0u && lz_on() &&
          card_y() == TF_KN_Y && graph_y() == TF_SC_Y && pg_row() && lz_tab_lit(2) &&
-         lz_crumb_is("SAVE \xB7 PROJECTS") && lz_count_is(XS ? "1/7" : "1/6");
-    bad += check("SAVE from HOME at power-on: PROJECTS, nothing armed; the page row (PROJECTS lit), the crumb, 1/7 (1/6 without USER FX)", ok);
-    bad += check("SAVE: one chain PROJECTS TOOLS USER USER FX SECTIONS ARRANGE; a SAVE tap on it TRACKS",
-                 chain_walk(B_SAVE, CH, 6 + XS));
+         lz_crumb_is("SAVE \xB7 PROJECT") && lz_count_is("1/3");
+    bad += check("SAVE from HOME at power-on: PROJECT, nothing armed; the page row (PROJECT lit), the crumb, 1/3", ok);
+    bad += check("SAVE: one chain PROJECT STRUCT TRIM; a SAVE tap on it TRACKS",
+                 chain_walk(B_SAVE, CH, 3));
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
-    turn(EN_SELECT, 5 + XS); frame();                                         /* ARRANGE, left there */
+    turn(EN_SELECT, 1); frame();                                         /* ARRANGE, left there */
     go_home(); frame(); press(B_SAVE); frame();
     ok = cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u;   /* (its first, PROJECTS) */
-    turn(EN_SELECT, 4 + XS); frame();
-    ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_PROJ && ui.act == 0u && lz_crumb_is("SAVE \xB7 SECTIONS");
-    turn(EN_SELECT, 2); frame();
-    ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u && lz_crumb_is("SAVE \xB7 PROJECTS");
-    bad += check("SAVE from elsewhere its first, PROJECTS (not the page left, ARRANGE); SECTIONS from inside not armed", ok);
+    bad += check("SAVE from elsewhere its first, PROJECT (not the page left, ARRANGE)", ok);
     turn(EN_K1, 1); frame();                                                 /* LIBRARY: KNOB 1 the project */
     ok = song_cur == 1u;
     turn(EN_K1, -1); frame();
@@ -6127,8 +6125,8 @@ static int test_lente(void)
     bad += check("0.9.2 SEQ: the page's title (\"COMP 2\"); the page row at the foot, the page over it", ok);
     /* (2026-11-03) held past HOLD, a button does nothing when let go (but FX SCL REC: their layers) */
     ok = 1;
-    for (q = 0; q < 4u; q++) {
-        static const uint8_t BT[4] = {B_SEQ, B_EDIT, B_SAVE, B_HOME};
+    for (q = 0; q < 3u; q++) {
+        static const uint8_t BT[3] = {B_SEQ, B_EDIT, B_HOME};   /* (SAVE: its layer, 2026-11-06) */
         uint32_t pg;
         ui_power_on();
         go_title("MUTATE"); frame();
@@ -6140,7 +6138,7 @@ static int test_lente(void)
         press(BT[q]); frame();
         ok &= ui.page != pg || ui.home;                 /* (a tap still goes) */
     }
-    bad += check("  SEQ EDIT SAVE HOME held: nothing when let go (no map, no page); tapped: their pages", ok);
+    bad += check("  SEQ EDIT HOME held: nothing when let go (no map, no page); tapped: their pages", ok);
     /* the DRUM grid: STEP's; BAR its bars, KNOB 1 the bar; COMP the step large, the grid's keys still its */
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req;
@@ -6578,7 +6576,7 @@ static int test_song_layer(void)
     sl_steps(70); project_save(1);                      /* B: notes 70.. */
     sl_steps(80);                                       /* the music now: 80.. */
     btn_down(B_SAVE); frames(800);
-    ok = !ui.layer;                                     /* (2026-11-03: SAVE held, nothing) */
+    ok = ui.layer == LAYER_SAVE && str_eq(layer_head(), "[SAVE] SET");   /* (2026-11-06: SAVE held, the save tools) */
     btn_up(B_SAVE); frame();
     ok &= ui.home && !ui.layer;
     press(B_SAVE);
@@ -7046,7 +7044,7 @@ static int test_project_page(void)
     chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
     sl_steps(80);                                       /* the music now: 80.. */
     go_home(); frame(); press(B_SAVE); frame();
-    nav_put(SEC_SAVE, "PROJECTS"); frame();             /* (0.9.2: LIBRARY's PROJECTS, the chain's 5th) */
+    nav_put(SEC_SAVE, "PROJECT"); frame();              /* (0.9.2: LIBRARY's PROJECTS, the chain's 5th) */
     ok = cur_page()->graph == GR_SLOTS && PAGES[ui.page + 1u].graph == GR_SONG && str_eq(PAGES[ui.page + 1u].title, "ARRANGE");
     bad += check("PROJECT: SAVE > PROJECT, then ARRANGE (the project's song)", ok);
     turn(EN_K1, 1); frame();
@@ -7055,22 +7053,17 @@ static int test_project_page(void)
     song.g[G_SLOT] = 1;
     turn(EN_K2, 1); frame();                            /* LIBRARY: KNOB 2 the section */
     ok = song.g[G_SLOT] == 2 && save_level() == SV_LIB;
-    turn(EN_SELECT, -2); frame();                       /* (0.9.2) PROJECT's SECTIONS (two back): KNOB 1 the section */
-    ok &= save_level() == SV_PROJ && cur_page()->graph == GR_SLOTS;
-    turn(EN_K1, 1); frame();
+    turn(EN_K2, 1); frame();
     ok &= song.g[G_SLOT] == 3;
-    turn(EN_K1, 1); frame();
+    turn(EN_K2, 1); frame();
     ok &= song.g[G_SLOT] == 4 && song_cur == 1;
-    turn(EN_K2, 1); frame();                            /* (KNOB 2: the section's name, shown) */
-    ok &= song.g[G_SLOT] == 4 && song_cur == 1;
-    turn(EN_K1, -1); frame();
+    turn(EN_K2, -1); frame();
     ok &= song.g[G_SLOT] == 3;
-    bad += check("  LIBRARY's KNOB 2, SECTIONS' KNOB 1: the section (C); SECTIONS' KNOB 2 nothing (0.9.2: PRESETS a sound)", ok);
+    bad += check("  PROJECT's KNOB 2: the section (C)", ok);
     turn(EN_K4, 1); press(B_OCTUP); frame();            /* SAVE into project 2's C: the NAME screen, then OK */
     for (k = 0; k < 8u && name_on(); k++) { press(B_OCTUP); frame(); }
     ok = project_used(2) && live.cur == 2;
     bad += check("  SAVE: the music into project 2's section C (the music's section: NOW)", ok);
-    turn(EN_SELECT, 2); frame();                        /* (back to LIBRARY's PROJECTS: KNOB 1 the project) */
     turn(EN_K1, -1); frame();
     ok = song_cur == 0 && (!YEHNAH_FLASH || project_used(0)) && !project_used(2) && chain_config.count == 2 &&
          trk[0].step[0].note[0] == 80;                  /* (no flash here: the sections were RAM only) */
@@ -10457,8 +10450,8 @@ static const old_lv_t OLD_LV[] = {
     {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
     {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"TEMPO"}},
     {FAM_GLO, 2, 9, {"SCREEN", "LEDS", "CONTROL", "MIDI", "AUDIO", "CLICK", "SYSTEM", "SETUP"}},
-    {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS", "ERASE"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
-    {FAM_SAVE, SV_SOUND, 9, {"USER", "PRESETS", "MORPH"}},
+    {FAM_SAVE, SV_LIB, 9, {"PROJECT"}}, {FAM_SAVE, SV_PROJ, 9, {"ARRANGE", "SONG EDIT"}},
+    {FAM_SAVE, SV_SOUND, 9, {"PRESETS", "MORPH"}},
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"}},
     {FAM_SEQ, LV_BAR, 9, {"STEP", "NOTE", "AUTOMATION", "AUTO LIST"}},
     {FAM_SEQ, LV_STEP, 9, {"COMP", "COMP 2"}},   /* (NOTE's STEP view: merged into BAR's, the mock-up's "páginas repetidas") */
@@ -10585,7 +10578,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 5, 11, 11, 2, 6, 1, 5, 10, 12, 4};   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 5, 3, 3, 2, 6, 1, 5, 10, 12, 4};   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10618,13 +10611,14 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "STEP") && ui.cursor == 32u && (TSEL->step[32].flags & SF_ACCENT);
             break;
         case 5:                                         /* the sound into U05 */
-            tk_start(0); tk_btn(B_SAVE); tk_go(EN_SELECT, 3); tk_go(EN_K1, 4); tk_val(EN_K4, 1); tk_btn(B_OCTUP); tk_btn(B_OCTUP);
-            ok = ui.uslot == 4u && up_used(4) && !name_on();
+            { uint32_t u;                               /* (2026-11-06: SAVE held + G4 SAVE SOUND, then OCT+ twice) */
+              tk_start(0); u = sv_free_slot(); sv_tap(8); tk_n++; tk_btn(B_OCTUP); tk_btn(B_OCTUP);
+              ok = u < UP_SLOTS && up_used(u) && !name_on(); }
             break;
         case 6:                                         /* the sound into U05, SAVE left on ARRANGE */
-            tk_start(3); tk_btn(B_SAVE); tk_go(EN_SELECT, 3); tk_go(EN_K1, 4); tk_val(EN_K4, 1);   /* (PROJECTS, TOOLS, ERASE, USER) */
-            tk_btn(B_OCTUP); tk_btn(B_OCTUP);
-            ok = ui.uslot == 4u && up_used(4) && !name_on();
+            { uint32_t u;                               /* (the same, from SAVE's ARRANGE: the layer is on every page) */
+              tk_start(3); u = sv_free_slot(); sv_tap(8); tk_n++; tk_btn(B_OCTUP); tk_btn(B_OCTUP);
+              ok = u < UP_SLOTS && up_used(u) && !name_on(); }
             break;
         case 7:                                         /* the envelope's RELEASE */
             tk_start(0); tk_btn(B_ENV);   /* (2026-11-02: ENV first) */
@@ -10670,7 +10664,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (93 since ERASE joined SAVE's chain; 0.9.2's taps: 75)", okall && tot == 92u + XS);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 76)", okall && tot == 76u + XS);
     ui_power_on();
     return bad;
 }
@@ -10714,14 +10708,14 @@ static int test_nav_rules(void)
     press(B_EDIT); frame();
     ok &= str_eq(cur_page()->title, "EDIT 1");           /* (EDIT: EDIT) */
     bad += check("2026-11-03 NOTE / PITCH under the lowest: NONE (the step, the note in focus); TIME = REST clears; EDIT opens EDIT", ok);
-    ui_power_on(); go_home(); frame(); press(B_SAVE); frame(); nav_put(SEC_SAVE, "USER"); frame();
+    ui_power_on(); go_home(); frame(); press(B_SAVE); frame(); frame();
     btn_down(B_REC); frames(800);
     (void)ly_keyname(LAYER_REC, 0, 14u, kn);
     ok = ui.layer == LAYER_REC && str_eq(kn, "NAME");
     btn_up(B_REC); frame(); frame();
-    up_ui(2, 0);
+    project_save(0); go_page(GR_SLOTS); song.g[G_SLOT] = 1;
     name_key();
-    ok &= name_on() && nm.kind == NK_USER_RENAME && !song.rec;
+    ok &= name_on() && nm.kind == NK_PROJ_RENAME && !song.rec;
     press(B_OCTDN); frame();
     go_title("ENV"); frame();
     name_key();
@@ -11171,6 +11165,7 @@ int main(void)
     bad += test_large();
     bad += test_skin();
     bad += test_browse_no_pattern();
+    bad += test_song_edit();
     bad += test_name();
     bad += test_edit_cycle();
     bad += test_quick_layers();

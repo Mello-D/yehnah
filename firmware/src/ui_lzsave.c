@@ -23,37 +23,113 @@ static uint16_t lz_sec(uint32_t s, int used, int half)
     return used && half ? ux_mix(T_BG, c, 50) : c;
 }
 #define LZ_TX(c) (4 + (int32_t)(c) * 117 / 2)          /* four columns of 56 px, 58 or 59 apart (the mock-up's 58.5) */
+/* (2026-11-06) PROJECT: one project only: a banner with its name, four squares under it for its sections (the one
+ * picked framed, NOW on the section playing) */
 static void graph_lib(void)
 {
-    uint32_t i, j;
-    for (i = 0; i < NSONG; i++) {
-        int32_t x = LZ_TX(i % 4u), y = (int32_t)(i / 4u) * 70;
-        int cur = i == song_cur;
-        uint16_t bg = cur ? T_TINT : T_RAISE;
-        char b[4], nm[13];
-        cv_rect(x, y, 56, 66, bg);
-        if (cur)
-            cv_frame(x, y, 56, 66, T_THEME);
-        fmt_int(b, (int32_t)i + 1);
-        GFX_HOOK_ALIGN(0, y + 3, 0, y + 12, AL_V | AL_PASS, "library tile number");
-        cv_text_on(x + 4, y + 3, &AF_X, b, cur ? T_THEME : T_DIM, bg);
-        if (cur)
-            str_cpy(nm, graph_project_used(0) ? graph_project_name(0) : "", sizeof nm);
-        else
-            str_cpy(nm, lib.name[i], sizeof nm);
-        if (!nm[0] && (cur ? graph_project_used(0) : (lib.mask[i] & 1u)))
-            str_cpy(nm, "USED", sizeof nm);
-        cv_clip_text(x + 4, y + 14, &AF_X, nm[0] ? nm : "--", nm[0] ? T_TEXT : T_DIM, bg, 50);
-        for (j = 0; j < 4u; j++) {
-            int32_t sx = x + 4 + (int32_t)(j % 2u) * 25, sy = y + 28 + (int32_t)(j / 2u) * 18;
-            int used = cur ? graph_project_used(j) : (int)((lib.mask[i] >> j) & 1u);
-            uint16_t c = lz_sec(j, used, 0);
-            char l[2] = {(char)('A' + j), 0};
-            cv_rect(sx, sy, 23, 15, c);
-            GFX_HOOK_ALIGN(sx, sy, sx + 23, sy + 15, AL_HV, "library section chip letter centred");
-            cv_text_in(sx, sy + CAP_IN(X, 15), 23, &AF_X, l, used ? T_INK : T_DIM, c);
-            if (cur && (int32_t)j + 1 == song.g[G_SLOT])
-                cv_frame(sx - 1, sy - 1, 25, 17, T_TEXT);
+    uint32_t i, k = (uint32_t)song.g[G_SLOT] - 1u;
+    char b[16], nm[13];
+    uint16_t bc = T_TINT;
+    fmt_int(b, (int32_t)song_cur + 1);
+    str_cpy(nm, graph_project_used(0) ? graph_project_name(0) : "", sizeof nm);
+    if (!nm[0]) str_cpy(nm, graph_project_used(0) ? "USED" : "EMPTY", sizeof nm);
+    cv_rect(4, 2, 232, 40, bc);
+    GFX_HOOK_ALIGN(0, 6, 0, 17, AL_V | AL_PASS, "project banner number");
+    cv_text_on(12, 7, &AF_X, "PROJECT", T_DIM, bc);
+    cv_text_r(228, 6, &AF_M, b, T_THEME, bc);
+    cv_free_text(12, 22, &AF_M, nm, graph_project_used(0) ? T_TEXT : T_DIM, bc, 200);
+    for (i = 0; i < 4u; i++) {
+        int32_t x = LZ_TX(i), y = 50;
+        int used = graph_project_used(i), pick = i == (k & 3u);
+        uint16_t c = lz_sec(i, used, used ? !pick : -1), ink = used ? T_INK : T_DIM;
+        b[0] = (char)('A' + i); b[1] = 0;
+        cv_rect(x, y, 56, 56, c);
+        GFX_HOOK_ALIGN(0, y + 8, 0, y + 19, AL_V | AL_PASS, "project section letter");
+        cv_text_on(x + 6, y + 4, &AF_M, b, ink, c);
+        cv_free_text(x + 6, y + 30, &AF_X, !used ? "EMPTY" : "USED", ink, c, 47);
+        if (live.cur == (int8_t)i && used)
+            cv_text_r(x + 52, y + 42, &AF_X, "NOW", ink, c);
+        if (pick) {
+            cv_frame(x - 2, y - 2, 60, 60, T_TEXT);
+            cv_frame(x - 1, y - 1, 58, 58, T_TEXT);
+        }
+    }
+}
+/* (2026-11-06) SONG STRUCTURE: every row inserted is a line across the screen (6 rows, 6 lines), its section's colour
+ * and "A x4"; the next INSERT as a framed ghost line; the song's length under */
+static void graph_song(void)
+{
+    uint32_t i, n = chain_config.count, total = 0, end, lines = n;
+    int32_t h = lines ? 112 / (int32_t)lines : 14;
+    char b[24];
+    if (h > 14) h = 14;
+    for (i = 0; i < lines; i++) {
+        int32_t y = 2 + (int32_t)i * h;
+        int ghost = 0, sel = i == ui.song_row;
+        uint32_t sec = chain_config.row[i].slot;
+        uint32_t bars = chain_config.row[i].bars;
+        uint16_t c = lz_sec(sec, 1, !sel);
+        cv_rect(4, y, 232, h - 1, c);
+        if (h >= 10) {
+            b[0] = (char)('A' + sec); b[1] = ' '; b[2] = 'x';
+            fmt_int(b + 3, (int32_t)bars);
+            GFX_HOOK_ALIGN(0, y, 0, y + h - 1, AL_V, "song structure line text centred up/down");
+            cv_text_on(10, y + CAP_IN(X, h - 1), &AF_X, b, T_INK, c);
+        }
+        if (sel) {
+            cv_frame(3, y - 1, 234, h + 1, T_TEXT);
+            cv_frame(4, y, 232, h - 1, T_TEXT);
+        }
+        (void)ghost;
+        total += bars;
+    }
+    end = SONG_END(&chain_config);
+    fmt_int(b, (int32_t)total);
+    str_cpy(b + str_len(b), " BARS \xB7 ", 9);
+    if (end == SONG_FOREVER) str_cpy(b + str_len(b), "LOOP", 6);
+    else if (end >= 2u) { uint32_t k = str_len(b); b[k] = 'x'; fmt_int(b + k + 1u, (int32_t)end); }
+    else str_cpy(b + str_len(b), "STOP", 6);
+    GFX_HOOK_ALIGN(0, 128, 0, 137, AL_V | AL_PASS, "song structure length");
+    cv_text_r(236, 128, &AF_X, n ? b : "OCT+ INSERTS A SECTION", ui.song_row >= n && n ? T_THEME : T_DIM, T_SURF);
+}
+/* (2026-11-06) SONG EDIT: the tracks run down the screen, each line broken into the song's parts (the rows, their bars at one scale
+ * across the width, a gap between); a part in its section's colour, the bars the track sits out of it dim; the part picked on the
+ * track picked framed; the song playing: a line where it is */
+static void graph_sedit(void)
+{
+    uint32_t i, q, n = chain_config.count, total = 0, nt = trk_live, r = ui.song_row < n ? ui.song_row : 0u, st = ui.sed_trk < nt ? ui.sed_trk : 0u;
+    int32_t h = 112 / (int32_t)nt, acc = 0, W = 232 - (int32_t)n * 2;
+    char b[8];
+    if (!n) {
+        cv_text_in(4, 56, 232, &AF_X, "NO PARTS: ADD ONE IN ARRANGE", T_MID, T_SURF);
+        return;
+    }
+    if (h > 18) h = 18;
+    for (i = 0; i < n; i++)
+        total += chain_config.row[i].bars;
+    for (q = 0; q < nt; q++) {
+        int32_t y = 2 + (int32_t)q * h;
+        acc = 0;
+        if (h >= 10) {
+            b[0] = 'T'; b[1] = (char)('1' + q); b[2] = 0;
+            cv_text_on(4, y + CAP_IN(X, h - 2), &AF_X, b, q == st ? T_TEXT : T_DIM, T_SURF);
+        }
+        for (i = 0; i < n; i++) {
+            uint32_t bars = chain_config.row[i].bars, ta, tb;
+            int32_t x0 = 20 + (int32_t)i * 2 + (acc * (W - 16)) / (int32_t)total, x1;
+            int pick = q == st && i == r;
+            uint16_t c = lz_sec(chain_config.row[i].slot, 1, !pick);
+            acc += (int32_t)bars;
+            x1 = 20 + (int32_t)i * 2 + (acc * (W - 16)) / (int32_t)total;
+            row_trims(&chain_config, song_cur, i, q, &ta, &tb);
+            cv_rect(x0, y, x1 - x0, h - 2, ux_mix(T_BG, c, 22));                      /* the whole part, dim: what is cut */
+            cv_rect(x0 + (int32_t)(ta * (uint32_t)(x1 - x0) / bars), y, (int32_t)((bars - ta - tb) * (uint32_t)(x1 - x0) / bars), h - 2, c);
+            if (pick)
+                cv_frame(x0 - 1, y - 1, x1 - x0 + 2, h, T_TEXT);
+            if (chain.running && i == chain.row) {
+                uint32_t done = bars - chain.remaining;
+                cv_rect(x0 + (int32_t)(done * (uint32_t)(x1 - x0) / bars), y - 1, 1, h, T_ACCENT);
+            }
         }
     }
 }
@@ -247,11 +323,11 @@ static void graph_lz_presets(void)
 /* the lens's panel for the SAVE page shown */
 static void graph_save_lz(const page_t *pg)
 {
-    uint32_t lv = save_level();
     if (pg->graph == GR_TOOLS) graph_lz_tools();
-    else if (pg->graph == GR_SONG) graph_proj(1);
+    else if (pg->graph == GR_SONG) graph_song();
+    else if (pg->graph == GR_SEDIT) graph_sedit();
     else if (pg->graph == GR_ERASE) graph_proj(0);
-    else if (pg->graph == GR_SLOTS) { if (lv == SV_PROJ) graph_proj(0); else graph_lib(); }
+    else if (pg->graph == GR_SLOTS) graph_lib();
     else if (pg->graph == GR_USER) graph_sound();
     else if (pg->graph == GR_BLEND) graph_blend();       /* (chord-harp fork) MORPH: TRACK A | B, the divider at the blend */
     else graph_lz_presets();

@@ -1295,46 +1295,63 @@ static void edit_param(uint32_t slot, int32_t steps)
         else if (slot == 3u) ui.act = steps > 0 ? 4u : 0u;
         return;
     }
-    if (pg->graph == GR_SONG) {                         /* (2026-11-05) ARRANGE: K1 PROJECT, K2 SECT, K3 BARS, K4 ROW; the NEW row
-                                                         * (after the last) holds the SECT and BARS OCT+ adds; END after it */
-        uint32_t end = song_end_row(), n = chain_config.count;
-        if (slot == 0u) {                               /* the project (one of the songs; as PROJECT's KNOB 1) */
-            int32_t p = wrap_add((int32_t)song_cur, steps > 0 ? 1 : -1, (int32_t)NSONG);
-            if ((uint32_t)p != song_cur && song_open((uint32_t)p) == 0)
-                ui.song_row = (uint8_t)chain_config.count;
+    if (pg->graph == GR_SEDIT) {                        /* (2026-11-06) SONG EDIT: the tracks run down the screen, each broken into the song's parts
+                                                         * (the rows). K1 the track, K2 the part (on to the next, to the song's end), K3 / K4 the bars the
+                                                         * track sits out of that part, from its start / its end */
+        uint32_t n = chain_config.count, a, b, bars;
+        uint8_t *cut;
+        if (!n) return;
+        if (slot == 0u) {
+            ui.sed_trk = (uint8_t)clamp((int32_t)ui.sed_trk + steps, 0, (int32_t)trk_live - 1);
             return;
         }
-        if (slot == 3u) {                               /* the row: the rows, NEW, END; a row shows its SECT and BARS */
-            ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0, (int32_t)end);
-            if (ui.song_row < n) {
-                ui.arr_sect = chain_config.row[ui.song_row].slot;
-                ui.arr_bars = chain_config.row[ui.song_row].bars;
-            }
+        if (ui.sed_trk >= trk_live) ui.sed_trk = (uint8_t)(trk_live - 1u);
+        if (ui.song_row >= n) ui.song_row = (uint8_t)(n - 1u);
+        if (slot == 1u) {
+            ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0, (int32_t)n - 1);
             return;
         }
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (ui.song_row >= end) {                       /* END: KNOB 2 STOP / x2 .. x8 / LOOP (the song's times) */
+        bars = chain_config.row[ui.song_row].bars;
+        row_trims(&chain_config, song_cur, ui.song_row, ui.sed_trk, &a, &b);
+        cut = song_idx.scene[song_cur][ui.song_row].cut[ui.sed_trk];
+        if (slot == 2u) a = (uint32_t)clamp((int32_t)a + steps, 0, (int32_t)(bars - 1u - b));
+        else b = (uint32_t)clamp((int32_t)b + steps, 0, (int32_t)(bars - 1u - a));
+        cut[0] = (uint8_t)a;
+        cut[1] = (uint8_t)b;
+        song_idx_touch();
+        return;
+    }
+    if (pg->graph == GR_SONG) {                         /* (2026-11-06) SONG STRUCTURE: K1 PROJECT, K2 SECT, K3 TIMES (what OCT+ inserts),
+                                                         * K4 ROW (n/N, then END). On END K2 sets STOP / x2..x8 / LOOP; TIMES below x1 deletes the row */
+        uint32_t n = chain_config.count;
+        if (slot == 0u) {                               /* the project (one of the songs; as PROJECT's KNOB 1) */
+            int32_t p = wrap_add((int32_t)song_cur, steps > 0 ? 1 : -1, (int32_t)NSONG);
+            if ((uint32_t)p != song_cur && song_open((uint32_t)p) == 0)
+                ui.song_row = (uint8_t)(chain_config.count ? chain_config.count - 1u : 0u);
+            return;
+        }
+        if (slot == 3u) {                               /* the row cursor: the rows, then END */
+            ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0, (int32_t)n);
+            return;
+        }
+        if (ui.song_row >= n && n) {                    /* END: K2 STOP / x2 .. x8 / LOOP */
             if (slot == 1u) {
+                if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
                 SONG_END(&chain_config) = (uint8_t)song_end_step(SONG_END(&chain_config), steps > 0 ? 1 : -1);
                 song_idx_touch();
             }
             return;
         }
-        if (ui.song_row >= n) {                         /* NEW: what OCT+ adds */
-            if (slot == 1u) ui.arr_sect = (uint8_t)wrap_add((int32_t)(ui.arr_sect & 3u), steps, 4);
-            else ui.arr_bars = (uint8_t)clamp((int32_t)arr_bars_get() + steps, 1, (int32_t)CHAIN_BARS);
-            return;
+        if (slot == 1u) ui.arr_sect = (uint8_t)wrap_add((int32_t)(ui.arr_sect & 3u), steps, 4);
+        else if (slot == 2u) {
+            if (steps < 0 && arr_bars_get() <= 1u && ui.song_row < n) {   /* TIMES below x1: DELETE ROW? */
+                if (chain_busy()) ui_message("STOP TO EDIT");
+                else confirm_open(CF_DEL_ROW, ui.song_row);
+                return;
+            }
+            ui.arr_bars = (uint8_t)clamp((int32_t)arr_bars_get() + steps, 1, (int32_t)CHAIN_BARS);
         }
-        if (slot == 1u && steps < 0 && chain_config.row[ui.song_row].slot == 0u) {
-            confirm_open(CF_DEL_ROW, ui.song_row);      /* (0.6.22) SECT left of A: DELETE ROW? (the dialog) */
-            return;
-        }
-        if (slot == 1u)
-            ui.arr_sect = chain_config.row[ui.song_row].slot =
-                (uint8_t)wrap_add((int32_t)chain_config.row[ui.song_row].slot, steps, 4);
-        if (slot == 2u)
-            ui.arr_bars = chain_config.row[ui.song_row].bars =
-                (uint8_t)clamp((int32_t)chain_config.row[ui.song_row].bars + steps, 1, (int32_t)CHAIN_BARS);
         return;
     }
     if (chain_busy() && (pg->scope == SC_STEP || pg->graph == GR_STEPS ||
@@ -1513,7 +1530,7 @@ static void act_do(void)
         uint32_t n = chain_config.count, at, i;
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         if (n >= CHAIN_ROWS) { ui_message("16 ROWS"); return; }
-        at = ui.song_row < n ? ui.song_row + 1u : n;
+        at = ui.song_row < n ? ui.song_row + 1u : n;    /* (always after the selected row; on END, at the end) */
         for (i = n; i > at; i--) {
             chain_config.row[i] = chain_config.row[i - 1u];
             song_idx.scene[song_cur][i] = song_idx.scene[song_cur][i - 1u];
@@ -1522,9 +1539,9 @@ static void act_do(void)
         chain_config.row[at].bars = (uint8_t)arr_bars_get();
         memset(&song_idx.scene[song_cur][at], 0, sizeof song_idx.scene[0][0]);   /* (no scene yet) */
         chain_config.count++;
-        ui.song_row = (uint8_t)(ui.song_row < n ? at : chain_config.count);
+        ui.song_row = (uint8_t)at;                      /* (the cursor follows the new row) */
         song_idx_touch();
-        ui_message("ROW ADDED");
+        ui_message("INSERTED");
         return;
     }
     if (cur_page()->graph == GR_PATS) {
@@ -2111,7 +2128,7 @@ static void ui_input(void)
 static void ui_input_frame(void)
 {
     uint32_t pressed = fm1_input_edges(0), notes = fm1_input_note_edges(), now = fm1_ticks(), id, b, k;
-    uint32_t home, rec, seq, save;
+    uint32_t home, rec, seq;
     uint32_t oct;
     uint32_t lay, combo = 0, lytap, lkeys, kq = 0;
     int32_t s, ks[4] = {0, 0, 0, 0};
@@ -2191,7 +2208,6 @@ static void ui_input_frame(void)
     home = btn_hold(&ui.home_t0, B_HOME, now, 1);       /* (2026-11-03: held, nothing; the MENU is GLO's pages) */
     rec = btn_hold(&ui.rec_t0, B_REC, now, 0);          /* (a tap; held, the REC layer: ui_layer.c) */
     seq = btn_hold(&ui.seq_t0, B_SEQ, now, 1);          /* (2026-11-03: its TOOLS a page; held, nothing) */
-    save = btn_hold(&ui.save_t0, B_SAVE, now, 1);       /* (2026-11-03: the song layer gone; held, nothing) */
     layer_arm(pressed, now);
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
         ui.rec_t0 |= 2u;                                /* (REC is its layer's button now: its tap is layer_tap's) */
@@ -2310,8 +2326,6 @@ static void ui_input_frame(void)
         name_input(notes, oct);
         return;
     }
-    if (save == BT_TAP && !dlg_on())                    /* SAVE let go */
-        open_family(FAM_SAVE);
     if (dlg_on()) {                                     /* OCT- cancels, OCT+ does it; nothing else reacts (GEN: a page,
                                                          * below) */
         if (oct & 2u) {
@@ -2349,7 +2363,7 @@ static void ui_input_frame(void)
                     memset(&song_idx.scene[song_cur][r], 0, sizeof(scene_t));
                     song_idx_touch();
                     chain_config.count--;
-                    if (ui.song_row > chain_config.count) ui.song_row = chain_config.count;
+                    if (ui.song_row >= chain_config.count) ui.song_row = (uint8_t)(chain_config.count ? chain_config.count - 1u : 0u);
                     ui_message("ROW DELETED");
                 }
             } else if (kind == CF_CLEAR_SONG) {
@@ -2573,7 +2587,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS || BAR_PAGE(pg)) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }

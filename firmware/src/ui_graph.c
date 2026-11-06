@@ -1070,7 +1070,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP && g != GR_FUGUE &&   /* (0.8.3: LENTE's step, the heads) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
-           g != GR_SONG && g != GR_TOOLS && g != GR_ERASE && g != GR_PATS && g != GR_SQTOOL;
+           g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_PATS && g != GR_SQTOOL;
 }
 static void graph_drift(void)
 {
@@ -1294,6 +1294,16 @@ static uint32_t graph_signature(void)
         h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
         if (pg->graph == GR_USER)
             h ^= bg_energy() > 2 ? ui.frame * 2654435761u : 0u;   /* (the being moves with the sound) */
+        if (pg->graph == GR_SEDIT) {                     /* (SONG EDIT: the rows, their trims, the bar highlighted) */
+            for (i = 0; i < CHAIN_ROWS; i++) {
+                uint32_t q;
+                h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
+                for (q = 0; q < NTRK; q++)
+                    h = (h ^ (song_idx.scene[song_cur][i].cut[q][0] + 256u * song_idx.scene[song_cur][i].cut[q][1])) * 16777619u;
+            }
+            h ^= ui.song_row * 40503u + chain_config.count * 7919u + ui.sed_trk * 1299709u;
+            h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u : 0u;
+        }
         if (pg->graph == GR_SONG || pg->graph == GR_ERASE) {   /* (ARRANGE: as SLOTS', the rows and where the song is) */
             for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (20u + i);
             h += graph_pname_sig + (uint32_t)(live.cur + 1) * 40503u;

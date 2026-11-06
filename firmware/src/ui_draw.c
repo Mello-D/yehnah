@@ -859,7 +859,7 @@ static const char *const PG_SHORT[][2] = {   /* (2026-11-02) every page name ove
     {"AUTO LIST", "A LIST"}, {"AUTO PAN", "A PAN"}, {"REVERB 2", "REVRB2"},
     {"SL BUS 2", "SLBUS2"}, {"SL PITCH", "SL PCH"}, {"ALL ENV", "A ENV"}, {"ALL DEST", "A DEST"}, {"ENV DEST", "E DEST"},
     {"LFO DEST", "L DEST"}, {"PRESETS", "PRESET"}, {"SECTIONS", "SECTS"},
-    {"ARRANGE", "ARRANG"}, {"PROJECTS", "PROJS"}, {"CONTROL", "CTRL"}};   /* (CONTROL: GLO's, 2026-11-02) */
+    {"ARRANGE", "ARRANG"}, {"SONG EDIT", "S EDIT"}, {"PROJECT", "PROJ"}, {"PROJECTS", "PROJS"}, {"CONTROL", "CTRL"}};   /* (CONTROL: GLO's, 2026-11-02) */
 #define PG_SIDE_W 40
 #define PG_MID_W 68
 static const char *pg_short(const char *s)
@@ -997,33 +997,48 @@ static void draw_cards(void)
         dx_kit3_cards();
         return;
     }
-    if (cur_page()->graph == GR_SONG) {                 /* (2026-11-05) PROJECT, SECT, BARS, ROW; OCT+ adds */
-        uint32_t row = ui.song_row < CHAIN_ROWS ? ui.song_row : CHAIN_ROWS - 1u, n = chain_config.count;
-        int used = row < n, newr = ui.song_row == n && n < CHAIN_ROWS;
+    if (cur_page()->graph == GR_SEDIT) {                /* (2026-11-06) TRACK, PART, CUT START, CUT END */
+        uint32_t n = chain_config.count, r = ui.song_row < n ? ui.song_row : 0u, t = ui.sed_trk < trk_live ? ui.sed_trk : 0u, a = 0, b = 0;
+        if (n) row_trims(&chain_config, song_cur, r, t, &a, &b);
+        val[0] = 'T'; fmt_int(val + 1, (int32_t)t + 1);
+        draw_column(0, "TRACK", val, "", VAL(0u), pick_of(trk_live, t), ICON_X_SONG);
+        if (n) { val[0] = (char)('A' + (chain_config.row[r].slot & 3u)); val[1] = ' '; fmt_int(val + 2, (int32_t)r + 1);
+                 str_cpy(val + str_len(val), "/", 2); fmt_int(val + str_len(val), (int32_t)n); }
+        else str_cpy(val, "-", sizeof val);
+        draw_column(1, "PART", val, "", VAL(1u), n ? pick_of(n, r) : -1, ICON_AUTO);
+        fmt_int(val, (int32_t)a);
+        draw_column(2, "CUT START", val, "BAR", a ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+        fmt_int(val, (int32_t)b);
+        draw_column(3, "CUT END", val, "BAR", b ? VAL(3u) : T_DIM, -1, ICON_AUTO);
+        return;
+    }
+    if (cur_page()->graph == GR_SONG) {                 /* (2026-11-06) PROJECT, SECT, TIMES, INSERT (OCT+ adds) */
         fmt_int(val, (int32_t)song_cur + 1);
         draw_column(0, "PROJECT", val, "", VAL(0u), pick_of(NSONG, song_cur), ICON_X_SONG);
-        if (ui.song_row >= song_end_row()) {            /* the song's END: STOP / x2 .. x8 / LOOP */
-            uint32_t e = SONG_END(&chain_config);
-            if (e == SONG_FOREVER) str_cpy(val, "LOOP", sizeof val);
-            else if (e >= 2u) { val[0] = 'x'; fmt_int(val + 1, (int32_t)e); }
-            else str_cpy(val, "STOP", sizeof val);
-            draw_column(1, "END", val, "", VAL(1u), -1, ICON_LOOP);
-            draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-            draw_column(3, "ROW", "END", "", VAL(3u), -1, ICON_AUTO);
-            return;
+        {
+            uint32_t n = chain_config.count;
+            if (n && ui.song_row >= n) {                /* END: K2 sets it */
+                uint32_t e = SONG_END(&chain_config);
+                if (e == SONG_FOREVER) str_cpy(val, "LOOP", sizeof val);
+                else if (e >= 2u) { val[0] = 'x'; fmt_int(val + 1, (int32_t)e); }
+                else str_cpy(val, "STOP", sizeof val);
+                draw_column(1, "END", val, "", VAL(1u), -1, ICON_LOOP);
+                draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
+                draw_column(3, "ROW", "END", "", VAL(3u), -1, ICON_AUTO);
+                return;
+            }
+            val[0] = (char)('A' + (ui.arr_sect & 3u)); val[1] = 0;
+            draw_column(1, "SECT", val, "", VAL(1u), pick_of(4u, ui.arr_sect & 3u), ICON_X_PATTERN);
+            val[0] = 'x';
+            fmt_int(val + 1, (int32_t)arr_bars_get());
+            draw_column(2, "TIMES", val, "", VAL(2u), -1, ICON_AUTO);
+            if (n) {
+                fmt_int(val, (int32_t)ui.song_row + 1);
+                str_cpy(val + str_len(val), "/", 2);
+                fmt_int(val + str_len(val), (int32_t)n);
+            } else str_cpy(val, "0/0", sizeof val);
+            draw_column(3, "ROW", val, "", VAL(3u), -1, ICON_AUTO);
         }
-        if (used) { val[0] = (char)('A' + chain_config.row[row].slot); val[1] = 0; }
-        else { val[0] = (char)('A' + (ui.arr_sect & 3u)); val[1] = 0; }
-        draw_column(1, "SECT", val, "", VAL(1u), pick_of(4u, used ? chain_config.row[row].slot : ui.arr_sect & 3u), ICON_X_PATTERN);
-        fmt_int(val, used ? chain_config.row[row].bars : (int32_t)arr_bars_get());
-        draw_column(2, "BARS", val, "", VAL(2u), -1, ICON_AUTO);
-        if (newr) str_cpy(val, "NEW", sizeof val);
-        else {
-            fmt_int(val, (int32_t)row + 1);
-            str_cpy(val + str_len(val), "/", 2);
-            fmt_int(val + str_len(val), (int32_t)n);
-        }
-        draw_column(3, "ROW", val, "", VAL(3u), -1, ICON_AUTO);
         return;
     }
     if (cur_page()->graph == GR_ERASE) {                 /* (2026-11-05) PROJECT, SECT, then ERASE SECTION and ERASE PROJECT */
@@ -1762,7 +1777,7 @@ static void confirm_text(char *a, char *b)
     case CF_ERASE_PRJ:
         str_cpy(a, "ERASE PROJECT 1?", 24);
         a[14] = (char)('1' + k % NSONG);
-        str_cpy(b, "4 SECTIONS + SONG: NO UNDO", 26);
+        str_cpy(b, "4 SECTS + SONG: NO UNDO", 24);
         break;
     case CF_LOAD_PAT: {
         char tag[4];

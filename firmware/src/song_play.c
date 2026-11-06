@@ -68,11 +68,24 @@ static void scene_apply(uint32_t row)
         trk[i].p[P_MUTE] = (int16_t)(i < 4u ? (s->mute >> i) & 1u : (s->on >> (i - 3u)) & 1u);
     dx_mute_set((uint16_t)((dx_mute & ~DXG_ALL) | ((s->mute >> 4) & DXG_ALL)));
 }
+/* (2026-11-06) SONG EDIT's cuts: the tracks that sit out the bar the row is at (a quick chain: none) */
+static void chain_gate(void)
+{
+    uint32_t t, a, b, at = (uint32_t)chain.config.row[chain.row].bars - chain.remaining, m = 0;
+    if (!chain.loop && chain.row < chain.config.count)
+        for (t = 0; t < NTRK; t++) {
+            row_trims(&chain.config, song_cur, chain.row, t, &a, &b);
+            if (at < a || at >= chain.config.row[chain.row].bars - b)
+                m |= 1u << t;
+        }
+    chain.cut = (uint8_t)m;
+}
 static void chain_apply(void)                         /* a song row's section in */
 {
     chain.row = sec_stage.row;
     chain.remaining = chain.config.row[chain.row].bars;
     sec_apply();
+    chain_gate();
     scene_apply(chain.row);
 }
 
@@ -152,6 +165,7 @@ static void chain_stop(void)                          /* (seq_stop) */
         return;
     song.rec = chain.rec;
     chain.running = 0;
+    chain.cut = 0;
     scene_pfx = 0;                                    /* (a scene's punch-in effects end with the song) */
     chain.ended = chain.kept;                         /* (a quick chain keeps nothing: what plays stays) */
 }
@@ -171,6 +185,7 @@ static void chain_tick(uint32_t n)
         uint32_t next = chain.row + 1u;
         if (chain.remaining > 1u) {
             chain.remaining--;
+            chain_gate();
             return;
         }
         if (next >= chain.config.count) {

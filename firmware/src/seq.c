@@ -82,6 +82,8 @@ static int mo_plays(const track_t *t, uint32_t note)   /* trk_note_on would soun
  * on it (pfx.c pfx_pit, pfx_rpit: drawn by trk_note_on) */
 static void seq_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
+    if ((chain.cut >> (trk_index(t) % NTRK)) & 1u)
+        return;                                         /* (2026-11-06) SONG EDIT: the track sits this bar out */
     uint32_t i = trk_index(t) % NTRK, send = mo_lvl == MO_ALL && note < 128u && mo_plays(t, note) && !pfx_holds(t);
     trk_note_on(t, note, vel);
     if (send) {
@@ -1378,7 +1380,7 @@ static __attribute__((noinline)) void dxo_rec_hold(track_t *t, uint32_t idx)
         e->quiet = (uint8_t)(idx + 1u);
     }
 }
-static void dxo_hit(track_t *t, const dxo_t *e) { trk_note_on(t, e->note, e->vel); }
+static void dxo_hit(track_t *t, const dxo_t *e) { if (!((chain.cut >> (trk_index(t) % NTRK)) & 1u)) trk_note_on(t, e->note, e->vel); }
 /* a block on (events_block, after the sequencer): the held ones' next hits */
 static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
 {

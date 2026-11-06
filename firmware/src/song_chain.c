@@ -30,6 +30,8 @@ typedef struct {
     uint8_t mute;                             /* bits 0..3 T1..T4 muted, 4..7 DRUM's groups (DXG_*) */
     uint16_t pfx;                             /* the punch-in MIDI effects held: bit k = PF_OCTD + k */
     uint8_t mac[4];                           /* M1..M4 (mod.c macro_v) */
+    uint8_t cut[NTRK][2];                     /* (2026-11-06, SAVE > SONG EDIT) per track: the bars of the row it sits out, from the row's start,
+                                               * from its end (kept with the row's scene: they shift and go with the row) */
 } scene_t;
 typedef struct {                              /* the song index (flash: OBJ_SONGIDX) */
     uint32_t magic;
@@ -54,6 +56,15 @@ static void scene_capture(scene_t *s)
     memcpy(s->mac, macro_v, sizeof s->mac);
 }
 static song_index_t song_idx;
+/* (2026-11-06) a track's cuts in a row, clamped so one bar is left: the bars it sits out from the row's start (*a) and end (*b) */
+static void row_trims(const chain_config_t *c, uint32_t song, uint32_t row, uint32_t t, uint32_t *a, uint32_t *b)
+{
+    uint32_t bars = c->row[row].bars, ta = song_idx.scene[song][row].cut[t][0], tb = song_idx.scene[song][row].cut[t][1];
+    if (ta > bars - 1u) ta = bars - 1u;
+    if (tb > bars - 1u - ta) tb = bars - 1u - ta;
+    *a = ta;
+    *b = tb;
+}
 static uint8_t song_cur;                      /* the song whose sections proj_slot holds (0: the four project slots) */
 #define SEC_LIVE 0xFEu                /* sec_stage.row: a live jump (the song layer), not a song row */
 typedef struct {                      /* a track of a section, as the ISR puts it in */
@@ -82,6 +93,7 @@ static struct {
     uint8_t loop;                     /* the quick chain: round and round (a song stops at its end) */
     volatile uint8_t pass;            /* (0.6.22) the song's times through so far (its END: chain_wraps) */
     uint8_t scn;                      /* the row whose scene is in effect + 1 (0: none since the song began) */
+    volatile uint8_t cut;             /* (2026-11-06) the tracks sitting out this bar (SONG EDIT's cuts): bit per track */
     uint8_t rec, kept;
     uint32_t carry;                   /* samples past the bar line at the end of the block: the first step's */
     uint32_t bar_pos;                 /* samples into the bar (while playing) */

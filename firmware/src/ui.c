@@ -245,6 +245,7 @@ static struct {
     uint8_t uslot;               /* SAVE > USER: the selected user preset slot */
     uint8_t ppick;               /* SEQ > PATTERNS: the pattern picked (pat_count list index) */
     uint8_t song_row;            /* SONG: row selected, count selects the next empty row */
+    uint8_t sed_trk;             /* (2026-11-06) SONG EDIT: the track line picked (K1); the part along it is ui.song_row (K2) */
     uint8_t arr_sect, arr_bars;  /* (2026-11-05) ARRANGE: the section (0..3) and bars the next row gets (0 bars: 4) */
     uint8_t ev_row;              /* SEQ > AUTO LIST (ui_input.c ev_*): the row selected (the track's count: + ADD LOCK) */
     uint8_t ev_step, ev_id;      /* .. + ADD LOCK: the step and the parameter a lock is added on */
@@ -431,7 +432,7 @@ static uint32_t graph_y(void) { return TF_SC_Y; }
 static uint32_t graph_h(void) { return TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
-enum { LAYER_NONE, LAYER_FX, LAYER_SCL, LAYER_REC, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
+enum { LAYER_NONE, LAYER_FX, LAYER_SCL, LAYER_REC, LAYER_SAVE, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
                                                          * NAV-LAYOUT.md; 2026-11-03: SEQ's TOOLS and SAVE's song too: held,
                                                          * the other buttons do nothing) */
 static void draw_layer(void);
@@ -1655,7 +1656,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     if (pg->graph == GR_PROG) return ui.act ? 8u : 0u;   /* (chord-harp fork) SCL > PROG: F#4 WRITE, OCT+ does it
                                                          * (ui_input.c prog_write); KNOB 4 its PLATE, not the action */
     if (pg->graph == GR_SONG)
-        return 1u;                               /* (0.8.5) ADD a row (PLAY: the song) */
+        return 8u;                               /* (2026-11-06) OCT+ is armed (INSERT); K4 is the row cursor, not an action (edit_param / draw_cards run first) */
     if (pg->graph == GR_PATS)
         return 2u;                               /* LOAD */
     if (pg->graph == GR_USER)
@@ -1679,7 +1680,7 @@ static uint32_t shp_rep(void) { return shp_r == 0u ? 1u : shp_r < 8u ? shp_r + 1
 
 static uint32_t act_col(void)
 {
-    if (!ui.home && cur_page()->graph == GR_SONG) return 1u;
+    if (!ui.home && cur_page()->graph == GR_SONG) return 4u;
     if (!ui.home && cur_page()->graph == GR_EVENTS) return 5u;
     return !ui.home && cur_page()->graph == GR_PATS ? 2u : ui.act;
 }

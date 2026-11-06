@@ -96,13 +96,9 @@ static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2), NV("ARP 
                               NV("AMBIENT", 0, 0, 2),
 #endif
 };
-static const nv_t CE_SAVE[] = {NV("PROJECT", "PROJECTS", 2, SV_LIB), NV("TOOLS", 0, 2, SV_LIB), NV("ERASE", 0, 2, SV_LIB),   /* (2026-11-02: PRESETS,
-                                                         * MORPH to HOME; PROJECTS first) */
-                               NV("USER", 0, 0, SV_SOUND),
-#if FELUCCA_FXSCENE
-                               NV("USER FX", 0, 0, SV_SOUND),   /* (2026-11-02) */
-#endif
-                               NV("PROJECT", "SECTIONS", 1, SV_PROJ), NV("ARRANGE", 0, 1, SV_PROJ)};
+static const nv_t CE_SAVE[] = {NV("PROJECT", 0, 2, SV_LIB), NV("ARRANGE", "STRUCT", 1, SV_PROJ),   /* (2026-11-06: TOOLS, ERASE, USER went to the
+                                                         * SAVE held layer; PRESETS, MORPH are HOME's) */
+                               NV("SONG EDIT", "TRIM", 1, SV_PROJ)};
 #define CH(e, ng) {e, (uint8_t)NELEM(e)}
 /* (chord-harp fork) a chain's pages, at most NAV_MAX (nav_list's buffers): FX's 17th page (PHASER) overran a 16-byte
  * buffer on the stack, a crash on the device only */
@@ -112,7 +108,7 @@ CH_OK(CE_HOME); CH_OK(CE_SYN); CH_OK(CE_SEQ); CH_OK(CE_FX); CH_OK(CE_GLO); CH_OK
 CH_OK(CE_ARP); CH_OK(CE_SAVE); CH_OK(CE_FM6); CH_OK(CE_DRM);
 #define NAV_KEYS (SEC_N + 2u)                           /* the sections' memories: EDIT's synth one, then FM6 DRUM */
 static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, 4), CH(CE_SYN, 3), CH(CE_SEQ, 5), CH(CE_FX, 8), CH(CE_GLO, 5),
-                                      CH(CE_ENV, 3), CH(CE_LFO, 3), CH(CE_SCL, 5), CH(CE_ARP, 1), CH(CE_SAVE, 3),
+                                      CH(CE_ENV, 3), CH(CE_LFO, 3), CH(CE_SCL, 5), CH(CE_ARP, 1), CH(CE_SAVE, 2),
                                       CH(CE_FM6, 3), CH(CE_DRM, 4)};
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }
@@ -255,7 +251,7 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     if (PAGES[i].graph == GR_USER || PAGES[i].graph == GR_SLOTS)
         ui.act = outside && (PAGES[i].graph == GR_USER || c->e[e].lv == SV_PROJ) ? 4u : 0u;
     if (PAGES[i].graph == GR_SONG)                       /* (2026-11-05) ARRANGE opens on its NEW row: pick, OCT+ */
-        ui.song_row = (uint8_t)chain_config.count;
+        ui.song_row = (uint8_t)(chain_config.count ? chain_config.count - 1u : 0u);
 }
 /* rule 2: a section's button: its chain's first page; already inside, HOME's first (TRACKS) */
 static void nav_button(uint32_t sec)

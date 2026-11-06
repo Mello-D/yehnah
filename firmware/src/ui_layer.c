@@ -51,6 +51,7 @@ static const layer_t LAYERS[LAYER_N] = {
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
     {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_K14, "STRUM"}, {KC_SCL, "DONE"}}},
     {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
+    {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SET", {{KC_KEYS, "CLEAR ERASE NEW"}, {0, 0}, {0, 0}}},   /* (2026-11-06) the generic save tools */
 };
 /* SCL's knob: STRUM (2026-10-27: the track's, every chord mode's: CHORD HARP OMNI PROG share P_CSTR) (cur_page()
  * while the layer edits or draws them: page_over) */
@@ -359,7 +360,7 @@ static void rec_mode_set(uint32_t v)
     ui_say("REC MODE ", rec_loop ? "LOOP" : "ONE PASS");
 }
 static int restart_ok(void) { return !chain_busy() && !(song.g[G_CLOCK] && song.playing); }
-static int name_here(void) { return !ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS); }
+static int name_here(void) { return !ui.home && cur_page()->graph == GR_SLOTS; }   /* (USER page gone) */
 /* REC's song keys (SAVE held's until 2026-11-03), white key p: RK_PLAY.. the sections A..D (on the next bar; tapped in
  * a row in one hold: a quick chain, layer_let_go), LOOP / SONG, SONG REC, NAME */
 static void song_key(uint32_t p)
@@ -389,6 +390,60 @@ static void song_key(uint32_t p)
             name_rename();
         else
             ui_message("NAME: ON USER OR PROJECT");
+    }
+}
+/* (2026-11-06) SAVE held: the generic save tools that were SAVE > TOOLS, ERASE and USER, white keys (each asks first, as before):
+ * F3 CLEAR PAT, G3 CLEAR SONG, A3 DELETE ROW (SONG EDIT / ARRANGE's row), C4 ERASE SECTION (PROJECT's section), D4 ERASE
+ * PROJECT, E4 NEW PROJECT, G4 SAVE SOUND (the user slot the track's sound came from, else the first free one), A4 ERASE SOUND */
+enum { SK_CLRPAT = 0, SK_CLRSONG = 1, SK_DELROW = 2, SK_ERASEC = 4, SK_ERAPRJ = 5, SK_NEW = 6, SK_SAVSND = 8, SK_ERASND = 9 };
+static const char *const SK_NAME[10] = {"CLEAR PAT", "CLEAR SONG", "DEL ROW", "", "ERASE SECT", "ERASE PROJ", "NEW PROJ", "",
+                                        "SAVE SND", "ERASE SND"};
+static uint32_t sv_free_slot(void)
+{
+    uint32_t k;
+    for (k = 0; k < UP_SLOTS; k++)
+        if (!up_used(k))
+            return k;
+    return UP_SLOTS;
+}
+static int sv_ok(uint32_t p)
+{
+    uint32_t k = (uint32_t)song.g[G_SLOT] - 1u;
+    switch (p) {
+    case SK_CLRPAT: return !chain_busy() && (!seq_is_empty(TSEL) || motion_count(TSEL) != 0u);
+    case SK_CLRSONG: return !chain_busy() && chain_config.count != 0u;
+    case SK_DELROW: return !chain_busy() && ui.song_row < chain_config.count;
+    case SK_ERASEC: return !song.playing && project_used(k);
+    case SK_ERAPRJ: return !song.playing && (project_used(0) || project_used(1) || project_used(2) || project_used(3) || chain_config.count);
+    case SK_NEW: return !chain_busy();
+    case SK_SAVSND: return !transport_busy();
+    case SK_ERASND: return !transport_busy() && user_of(TSEL) < UP_SLOTS;
+    default: return 0;
+    }
+}
+static void sv_key(uint32_t p)
+{
+    uint32_t k = (uint32_t)song.g[G_SLOT] - 1u, u;
+    if (p >= 10u || !SK_NAME[p][0])
+        return;
+    if (!sv_ok(p)) {
+        ui_message(chain_busy() || song.playing ? "STOP TO EDIT" : "NOTHING TO DO");
+        return;
+    }
+    switch (p) {
+    case SK_CLRPAT: confirm_open(CF_CLEAR_SEQ, song.sel); break;
+    case SK_CLRSONG: confirm_open(CF_CLEAR_SONG, song.sel); break;
+    case SK_DELROW: confirm_open(CF_DEL_ROW, ui.song_row); break;
+    case SK_ERASEC: confirm_open(CF_ERASE_SEC, k); break;
+    case SK_ERAPRJ: confirm_open(CF_ERASE_PRJ, song_cur); break;
+    case SK_NEW: confirm_open(CF_INIT_SYS, song.sel); break;
+    case SK_SAVSND:
+        u = user_of(TSEL);
+        if (u < UP_SLOTS) confirm_open(CF_OVR_USER, u);
+        else if ((u = sv_free_slot()) < UP_SLOTS) { ui.uslot = (uint8_t)u; name_open(NK_USER_SAVE, u); }
+        else ui_message("NO FREE SOUND SLOT");
+        break;
+    default: confirm_open(CF_ERASE_USER, user_of(TSEL)); break;
     }
 }
 static void rec_key(uint32_t p)
@@ -510,6 +565,9 @@ static void layer_key(uint32_t l, uint32_t k)
     } else if (l == LAYER_REC) {
         if (!key_black(k) && p <= RK_NAME)
             rec_key(p);
+    } else if (l == LAYER_SAVE) {
+        if (!key_black(k))
+            sv_key(p);
     }
 }
 /* each pass: the keys the layer got now; the solo: HOME > MIXER's (perform.c) */
@@ -541,6 +599,7 @@ static void layer_knob(uint32_t k, int32_t s)
             song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_K1 + k, s, 200), GP[G_BPM].min, GP[G_BPM].max);
             ui.bpm_t = 40;
         }
+    } else if (l == LAYER_SAVE) {                       /* (no knobs) */
     } else if (l) {                                     /* the page's knobs, wherever the page is */
         uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
         memcpy(nm, ui.nmem, sizeof nm);                 /* (the sections' memories: not this borrowed page's) */
@@ -602,6 +661,8 @@ static uint32_t layer_leds(uint32_t *br)
             e = ((uint32_t)scl_pc(b, p) + 12u - (uint32_t)clamp(TSEL->p[P_ROOT], 0, 11)) % 12u;
             on = e == 0u;
             can = (scale_mask(TSEL) >> e) & 1u;
+        } else if (l == LAYER_SAVE && !b && p < 10u && SK_NAME[p][0]) {   /* the tools that would do something breathe */
+            can = (uint32_t)sv_ok(p);
         } else if (l == LAYER_REC && !b && p >= RK_PLAY && p <= RK_NAME) {   /* the section playing lit, the saved
                                                          * ones and the actions breathe */
             on = (p - RK_PLAY < 4u && live.cur == (int8_t)(p - RK_PLAY)) || (p == RK_SREC && live.srec) ||
@@ -666,6 +727,12 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         str_cpy(nm, NN[n], 12);
         deg = ((uint32_t)n + 12u - (uint32_t)clamp(TSEL->p[P_ROOT], 0, 11)) % 12u;
         return !deg ? LS_SEL : (scale_mask(TSEL) >> deg) & 1u ? LS_OFF : LS_DIM;
+    }
+    if (l == LAYER_SAVE) {
+        if (blk || p >= 10u || !SK_NAME[p][0])
+            return LS_OFF;
+        str_cpy(nm, SK_NAME[p], 12);
+        return sv_ok(p) ? LS_OFF : LS_DIM;
     }
     if (l == LAYER_REC) {
         if (blk || p > RK_NAME)
@@ -771,6 +838,9 @@ static void ly_own_cards(void)                          /* FX REC: their own fou
                     perf_k[2] * 10, ICON_DELAY);
         fmt_int(val, 100 - perf_k[3]);
         draw_column(3, "DEPTH", val, "%", VAL(3u), (100 - perf_k[3]) * 10, ICON_MIX);
+    } else if (l == LAYER_SAVE) {                       /* (no knobs: four empty cells) */
+        for (c = 0; c < 4u; c++)
+            draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
     } else if (l == LAYER_REC) {                        /* CLICK, MODE, BPM, COUNT-IN */
         for (c = 0; c < 4u; c++) {
             uint32_t r = c == 3u, v = rp_get(RL_F[r]);
@@ -789,7 +859,7 @@ static void ly_own_cards(void)                          /* FX REC: their own fou
 }
 static void layer_cards(uint32_t l)
 {
-    if (l == LAYER_FX || l == LAYER_REC) {
+    if (l == LAYER_FX || l == LAYER_REC || l == LAYER_SAVE) {
         knobs_of(ly_own_cards);
     } else {                                            /* the page's four (SCL: LY_SCL) */
         uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
@@ -835,7 +905,7 @@ static void lst_chip(const char *a, const char *v, int on)
 }
 static void layer_state(uint32_t l)
 {
-    static const char *const LN[LAYER_N] = {"", "FX", "SCL", "REC"};
+    static const char *const LN[LAYER_N] = {"", "FX", "SCL", "REC", "SAVE"};
     const khint_t *ft = layer_foot(l);
     uint32_t k, e;
     char b[48], v[8];
@@ -884,6 +954,15 @@ static void layer_state(uint32_t l)
             fmt_int(v, chain.remaining);
             lst_chip("BARS LEFT", v, 1);
         }
+    } else if (l == LAYER_SAVE) {                       /* what the keys would act on */
+        v[0] = (char)('A' + (song.g[G_SLOT] - 1) % 4); v[1] = 0;
+        lst_chip("SECTION", v, project_used((uint32_t)song.g[G_SLOT] - 1u));
+        fmt_int(v, (int32_t)ui.song_row + 1);
+        lst_chip("ROW", v, ui.song_row < chain_config.count);
+        b[0] = 'T'; b[1] = (char)('1' + song.sel); b[2] = 0;
+        lst_chip(b, sv_ok(SK_CLRPAT) ? "SEQUENCE" : "EMPTY", sv_ok(SK_CLRPAT));
+        lst_chip("SONG", chain_config.count ? "ROWS" : "EMPTY", chain_config.count != 0u);
+        lst_chip("SOUND", user_of(TSEL) < UP_SLOTS ? "USER" : "PRESET", user_of(TSEL) < UP_SLOTS);
     } else {                                            /* the four knobs' values; the track's sound; DRUM's sounds */
         for (k = 0; k < 4u; k++)
             if (ly_card[k].l[0])
@@ -911,6 +990,9 @@ static void draw_layer(void)
                (uint32_t)(live.cur + 1) * 23u + (uint32_t)(live.req + 1) * 131u + live.srec * 7u + live.mode * 11u +
                lys.nqc * 4099u + (chain.running ? chain.row * 13u + chain.remaining * 17u : 0u) + (uint32_t)name_here() * 29u +
                up_gen * 37u;
+    else if (l == LAYER_SAVE)
+        sig += (uint32_t)chain_busy() * 3u + song.playing * 5u + chain_config.count * 7u + ui.song_row * 11u + (uint32_t)rec_clearable() * 13u +
+               (uint32_t)song.g[G_SLOT] * 17u + (user_of(TSEL) < UP_SLOTS) * 19u + up_gen * 37u + (uint32_t)project_used((uint32_t)song.g[G_SLOT] - 1u) * 23u;
     else
         sig += snd_id() * 31u + (uint32_t)chain_busy() * 3u + (uint32_t)(project_recall_slot() + 1) * 5u + dx_mute * 7919u +
                (uint32_t)drum_track(TSEL) * 11u + up_gen * 101u;

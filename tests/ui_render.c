@@ -569,7 +569,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
-       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_HARP, S_KEY_HARP2, S_KEY_HARP3, S_KEY_OMNI, S_KEY_PROG, S_EDIT_GUITAR, S_EDIT_ELEC, S_EDIT_ACID, S_EDIT_NOISE, S_EDIT_DRIFT, S_SCL_PLAY, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_LY_FX_MAP, S_LY_FX_STATE, S_LY_REC_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK, S_REC_LAYER_LOOP,
+       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_HARP, S_KEY_HARP2, S_KEY_HARP3, S_KEY_OMNI, S_KEY_PROG, S_EDIT_GUITAR, S_EDIT_ELEC, S_EDIT_ACID, S_EDIT_NOISE, S_EDIT_DRIFT, S_SCL_PLAY, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_LY_FX_MAP, S_LY_FX_STATE, S_LY_REC_STATE, S_LY_SAVE_MAP, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK, S_REC_LAYER_LOOP,
        S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_CHORD, S_ROLL_CHORD, S_GEN_EXPLORE,
        S_VX_HEAD_VOWEL,
        S_VX_HEAD_HOME, S_VX_HEAD_QUIET, S_VX_BIRD, S_VX_CMOS, S_VX_INSECT, S_VX_WING, S_VX_MAMMAL, S_VX_MORPH_IB, S_VX_MORPH_BM,
@@ -605,7 +605,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "fx_effect_slicer", "fx_effect_master",
     "home_macros", "home_being", "home_routes", "gen_lead",
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
-    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_harp", "key_harp2", "key_harp3", "key_omni", "key_prog", "edit_guitar", "edit_elec", "edit_acid", "edit_noise", "edit_drift", "scl_play", "key_arp", "key_arp2", "glo_sends", "ly_fx_map", "ly_fx_state", "ly_rec_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "rec_layer_loop",
+    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_harp", "key_harp2", "key_harp3", "key_omni", "key_prog", "edit_guitar", "edit_elec", "edit_acid", "edit_noise", "edit_drift", "scl_play", "key_arp", "key_arp2", "glo_sends", "ly_fx_map", "ly_fx_state", "ly_rec_state", "ly_save_map", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back", "rec_layer_loop",
     "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_chord", "roll_chord", "gen_explore",
     "vx_head_vowel",
     "vx_head_home", "vx_head_quiet", "vx_bird", "vx_cmos", "vx_insect", "vx_wing", "vx_mammal", "vx_morph_insect_bird", "vx_morph_bird_mammal",
@@ -916,10 +916,10 @@ static void setup(int s)
     case S_MESSAGE_NOFILE: ui_message(MSG_NOFILE "NO FILE"); break;   /* a message led by the no-file icon */
     case S_PRESETS: favorite_set(0, 4, 1); favorite_set(0, 5, 1); go_page(GR_BROWSE); break;
     case S_PRESETS_NOFAV: favorites.filter = 1; go_page(GR_BROWSE); break;
-    case S_USER: song.playing = 0; up_store(3, "MY LONG BASS NAME"); up_store(4, "PAD"); ui.uslot = 3; go_page(GR_USER); break;
+    case S_USER: song.playing = 0; up_store(3, "MY LONG BASS NAME"); up_store(4, "PAD"); ui.uslot = 3; go_page(GR_SLOTS); break;
     case S_PHRASES: go_page(GR_PATS); break;
     case S_PROJECT: song.playing = 0; project_save(1); song.g[G_SLOT] = 2; go_page(GR_SLOTS); ui.act = 4; break;
-    case S_TOOLS: go_page(GR_TOOLS); ui.act = 1; break;
+    case S_TOOLS: go_page(GR_SEDIT); break;
     case S_SONG_EMPTY: song.playing = 0; go_page(GR_SONG); break;
     case S_SONG:
         song.playing = 0; project_save(0); project_save(1);
@@ -1084,6 +1084,7 @@ static void setup(int s)
         perf_k[0] = -40; perf_k[1] = 25; perf_k[3] = 30;
         break;
     case S_LY_REC_STATE: go_home(); ui.layer = LAYER_REC; undo_ok = 1; ui.lylv = 1; break;
+    case S_LY_SAVE_MAP: go_home(); ui.layer = LAYER_SAVE; ui.lylv = 0; chain_config.count = 2; chain_config.row[0] = (chain_row_t){0, 2}; break;
     case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS (2026-11-02: HOME's) */
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
         go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;
@@ -1332,9 +1333,9 @@ static void setup(int s)
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
      * (the placeholder); 12 of the widest letters, the cursor past them; playing (OCT+ dim) */
-    case S_NAME_USER: song.playing = 0; go_page(GR_USER); ui.uslot = 6; name_open(NK_USER_SAVE, 6); break;
+    case S_NAME_USER: song.playing = 0; go_page(GR_SLOTS); ui.uslot = 6; name_open(NK_USER_SAVE, 6); break;
     case S_NAME_TYPING:
-        song.playing = 0; go_page(GR_USER); name_open(NK_USER_SAVE, 6);
+        song.playing = 0; go_page(GR_SLOTS); name_open(NK_USER_SAVE, 6);
         str_cpy(nm.s, "SUB BAS", sizeof nm.s); nm.len = 7; nm.cur = 6; nm.key = 9; nm.tap = 1; nm.t = fm1_ms;
         break;
     case S_NAME_123:
@@ -1343,10 +1344,10 @@ static void setup(int s)
         break;
     case S_NAME_EMPTY: song.playing = 0; go_page(GR_SLOTS); proj_name[0] = 0; name_open(NK_PROJ_SAVE, 2); break;
     case S_NAME_FULL:
-        song.playing = 0; up_store(4, "PAD"); go_page(GR_USER); name_open(NK_USER_RENAME, 4);
+        song.playing = 0; up_store(4, "PAD"); go_page(GR_SLOTS); name_open(NK_USER_RENAME, 4);
         str_cpy(nm.s, "MWMWMWMWMWMW", sizeof nm.s); nm.len = nm.cur = 12;
         break;
-    case S_NAME_PLAYING: go_page(GR_USER); name_open(NK_USER_SAVE, 6); ui_message("STOP TO SAVE"); break;
+    case S_NAME_PLAYING: go_page(GR_SLOTS); name_open(NK_USER_SAVE, 6); ui_message("STOP TO SAVE"); break;
     case S_PROJECT_NAMED:
         song.playing = 0; project_save_as(0, "LOFI JAM"); project_save_as(1, "MWMWMWMWMWMW"); project_save_as(2, "");
         song.g[G_SLOT] = 2; go_page(GR_SLOTS); ui.act = 4; ui.msg_t = 0;
@@ -1410,7 +1411,7 @@ static void setup(int s)
         go_page(GR_EVENTS); ui.ev_row = 13; song.playing = 1;
         break;
     }
-    case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
+    case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_SLOTS); break;   /* EDIT NAME lit */
     /* (0.8.5) FX's lens as the mock-up's values: T1's sends DIST 0 CHORUS 0 DLY 0 REV 10 (sends: 30 60 40 50 to show
      * them), DIST SOFT, AUTO PAN 40 SIN; DLY 1/8 FDBK 70 MIX 50, REVERB ROOM SIZE 70, CHORUS DEPTH 64, SLICER GATE PAT 3
      * DEPTH 90, CLIP 30 PUNCH 40 DUCK 20 REL 60 */
@@ -1448,11 +1449,11 @@ static void setup(int s)
         for (k = 0; k < 7u; k++) { eng(UE[k]); up_store(UK[k], UN[k]); }
         eng(e0);
         ui.uslot = 0; ui.song_row = 0; ui.msg_t = 0; ui.frame += 7u;   /* (the sections' cache read again) */
-        if (s == S_SAVE_LIB) { nav_scene(SEC_SAVE, "PROJECTS"); ui.act = 4; }
-        else if (s == S_SAVE_TOOLS) { nav_scene(SEC_SAVE, "TOOLS"); ui.act = 1; }
-        else if (s == S_SAVE_PROJ) { nav_scene(SEC_SAVE, "SECTIONS"); ui.act = 4; }
-        else if (s == S_SAVE_ARR) nav_scene(SEC_SAVE, "ARRANGE");
-        else if (s == S_SAVE_SOUND) { nav_scene(SEC_SAVE, "USER"); ui.act = 4; }
+        if (s == S_SAVE_LIB) { nav_scene(SEC_SAVE, "PROJECT"); ui.act = 4; }
+        else if (s == S_SAVE_TOOLS) { nav_scene(SEC_SAVE, "TRIM"); ui.song_row = 2; ui.sed_trk = 1; song_idx.scene[song_cur][2].cut[1][0] = 8; song_idx.scene[song_cur][2].cut[1][1] = 4; song_idx.scene[song_cur][0].cut[0][1] = 5; }
+        else if (s == S_SAVE_PROJ) { nav_scene(SEC_SAVE, "PROJECT"); ui.act = 4; }
+        else if (s == S_SAVE_ARR) nav_scene(SEC_SAVE, "STRUCT");
+        else if (s == S_SAVE_SOUND) { nav_scene(SEC_SAVE, "PROJECT"); ui.act = 4; }
         else if (s == S_SAVE_MORPH || s == S_SAVE_MORPH_OFF) {   /* (chord-harp fork) MORPH: TRACK A | B, the divider at BLEND */
             eng(ENGI_ANALOG);
             song.g[G_BLA] = 1;
@@ -1912,7 +1913,7 @@ static void align_sweeps(void)
         cin_total = cin_left = 0;
         state(); pal(UI_DEFAULT_INDEX);
         cur_name = st ? "sweep LINE: NAME" : "sweep FLAT: NAME";
-        song.playing = 0; go_page(GR_USER); name_open(NK_USER_SAVE, 6);
+        song.playing = 0; go_page(GR_SLOTS); name_open(NK_USER_SAVE, 6);
         for (k = 0; k < 2u; k++) {                       /* ABC, 123: every key cycling, every letter typed next */
             nm.num = (uint8_t)k;
             for (i = 0; i <= 16u; i++) {
