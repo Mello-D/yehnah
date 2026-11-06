@@ -5990,10 +5990,14 @@ static int test_erase(void)
     song.playing = 0;
     return bad;
 }
+#define XS (FELUCCA_FXSCENE ? 1 : 0)                     /* (2026-11-06: FX > SCENE, SAVE > USER FX are in the build or not) */
 static int test_save_lens(void)
 {
-    static const char *const CH[7] = {"PROJECTS", "TOOLS", "ERASE", "USER", "USER FX", "SECTIONS", "ARRANGE"};   /* (2026-11-02:
-                                                         * PRESETS, MORPH HOME's; PROJECTS first; USER FX after USER) */
+    static const char *const CH[7] = {"PROJECTS", "TOOLS", "ERASE", "USER",
+#if FELUCCA_FXSCENE
+                                      "USER FX",
+#endif
+                                      "SECTIONS", "ARRANGE"};   /* (2026-11-02: PRESETS, MORPH HOME's; PROJECTS first; USER FX after USER) */
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
@@ -6001,15 +6005,15 @@ static int test_save_lens(void)
     press(B_SAVE); frame();
     ok = save_on() && save_level() == SV_LIB && cur_page()->graph == GR_SLOTS && ui.act == 0u && lz_on() &&
          card_y() == TF_KN_Y && graph_y() == TF_SC_Y && pg_row() && lz_tab_lit(2) &&
-         lz_crumb_is("SAVE \xB7 PROJECTS") && lz_count_is("1/7");
-    bad += check("SAVE from HOME at power-on: PROJECTS, nothing armed; the page row (PROJECTS lit), the crumb, 1/7", ok);
+         lz_crumb_is("SAVE \xB7 PROJECTS") && lz_count_is(XS ? "1/7" : "1/6");
+    bad += check("SAVE from HOME at power-on: PROJECTS, nothing armed; the page row (PROJECTS lit), the crumb, 1/7 (1/6 without USER FX)", ok);
     bad += check("SAVE: one chain PROJECTS TOOLS USER USER FX SECTIONS ARRANGE; a SAVE tap on it TRACKS",
-                 chain_walk(B_SAVE, CH, 7));
+                 chain_walk(B_SAVE, CH, 6 + XS));
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
-    turn(EN_SELECT, 6); frame();                                             /* ARRANGE, left there */
+    turn(EN_SELECT, 5 + XS); frame();                                         /* ARRANGE, left there */
     go_home(); frame(); press(B_SAVE); frame();
     ok = cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u;   /* (its first, PROJECTS) */
-    turn(EN_SELECT, 5); frame();
+    turn(EN_SELECT, 4 + XS); frame();
     ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_PROJ && ui.act == 0u && lz_crumb_is("SAVE \xB7 SECTIONS");
     turn(EN_SELECT, 2); frame();
     ok &= cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u && lz_crumb_is("SAVE \xB7 PROJECTS");
@@ -6778,24 +6782,28 @@ static int test_scl_alltr(void)
  * SENDS. (Was 0.8.5's lens: SELECT TRACK <-> BUSES <-> EFFECT, PRESETS the module, the FX tap the level's next) */
 static int test_fx_sections(void)
 {
-    static const char *const CH[18] = {"SENDS", "DIST", "AUTO PAN", "PHASER", "BUSES", "SCENE", "DELAY", "DELAY 2", "DELAY 3", "REVERB", "REVERB 2",
+    static const char *const CH[18] = {"SENDS", "DIST", "AUTO PAN", "PHASER", "BUSES",
+#if FELUCCA_FXSCENE
+                                       "SCENE",
+#endif
+                                       "DELAY", "DELAY 2", "DELAY 3", "REVERB", "REVERB 2",
                                        "CHORUS", "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "MASTER", "PUNCH"};
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
     bad += check("0.9.2 FX: one chain of 18 (TRK BUS DLY REV CHO SLC MST PCH; 2026-11-02: SCENE) by SELECT, round; an FX tap on it TRACKS",
-                 chain_walk(B_FX, CH, 18));
+                 chain_walk(B_FX, CH, 17 + XS));
     ui_power_on(); go_home(); frame(); press(B_FX); frame();
     ok = fx_on() && fx_level() == FXL_TRACK && lz_on() && card_y() == TF_KN_Y && lz_tabs() == 8u && lz_tab_lit(0) &&
-         lz_crumb_is("FX \xB7 SENDS") && lz_count_is("1/18");
+         lz_crumb_is("FX \xB7 SENDS") && lz_count_is(XS ? "1/18" : "1/17");
     turn(EN_SELECT, 4); frame();
     ok &= fx_level() == FXL_BUSES && cur_page()->graph == GR_BUSES && lz_tab_lit(1) && lz_crumb_is("FX \xB7 BUSES");
     ok &= cur_page()->id[0] == G_DMIX && cur_page()->id[1] == G_RSIZE && cur_page()->id[2] == G_CDEPTH && cur_page()->id[3] == G_SLDEP;
     song.g[G_RSIZE] = 50; turn(EN_K2, 3); frame();
     ok &= song.g[G_RSIZE] > 50;
-    turn(EN_SELECT, 3); frame();                        /* (SCENE, DLY, DLY 2) */
+    turn(EN_SELECT, 2 + XS); frame();                    /* ([SCENE,] DLY, DLY 2) */
     ok &= fx_level() == FXL_EFFECT && str_eq(cur_page()->title, "DLY 2") && lz_tab_lit(2) &&
-          lz_crumb_is("FX \xB7 DELAY 2") && lz_count_is("8/18") && ui.fxmod == 0u;
+          lz_crumb_is("FX \xB7 DELAY 2") && lz_count_is(XS ? "8/18" : "7/17") && ui.fxmod == 0u;
     ok &= str_eq(pg_short("DELAY 2"), "DELAY2") && str_eq(pg_short("SL PITCH"), "SL PCH") &&   /* (the page row's */
           str_eq(pg_short("REVERB"), "REVERB");         /* short forms, 2026-11-02) */
     {                                                   /* (every page's name bold in the middle pill, 3 px each side) */
@@ -6818,12 +6826,12 @@ static int test_fx_sections(void)
     go_home(); frame();
     press(B_FX); frame();
     ok = str_eq(nav_name(), "SENDS") && fx_level() == FXL_TRACK;
-    turn(EN_SELECT, 9); frame();
+    turn(EN_SELECT, 8 + XS); frame();
     ok &= str_eq(cur_page()->title, "REVERB") && fx_level() == FXL_EFFECT;
     ui_load = LOAD_ECO; frame();                                   /* LOAD ECO: no CHORUS, no SLICER */
     turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "REVERB 2");
     turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "MASTER");   /* (CHORUS, SLICER skipped) */
-    ok &= lz_tabs() == 6u && lz_count_is("12/13");
+    ok &= lz_tabs() == 6u && lz_count_is(XS ? "12/13" : "11/12");
     turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "PUNCH");
     ui_load = LOAD_FULL; frame();
     bad += check("0.9.2 FX: from elsewhere SENDS; LOAD ECO: CHORUS and SLICER out of the chain and the tabs", ok);
@@ -6833,6 +6841,7 @@ static int test_fx_sections(void)
 
 /* (2026-11-02) FX scenes: GLO > FX's SCENE loads a whole reverb + delay setting as it turns; a user preset stores SAVE >
  * USER FX's scene and brings it back with the sound; a preset with none leaves the bus as it is */
+#if FELUCCA_FXSCENE
 static int test_fx_scenes(void)
 {
     int bad = 0, ok;
@@ -6864,6 +6873,7 @@ static int test_fx_scenes(void)
     ui_power_on();
     return bad;
 }
+#endif
 
 /* HOME + SELECT: IDEAS (chord-harp fork; was Yehnah's GEN), OCT- out. Yehnah's GEN (the host's tests and tools, not
  * the firmware): everything diced (one musical scale, a sequence on every track, DRUM a beat); REC + D4: UNDO puts the
@@ -7029,7 +7039,8 @@ static int test_project_page(void)
     int bad = 0, ok;
     uint32_t k;
     ui_power_on();
-    if (song_cur) (void)song_select(0);
+    (void)song_select(1); project_erase_all();          /* (2026-11-06: project 2 empty whatever an earlier test, or its autosave's timing, left) */
+    (void)song_select(0);
     sl_steps(60); project_save(0);                      /* project 1, A: notes 60.. */
     chain_config.count = 2;                             /* .. its song: A 4 > B 8 */
     chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
@@ -10574,7 +10585,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {5, 6, 9, 6, 5, 11, 11, 2, 6, 1, 5, 10, 12, 4};   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 5, 11, 11, 2, 6, 1, 5, 10, 12, 4};   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10594,7 +10605,7 @@ static int test_nav_tasks(void)
             ok = cur_page()->graph == GR_BUSES && song.g[G_RSIZE] != v;
             break;
         case 2:                                         /* DLY 2's MOD */
-            tk_start(0); tk_btn(B_FX); tk_go(EN_SELECT, 7);   /* (2026-11-02: SCENE before DLY) */
+            tk_start(0); tk_btn(B_FX); tk_go(EN_SELECT, 6 + XS);   /* (2026-11-02: SCENE before DLY) */
             v = song.g[G_DMOD]; tk_val(EN_K4, 6);
             ok = str_eq(cur_page()->title, "DLY 2") && song.g[G_DMOD] != v;
             break;
@@ -10659,7 +10670,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (93 since ERASE joined SAVE's chain; 0.9.2's taps: 75)", okall && tot == 93u);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (93 since ERASE joined SAVE's chain; 0.9.2's taps: 75)", okall && tot == 92u + XS);
     ui_power_on();
     return bad;
 }
@@ -11138,7 +11149,9 @@ int main(void)
     bad += test_step_len();
     bad += test_chord_glide();
     bad += test_fx_sections();
+#if FELUCCA_FXSCENE
     bad += test_fx_scenes();
+#endif
     bad += test_scl_alltr();
     bad += test_clear_ghosts();
     bad += test_dx_sound();

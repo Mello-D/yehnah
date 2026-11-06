@@ -1412,12 +1412,14 @@ static void edit_param(uint32_t slot, int32_t steps)
         settings_save();
         return;
     }
+#if FELUCCA_FXSCENE
     if (vp == &scene_ui) {                              /* (chord-harp fork) GLO > FX > SCENE: loaded as it turns */
         fx_scene((uint32_t)v);
         if (v)
             ui_message(N_SCENE[v]);
         return;
     }
+#endif
     if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
         load_put(v);
         ui_message(v == 2 ? "LOAD FULL: ALL FX" : v ? "LOAD LITE: LIGHTER FX" : "LOAD ECO: NO SLICER/CHORUS");

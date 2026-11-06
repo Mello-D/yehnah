@@ -70,7 +70,10 @@ static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR)
 enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
 static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, FXL_TRACK), NV("AUTO PAN", 0, 0, FXL_TRACK),
                              NV("PHASER", 0, 0, FXL_TRACK),   /* (chord-harp fork) */
-                             NV("BUSES", 0, 1, FXL_BUSES), NV("SCENE", 0, 1, FXL_BUSES),   /* (2026-11-02: the FX scenes) */
+                             NV("BUSES", 0, 1, FXL_BUSES),
+#if FELUCCA_FXSCENE
+                             NV("SCENE", 0, 1, FXL_BUSES),   /* (2026-11-02: the FX scenes) */
+#endif
                              NV("DLY", "DELAY", 2, FXL_EFFECT), NV("DLY 2", "DELAY 2", 2, FXL_EFFECT),
                              NV("DLY 3", "DELAY 3", 2, FXL_EFFECT), NV("REVERB", 0, 3, FXL_EFFECT), NV("REVERB 2", 0, 3, FXL_EFFECT),
                              NV("CHORUS", 0, 4, FXL_EFFECT), NV("SLICER", 0, 5, FXL_EFFECT), NV("SL BUS", 0, 5, FXL_EFFECT),
@@ -95,7 +98,10 @@ static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2), NV("ARP 
 };
 static const nv_t CE_SAVE[] = {NV("PROJECT", "PROJECTS", 2, SV_LIB), NV("TOOLS", 0, 2, SV_LIB), NV("ERASE", 0, 2, SV_LIB),   /* (2026-11-02: PRESETS,
                                                          * MORPH to HOME; PROJECTS first) */
-                               NV("USER", 0, 0, SV_SOUND), NV("USER FX", 0, 0, SV_SOUND),   /* (2026-11-02) */
+                               NV("USER", 0, 0, SV_SOUND),
+#if FELUCCA_FXSCENE
+                               NV("USER FX", 0, 0, SV_SOUND),   /* (2026-11-02) */
+#endif
                                NV("PROJECT", "SECTIONS", 1, SV_PROJ), NV("ARRANGE", 0, 1, SV_PROJ)};
 #define CH(e, ng) {e, (uint8_t)NELEM(e)}
 /* (chord-harp fork) a chain's pages, at most NAV_MAX (nav_list's buffers): FX's 17th page (PHASER) overran a 16-byte

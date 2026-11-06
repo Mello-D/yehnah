@@ -379,7 +379,9 @@ static int up_store(uint32_t k, const char *name)
     r.engine = TSEL->eng_req;
     r.np = P_COUNT;
     r.packed[UP_FM_AT] = UP_V04_MARK;
+#if FELUCCA_FXSCENE
     r.packed[UP_FX_AT] = (uint8_t)clamp(ufx_ui, 0, (int32_t)N_SCENES);   /* (SAVE > USER FX) */
+#endif
     up_set_name(&r, k, name);
     for (i = 0; i < P_COUNT; i++)                       /* (chord-harp fork: each in its byte's range; P_CTABS, past it, is
                                                          * the track's, never loaded: ui.c param_kept) */
@@ -449,8 +451,10 @@ static int up_load(uint32_t k)
     }
     t->user = (uint8_t)(k + 1u);
     load_end(t);
+#if FELUCCA_FXSCENE
     if (r->ver >= 4u)                                   /* (chord-harp fork) its FX scene, if it has one: the bus */
         fx_scene(r->packed[UP_FX_AT]);
+#endif
     sync_reload = 1;
     ui.force = 1;
     return 0;

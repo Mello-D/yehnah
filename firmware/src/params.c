@@ -618,6 +618,8 @@ enum { MI_COLOR, MI_LEDS, MI_SCROFF, MI_FILL, MI_HOLD, MI_ACCEL, MI_LATCH, MI_SC
 static const char *const N_LOAD[] = {"ECO", "LITE", "FULL"};
 static const param_desc_t LOAD_DESC = PE("LOAD", N_LOAD, 2);
 static int16_t load_ui;
+static uint8_t rev_rt0 = 0xFFu;                         /* (the reverb model ui_input_frame last saw) */
+#if FELUCCA_FXSCENE
 /* (chord-harp fork, 2026-11-02) FX scenes: the reverb and delay are one bus each, so a sound can't have its own; a
  * scene is a whole setting of both (ui_input.c FX_SCENE), loaded at once. GLO > FX's SCENE loads one as it turns
  * (scene_ui: the last loaded, "--" none); a user preset may carry one (SAVE > USER FX, ufx_ui: what SAVE stores,
@@ -631,7 +633,6 @@ static const param_desc_t UFX_DESC = PE("FX", N_SCENE, 0);
 static int16_t scene_ui, ufx_ui;
 /* (chord-harp fork, 2026-11-02) the FX scenes (N_SCENE): the reverb's TYPE SIZE DAMP PRE MOD RATE FILT WIDE,
  * the delay's TIME FEEDBK TONE MIX PITCH SPRAY MOD TYPE PING. A scene sets the whole bus at once (every track hears it) */
-static uint8_t rev_rt0 = 0xFFu;                         /* (the reverb model ui_input_frame last saw) */
 static const uint8_t FX_SCENE_ID[17] = {G_RTYPE, G_RSIZE, G_RDAMP, G_RPRE, G_RMOD, G_RRATE, G_RFILT, G_RWIDE,
                                         G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX, G_DPIT, G_DSPRY, G_DMOD, G_DTYPE, G_DPING};
 static const int8_t FX_SCENE[N_SCENES][17] = {
@@ -655,6 +656,7 @@ static void fx_scene(uint32_t n)                        /* 1..N_SCENES (0: none,
     rev_rt0 = (uint8_t)song.g[G_RTYPE];                 /* (the scene's PRE / AIR, DAMP as set: not the model change's) */
     scene_ui = ufx_ui = (int16_t)n;
 }
+#endif /* FELUCCA_FXSCENE */
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* 0.4: LOOP */
@@ -670,7 +672,9 @@ static const page_t PAGES[] = {
     {"AUTO PAN", FAM_FX, SC_TRACK, GR_NONE, {P_APDEP, P_APRATE, P_APSYNC, P_APWAVE}},   /* (0.6.9) the track's pan swung */
     {"PHASER", FAM_FX, SC_TRACK, GR_NONE, {P_PHAMT, P_PHRATE, P_PHFB, 0xFF}},   /* (chord-harp fork) on the part's sum */
     {"BUSES", FAM_FX, SC_GLOBAL, GR_BUSES, {G_DMIX, G_RSIZE, G_CDEPTH, G_SLDEP}},   /* (0.8.5) FX's lens: the buses' main values */
+#if FELUCCA_FXSCENE
     {"SCENE", FAM_FX, SC_GLOBAL, GR_NONE, {G_SCENEP, 0xFF, 0xFF, 0xFF}},   /* (chord-harp fork) the buses' FX scenes */
+#endif
     {"DLY", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX}},
     {"DLY 2", FAM_FX, SC_GLOBAL, GR_NONE, {G_WIDTH, G_DPIT, G_DSPRY, G_DMOD}},
     {"DLY 3", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTYPE, G_DPING, 0xFF, 0xFF}},   /* (0.6.90) ANALOG / DIGITAL, PING-PONG */   /* Yehnah: width, the grains (0.4: the low cut
@@ -734,7 +738,9 @@ static const page_t PAGES[] = {
                                                          * a YES / NO dialog) */
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
+#if FELUCCA_FXSCENE
     {"USER FX", FAM_SAVE, SC_GLOBAL, GR_NONE, {G_UFXP, 0xFF, 0xFF, 0xFF}},  /* (chord-harp fork) the FX scene SAVE stores */
+#endif
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
     {"ARRANGE", FAM_SAVE, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.12) the project's song (SEQ > SONG) */
     {"TOOLS", FAM_SAVE, SC_GLOBAL, GR_TOOLS, {G_CLRSEQ, G_INITSND, 0xFF, 0xFF}},
@@ -830,10 +836,12 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         *valp = &load_ui;
         return &LOAD_DESC;
     }
+#if FELUCCA_FXSCENE
     if (id == G_SCENEP || id == G_UFXP) {             /* (chord-harp fork) FX scenes: not song globals */
         *valp = id == G_SCENEP ? &scene_ui : &ufx_ui;
         return id == G_SCENEP ? &SCENE_DESC : &UFX_DESC;
     }
+#endif
     if (pg->scope == SC_STEP || pg->scope == SC_TRK) {
         *valp = 0;
         return 0;

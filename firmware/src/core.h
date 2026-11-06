@@ -20,6 +20,10 @@
                                   * tests and tools (dice_all); 0 (tools/build.py's default): not built. Its screen is gone:
                                   * HOME's last group is IDEAS (ideas.c) either way */
 #endif
+#ifndef FELUCCA_FXSCENE
+#define FELUCCA_FXSCENE 0       /* (2026-11-06) 1: FX > SCENE and SAVE > USER FX (the FX scenes, params.c) are in the build; 0: both pages are
+                                 * gone, a user preset stores no scene (its byte stays 0) and loads none */
+#endif
 #ifndef FELUCCA_AMBIENT
 #define FELUCCA_AMBIENT 0       /* (chord-harp fork, 2026-11-05) 1: ARP > AMBIENT (amb.c) is in the build: its page, its keys' pool, its
                                  * tick. 0 (now): out; the params P_AMB..P_ASPC stay (numbering stable, all OFF), the code stays in the tree */
