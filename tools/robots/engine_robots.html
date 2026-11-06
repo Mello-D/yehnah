@@ -1,0 +1,182 @@
+<title>Engine Robots</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Silkscreen&display=swap">
+<style>
+/* Layout: one dark column like the device's screen; HOME first, then the twenty robots as a grid of small screens. */
+:root {
+  --bg: #100e19;
+  --panel: #19162a;
+  --line: #2c2742;
+  --fg: #e8e3f3;
+  --muted: #9a93b3;
+  --accent: #ffcf80;
+  --display: "Silkscreen", "IBM Plex Mono", monospace;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 400; letter-spacing: .02em; text-wrap: balance; margin: 0; }
+h1 { font-size: 30px; color: var(--accent); }
+h2 { font-size: 18px; }
+p { margin: 0; max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.stage { display: grid; grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+#screen { width: 100%; max-width: 480px; aspect-ratio: 240 / 142; image-rendering: pixelated; border-radius: 4px; outline: 6px solid #07060c; display: block; }
+.controls { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button, .play { font: 500 13px var(--mono); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+input[type=range] { width: 100%; max-width: 260px; accent-color: var(--accent); }
+.legend { font-family: var(--mono); font-size: 12px; color: var(--muted); display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+.legend b { color: var(--fg); font-weight: 500; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.bot { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 6px; align-items: center; cursor: pointer; color: var(--fg); font: inherit; text-align: center; }
+.bot:hover { border-color: #4a4268; }
+.bot[aria-current="true"] { border-color: var(--accent); }
+.bot canvas { width: 96px; height: 108px; image-rendering: pixelated; }
+.bot b { font-family: var(--mono); font-weight: 500; font-size: 13px; letter-spacing: .04em; }
+.bot span { font-size: 12px; color: var(--muted); line-height: 1.35; }
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <h1>Engine Robots</h1>
+    <p>HOME shows the selected track's robot walking a city street at dusk and by night (the device's firmware/src/ui_road.c, ported), its 16 steps the road's centre-line dashes. All twenty robots are below; click one to put it on the selected track.</p>
+  </header>
+
+  <section>
+    <h2>HOME's street</h2>
+    <div class="stage">
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <canvas id="screen" width="240" height="142"></canvas>
+        <span class="tag" id="cap">Track 1 &middot; ANALOG</span>
+      </div>
+      <div class="controls">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span class="tag">Selected track</span>
+          <div class="seg" id="sel"></div>
+        </div>
+        <button type="button" class="play" id="play" style="align-self:flex-start">Pause</button>
+        <div class="legend">
+          <b>Dance</b><span>a new move on every beat, picked at random from sixteen: arms down, out, up, waving, on the hips or pointing; leaning, nodding, a side step, a foot up, knees bent or bent wide. On the off-beat it dips at the knees.</span>
+          <b>Sound</b><span>it hops and lights up on its notes, and its chest moves with the sound (the record spins, the tape turns, the drawbars rise, the static fizzes...).</span>
+          <b>Scene</b><span>the street goes by a pixel a 1/16 (EAT, SLEEP, the club's PARTY and its visualiser, REPEAT), the towers behind at a half and a quarter of its speed; dusk turns to night and back; the neon pulses on the beat; the wet road mirrors it all. On a note, one time in ten, the robot slides to another of five places; back to the middle when its notes stop.</span>
+          <b>Steps</b><span>the selected track's 16 steps on the road's centre line, moving with it: a note in its robot's colour, an empty step white, the first step in the accent, the playhead bright white.</span>
+          <b>Cost</b><span>each robot stored in parts (head, body, arm, leg, foot), ~150&ndash;300 B compressed; the moves are a few bytes each.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The twenty</h2>
+    <div class="gallery" id="gallery"></div>
+  </section>
+</div>
+
+<script src="../../web/road/road.js"></script>
+<script>
+(() => {
+// the robots and HOME's street: web/road/road.js (shared with the big FM-1's page); here a demo of HOME and the gallery
+const { ROBOTS, POSES, robot, lit, put, poseAt, hsh, fr, N, tnt, RD_SLIDE } = Road;
+const fl = Math.floor;
+const scr = document.getElementById('screen'), sx = scr.getContext('2d'), img = sx.createImageData(240, 142);
+const ACCENT = 0xff71ce, BG = 0x140628;                 // VAP DK, the default palette
+const put32 = (x, y, c) => { if (x < 0 || y < 0 || x >= 240 || y >= 142) return; const i = (y * 240 + x) * 4; img.data[i] = c >> 16 & 255; img.data[i + 1] = c >> 8 & 255; img.data[i + 2] = c & 255; img.data[i + 3] = 255; };
+
+let sel = 0, playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, step = 0, last = 0, t = 0, bp = 0;
+const PATS = ['x..x..x...x.x...', 'x...x...x...x...', 'xx.x.xx.x.xxx.x.', '..x...x...x...xx', 'x.......x.....x.', '....x.......x...'];
+const tracks = [0, 6, 13, 9, 1, 4].map((e, i) => ({ eng: e, pat: [...PATS[i]].map(c => c === 'x'), hit: 0, level: 0, note: i, blink: false }));
+const mv = { from: 0, to: 0, ms: -1e9, last: -1e9 };     // the slide (a dance move, a note in 10): between RD_SLIDE's places
+
+function drawHome() {
+  const way = 135 + fl(t / 125), now = fl(t), tr = tracks[sel];   // a pixel a 1/16 at 120 BPM, from dusk by the club
+  // it slides between five places on its notes, back to the middle 1.2 s after; no notes: it walks (a foot up each 1/8)
+  const e = t - mv.ms, mo = e < 240 ? mv.from + fl((mv.to - mv.from) * e / 240) : mv.to;
+  if (e >= 240 && mv.to && t - mv.last >= 1200) { mv.from = mo; mv.to = 0; mv.ms = t; }
+  const beat = fl(t / 500), f = fr(t / 500), P = poseAt(beat, sel * 13 + tr.eng), dancing = t - mv.last < 1200;
+  const walk = dancing ? 0 : 1 + (fl(way / 2) & 3), pose = dancing ? POSES.indexOf(P) : 0;
+  const dip = walk ? walk & 1 : !P.squat && f > .5 && f < .72 ? 1 : 0;
+  const sk = tr.pat.map((on, s) => { const k = playing && s === step % 16 ? 3 : on ? 2 : 1; return s === 0 && k < 3 ? k + 4 : k; });
+  const robots = [{ ri: tr.eng, cx: 120 + mo + (POSES[pose].shift || 0) * 3, fy: 134, sc: 3,
+                    s: { t, hit: tr.hit, level: tr.level, note: tr.note, ang: t * (.004 + tr.level * .01), blink: tr.blink, pose, dip, walk } }];
+  Road.frame(put32, { way, now, bp, dy: 0, sh: 142, pulse: bp > .3 || (!playing && fl(now / 250) % 4 === 0),
+                      vm: (playing ? fl(now / 500 / 16) : fl(now / 8000)) % 3, lv: tracks.map(r => r.level * 256), face: 1, n: 16, sk,
+                      stc: [0xb4b2c0, N(ROBOTS[tr.eng].ac[3]), 0xffffff, 0xff3040, tnt(BG, ACCENT, .75), ACCENT], robots });
+  sx.putImageData(img, 0, 0);
+}
+function onNote(i) {                                    // a note of the selected track's: one in 10 a slide
+  if (i !== sel) return;
+  mv.last = t;
+  if (t - mv.ms >= 240 && hsh(step * 7 + 3) % 10 === 0) {
+    const e = t - mv.ms, mo = e < 240 ? mv.from + fl((mv.to - mv.from) * e / 240) : mv.to;
+    let j = RD_SLIDE.indexOf(mv.to);
+    mv.from = mo; mv.to = RD_SLIDE[(j + 1 + hsh(step) % 4) % 5]; mv.ms = t;
+  }
+}
+
+// ---- the gallery: each robot dancing on its own
+const gal = document.getElementById('gallery');
+const gcs = ROBOTS.map((r, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'bot'; b.id = 'bot-' + i;
+  b.innerHTML = `<canvas width="32" height="36"></canvas><b>${r.name}</b><span>${r.about}</span>`;
+  b.addEventListener('click', () => { tracks[sel].eng = i; selButtons(); });
+  gal.appendChild(b);
+  const x = b.querySelector('canvas').getContext('2d');
+  return { b, x, im: x.createImageData(32, 36), hit: 0, level: 0 };
+});
+function drawGallery() {
+  const beat = Math.floor(t / 500), f = fr(t / 500);
+  gcs.forEach((g, i) => {
+    for (let y = 0; y < 36; y++) for (let x = 0; x < 32; x++) put(g.im, 32, x, y, y > 33 ? '#1a1628' : y === 33 ? '#2e2840' : '#120f20');
+    const P = poseAt(beat, i * 7 + 1), dip = !P.squat && f > .5 && f < .72 ? 1 : 0;
+    const L = robot(ROBOTS[i], { t: t + i * 170, hit: g.hit, level: g.level, note: (beat + i) % 11, ang: t * (.004 + g.level * .01), blink: (beat + i) % 13 === 0 && f < .2, pose: P, dip });
+    const oy = 1 - Math.round(g.hit * 1.5);
+    for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const c = lit(L, x, y); if (c) put(g.im, 32, x + 1 + (P.shift || 0), y + oy, c); }
+    g.x.putImageData(g.im, 0, 0);
+  });
+}
+
+function tick(now) {
+  const dt = Math.min(50, now - (last || now)); last = now;
+  if (playing) {
+    t += dt;
+    const s = Math.floor(t / 125);
+    if (s !== step) {
+      step = s;
+      tracks.forEach((tr, i) => {
+        if (tr.pat[step % 16]) { tr.hit = 1; tr.level = 1; tr.note = (tr.note * 7 + 3 + i) % 11; onNote(i); }
+        tr.blink = (step + i * 5) % 29 === 0;
+      });
+      gcs.forEach((g, i) => { if (hsh(step * 41 + i) % 4 === 0) { g.hit = 1; g.level = 1; } });
+      if (step % 4 === 0) bp = 1;
+    }
+    for (const tr of tracks) { tr.hit = Math.max(0, tr.hit - dt / 180); tr.level = Math.max(0, tr.level - dt / 600); }
+    for (const g of gcs) { g.hit = Math.max(0, g.hit - dt / 180); g.level = Math.max(0, g.level - dt / 600); }
+    bp = Math.max(0, bp - dt / 300);
+  }
+  drawHome(); drawGallery();
+  requestAnimationFrame(tick);
+}
+
+const selEl = document.getElementById('sel');
+function selButtons() {
+  selEl.innerHTML = tracks.map((tr, i) => `<button type="button" id="t-${i}" data-i="${i}" aria-pressed="${i === sel}">${i + 1} ${ROBOTS[tr.eng].name}</button>`).join('');
+  document.getElementById('cap').textContent = `Track ${sel + 1} · ${ROBOTS[tracks[sel].eng].name}`;
+  gcs.forEach((g, i) => g.b.setAttribute('aria-current', i === tracks[sel].eng));
+}
+selEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; sel = +b.dataset.i; selButtons(); });
+const pb = document.getElementById('play');
+pb.textContent = playing ? 'Pause' : 'Play';
+pb.addEventListener('click', () => { playing = !playing; pb.textContent = playing ? 'Pause' : 'Play'; });
+selButtons();
+requestAnimationFrame(tick);
+})();
+</script>

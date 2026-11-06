@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: 0.9.9 CPU and RAM audit
+on:
+  push:
+    branches: [codex/fm1-v099-cpu2]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: firmware-cpu2-audit
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
+      JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.jieli
+            ~/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          key: jieli-ac79-v1.2.1
+      - name: JieLi toolchain and pinned SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          retry() { for d in 0 5 15 30; do sleep "$d"; "$@" && return 0; done; return 1; }
+          test -x "$JIELI_TOOLCHAIN/pi32v2/bin/clang" || retry sh tools/get_toolchain.sh "$HOME/.jieli"
+          T="$AC79_SDK/cpu/wl82/tools"
+          if [ ! -s "$T/uboot.boot" ] || [ ! -s "$T/cfg_tool.bin" ] || [ ! -s "$T/cfg/eq_cfg_hw.bin" ]; then
+            git clone --filter=blob:none --no-checkout https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$AC79_SDK"
+            git -C "$AC79_SDK" sparse-checkout set --no-cone /cpu/wl82/tools/uboot.boot /cpu/wl82/tools/cfg_tool.bin /cpu/wl82/tools/cfg/eq_cfg_hw.bin
+            retry git -C "$AC79_SDK" checkout d179b4484759423312073f5fbb232501aa491047
+          fi
+      - name: Build the FM1 package and enforce target layout checks
+        run: python3 tools/build.py
+      - name: Target budgets
+        run: |
+          python3 tests/target_budget.py build/yehnah.dis tests/target_budget.txt
+      - name: FM6 differential, audio, golden and concurrency checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/host
+          for suite in fm6_env_compare fm6_test voice_test audio_test regress; do
+            cc -O2 -w -Ibuild/gen -Ifirmware/src "tests/$suite.c" -lm -o "build/host/$suite"
+          done
+          build/host/fm6_env_compare
+          build/host/fm6_test
+          build/host/voice_test
+          build/host/audio_test
+          build/host/regress tests/golden.txt tests/cpu_baseline.txt
+          cc -O2 -w -pthread -Ibuild/gen -Ifirmware/src tests/mc_thread_test.c -lm -o build/host/mc_thread_test
+          python3 tests/mc_thread_test.py build/host/mc_thread_test
+          for core in 0 1; do
+            cc -O2 -w -DT_C1=$core -DHALF_FRAMES=128 -Ibuild/gen -Ifirmware/src tests/uac_sched_test.c -lm -o build/host/uac_sched_test
+            build/host/uac_sched_test
+          done
+          cc -O2 -w -Ibuild/gen -Ifirmware/src tests/cpu_probe.c -lm -o build/host/cpu_probe
+          for scene in '0 0' '3 0' '5 0' '5 7' '7 0' '11 0' '12 0' '12 7' '14 0'; do
+            build/host/cpu_probe $scene 4
+          done
+      - name: Package provenance
+        shell: bash
+        run: |
+          sha256sum build/yehnah.fwsc build/yehnah.bin > build/SHA256SUMS
+          printf '%s\n' "$GITHUB_SHA" > build/SOURCE_COMMIT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fm1-v099-cpu2-audit
+          if-no-files-found: error
+          path: |
+            build/yehnah.fwsc
+            build/yehnah.bin
+            build/loader/ota.bin
+            build/SHA256SUMS
+            build/SOURCE_COMMIT
+            LICENSE
+            LICENSING.md
+            LICENSES/
