@@ -321,8 +321,8 @@ static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
     *glow = chords | latch | bends | wr;               /* (2026-11-06: the plate keys dark; the wave alone lights them) */
     *mid = 0;
     if (plate) {                                        /* (2026-11-06) the wave: a bright head running up the plate keys from the
-                                                         * lowest to the top in 0.75 s and back down (1.5 s round), a mid-level
-                                                         * swell either side of it and a dim tail beyond, its place in 1/256 of a
+                                                         * lowest to the top in 0.75 s and back down (1.5 s round), with a tail of
+                                                         * two keys behind it (mid, then dim; below it going up, above it going down), its place in 1/256 of a
                                                          * key so the swell slides from key to key; it stops while a plate key is
                                                          * down and starts again upward from the last one hit once all are let go */
         static uint32_t t0, prev, held, last_i;
@@ -347,12 +347,13 @@ static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
                 if (!((plate >> k) & 1u))
                     continue;
                 d = pos - (int32_t)(j++ * 256u);
-                d = d < 0 ? -d : d;
-                if (d < 176)
+                if (ph >= 750u)                         /* going down: the tail is the keys above the head */
+                    d = -d;
+                if (d >= -128 && d < 128)               /* the head, then the two keys behind it: three keys alight */
                     wave |= 1u << k;
-                else if (d < 400)
+                else if (d >= 128 && d < 384)
                     *mid |= 1u << k;
-                else if (d < 656)
+                else if (d >= 384 && d < 640)
                     *glow |= 1u << k;
             }
         }
