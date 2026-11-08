@@ -24,6 +24,10 @@
 #define FELUCCA_FXSCENE 0       /* (2026-11-06) 1: FX > SCENE and SAVE > USER FX (the FX scenes, params.c) are in the build; 0: both pages are
                                  * gone, a user preset stores no scene (its byte stays 0) and loads none */
 #endif
+#ifndef FELUCCA_MACROPAGE
+#define FELUCCA_MACROPAGE 0     /* (2026-11-06) 1: HOME > MACRO (M1..M4 on the knobs, ui_lens.c CE_HOME) is in HOME's chain; 0: hidden (the macros
+                                 * themselves stay: the FX held layer's MACROS keys, the matrix, scenes) */
+#endif
 #ifndef FELUCCA_AMBIENT
 #define FELUCCA_AMBIENT 0       /* (chord-harp fork, 2026-11-05) 1: ARP > AMBIENT (amb.c) is in the build: its page, its keys' pool, its
                                  * tick. 0 (now): out; the params P_AMB..P_ASPC stay (numbering stable, all OFF), the code stays in the tree */

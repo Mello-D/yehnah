@@ -669,10 +669,10 @@ int main(void)
         }
         bad += gcheck("  EXPLORE PARTS / SONG x 12: sections stored, ARRANGE filled, each on the piece's SCALE", !sec_bad);
     }
-    {   /* NEW PROJECT (SAVE > TOOLS, K4): GENRE back to EXPLORE */
+    {   /* NEW PROJECT (SAVE held, E4): GENRE back to EXPLORE */
         gen_reset();
         gp.genre = 5;
-        go_title("TOOLS"); ui.act = 0; turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
+        sv_tap(6); press(B_OCTUP);
         bad += gcheck("NEW PROJECT: GENRE back to EXPLORE", gp.genre == GEN_EXPLORE && msg_is("NEW PROJECT"));
     }
     /* (chord-harp fork) GEN's screen is gone: HOME's last group is IDEAS (ideas.c; tests/ui_test.c) */

@@ -273,6 +273,11 @@ static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC
     fm1_in.buttons &= ~(1u << panel.btn[B_REC]);
     frame();
 }
+#if FELUCCA_MACROPAGE
+#define HCNT(n) #n "/11"
+#else
+#define HCNT(n) #n "/10"
+#endif
 static void ideas_open(void) { nav_go(SEC_HOME, HOME_IDEA + gen_page(), 1); frame(); }   /* (2026-11-02: HOME + SELECT gone) */
 static void stop_transport(void) { transport_req = 0; song.playing = 0; }
 static int16_t stored_param(uint32_t slot, uint32_t track, uint32_t id)
@@ -3178,6 +3183,38 @@ static int test_song_edit(void)
     seq_stop();
     ok = chain.cut == 0u;
     bad += check("  stopped: nothing cut", ok);
+    return bad;
+}
+static int test_section_preview(void)             /* (2026-11-06) SAVE > PROJECT: PLAY previews the picked section */
+{
+    int bad = 0, ok;
+    uint32_t i, k;
+    ui_power_on();
+    for (k = 0; k < 2u; k++) {
+        for (i = 0; i < NTRK; i++) {
+            track_defaults_steps(&trk[i]);
+            trk[i].p[P_SLEN] = 16;
+            trk[i].step[0] = (step_t){{(uint8_t)(60u + 5u * k), 0, 0, 0}, 1, ST_NOTE, 0, 96, 0, 0};
+        }
+        project_save(k);
+    }
+    chain_defaults(&chain_config);
+    chain_config.count = 1;
+    chain_config.row[0] = (chain_row_t){0, 4};
+    for (i = 0; i < NTRK; i++) trk[i].step[0].note[0] = 40;   /* the music now: neither section */
+    go_page(GR_SLOTS); ui.home = 0; frame();
+    song.g[G_SLOT] = 2;                               /* section B */
+    press(B_PLAY); frame();
+    events_block(32u);
+    ok = song.playing && chain.running && chain.config.count == 1u && chain.config.row[0].slot == 1u &&
+         trk[0].step[0].note[0] == 65u;
+    ok &= chain_config.count == 1u && chain_config.row[0].slot == 0u && chain_config.row[0].bars == 4u;   /* (the song untouched) */
+    bad += check("PROJECT PLAY: the picked section (B) plays by itself, the song's rows untouched", ok);
+    press(B_PLAY); frame();
+    events_block(32u); song_poll();
+    ok = !song.playing && !chain.running && trk[0].step[0].note[0] == 40u;
+    ok &= chain_config.count == 1u && chain_config.row[0].slot == 0u && chain_config.row[0].bars == 4u;
+    bad += check("  STOP: the music as it was, the song untouched", ok);
     return bad;
 }
 static int test_name(void)
@@ -8988,8 +9025,12 @@ static int test_skin(void)
     ui_power_on(); frame();
     ok = trk_face() && graph_y() == TF_SC_Y && graph_h() == TF_SC_H && card_y() == TF_KN_Y && card_h() == TF_KN_H &&
          ux.surf != ux.bg;
+#if FELUCCA_MACROPAGE
     nav_put(SEC_HOME, "MACRO"); frame();
-    ok &= home_set() && card_y() == TF_KN_Y && graph_y() == TF_SC_Y && graph_h() == TF_SC_H &&
+#else
+    nav_put(SEC_HOME, "SENDS"); frame();
+#endif
+    ok &= (FELUCCA_MACROPAGE ? home_set() : 1) && card_y() == TF_KN_Y && graph_y() == TF_SC_Y && graph_h() == TF_SC_H &&
           pg_row() && swap16(host_screen[(TF_PG_Y + 2) * 240 + 120]) == T_THEME;
     go_title("ENV"); frame();
     ok &= card_y() == TF_KN_Y && graph_y() == TF_SC_Y && pg_row() &&
@@ -9287,6 +9328,7 @@ static int test_skin(void)
         ok = okp;
         for (i = 0; i < 3u; i++) {                                /* HOME's own: TRACKS, MACRO, IDEAS (2026-11-02) */
             ui_power_on(); frame();
+            if (i == 1u && !FELUCCA_MACROPAGE) continue;     /* (2026-11-06: no MACRO page) */
             if (i) nav_put(SEC_HOME, i == 1u ? "MACRO" : "IDEA TRK");
             frames(100);
             ok &= lz_on() && lz_fam() == LZ_HOME && home_level() == i && skin_ink(TF_PG_Y, 240) > 0 &&   /* (the page row) */
@@ -9635,18 +9677,19 @@ static int test_lz_home(void)
     ok = ui.home && lz_on() && lz_fam() == LZ_HOME && home_level() == 0u && !home_set() && trk_face() &&
          swap16(host_screen[(TF_PG_Y + TF_PG_H / 2) * 240 + 92]) == T_THEME &&   /* (TRACKS, the page row: its page in
                                                                      * the middle pill) */
-         lz_tabs() == 4u && lz_crumb_is("HOME \xB7 TRACKS") && lz_count_is("1/11");
+         lz_tabs() == 4u && lz_crumb_is("HOME \xB7 TRACKS") && lz_count_is(HCNT(1));
     press(B_HOME); frame();                                         /* a HOME tap on TRACKS: TRACKS */
-    ok &= ui.home && home_level() == 0u && lz_count_is("1/11");
+    ok &= ui.home && home_level() == 0u && lz_count_is(HCNT(1));
     turn(EN_SELECT, 1); frame();                                    /* SELECT right: PRESETS */
     ok &= !ui.home && nav_sec() == SEC_HOME && str_eq(cur_page()->title, "PRESETS") && lz_tab_lit(1) &&
-          lz_crumb_is("HOME \xB7 PRESETS") && lz_count_is("2/11");
+          lz_crumb_is("HOME \xB7 PRESETS") && lz_count_is(HCNT(2));
     turn(EN_SELECT, 1); frame();                                    /* MORPH */
-    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is("3/11");
+    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(3));
     press(B_HOME); frame();                                         /* a HOME tap: TRACKS */
     ok &= ui.home && home_level() == 0u && !home_set();
     turn(EN_SELECT, 3); frame();                                    /* MIXER */
-    ok &= str_eq(cur_page()->title, "MIXER") && lz_tab_lit(2) && lz_crumb_is("HOME \xB7 MIXER") && lz_count_is("4/11");
+    ok &= str_eq(cur_page()->title, "MIXER") && lz_tab_lit(2) && lz_crumb_is("HOME \xB7 MIXER") && lz_count_is(HCNT(4));
+#if FELUCCA_MACROPAGE
     turn(EN_SELECT, 2); frame();                                    /* SENDS, MACRO */
     ok &= ui.home && home_macros() && lz_crumb_is("HOME \xB7 MACRO") && lz_count_is("6/11");
     k = macro_v[0];
@@ -9654,6 +9697,13 @@ static int test_lz_home(void)
     ok &= macro_v[0] == (uint8_t)(k + 3u) && !strncmp(ui.col[0], "M1|", 3);
     c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
     turn(EN_SELECT, -5); frame();                                   /* TRACKS: the HOME knobs */
+#else
+    turn(EN_SELECT, 1); frame();                                    /* SENDS (2026-11-06: no MACRO page) */
+    ok &= !home_macros();
+    k = macro_v[0] - 3u;                                            /* (the check below adds the 3 the MACRO page turned) */
+    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    turn(EN_SELECT, -4); frame();                                   /* TRACKS: the HOME knobs */
+#endif
     turn(EN_K1, 1); frame();
     ok &= ui.home && !home_set() && home_level() == 0u && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c &&
           macro_v[0] == (uint8_t)(k + 3u);
@@ -9662,31 +9712,41 @@ static int test_lz_home(void)
     turn(EN_SELECT, 1); frame();                                    /* (.. and on round: TRACKS) */
     ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
     bad += check("HOME: TRACKS PRESETS MORPH MIXER SENDS MACRO IDEAS one chain by SELECT (round), a HOME tap TRACKS, n/11", ok);
+#if FELUCCA_MACROPAGE
     turn(EN_SELECT, 5); frame();                                    /* MACRO */
     ok = home_macros() && lz_tab_lit(2);
     fm1_ms += 1000u;
     turn(EN_SELECT, 1); frame();                                    /* IDEAS: TRACK */
+#else
+    turn(EN_SELECT, 5); frame();                                    /* IDEAS: TRACK (SENDS was the last page before) */
+    ok = 1;
+    fm1_ms += 1000u;
+#endif
     ok &= gen_on() && gen_page() == IX_TRACK && home_level() == 2u && lz_on() && lz_tab_lit(3) &&
-          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is("7/11");
+          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is(FELUCCA_MACROPAGE ? "7/11" : "6/10");
     k = ix.genre;
     turn(EN_PRESET, 1); frame();
     ok &= ix.genre == (k + 1u) % (NDSTYLE + 1u);                    /* PRESETS: the GENRE */
     turn(EN_SELECT, 1); frame();
-    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is("8/11");
-    turn(EN_SELECT, -2); frame();                                   /* back: MACRO, IDEAS shut */
+    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(FELUCCA_MACROPAGE ? "8/11" : "7/10");
+    turn(EN_SELECT, -2); frame();                                   /* back: MACRO (else TRACKS-side SENDS), IDEAS shut */
+#if FELUCCA_MACROPAGE
     ok &= !ui.confirm && ui.home && home_macros();
+#else
+    ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "SENDS");
+#endif
     turn(EN_SELECT, 1); frame();
     ok &= gen_on() && gen_page() == 0u;
     press(B_HOME); frame();                                         /* a HOME tap on IDEAS: round to TRACKS */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     bad += check("HOME: MACRO, then IDEAS TRACK SOUND .. (PRESETS its GENRE); SELECT back out; a HOME tap on IDEAS: TRACKS", ok);
-    turn(EN_SELECT, 7); frame();                                    /* IDEAS 2 */
+    turn(EN_SELECT, FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
     ok = gen_on() && gen_page() == 1u;
     press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV");
     press(B_HOME); frame();                                         /* HOME: TRACKS (IDEAS shut) */
     ok &= !gen_on() && ui.home && home_level() == 0u;
-    turn(EN_SELECT, 7); frame();                                    /* IDEAS 2 */
+    turn(EN_SELECT, FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
     turn(EN_ALGO, 1); frame();
     ok &= song.sel == 1u && gen_on() && gen_page() == 1u;           /* (ALGORITHM the track there too) */
     turn(EN_ALGO, -1); frame();
@@ -9701,8 +9761,10 @@ static int test_lz_home(void)
     {   /* TRACKS the redesign's (the scene under the header, the knob cells, the page row); MACRO the same order */
         ui.force = 1; frame();                                      /* TRACKS */
         ok &= trk_face() && graph_y() == TF_SC_Y && card_y() == TF_KN_Y;
+#if FELUCCA_MACROPAGE
         turn(EN_SELECT, 5); frame(); ui.force = 1; frame();        /* MACRO */
         ok &= home_macros() && !trk_face() && graph_y() == TF_SC_Y && lz_tab_lit(2);
+#endif
     }
     bad += check("HOME: HOME from elsewhere TRACKS (rule 2); TRACKS the redesign's layout, MACRO", ok);
     ix.page = IX_TRACK;                                             /* (IDEAS' page is kept: the next tests' start) */
@@ -11166,6 +11228,7 @@ int main(void)
     bad += test_skin();
     bad += test_browse_no_pattern();
     bad += test_song_edit();
+    bad += test_section_preview();
     bad += test_name();
     bad += test_edit_cycle();
     bad += test_quick_layers();
