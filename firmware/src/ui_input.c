@@ -2057,6 +2057,11 @@ static uint32_t btn_hold(uint32_t *t0, uint32_t label, uint32_t now, int hold)
 
 /* the quick layers: ui_layer.c (included after this file) */
 static void layer_masks(void);
+static void hm_tick(void);
+static void hm_close(void);
+static void hm_hold(uint32_t b);
+static void hm_knob(uint32_t k, int32_t s);
+static uint32_t hm_btn_is(uint32_t b);
 static void macro_dice(uint32_t mode);                  /* (0.4) */
 static void layer_arm(uint32_t pressed, uint32_t now);
 static uint32_t layer_held(void);
@@ -2235,7 +2240,13 @@ static void ui_input_frame(void)
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
         ui.rec_t0 |= 2u;                                /* (REC is its layer's button now: its tap is layer_tap's) */
     layer_oct_open(pressed);                            /* (OCT± with a SET layer's button down: it opens now) */
-    oct = oct_taps(pressed, ui.menu || ui.confirm || act_oct() || name_on() || layer_set_open());
+    hm_tick();
+    oct = oct_taps(pressed, ui.menu || ui.confirm || act_oct() || name_on() || layer_set_open() || ui.hm);
+    if (ui.hm && !dlg_on() && !name_on()) {              /* a held menu: OCT- closes it, OCT+ nothing */
+        if (oct & 1u)
+            hm_close();
+        oct = 0;
+    }
     oct = layer_oct(pressed, oct);                      /* (a SET layer's OCT-: put back) */
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
     {   /* (0.6.67) a button held + SELECT: (2026-11-02, the redesign) nothing: its chain (nav_jump) and HOME + SELECT's
@@ -2406,6 +2417,19 @@ static void ui_input_frame(void)
                 scrn.idle = fm1_ms;
             } else if (kind == CF_ABOUT) {              /* .. the MENU's document; OCT- back to the page */
                 ui.menu = 2, ui.menu_scroll = 0, about_glo = 1;
+            } else if (kind == CF_INIT_SOUND) {         /* the EDIT held menu's INIT: the engine's defaults and first preset */
+                if (!chain_busy()) {
+                    set_engine(TSEL->eng_req);
+                    ui_message("SOUND INIT");
+                }
+            } else if (kind == CF_RECALL_SOUND) {       /* .. RECALL: the sound as the section playing stored it */
+                int sl = project_recall_slot();
+                if (chain_busy())
+                    ui_message("STOP TO EDIT");
+                else if (sl < 0 || project_recall_sound(song.sel, (uint32_t)sl))
+                    ui_message("NOTHING STORED");
+                else
+                    ui_message("SOUND RECALLED");
             } else if (kind == CF_INIT_SYS) {           /* (0.6.40) SAVE > TOOLS 5: everything as at power-on */
                 if (!chain_busy()) {
                     undo_mark();
@@ -2459,6 +2483,8 @@ static void ui_input_frame(void)
         enc_drop();
         return;
     }
+    if (ui.hm && (home == BT_TAP || seq == BT_TAP || lytap))   /* (a held menu: any of these closes it) */
+        hm_close();
     if (lytap)                                          /* a layer's button acts on release (held: the layer) */
         layer_tap(lytap);
     if (seq == BT_TAP)
@@ -2486,8 +2512,7 @@ static void ui_input_frame(void)
         case B_SAVE:
         case B_HOME:
             break;
-        case B_FX:                                      /* the layers' buttons: ui_layer.c */
-        case B_SCL:
+        case B_FX:                                      /* the layers' buttons: ui_layer.c (SCL: a page button, its hold a menu) */
             break;
         case B_OCTDN:
         case B_OCTUP: {
@@ -2531,13 +2556,23 @@ static void ui_input_frame(void)
         }
     }
     for (id = 0; id < 14u; id++)                        /* (2026-11-03) held past HOLD: let go, nothing */
-        if (((ui.pg_down & fm1_in.buttons) >> id) & 1u && (uint16_t)(fm1_ms - pg_ms[id]) >= HOLD_MS[settings_hold % 4u])
+        if (((ui.pg_down & fm1_in.buttons) >> id) & 1u && (uint16_t)(fm1_ms - pg_ms[id]) >= HOLD_MS[settings_hold % 4u]) {
             ui.pg_down &= (uint16_t)~(1u << id);
+            hm_hold(panel_btn_of(id));                  /* SCL / EDIT / GLO: the held menu opens */
+        }
     b = ui.pg_down & ~fm1_in.buttons;
     ui.pg_down &= (uint16_t)~b;
     for (id = 0; b; id++, b >>= 1)
-        if (b & 1u)
-            page_tap(panel_btn_of(id));
+        if (b & 1u) {
+            uint32_t pb = panel_btn_of(id);
+            if (ui.hm) {                                /* a held menu open: the tap closes it (its own button: only that) */
+                uint32_t same = hm_btn_is(pb);
+                hm_close();
+                if (same)
+                    continue;
+            }
+            page_tap(pb);
+        }
     if (gen_on() && (oct & 2u)) {                       /* (chord-harp fork) IDEAS, HOME's pages: OCT+ KEEP, OCT- BACK */
         gen_press();                                    /* (nothing thrown: back to TRACKS) */
     } else if (gen_on() && (oct & 1u)) {
@@ -2560,7 +2595,7 @@ static void ui_input_frame(void)
         ui.act = ui.act ? 0u : 4u;                      /* (chord-harp fork) SCL > PROG: F#4 picks WRITE (OCT+ does it) */
     if (song.grid) {
         grid_keys(notes);
-    } else if (song.seq_mode && cur_page()->graph == GR_ROLL) {   /* STEP (not CHANCE: its knobs only) */
+    } else if (!ui.hm && song.seq_mode && cur_page()->graph == GR_ROLL) {   /* STEP (not CHANCE: its knobs only) */
         if (live_rec_sel() || !((song.rec >> song.sel) & 1u))   /* armed and playing: the keys record live, not
                                                          * into the cursor step too; not armed (1.2, #133): they
                                                          * only play, being on STEP writes nothing */
@@ -2594,6 +2629,10 @@ static void ui_input_frame(void)
         uint64_t held;
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
+        if (ui.hm) {                                    /* a held menu: its rows and values */
+            hm_knob(k, s);
+            continue;
+        }
         if (gen_on()) {                                 /* GEN: its settings */
             gen_knob(k, s);
             continue;

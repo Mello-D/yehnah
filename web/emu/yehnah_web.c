@@ -159,6 +159,7 @@ static void lcd_init(void) {}
 #include "../../firmware/src/ui_draw.c"
 #include "../../firmware/src/ui_menu.c"
 #include "../../firmware/src/ui_input.c"
+#include "../../firmware/src/ui_hmenu.c"
 #include "../../firmware/src/ui_layer.c"
 
 /* ------------------------------------------------------------ the flash --- */

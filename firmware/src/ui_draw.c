@@ -1762,6 +1762,16 @@ static void confirm_text(char *a, char *b)
         str_cpy(b, "T1: SOUND AND PATTERN", 24);
         b[1] = (char)('1' + k % NTRK);
         break;
+    case CF_INIT_SOUND:
+        str_cpy(a, "INIT SOUND T1?", 24);
+        a[12] = (char)('1' + k % NTRK);
+        str_cpy(b, "THE STEPS STAY", 24);
+        break;
+    case CF_RECALL_SOUND:
+        str_cpy(a, "RECALL SOUND T1?", 24);
+        a[14] = (char)('1' + k % NTRK);
+        str_cpy(b, "AS THE SECTION STORED IT", 24);
+        break;
     case CF_CALIB:                                   /* (2026-11-02) GLO > TOOLS */
         str_cpy(a, "OPEN CALIBRATION?", 24);
         break;
@@ -1938,6 +1948,18 @@ static void ui_draw_body(uint32_t counting)
     }
     if (name_on()) {                                    /* NAME: a user preset's or a project's (ui_name.c) */
         name_draw();
+        return;
+    }
+    if (ui.hm) {                                        /* a held menu (ui_hmenu.c) */
+        hm_draw();
+        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {
+            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+            ui.msg2[0] = 0;
+            ui.msg_t = 60;
+        }
+        if (ui.bpm_t)
+            ui.bpm_t--;
+        ui.force = 0;
         return;
     }
     if (ui.layer) {                                     /* a layer's map over the page (ui_layer.c) */

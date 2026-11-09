@@ -83,14 +83,15 @@ static struct {
 /* (0.6.44) FX LATCH: FX held open and let go locks its layer open, as the macros latch: its keys, knobs and map stay
  * until FX is pressed again (or another layer is held over it, for as long as it is) */
 static uint8_t fx_lock;
-static int layer_allowed(void) { return !ui.menu && !dlg_on() && !ui.uboot && !name_on(); }   /* (GEN: a page) */
+static int layer_allowed(void) { return !ui.menu && !dlg_on() && !ui.uboot && !name_on() && !ui.hm; }   /* (GEN: a page) */
 static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
 static uint32_t ly_down(uint32_t l) { return l && (fm1_in.buttons & ly_bit(l)) != 0u; }
 static uint32_t layer_bits(void)
 {
     uint32_t l, m = 0;
     for (l = LAYER_FX; l < LAYER_N; l++)
-        m |= ly_bit(l);
+        if (l != LAYER_SCL)                             /* (SCL held is a menu now: ui_hmenu.c) */
+            m |= ly_bit(l);
     return m;
 }
 static uint32_t layer_btn(void) { return LAYERS[ui.layer % LAYER_N].btn; }
@@ -142,7 +143,7 @@ static void layer_arm(uint32_t pressed, uint32_t now)
         return;
     }
     for (l = LAYER_FX; l < LAYER_N; l++)
-        if (pressed & ly_bit(l)) {
+        if (l != LAYER_SCL && (pressed & ly_bit(l))) {
             lys.used = 0;
             ui.ly = (uint8_t)l;
             ui.ly_t0 = (now & ~15u) | 1u | (layer_allowed() ? 0u : LY_DEAD);
@@ -448,7 +449,6 @@ static void sv_key(uint32_t p)
 }
 static void rec_key(uint32_t p)
 {
-    uint32_t r = p - 1u, v;
     if (p >= RK_PLAY) {
         song_key(p);
         return;
@@ -490,10 +490,7 @@ static void rec_key(uint32_t p)
             tap_tempo();
         return;
     }
-    r = p == RK_CIN;
-    v = (rp_get(RL_F[r]) + 1u) % 3u;                    /* the next value, round */
-    rec_set(r, v);
-    ui_say(r ? "COUNT-IN " : "CLICK ", rl_name(r, v));
+    /* (2026-11-09) G3 CLICK and C4 COUNT-IN left the layer: GLO > MAIN has them (and BPM) */
 }
 
 /* a key pressed in layer l (k: 0 = F3 .. 26 = G5) */
@@ -590,15 +587,9 @@ static void layer_knob(uint32_t k, int32_t s)
         if (k == 3u)
             s = -s;                                     /* DEPTH (100 - perf_k[3]) rises to the right (#40: it fell) */
         perf_k[k] = (int8_t)clamp(perf_k[k] + accel(EN_K1 + k, s, k ? 100 : 200), k ? 0 : -100, 100);   /* (#126) */
-    } else if (l == LAYER_REC) {                        /* CLICK, MODE, BPM, COUNT-IN */
-        if (k == 0u || k == 3u)
-            rec_set(k != 0u, (uint32_t)wrap_add((int32_t)rp_get(RL_F[k != 0u]), s, 3));
-        else if (k == 1u && s)
+    } else if (l == LAYER_REC) {                        /* MODE (2026-11-09: CLICK, BPM, COUNT-IN are GLO > MAIN's) */
+        if (k == 1u && s)
             rec_mode_set(!rec_loop);
-        else if (k == 2u && !song.g[G_CLOCK]) {
-            song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_K1 + k, s, 200), GP[G_BPM].min, GP[G_BPM].max);
-            ui.bpm_t = 40;
-        }
     } else if (l == LAYER_SAVE) {                       /* (no knobs) */
     } else if (l) {                                     /* the page's knobs, wherever the page is */
         uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
@@ -669,9 +660,9 @@ static uint32_t layer_leds(uint32_t *br)
                  (p == RK_LOOP && live.mode);
             can = p - RK_PLAY < 4u ? project_used(p - RK_PLAY) : p == RK_NAME ? name_here() : 1;
         } else if (l == LAYER_REC && !b && p <= RK_RVA) {   /* the click / count-in on, LOOP: lit, else they breathe; CLEAR: */
-            on = (p == 1u && rp_get(RP_CLICK) != 0u) || (p == RK_MODE && rec_loop) || (p == RK_CIN && rp_get(RP_COUNTIN));   /* something to clear, not
+            on = p == RK_MODE && rec_loop;   /* something to clear, not
                                                          * while a song plays; TAP breathes; UNDO: one to undo */
-            can = p == RK_RVA ? mut_back_ok() : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p ? 1u : !chain_busy() && rec_clearable();
+            can = p == RK_RVA ? mut_back_ok() : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p == 1u || p == RK_CIN ? 0u : p ? 1u : !chain_busy() && rec_clearable();
         }
         m |= on << k;
         n |= (can & !on) << k;
@@ -767,10 +758,8 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             str_cpy(nm, "RESTART", 12);
             return restart_ok() ? LS_OFF : LS_DIM;
         }
-        if (p == RK_CIN) {
-            str_cpy(nm, rl_name(1, rp_get(RP_COUNTIN)), 12);
-            return rp_get(RP_COUNTIN) ? LS_SEL : LS_OFF;
-        }
+        if (p == RK_CIN || p == 1u)                     /* (CLICK, COUNT-IN: GLO > MAIN) */
+            return LS_OFF;
         if (p == RK_MODE) {
             str_cpy(nm, REC_MODE_N[rec_loop & 1u], 12);
             return rec_loop ? LS_SEL : LS_OFF;
@@ -779,10 +768,8 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             str_cpy(nm, "TAP", 12);
             return song.g[G_CLOCK] ? LS_DIM : LS_OFF;
         }
-        str_cpy(nm, p ? "CLICK " : "CLEAR", 12);
-        if (p)
-            str_cpy(nm + 6, rl_name(0, rp_get(RL_F[0])), 6);
-        return p ? (rp_get(RL_F[0]) ? LS_SEL : LS_OFF) : chain_busy() || !rec_clearable() ? LS_DIM : LS_OFF;
+        str_cpy(nm, "CLEAR", 12);
+        return chain_busy() || !rec_clearable() ? LS_DIM : LS_OFF;
     }
     return LS_OFF;
 }
@@ -797,28 +784,50 @@ static uint16_t pk_fill(uint32_t st, int blk, int n, uint16_t *ink)
         return blk ? T_BG : ux_mix(T_BG, T_TEXT, 7);
     return blk ? ux_mix(T_BG, T_THEME, 34) : ux_mix(T_BG, T_TEXT, 17);
 }
-/* MAP: the keys named in S, turned (2026-11-02, the user: legible) */
-static void ly_piano(uint32_t l)
+/* MAP (2026-11-09, held menus): a GRID of cells, one for each key that does something in the layer, in key order: its name, its
+ * note in the corner, the state as the keys' fill (lit = on / held, DIM = unavailable). The keys' LEDs light with it */
+static void ly_grid(uint32_t l)
 {
-    int32_t h = (int32_t)graph_h() - 6, y = 3, bh = 52, i;
-    char nm[12], nt[2] = {0, 0};
-    for (i = 0; i < 16; i++) {                          /* the white keys */
-        int32_t x0 = 4 + i * 232 / 16, w = 4 + (i + 1) * 232 / 16 - x0 - 1;
-        uint16_t ink, fill = pk_fill(ly_keyname(l, 0, (uint32_t)i, nm), 0, nm[0] != 0, &ink);
-        cv_rect(x0, y, w, h, fill);
-        if (nm[0])
-            cv_text_up(x0 + HALF_UP(w - AF_S_CAP_H) - AF_S_CAP_Y, y + h - 13, &AF_S, nm, ink, fill, h - 13 - bh - 1);
-        nt[0] = W_NOTE[i];                              /* (its note, the letter) */
-        GFX_HOOK_ALIGN(x0, 0, x0 + w, 0, AL_H, "layer key's note centred");
-        cv_text_in(x0, y + h - 9 - AF_X_CAP_Y, w, &AF_X, nt, ink == T_INK ? ink : T_DIM, fill);
+    static const char NN[12][3] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    uint32_t k, n = 0, i = 0, cols, rows;
+    int32_t cw, ch, ph = (int32_t)graph_h() - 8;
+    char nm[12], nt[6];
+    for (k = 0; k < 27u; k++) {
+        (void)ly_keyname(l, key_black(k), key_place(k), nm);
+        n += nm[0] != 0;
     }
-    for (i = 0; i < 11; i++) {                          /* the black keys over them */
-        int32_t x0 = 4 + PK_BLK[i] * 232 / 16 - 5;
-        uint16_t ink, fill = pk_fill(ly_keyname(l, 1, (uint32_t)i, nm), 1, nm[0] != 0, &ink);
-        cv_rect(x0 - 1, y, 12, bh + 1, T_BG);
-        cv_rect(x0, y, 10, bh, fill);
-        if (nm[0])
-            cv_text_up(x0 + HALF_UP(10 - AF_S_CAP_H) - AF_S_CAP_Y, y + bh - 3, &AF_S, nm, fill == T_BG ? T_DIM : ink, fill, bh - 5);
+    if (!n)
+        return;
+    cols = n <= 4u ? 2u : n <= 9u ? 3u : 4u;
+    rows = (n + cols - 1u) / cols;
+    cw = (224 - (int32_t)(cols - 1u) * 3) / (int32_t)cols;
+    ch = (ph - (int32_t)(rows - 1u) * 3) / (int32_t)rows;
+    if (ch > 36)
+        ch = 36;
+    for (k = 0; k < 27u; k++) {
+        int blk = key_black(k);
+        uint32_t st = ly_keyname(l, blk, key_place(k), nm), semi = 53u + k;
+        uint16_t ink, fill;
+        int32_t x, y;
+        if (!nm[0])
+            continue;
+        x = 8 + (int32_t)(i % cols) * (cw + 3);
+        y = 4 + (int32_t)(i / cols) * (ch + 3);
+        i++;
+        fill = pk_fill(st, blk, 1, &ink);
+        cv_rrect(x, y, cw, ch, 4, fill, T_SURF);
+        if (ch >= 28) {                                 /* roomy: the name above, the note in the corner */
+            cv_clip_text(x + 5, y + 4 - (cols < 4u ? AF_S_CAP_Y : AF_X_CAP_Y), cols < 4u ? &AF_S : &AF_X, nm, ink, fill, cw - 8);
+            str_cpy(nt, NN[semi % 12u], sizeof nt);
+            {
+                uint32_t e = str_len(nt);
+                nt[e] = (char)('0' + (int32_t)(semi / 12u) - 1);
+                nt[e + 1u] = 0;
+            }
+            cv_text_r(x + cw - 4, y + ch - 4 - AF_X_CAP_H - AF_X_CAP_Y, &AF_X, nt, ink == T_INK ? ink : T_DIM, fill);
+        } else {                                        /* tight: the name alone, centred */
+            cv_clip_text(x + 5, y + (cols < 4u ? CAP_IN(S, ch) : CAP_IN(X, ch)), cols < 4u ? &AF_S : &AF_X, nm, ink, fill, cw - 8);
+        }
     }
 }
 static void ly_own_cards(void)                          /* FX REC: their own four (into the knob cells: knobs_of) */
@@ -841,20 +850,12 @@ static void ly_own_cards(void)                          /* FX REC: their own fou
     } else if (l == LAYER_SAVE) {                       /* (no knobs: four empty cells) */
         for (c = 0; c < 4u; c++)
             draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
-    } else if (l == LAYER_REC) {                        /* CLICK, MODE, BPM, COUNT-IN */
-        for (c = 0; c < 4u; c++) {
-            uint32_t r = c == 3u, v = rp_get(RL_F[r]);
-            if (c == 0u || c == 3u) {
-                draw_column(c, RL_LABEL[r], rl_name(r, v), "", !v ? T_DIM : VAL(c), pick_of(3u, v), ICON_TEMPO);
-            } else if (c == 1u) {
+    } else if (l == LAYER_REC) {                        /* MODE (the others are GLO > MAIN's) */
+        for (c = 0; c < 4u; c++)
+            if (c == 1u)
                 draw_column(c, "MODE", REC_MODE_N[rec_loop & 1u], "", VAL(c), pick_of(2u, rec_loop & 1u), ICON_LOOP);
-            } else if (c == 2u) {
-                char bv[8];
-                fmt_int(bv, song.g[G_BPM]);
-                draw_column(c, "BPM", bv, "", song.g[G_CLOCK] ? T_DIM : VAL(c), RATIO(&GP[G_BPM], song.g[G_BPM]),
-                            ICON_TEMPO);
-            }
-        }
+            else
+                draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
     }
 }
 static void layer_cards(uint32_t l)
@@ -938,8 +939,6 @@ static void layer_state(uint32_t l)
         lst_chip("ARMED", b, (song.rec >> song.sel) & 1u);
         lst_chip("MODE", rec_loop ? "LOOP" : "ONE PASS", 1);
         lst_chip(b, rec_clearable() ? "SEQUENCE" : "EMPTY", rec_clearable());
-        lst_chip("CLICK", rl_name(0, rp_get(RP_CLICK)), rp_get(RP_CLICK) != 0u);
-        lst_chip("COUNT-IN", COUNTIN_N[rp_get(RP_COUNTIN) % 3u], rp_get(RP_COUNTIN) != 0u);
         lst_chip("UNDO", undo_ok ? "READY" : "-", undo_ok);
         v[0] = live.cur >= 0 ? (char)('A' + live.cur) : '-'; v[1] = 0;   /* (the song keys) */
         lst_chip("SECTION", v, live.cur >= 0);
@@ -1006,7 +1005,7 @@ static void draw_layer(void)
         if (ui.lylv & 1u)                               /* STATE: what is on */
             layer_state(l);
         else                                            /* MAP: the keyboard */
-            ly_piano(l);
+            ly_grid(l);
         cv_blit(0, graph_y());
     }
     page_row();                                         /* (2026-11-02: the page row, MAP STATE) */

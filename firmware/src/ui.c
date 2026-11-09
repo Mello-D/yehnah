@@ -36,6 +36,8 @@ static uint32_t lib_scan(uint32_t n, char *b);           /* (0.8.5) project.c: S
 static uint32_t lib_gen(void);
 static int undo_sound(uint32_t k);                 /* (0.6.65) project.c: the sound dice's CANCEL */
 static int project_recall_slot(void);
+static int project_recall_sound(uint32_t k, uint32_t slot);
+static void hm_draw(void);
 static uint32_t chain_prepare(void);
 static uint32_t section_preview(uint32_t s);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
@@ -254,6 +256,7 @@ static struct {
     uint32_t ly_t0;              /* the layer button's press time | 1, LY_* bits (ui_layer.c layer_gesture) */
     uint8_t ly;                  /* the layer whose button is down (LAYER_*), 0 = none */
     uint8_t layer;               /* the layer whose map is shown (LAYER_*), 0 = none */
+    uint8_t hm;                  /* the held menu open (HM_*: SCL EDIT GLO; ui_hmenu.c), 0 = none; it stays open after the button is let go */
     uint16_t pg_down;            /* page buttons down (panel ids) that act when let go */
     uint32_t layer_sig;          /* drawn-state cache of the map */
     char msg[40];                /* (0.9.0: 40, was 24 and cut the long ones silently; longer: ellipsised, ui_say) */
@@ -280,7 +283,7 @@ static struct {
 static uint16_t val_col(uint32_t c) { return c == ui.hot_col && ui.hot_t ? T_ACCENT : T_THEME; }
 
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
-       CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
+       CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_RECALL_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
        CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS,
        CF_CPU_TEST, CF_MUT_BACK, CF_CALIB, CF_ABOUT,
        CF_ERASE_SEC, CF_ERASE_PRJ };   /* (2026-11-05: SAVE > ERASE) */
@@ -436,7 +439,7 @@ static uint32_t card_h(void) { return TF_KN_H; }
 static uint32_t graph_y(void) { return TF_SC_Y; }
 /* (2026-11-09, topic E) GLO's lists have no knob cells (the list and its choices say what the knobs do): the panel runs down to the page row */
 static int sets_full(void);
-static uint32_t graph_h(void) { return sets_full() ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
+static uint32_t graph_h(void) { return sets_full() || ui.hm ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
 enum { LAYER_NONE, LAYER_FX, LAYER_SCL, LAYER_REC, LAYER_SAVE, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
@@ -804,7 +807,7 @@ static void step_clear(step_t *st)
  * down / up. KNOB 1 STEP, 2 LANE, 3 HIT, 4 ACC edit the cursor step. A sound load never converts the
  * steps: the grid shows a step's notes on their lanes (eng_drum.c step_lanes) and an edit makes the lane its
  * own (grid_own). Live recording on a DRUM track writes hits (seq.c rec_note) */
-static int grid_on(void) { return !ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_ROLL && drum_track(TSEL); }   /* (STEP only: CHANCE is SC_STEP too) */
+static int grid_on(void) { return !ui.hm && !ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_ROLL && drum_track(TSEL); }   /* (STEP only: CHANCE is SC_STEP too) */
 
 /* black key place p (seq.c key_place) held, 0 = not */
 static int black_held(uint32_t p)

@@ -2169,6 +2169,19 @@ static int undo_sound(uint32_t k)
     return 0;
 }
 
+/* the EDIT held menu's RECALL: track k's sound as section slot stored it (0 done, 1 nothing there) */
+static int project_recall_sound(uint32_t k, uint32_t slot)
+{
+#if YEHNAH_FLASH
+    if (flash_ok && !proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) proj_fetch(slot);
+#endif
+    if (!proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t)))
+        return 1;
+    proj_bound(&proj_scratch);
+    sound_put(&proj_scratch, k);
+    return 0;
+}
+
 static void project_load(uint32_t slot)
 {
 #if YEHNAH_FLASH

@@ -106,6 +106,7 @@ static void tab_scr_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_
 #include "ui_draw.c"
 #include "ui_menu.c"
 #include "ui_input.c"
+#include "ui_hmenu.c"             /* SCL / EDIT / GLO held: a list menu that stays open */
 #include "ui_layer.c"              /* the quick layers (FX GLO SCL EDIT REC held; SEQ TOOLS: ui_tools.c) */
 
 /* --------------------------------------------- storage, update, editor --- */
