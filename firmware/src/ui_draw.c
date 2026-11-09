@@ -539,6 +539,7 @@ static int32_t gauge(const param_desc_t *d, int32_t v)
     kn_pi = (uint8_t)(r - d->min);
     return RATIO(d, r);
 }
+static const char *sets_label(uint32_t id);               /* (ui_menu.c) */
 static int32_t pick_of(uint32_t n, uint32_t i)          /* (2026-11-02, the user's: SAVE's SECT, PROJECT) a pick of n, i chosen */
 {
     kn_pn = (uint8_t)(n >= 2u && n <= 32u ? n : 0u), kn_pi = (uint8_t)i;
@@ -1470,6 +1471,19 @@ static void draw_cards(void)
                 draw_column(1, "PROG", val, u, VAL(1u), pick_of(PROG_N, (uint32_t)TSEL->p[P_PROG]), ICON_AUTO);
             } else
                 draw_column(2, "RATE", N_PRATE[prog_rate % 3u], "", VAL(2u), pick_of(3u, prog_rate % 3u), ICON_RATE);
+            continue;
+        }
+        if (cur_page()->graph == GR_SETS && c == 0u) {   /* (topic C) GLO's lists: KNOB 1 the row (its name; n/N) */
+            uint32_t ls = sets_of(&PAGES[ui.page]) & 3u, n = sets_n(ls);
+            char u[8];
+            fmt_int(u, (int32_t)sets_cur[ls] + 1);
+            str_cpy(u + str_len(u), "/", 2);
+            fmt_int(u + str_len(u), (int32_t)n);
+            draw_column(0, "ROW", sets_label(SETS[ls][sets_cur[ls]]), u, VAL(0u), pick_of(n, sets_cur[ls]), ICON_NONE);
+            continue;
+        }
+        if (cur_page()->graph == GR_SETS && c >= 2u) {
+            draw_column(c, "", "", "", T_DIM, -1, ICON_NONE);
             continue;
         }
         if (c == 1u && HARP_PAGE(cur_page())) {         /* (2026-10-27) SCL > HARP: KNOB 2 the set's genre */

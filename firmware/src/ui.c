@@ -415,7 +415,11 @@ static void scr_shown(void)                            /* after the frame: the r
 }
 
 static const page_t *page_over;   /* a quick layer's own four knobs (ui_layer.c), while it edits or draws them */
-static const page_t *cur_page(void) { return page_over ? page_over : &PAGES[ui.page]; }
+static const page_t *cur_page(void)
+{
+    const page_t *p = page_over ? page_over : &PAGES[ui.page];
+    return p->graph == GR_SETS ? sets_page(p) : p;     /* (GLO's lists: params.c) */
+}
 
 static int lens_on(void);
 static uint32_t lz_on(void);

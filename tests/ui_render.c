@@ -1141,11 +1141,11 @@ static void setup(int s)
     case S_SHIFT: TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
     case S_ARP: go_title("ARP"); break;
     case S_VOICE: go_title("VOICE"); break;
-    case S_GLOBAL: go_title("TEMPO"); break;
+    case S_GLOBAL: go_title("MAIN"); sets_cur[0] = 0; break;
     case S_SYSTEM: go_title("SYSTEM"); break;
-    case S_GLO_SCREEN: go_title("SCREEN"); glo_k = 0; break;
-    case S_GLO_CLICK: go_title("CLICK"); glo_k = 2; break;
-    case S_GLO_TOOLS: go_title("SETUP"); glo_k = 0; break;
+    case S_GLO_SCREEN: go_title("DEVICE"); sets_cur[1] = 0; break;
+    case S_GLO_CLICK: go_title("MAIN"); sets_cur[0] = 4; break;
+    case S_GLO_TOOLS: go_title("SYSTEM"); sets_cur[3] = 4; break;
     case S_EDIT_ANALOG: go_title("EDIT 1"); break;
     case S_EDIT_GUITAR: case S_EDIT_ELEC: case S_EDIT_ACID: case S_EDIT_NOISE: case S_EDIT_DRIFT:   /* (chord-harp fork) */
         eng(s == S_EDIT_ACID ? ENGI_ACID : s == S_EDIT_NOISE ? ENGI_NOISE : s == S_EDIT_DRIFT ? ENGI_DRIFT : ENGI_GUITAR);
@@ -1777,7 +1777,7 @@ static void roll_frames(const char *dir)
         memset(cimg, 90, sizeof cimg);
         state(); song.playing = 0; pal(p);
         song.g[G_BPM] = 129; song.g[G_SWING] = 19;
-        go_title("TEMPO");
+        go_title("MAIN"); sets_cur[0] = 1;             /* (topic C: KNOB 2 sets the row KNOB 1 is on: SWING) */
         snprintf(name, sizeof name, "%s/roll", UI_PALETTES[p].name);
         cur_name = name;
         draw(-1);
@@ -1818,7 +1818,7 @@ static void roll_cost(void)
         clock_t c0;
         state(); song.playing = 0; pal(1);
         song.g[G_BPM] = 129; song.g[G_SWING] = 19;
-        go_title("TEMPO");
+        go_title("MAIN"); sets_cur[0] = 1;
         draw(-1);
         for (k = 0; k < 8u; k++) { ui.hot_t = 0; ui.bpm_t = 0; ui_draw(); }
         px_visited = 0; blit_px = 0;
@@ -1882,14 +1882,14 @@ static void align_sweeps(void)
         ui.confirm = 0;
         cur_name = st ? "sweep LINE: GLO's rows" : "sweep FLAT: GLO's rows";   /* (2026-11-02: the MENU's rows, GLO's pages) */
         {
-            static const char *const GT[] = {"SCREEN", "LEDS", "CONTROL", "MIDI", "AUDIO", "CLICK", "SYSTEM", "SETUP"};
+            static const char *const GT[] = {"MAIN", "DEVICE", "CONTROL", "SYSTEM"};
             uint32_t g;
             for (k = 0; k < 4u; k++) {
                 ui_prefs = k & 1u ? 0xFFu : 0u; settings_hold = (uint8_t)k; settings.lowcut = (uint8_t)(k % 3u);
                 ui_rec_prefs = (uint8_t)((k % 3u) | (k % 3u) << 2 | ((k + 1u) % 3u) << 4);   /* (CLICK, LEVEL, COUNT-IN: each value) */
                 settings_leds = (uint8_t)(k % LEDS_COUNT);   /* (every LEDS name) */
                 for (g = 0; g < NELEM(GT); g++) {
-                    go_title(GT[g]); glo_k = (uint8_t)k; ui.force = 1;
+                    go_title(GT[g]); sets_cur[g] = (uint8_t)k; ui.force = 1;
                     draw_columns(); draw_graph();
                 }
             }

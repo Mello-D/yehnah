@@ -1211,13 +1211,15 @@ static int test_midi(void)
         const page_t *pg = &PAGES[0];                   /* (2026-11-02: ROUTE is GLO > MIDI's KNOB 2) */
         int16_t *vp;
         const param_desc_t *d;
-        while (!str_eq(pg->title, "MIDI"))
+        while (!str_eq(pg->title, "CONTROL"))
             pg++;
+        sets_cur[2] = 4;                                /* (topic C: ROUTE is CONTROL's 5th row, KNOB 2's) */
+        pg = sets_page(pg);
         d = page_desc(pg, 1, &vp);
         char v[8];
         const char *u;
         param_format(d, 1, v, &u);
-        bad += check("GLO > MIDI K2: ROUT CH1-4 / SEL", pg->fam == FAM_GLO && vp == &song.g[G_ROUTE] && str_eq(v, "SEL"));
+        bad += check("GLO > CONTROL list: ROUTE CH1-4 / SEL on KNOB 2", pg->fam == FAM_GLO && vp == &song.g[G_ROUTE] && str_eq(v, "SEL"));
     }
     return bad;
 }
@@ -1965,24 +1967,24 @@ static int test_display_preferences(void)
     ui.force = 1; ui_draw();
     memcpy(before, host_screen, sizeof before);
     settings.palette = 0; palette_set(0);
-    turn(EN_K1, 1); ui_draw();
+    turn(EN_K2, 1); ui_draw();
     bad += check("COLOR KNOB 1 shows the next palette (VAP LT, light) at once",
                  settings.palette == 1 && str_eq(UI_PALETTES[1].name, "VAP LT") && T_BG == UI_PALETTES[1].bg && ux.light &&
                  !song.octave && memcmp(before, host_screen, sizeof before) && !memcmp(sounds, trk, sizeof sounds));
     bad += check("COLOR KNOB 1 steps on to NOIRE, then wraps to VAP DK (2026-11-02: the three palettes)",
-                 (turn(EN_K1, 1), settings.palette == 2u) && str_eq(UI_PALETTES[2].name, "NOIRE") &&
-                 !ux.light && T_BG == 0u && (turn(EN_K1, 1), settings.palette == 0u) &&
-                 str_eq(UI_PALETTES[0].name, "VAP DK") && !ux.light && (turn(EN_K1, 1), turn(EN_K1, 1), settings.palette == 2u));
+                 (turn(EN_K2, 1), settings.palette == 2u) && str_eq(UI_PALETTES[2].name, "NOIRE") &&
+                 !ux.light && T_BG == 0u && (turn(EN_K2, 1), settings.palette == 0u) &&
+                 str_eq(UI_PALETTES[0].name, "VAP DK") && !ux.light && (turn(EN_K2, 1), turn(EN_K2, 1), settings.palette == 2u));
     settings.lowcut = 0; fx_lowcut = 0;
     glo_row(MI_LOWCUT);                                 /* (GLO > AUDIO's KNOB 1) */
     {   /* #42: SPEAKER EQ FLAT (the old OFF, stored 0) LOWCUT BASS+; KNOB 1 steps them, the audio follows at once */
         int ok = str_eq(MI_NAME[MI_LOWCUT], "SPEAKER EQ") && str_eq(SPK_EQ[0], "FLAT") && str_eq(SPK_EQ[1], "LOWCUT") &&
                  str_eq(SPK_EQ[2], "BASS+");
-        turn(EN_K1, 1); ok &= settings.lowcut == 1u && fx_lowcut == 1u;
-        turn(EN_K1, 1); ok &= settings.lowcut == 2u && fx_lowcut == 2u;
-        turn(EN_K1, 1); ok &= settings.lowcut == 0u && !fx_lowcut;    /* (2026-11-03: KNOB 1 wraps) */
-        turn(EN_K1, -1); ok &= settings.lowcut == 2u;
-        turn(EN_K1, 1); ok &= settings.lowcut == 0u && !fx_lowcut;
+        turn(EN_K2, 1); ok &= settings.lowcut == 1u && fx_lowcut == 1u;
+        turn(EN_K2, 1); ok &= settings.lowcut == 2u && fx_lowcut == 2u;
+        turn(EN_K2, 1); ok &= settings.lowcut == 0u && !fx_lowcut;    /* (2026-11-03: KNOB 1 wraps) */
+        turn(EN_K2, -1); ok &= settings.lowcut == 2u;
+        turn(EN_K2, 1); ok &= settings.lowcut == 0u && !fx_lowcut;
         bad += check("#42 SPEAKER EQ: FLAT (old OFF) / LOWCUT / BASS+ on KNOB 1, fx_lowcut follows", ok);
     }
     press(B_HOME);
@@ -1992,19 +1994,26 @@ static int test_display_preferences(void)
 }
 
 /* (2026-11-02) a MENU row on its GLO page (the MENU gone: params.c MROW): that page shown; the knob (0..3) that turns it */
-static uint32_t glo_row(uint32_t r)
+static uint32_t glo_id(uint32_t id)                     /* (topic C) GLO's lists: go to the one holding row `id`, KNOB 1 put on it;
+                                                         * returns the knob that sets it (KNOB 2's slot, 1) */
 {
-    uint32_t i, k;
-    for (i = 0; i < NPAGES; i++)
-        for (k = 0; k < 4u; k++)
-            if (PAGES[i].fam == FAM_GLO && PAGES[i].id[k] == MROW(r)) {
+    uint32_t i, k, ls = 0;
+    for (i = 0; i < NPAGES; i++) {
+        if (PAGES[i].graph != GR_SETS)
+            continue;
+        for (k = 0; k < SETS_MAX; k++)
+            if (SETS[ls][k] == id) {
+                sets_cur[ls] = (uint8_t)k;
                 go_title(PAGES[i].title);
                 frame();
-                return k;
+                return 1u;
             }
-    printf("ui:   no GLO page holds MENU row %u\n", r);
-    return 0;
+        ls++;
+    }
+    printf("ui:   no GLO list holds row %u\n", id);
+    return 1;
 }
+static uint32_t glo_row(uint32_t r) { return glo_id(MROW(r)); }
 static void about_open(void)                            /* GLO > TOOLS' ABOUT: its knob, the dialog's YES */
 {
     turn(EN_K1 + glo_row(MI_ABOUT), 1); frame();
@@ -2051,7 +2060,7 @@ static int test_information(void)
     bad += check("scrolling back through CREDITS returns to ABOUT's top", ui.menu == 2 && !ui.menu_scroll);
     press(B_OCTDN);
     bad += check("OCT- returns to GLO > TOOLS without changing sounds or patterns",
-                 !ui.menu && str_eq(cur_page()->title, "SETUP") && !memcmp(sounds, trk, sizeof sounds));
+                 !ui.menu && str_eq(cur_page()->title, "SYSTEM") && !memcmp(sounds, trk, sizeof sounds));
     about_open();
     bad += check("reopening ABOUT starts the continuous document at the top", ui.menu == 2 && !ui.menu_scroll);
     menu_close();
@@ -2084,20 +2093,23 @@ static int test_information(void)
  * value strip, its last frame is the static render; unchanged digits stay; the direction follows the sign; a
  * change mid-roll retargets; a fast turn, another shape, a page / track / palette change and ui.force snap. */
 static uint16_t roll_shot[240 * 240];
-static void roll_settle(void)                     /* AUDIO (TUNE KNOB 3), nothing rolling, no knob hot */
+static void roll_settle(void)                     /* CONTROL (TUNE, KNOB 2), nothing rolling, no knob hot */
 {
     uint32_t k;
-    go_title("AUDIO");
+    go_title("CONTROL"); sets_cur[2] = 7;            /* (topic C: TUNE is CONTROL's 8th row, KNOB 2's) */
     ui.hot_t = 0; ui.bpm_t = 0;
     for (k = 0; k < 12u; k++) frame();
 }
 /* host_screen against roll_shot: the pixels that differ inside the box (in = 1) or outside it */
+static int roll_nograph;                          /* (topic C: GLO's list shows the value too: the graph's rows do not count) */
 static uint32_t roll_diff(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int in)
 {
     uint32_t n = 0;
     int32_t x, y;
     for (y = 0; y < 240; y++)
         for (x = 0; x < 240; x++) {
+            if (roll_nograph && y >= (int32_t)H_HEAD && y < (int32_t)TF_KN_Y)
+                continue;
             int inside = x >= x0 && x < x1 && y >= y0 && y < y1;
             if (inside == in && host_screen[y * 240 + x] != roll_shot[y * 240 + x]) n++;
         }
@@ -2178,29 +2190,29 @@ static int test_roll(void)
 
     /* TUNE 0 -> 1 (AUDIO's card 3): a roll of ROLL_FRAMES frames, the last one the static render */
     ui_power_on(); roll_settle();
-    turn(EN_K3, 1);
-    ok = song.g[G_TUNE] == 1 && str_eq(ui.roll[2].from, "0") && ui.roll[2].dir == 1;
-    for (n = 1; ui.roll[2].from[0] && n < 20u; n++) frame();
+    turn(EN_K2, 1);
+    ok = song.g[G_TUNE] == 1 && str_eq(ui.roll[1].from, "0") && ui.roll[1].dir == 1;
+    for (n = 1; ui.roll[1].from[0] && n < 20u; n++) frame();
     ok &= n == ROLL_FRAMES;
     bad += check("roll: a card's value rolls for 9 frames (TUNE 0 -> 1), the value itself at once", ok);
     bad += check("roll: the roll's last frame is pixel-identical to the static render", roll_static_now());
 
     /* mid-roll: only the value strip differs from the static render */
     ui_power_on(); roll_settle();
-    turn(EN_K3, 1); frame(); frame(); frame();
+    turn(EN_K2, 1); frame(); frame(); frame();
     memcpy(roll_shot, host_screen, sizeof roll_shot);
     ui.force = 1; ui_draw();                       /* (snaps: the static render) */
-    ok = roll_diff(STRIP(2), 0) == 0 && roll_diff(STRIP(2), 1) > 20u && !ui.roll[2].from[0];
+    ok = roll_diff(STRIP(1), 0) == 0 && roll_diff(STRIP(1), 1) > 20u && !ui.roll[1].from[0];
     bad += check("roll: a mid-roll frame differs from the static render inside the value strip only", ok);
 
     /* BPM 120 -> 121 (SELECT): the header rolls, the digits 1 and 2 stay; the BPM card too (no unit:
      * the label says BPM: set in M, it rolls like any number) */
-    ui_power_on(); roll_settle();
-    go_title("TEMPO");                             /* (2026-11-02: BPM on TEMPO, TUNE on AUDIO) */
+    ui_power_on(); roll_settle(); roll_nograph = 1;
+    sets_cur[0] = 0; go_title("MAIN");
     for (k = 0; k < 12u; k++) frame();
     song.g[G_BPM]++; frame();                     /* (the tempo is REC + KNOB 3: set here) */
     ok = song.g[G_BPM] == 121 && str_eq(ui.roll[ROLL_BPM].from, "120") && ui.roll[ROLL_BPM].dir == 1 &&
-         str_eq(ui.roll[0].from, "120") && ui.roll[0].dir == 1;
+         str_eq(ui.roll[1].from, "120") && ui.roll[1].dir == 1;
     frame(); frame();
     memcpy(roll_shot, host_screen, sizeof roll_shot);
     ui.force = 1; ui_draw();
@@ -2210,70 +2222,71 @@ static int test_roll(void)
         head_geo(&g, "121");
         x0 = g.sx0; x1 = g.sx1;
         n = roll_diff(x0, 0, x1, H_HEAD, 1);
-        ok &= n > 20u && roll_diff(x0, 0, x1, H_HEAD, 0) == roll_diff(STRIP(0), 1);   /* (+ the card's strip) */
+        ok &= n > 20u && roll_diff(x0, 0, x1, H_HEAD, 0) == roll_diff(STRIP(1), 1);   /* (+ the card's strip) */
         ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_S, "12"), H_HEAD, 1) == 0;   /* (0.8.5: the BPM in S; 0.8.9 in M;
                                                          * chord-harp fork: S again) */
         ok &= x0 < g.bx && x1 <= 140 && x1 - x0 <= 40;
     }
-    ok &= roll_diff(RX0(0), RY0, rx(0) + text_w(RF, "12"), RY1, 1) == 0;
+    ok &= roll_diff(RX0(1), RY0, rx(1) + text_w(RF, "12"), RY1, 1) == 0;
     /* TUNE 10 -> 11 on a card: the 1 stays */
-    ui_power_on(); song.g[G_TUNE] = 10; roll_settle();
-    turn(EN_K3, 1); frame(); frame();
+    ui_power_on(); song.g[G_TUNE] = 10; roll_settle(); roll_nograph = 1;
+    turn(EN_K2, 1); frame(); frame();
     memcpy(roll_shot, host_screen, sizeof roll_shot);
     ui.force = 1; ui_draw();
-    ok &= song.g[G_TUNE] == 11 && roll_diff(STRIP(2), 1) > 20u && roll_diff(STRIP(2), 0) == 0;
-    ok &= roll_diff(RX0(2), RY0, rx(2) + text_w(RF, "1"), RY1, 1) == 0;
+    ok &= song.g[G_TUNE] == 11 && roll_diff(STRIP(1), 1) > 20u && roll_diff(STRIP(1), 0) == 0;
+    ok &= roll_diff(RX0(1), RY0, rx(1) + text_w(RF, "1"), RY1, 1) == 0;
+    roll_nograph = 0;
     bad += check("roll: header BPM 120 -> 121 and a card 10 -> 11: only the strip changes, unchanged digits stay put", ok);
 
     /* the direction: 5 -> 6 and -5 -> -6 at frame 4: the new digit comes from below (up) / above (down) */
     ui_power_on(); song.g[G_TUNE] = 5; roll_settle();
-    st = roll_ink_row(host_screen, rx(2), rx(2) + 11, RY0, RY1);
-    turn(EN_K3, 1); frame(); frame(); frame();
-    up = roll_ink_row(host_screen, rx(2), rx(2) + 11, RY0, RY1);
-    ok = ui.roll[2].dir == 1;
+    st = roll_ink_row(host_screen, rx(1), rx(1) + 11, RY0, RY1);
+    turn(EN_K2, 1); frame(); frame(); frame();
+    up = roll_ink_row(host_screen, rx(1), rx(1) + 11, RY0, RY1);
+    ok = ui.roll[1].dir == 1;
     ui_power_on(); song.g[G_TUNE] = 7; roll_settle();
-    turn(EN_K3, -1); frame(); frame(); frame();
-    down = roll_ink_row(host_screen, rx(2), rx(2) + 11, RY0, RY1);
-    ok &= ui.roll[2].dir == -1 && st > 0 && up > st + 16 && down < st - 16;
+    turn(EN_K2, -1); frame(); frame(); frame();
+    down = roll_ink_row(host_screen, rx(1), rx(1) + 11, RY0, RY1);
+    ok &= ui.roll[1].dir == -1 && st > 0 && up > st + 16 && down < st - 16;
     ui_power_on(); song.g[G_TUNE] = -5; roll_settle();
-    turn(EN_K3, -1);
-    ok &= song.g[G_TUNE] == -6 && str_eq(ui.roll[2].from, "-5") && ui.roll[2].dir == -1;
+    turn(EN_K2, -1);
+    ok &= song.g[G_TUNE] == -6 && str_eq(ui.roll[1].from, "-5") && ui.roll[1].dir == -1;
     bad += check("roll: an increase rolls up, a decrease down (-5 -> -6 is down)", ok);
 
     /* retarget: a change mid-roll restarts from the value it was going to; a fast turn snaps */
     ui_power_on(); song.g[G_TUNE] = 1; roll_settle();
-    turn(EN_K3, 1); frame(); frame(); frame();
-    turn(EN_K3, 1);
-    ok = song.g[G_TUNE] == 3 && str_eq(ui.roll[2].from, "2") && (uint8_t)(ui.frame - ui.roll[2].t0) == 0;
-    for (n = 1; ui.roll[2].from[0] && n < 20u; n++) frame();
+    turn(EN_K2, 1); frame(); frame(); frame();
+    turn(EN_K2, 1);
+    ok = song.g[G_TUNE] == 3 && str_eq(ui.roll[1].from, "2") && (uint8_t)(ui.frame - ui.roll[1].t0) == 0;
+    for (n = 1; ui.roll[1].from[0] && n < 20u; n++) frame();
     ok &= n == ROLL_FRAMES && roll_static_now();
     bad += check("roll: a change mid-roll retargets (from the last value, restarted) and ends static", ok);
     ui_power_on(); song.g[G_TUNE] = 1; roll_settle();
-    turn(EN_K3, 1); turn(EN_K3, 1);
-    ok = song.g[G_TUNE] == 3 && !ui.roll[2].from[0] && roll_static_now();
+    turn(EN_K2, 1); turn(EN_K2, 1);
+    ok = song.g[G_TUNE] == 3 && !ui.roll[1].from[0] && roll_static_now();
     bad += check("roll: a change within 40 ms of the last one snaps (a fast turn)", ok);
 
     /* snaps: another shape, a name, the page, the track, the palette, ui.force */
     ui_power_on(); roll_settle();
-    turn(EN_K3, -1);
-    ok = song.g[G_TUNE] == -1 && !ui.roll[2].from[0] && roll_static_now();
-    go_title("MIDI");                              /* (2026-11-02: CLOCK is GLO > MIDI's KNOB 1) */
+    turn(EN_K2, -1);
+    ok = song.g[G_TUNE] == -1 && !ui.roll[1].from[0] && roll_static_now();
+    go_title("CONTROL"); sets_cur[2] = 3;          /* (topic C: CLOCK is CONTROL's 4th row) */
     for (k = 0; k < 12u; k++) frame();
-    turn(EN_K1, 1);
-    ok &= song.g[G_CLOCK] != 0 && !ui.roll[0].from[0] && roll_static_now();
+    turn(EN_K2, 1);
+    ok &= song.g[G_CLOCK] != 0 && !ui.roll[1].from[0] && roll_static_now();
     bad += check("roll: a sign / length change (0 -> -1) and a name (CLK) snap", ok);
     ok = 1;
     for (k = 0; k < 5u; k++) {
         ui_power_on(); roll_settle();
-        turn(EN_K3, 1);
-        ok &= ui.roll[2].from[0] != 0;
+        turn(EN_K2, 1);
+        ok &= ui.roll[1].from[0] != 0;
         if (k == 0) go_title("SYSTEM");
         else if (k == 1) turn(EN_ALGO, 1);
         else if (k == 2) { settings.palette = 1; palette_set(1); }          /* (no ui.force) */
         else if (k == 3) set_engine_of(TSEL, eng_step(TSEL->eng_req, 1));   /* (no ui.force) */
         else ui.force = 1;
         frame();
-        ok &= !ui.roll[2].from[0] && !ui.roll[ROLL_BPM].from[0];
+        ok &= !ui.roll[1].from[0] && !ui.roll[ROLL_BPM].from[0];
     }
     ui_power_on(); roll_settle();
     song.g[G_BPM]++; frame();
@@ -2658,10 +2671,10 @@ static int test_product_ux(void)
     turn(EN_K3, -1);
     frames(320);                                       /* (taps further apart than a double tap: #83) */
     turn(EN_SELECT, 1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain; GLO its */
-    press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "TEMPO");   /* first) */
+    press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "MAIN");   /* first) */
     press(B_GLO); frames(320); ok &= ui.home && home_level() == 0u;
-    press(B_GLO); ok &= str_eq(cur_page()->title, "TEMPO");
-    bad += check("GLO: TEMPO (its first); a GLO tap on it TRACKS; again TEMPO", ok);
+    press(B_GLO); ok &= str_eq(cur_page()->title, "MAIN");
+    bad += check("GLO: MAIN (its first); a GLO tap on it TRACKS; again MAIN", ok);
     go_home(); hold(B_SEQ);
     bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
     go_page(GR_SONG);
@@ -8421,10 +8434,10 @@ static int test_click_menu(void)
         c = glo_row(MI_COUNTIN);
         turn(EN_K1 + c, 1); ok &= cin_bars == 1u;
         turn(EN_K1 + c, 1); ok &= cin_bars == 2u;
-        go_title("SYSTEM"); frame();                  /* TRACKS: SYSTEM's KNOB 1 (G_TRKS; chord-harp fork: 1..6) */
-        ok &= cur_page()->id[0] == G_TRKS && trk_live == 4u && menu_get(MI_TRACKS) == 3u && str_eq(menu_vname(MI_TRACKS, 0), "1");
-        turn(EN_K1, -1); frame(); ok &= trk_live == 3u && !(ui_rec_prefs & 0x80u) && ui_trks == 3u;
-        turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K1, 1); frame();   /* (a value a detent) */
+        glo_id(G_TRKS); frame();                      /* TRACKS: MAIN's list, KNOB 2 (G_TRKS; chord-harp fork: 1..6) */
+        ok &= cur_page()->id[1] == G_TRKS && trk_live == 4u && menu_get(MI_TRACKS) == 3u && str_eq(menu_vname(MI_TRACKS, 0), "1");
+        turn(EN_K2, -1); frame(); ok &= trk_live == 3u && !(ui_rec_prefs & 0x80u) && ui_trks == 3u;
+        turn(EN_K2, 1); turn(EN_K2, 1); turn(EN_K2, 1); frame();   /* (a value a detent) */
         ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && ui_trks == 6u;   /* 6 (the old bit too) */
         press(B_HOME);
         bad += check("GLO > CLICK: CLICK, CLICK LEVEL, COUNT-IN on their knobs; SYSTEM: TRACKS; applied at once", ok && !ui.menu);
@@ -8455,15 +8468,16 @@ static int test_click_menu(void)
         bad += check("TRACKS 4: a note for T5 says T5-T6 ASLEEP, GLO>SYSTEM>TRACKS 6", ok);
     }
     {   /* (0.6.19) GLO > SYSTEM's TRKS (KNOB 2): the same setting, both ways */
-        go_title("SYSTEM");
-        turn(EN_K1, -2); frame();
+        glo_id(G_TRKS);
+        turn(EN_K2, -2); frame();
         ok = trk_live == 4u && !(ui_rec_prefs & 0x80u) && trks_ui == 3;
-        turn(EN_K1, 2); frame();
+        turn(EN_K2, 2); frame();
         ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 5 && msg_is("6 TRACKS");
         trks_put(2); frame();
         ok &= trks_ui == 2;                             /* (MENU's change shown there) */
         trks_put(5); frame();
-        ok &= load_ui == 2 && sys_load == LOAD_FULL;    /* (0.6.30) KNOB 2 LOAD: FULL, the default */
+        glo_id(G_LOADP);
+        ok &= load_ui == 2 && sys_load == LOAD_FULL;    /* (0.6.30) LOAD: FULL, the default */
         turn(EN_K2, -1); frame();
         ok &= load_ui == 1 && sys_load == LOAD_LITE && ui_load == 1u && msg_is("LOAD LITE: LIGHTER FX");
         turn(EN_K2, -1); frame();
@@ -8843,12 +8857,12 @@ static int test_bpm_lock(void)
     ui_power_on();
     ui_prefs = 0;
     frame();
-    go_title("TEMPO"); frame();                       /* (0.6.67: SELECT alone scrolls the pages, never the tempo) */
+    go_title("MAIN"); frame();                        /* (0.6.67: SELECT alone scrolls the pages, never the tempo) */
     b0 = song.g[G_BPM];
     turn(EN_SELECT, 1);
-    ok = song.g[G_BPM] == b0 && str_eq(cur_page()->title, "SCREEN");
+    ok = song.g[G_BPM] == b0 && str_eq(cur_page()->title, "DEVICE");
     turn(EN_SELECT, -1);
-    ok &= str_eq(cur_page()->title, "TEMPO");
+    ok &= str_eq(cur_page()->title, "MAIN");
     go_home(); frame(); turn(EN_SELECT, 1);
     ok &= !ui.home && !ui.confirm && str_eq(cur_page()->title, "PRESETS");   /* (2026-11-02: TRACKS PRESETS MORPH MIXER
                                                          * SENDS MACRO IDEAS ..) */
@@ -8868,7 +8882,7 @@ static int test_bpm_lock(void)
 
     ok = 1;                                           /* (2026-11-02: BPM LOCK gone) no tempo from SELECT alone (0.6.67: it scrolls) */
     for (i = 0; i < 2u; i++) {
-        go_title(i ? "SYSTEM" : "TEMPO");
+        go_title(i ? "SYSTEM" : "MAIN");
         frame();
         b0 = song.g[G_BPM];
         turn(EN_SELECT, 1);
@@ -8949,11 +8963,11 @@ static int test_bpm_lock(void)
     }
 
     /* ON: GLO > GLOBAL's BPM knob */
-    go_title("TEMPO"); frame();
+    glo_id(G_BPM); frame();
     b0 = song.g[G_BPM];
-    turn(EN_K1, 1);
-    ok = str_eq(cur_page()->title, "TEMPO") && cur_page()->id[0] == G_BPM && song.g[G_BPM] == b0 + 1;
-    bad += check("GLO > GLOBAL KNOB 1 still sets the tempo", ok);
+    turn(EN_K2, 1);
+    ok = str_eq(cur_page()->title, "MAIN") && cur_page()->id[1] == G_BPM && song.g[G_BPM] == b0 + 1;
+    bad += check("GLO > MAIN: BPM (KNOB 2 on its row) still sets the tempo", ok);
 
     /* ON: REC + KNOB 3 (a combo: the map, no arming, no page; was GLO + SELECT), OCT- puts nothing back, B3 TAP */
     go_title("ENV"); frame();
@@ -8993,9 +9007,8 @@ static int test_large(void)
     int bad = 0, ok;
     uint32_t i;
     ui_power_on(); frame();
-    go_title("SCREEN"); frame();
-    ok = cur_page()->id[0] == MROW(MI_COLOR) && cur_page()->id[1] == MROW(MI_SCROFF) && cur_page()->id[2] == MROW(MI_FILL) &&
-         cur_page()->id[3] == 0xFF;
+    go_title("DEVICE"); frame();
+    ok = SETS[1][0] == MROW(MI_COLOR) && SETS[1][1] == MROW(MI_SCROFF) && SETS[1][2] == MROW(MI_FILL) && SETS[1][3] == MROW(MI_LEDS);
     for (i = 0; i < MI_COUNT; i++)
         ok &= !str_eq(MI_NAME[i], "BIG VIEW") && !str_eq(MI_NAME[i], "LARGE");
     ui_prefs |= 32u; ui.force = 1; frame();
@@ -10032,42 +10045,51 @@ static int test_lz_glo(void)
     turn(EN_K3, 4); frame();
     ok &= TSEL->p[P_DLY] > v;
     frames(320); press(B_GLO); frame();
-    ok &= pd_on() && lz_fam() == LZ_GLO && pd_level() == 1u && str_eq(cur_page()->title, "TEMPO") && lz_tab_lit(0) &&
-         lz_crumb_is("GLO \xB7 TEMPO") && lz_count_is("1/9");
+    ok &= pd_on() && lz_fam() == LZ_GLO && pd_level() == 1u && str_eq(cur_page()->title, "MAIN") && lz_tab_lit(0) &&
+         lz_crumb_is("GLO \xB7 MAIN") && lz_count_is("1/4");
     turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SCREEN");
-    turn(EN_SELECT, 2); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "DEVICE");
+    turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "CONTROL");
+    turn(EN_SELECT, -1); frame();
     frames(320); press(B_GLO); frame();
     ok &= ui.home && home_level() == 0u;                            /* (GLO on GLO: TRACKS) */
     open_family(FAM_ENV); frame();
     press(B_GLO); frame();
-    ok &= str_eq(cur_page()->title, "TEMPO");                       /* (from elsewhere: its first) */
+    ok &= str_eq(cur_page()->title, "MAIN");                        /* (from elsewhere: its first) */
     turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "SCREEN");
+    ok &= str_eq(cur_page()->title, "DEVICE");
     {                                                   /* (2026-11-02) the MENU's rows as GLO's knobs */
         uint32_t pal = settings.palette, hold = settings_hold;
-        turn(EN_K1, 1); frame();
-        ok &= settings.palette != pal && glo_k == 0u;
-        turn(EN_K1, -1); frame();
+        glo_row(MI_COLOR);                              /* (topic C: KNOB 2 sets the row KNOB 1 is on) */
+        turn(EN_K2, 1); frame();
+        ok &= settings.palette != pal && glo_k == 1u;
+        turn(EN_K2, -1); frame();
         ok &= settings.palette == pal;
-        go_title("CONTROL"); frame();
-        turn(EN_K1, 1); frame();
+        turn(EN_K1, 1); frame();                          /* (KNOB 1: the next row, SCREEN OFF) */
+        ok &= sets_cur[1] == 1u && cur_page()->id[1] == MROW(MI_SCROFF) && settings.palette == pal;
+        turn(EN_K1, -1); turn(EN_K1, -1); frame();      /* (round: the last, SCALE LEDS) */
+        ok &= sets_cur[1] == 4u && cur_page()->id[1] == MROW(MI_SCLLED);
+        glo_row(MI_HOLD); frame();
+        turn(EN_K2, 1); frame();
         ok &= settings_hold != hold;
-        turn(EN_K1, -1); frame();
-        go_title("SETUP"); frame();
+        turn(EN_K2, -1); frame();
+        glo_row(MI_PANEL); frame();
+        turn(EN_K2, -1); frame();
+        ok &= ui.confirm == CF_NONE;                    /* (an action: a turn left does nothing) */
         turn(EN_K2, 1); frame();
         ok &= ui.confirm == CF_CALIB;
         press(B_OCTDN); frame();
         ok &= ui.confirm == CF_NONE;
-        turn(EN_K4, 1); frame();
+        glo_row(MI_ABOUT); frame();
+        turn(EN_K2, 1); frame();
         ok &= ui.confirm == CF_ABOUT;
         press(B_OCTUP); frame();
         ok &= ui.menu == 2;
         press(B_OCTDN); frame();
-        ok &= ui.menu == 0 && str_eq(cur_page()->title, "SETUP");
+        ok &= ui.menu == 0 && str_eq(cur_page()->title, "SYSTEM");
     }
-    bad += check("0.9.2 GLO: its 9 pages by SELECT, GLO its first page, a tap on it TRACKS; (2026-11-02) the MENU's rows its knobs, TOOLS' actions a dialog", ok);
+    bad += check("0.9.2 GLO: its 4 lists by SELECT, GLO its first page, a tap on it TRACKS; (2026-11-02) the MENU's rows its knobs, TOOLS' actions a dialog", ok);
     ui_power_on();
     return bad;
 }
@@ -10510,8 +10532,8 @@ static const old_lv_t OLD_LV[] = {
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
     {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
-    {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"TEMPO"}},
-    {FAM_GLO, 2, 9, {"SCREEN", "LEDS", "CONTROL", "MIDI", "AUDIO", "CLICK", "SYSTEM", "SETUP"}},
+    {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"MAIN"}},
+    {FAM_GLO, 2, 9, {"DEVICE", "CONTROL", "SYSTEM"}},
     {FAM_SAVE, SV_LIB, 9, {"PROJECT"}}, {FAM_SAVE, SV_PROJ, 9, {"ARRANGE", "SONG EDIT"}},
     {FAM_SAVE, SV_SOUND, 9, {"PRESETS", "MORPH"}},
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"}},
@@ -10712,9 +10734,9 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "COMP 2") && ui.cursor == 8u && TSEL->step[8].comp2 != 0u;
             break;
         default:                                        /* GLO: six tracks (SYSTEM > TRACKS) */
-            tk_start(0); trks_put(4); frame(); tk_btn(B_GLO); tk_go(EN_SELECT, -2);   /* (TEMPO, round: SETUP, SYSTEM) */
-            tk_val(EN_K1, 1); frame();
-            ok = str_eq(cur_page()->title, "SYSTEM") && trk_live == NTRK;
+            tk_start(0); trks_put(4); frame(); sets_cur[0] = 0; tk_btn(B_GLO);   /* (topic C: MAIN's list: KNOB 1 to TRACKS, KNOB 2 to six) */
+            tk_go(EN_K1, 2); tk_val(EN_K2, 1); frame();
+            ok = str_eq(cur_page()->title, "MAIN") && trk_live == NTRK;
             break;
         }
         got[t] = tk_n;

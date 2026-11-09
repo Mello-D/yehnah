@@ -1451,6 +1451,19 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)wrap_add((int32_t)mod_ui_slot, steps > 0 ? 1 : -1, 4);
         return;
     }
+    if (pg->graph == GR_SETS) {                         /* (topic C) GLO's lists: KNOB 1 the row (top to bottom, round), KNOB 2 its value
+                                                         * (cur_page()'s copy has the row in slot 1); the other two knobs: nothing */
+        uint32_t ls = sets_of(&PAGES[ui.page]) & 3u;
+        if (slot == 0u) {
+            sets_cur[ls] = (uint8_t)wrap_add((int32_t)sets_cur[ls], steps > 0 ? 1 : -1, (int32_t)sets_n(ls));
+            ui.force = 1;
+            return;
+        }
+        if (slot != 1u)
+            return;
+        if (IS_MROW(pg->id[1]) && pg->id[1] - ID_MENU >= MI_VALUES && steps <= 0)
+            return;                                     /* (an action: a turn right asks, left nothing) */
+    }
     if (pg->fam == FAM_GLO)
         glo_k = (uint8_t)slot;                          /* (GLO: its row lit; SYSTEM: USB's choices or the CPU line) */
     if (IS_MROW(pg->id[slot])) {                        /* (2026-11-02) GLO: a MENU row, as the MENU turns it; an action

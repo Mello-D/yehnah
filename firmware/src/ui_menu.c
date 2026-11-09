@@ -242,6 +242,59 @@ static void graph_glo(const page_t *pg)
     if (IS_MROW(id) && id - ID_MENU < MI_VALUES)
         menu_chips(id - ID_MENU, 74, (int32_t)graph_h() - 2);
 }
+/* (topic C) a list row's name and its value as it reads (a MENU row as the MENU, the CPU row the load now) */
+static const char *sets_label(uint32_t id)
+{
+    page_t fp = {"", FAM_GLO, SC_GLOBAL, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}};
+    int16_t *vp;
+    const param_desc_t *d;
+    if (IS_MROW(id))
+        return menu_short(id - ID_MENU);
+    fp.id[0] = (uint8_t)id;
+    d = page_desc(&fp, 0, &vp);
+    return d && d->label ? d->label : "";
+}
+static void sets_val(uint32_t id, char *v)
+{
+    page_t fp = {"", FAM_GLO, SC_GLOBAL, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}};
+    int16_t *vp;
+    const param_desc_t *d;
+    const char *unit = "";
+    v[0] = 0;
+    if (IS_MROW(id)) {
+        menu_val(id - ID_MENU, v);
+        return;
+    }
+    fp.id[0] = (uint8_t)id;
+    if ((d = page_desc(&fp, 0, &vp)) == 0 || !vp)
+        return;
+    if (id == G_INFO)
+        fmt_int(v, (int32_t)(song.cpu_q8 * 100u / 256u)), unit = "%";
+    else
+        param_format(d, *vp, v, &unit);
+    if (unit[0]) {
+        str_cpy(v + str_len(v), " ", 2);
+        str_cpy(v + str_len(v), unit, 24 - str_len(v));
+    }
+}
+/* the list: every row of it, the one KNOB 1 is on lit (its value is KNOB 2's card) */
+static void graph_sets(void)
+{
+    uint32_t ls = sets_of(&PAGES[ui.page]) & 3u, n = sets_n(ls), k;
+    for (k = 0; k < n; k++) {
+        int32_t y = 4 + (int32_t)k * 16;
+        uint16_t bg = k == sets_cur[ls] ? T_TINT : T_RAISE;
+        char v[24], kn[2] = {(char)('1' + k), 0};
+        sets_val(SETS[ls][k], v);
+        cv_rect(8, y, 224, 15, bg);
+        if (k == sets_cur[ls])
+            cv_rect(8, y, 2, 15, T_ACCENT);
+        cv_text(13, y + 4 - AF_X_CAP_Y, &AF_X, kn, T_THEME);
+        GFX_HOOK_ALIGN(0, y, 0, y + 15, AL_V, "GLO row name centred up/down");
+        cv_text_on(24, y + CAP_IN(S, 15), &AF_S, sets_label(SETS[ls][k]), T_TEXT, bg);
+        cv_text_r(226, y + CAP_IN(S, 15), &AF_S, v, T_TEXT, bg);
+    }
+}
 static void confirm_open(uint32_t kind, uint32_t trk);   /* (0.6.58) INIT SYSTEM: ui_input.c */
 static void draw_menu(void)
 {

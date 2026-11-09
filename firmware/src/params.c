@@ -582,7 +582,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_FOCUS, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SQTOOL };   /* (0.8.5:
+       GR_PROG, GR_BLEND, GR_SQTOOL, GR_SETS };   /* (0.8.5:
                                                          * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -722,20 +722,12 @@ static const page_t PAGES[] = {
     {"LEVELS", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN0, P_LN1, P_LN2, P_LN3}},   /* DRUM only: the sounds' levels (was LANES) */
     {"LEVELS 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN4, P_LN5, P_LN6, P_LN7}},
     {"VOICE", FAM_EDIT, SC_TRACK, GR_NONE, {P_VOICE, P_GLIDE, P_GLMODE, P_PRIO}},
-    {"TEMPO", FAM_GLO, SC_GLOBAL, GR_NONE, {G_BPM, G_SWING, 0xFF, 0xFF}},   /* (2026-11-02, NAV-LAYOUT.md: GLOBAL and
-                                                         * SYSTEM and the MENU's rows as GLO's pages: the project's, then the
-                                                         * device's) */
-    {"SCREEN", FAM_GLO, SC_GLOBAL, GR_NONE, {MROW(MI_COLOR), MROW(MI_SCROFF), MROW(MI_FILL), 0xFF}},   /* (2026-11-02:
-                                                         * MOTION's rows here; SKIN STYLE ANIM BIG VIEW gone) */
-    {"LEDS", FAM_GLO, SC_GLOBAL, GR_NONE, {MROW(MI_LEDS), MROW(MI_SCLLED), 0xFF, 0xFF}},
-    {"CONTROL", FAM_GLO, SC_GLOBAL, GR_NONE, {MROW(MI_HOLD), MROW(MI_ACCEL), MROW(MI_LATCH), 0xFF}},   /* (BPM LOCK gone) */
-    {"MIDI", FAM_GLO, SC_GLOBAL, GR_NONE, {G_CLOCK, G_ROUTE, MROW(MI_MIDIOUT), 0xFF}},
-    {"AUDIO", FAM_GLO, SC_GLOBAL, GR_NONE, {MROW(MI_LOWCUT), MROW(MI_USB), G_TUNE, 0xFF}},
-    {"CLICK", FAM_GLO, SC_GLOBAL, GR_NONE, {MROW(MI_CLICK), MROW(MI_CLKLVL), MROW(MI_COUNTIN), 0xFF}},
-    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TRKS, G_LOADP, G_INFO, MROW(MI_SERIAL)}},   /* (0.6.18) TRACKS 4 / 6; (0.6.30)
-                                                         * LOAD ECO / LITE / FULL (the USB card: the header's icon) */
-    {"SETUP", FAM_GLO, SC_GLOBAL, GR_NONE, {MROW(MI_RESTORE), MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT)}},   /* (actions:
-                                                         * a YES / NO dialog) */
+    /* (2026-11-10, topic C) GLO as four lists (SETS below): KNOB 1 scrolls the rows top to bottom, KNOB 2 sets the row's value (an
+     * action row, KNOB 2 right, asks YES / NO); the page's id[] stay empty, cur_page() hands out a copy with the row's id in slot 1 */
+    {"MAIN", FAM_GLO, SC_GLOBAL, GR_SETS, {0xFF, 0xFF, 0xFF, 0xFF}},       /* BPM SWING TRACKS USB CLICK: the everyday ones */
+    {"DEVICE", FAM_GLO, SC_GLOBAL, GR_SETS, {0xFF, 0xFF, 0xFF, 0xFF}},     /* the screen and the LEDs */
+    {"CONTROL", FAM_GLO, SC_GLOBAL, GR_SETS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* the knobs, MIDI, the speaker */
+    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_SETS, {0xFF, 0xFF, 0xFF, 0xFF}},     /* load, CPU, serial, restore, calibration, init, about */
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
     {"ARRANGE", FAM_SAVE, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.12) the project's song (SEQ > SONG) */
@@ -812,6 +804,40 @@ static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12
                                                                        * up airy (G_RPRE; fx.c rev_air) */
 static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) AUTO PAN's RATE on the tempo (SYNC BEAT) */
 static uint8_t sl_ui_step;       /* (0.6.3) the SL PITCH page: the step KNOB 2 edits */
+
+/* (2026-11-10, topic C) the rows of GLO's four lists (a page's place among GR_SETS pages = its list); 0xFF ends a list */
+#define SETS_MAX 8u
+static const uint8_t SETS[4][SETS_MAX] = {
+    {G_BPM, G_SWING, G_TRKS, MROW(MI_USB), MROW(MI_CLICK), MROW(MI_CLKLVL), MROW(MI_COUNTIN), 0xFF},
+    {MROW(MI_COLOR), MROW(MI_SCROFF), MROW(MI_FILL), MROW(MI_LEDS), MROW(MI_SCLLED), 0xFF, 0xFF, 0xFF},
+    {MROW(MI_HOLD), MROW(MI_ACCEL), MROW(MI_LATCH), G_CLOCK, G_ROUTE, MROW(MI_MIDIOUT), MROW(MI_LOWCUT), G_TUNE},
+    {G_LOADP, G_INFO, MROW(MI_SERIAL), MROW(MI_RESTORE), MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT), 0xFF}};
+static uint8_t sets_cur[4];      /* each list's row KNOB 1 is on */
+static uint32_t sets_of(const page_t *p)              /* the list a GR_SETS page shows */
+{
+    uint32_t k, s = 0;
+    for (k = 0; &PAGES[k] != p; k++)
+        s += PAGES[k].graph == GR_SETS;
+    return s;
+}
+static uint32_t sets_n(uint32_t s)
+{
+    uint32_t n = 0;
+    while (n < SETS_MAX && SETS[s][n] != 0xFFu)
+        n++;
+    return n;
+}
+/* the page cur_page() hands out for a GR_SETS page: itself with the row KNOB 1 is on in slot 1 (KNOB 2's) */
+static const page_t *sets_page(const page_t *p)
+{
+    static page_t sh;
+    uint32_t s = sets_of(p) & 3u, n = sets_n(s);
+    sh = *p;
+    if (sets_cur[s] >= n)
+        sets_cur[s] = (uint8_t)(n ? n - 1u : 0u);
+    sh.id[1] = SETS[s][sets_cur[s]];
+    return &sh;
+}
 
 static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
 {

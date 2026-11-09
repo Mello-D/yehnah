@@ -26,6 +26,7 @@ static void lcd_clear(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c
 static uint8_t glo_k, about_glo;                        /* (2026-11-02) GLO: the knob last turned on a MENU row's page (its
                                                          * values the panel's chips); ABOUT opened from GLO > TOOLS */
 static void graph_glo(const page_t *pg);                /* (ui_menu.c) */
+static void graph_sets(void);
 static void lz_begin(uint32_t w, uint32_t h, uint32_t x, uint32_t y)
 {
     (void)x;
@@ -1070,7 +1071,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP && g != GR_FUGUE &&   /* (0.8.3: LENTE's step, the heads) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
-           g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_PATS && g != GR_SQTOOL;
+           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_PATS && g != GR_SQTOOL;
 }
 static void graph_drift(void)
 {
@@ -1335,7 +1336,7 @@ static uint32_t graph_signature(void)
             h = (h ^ (uint32_t)song.g[i]) * 16777619u;
         for (i = 0; i < MI_VALUES; i++)
             h = (h ^ menu_get(i)) * 16777619u;
-        h = (h ^ (glo_k + 1u) * 40503u ^ settings_hold * 7u ^ (uint32_t)(uint16_t)trks_ui * 131u ^ (uint32_t)(uint16_t)load_ui * 977u) * 16777619u;
+        h = (h ^ (glo_k + 1u) * 40503u ^ (uint32_t)sets_cur[0] * 7u ^ (uint32_t)sets_cur[1] * 61u ^ (uint32_t)sets_cur[2] * 509u ^ (uint32_t)sets_cur[3] * 4093u ^ settings_hold * 7u ^ (uint32_t)(uint16_t)trks_ui * 131u ^ (uint32_t)(uint16_t)load_ui * 977u) * 16777619u;
         if (cur_page()->id[0] == G_TRKS)             /* (SYSTEM: the CPU row and its line, a sample a quarter second) */
             h = (h ^ (fm1_ms / 250u + song.cpu_q8 * 7u)) * 16777619u;
     }
@@ -1726,6 +1727,9 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
     } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
+    } else if (lz_on() && lz_fam() == LZ_GLO && pg->graph == GR_SETS) {              /* .. GLO's lists (topic C) */
+        cv_oy = 0;
+        graph_sets();
     } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
         cv_oy = 0;
         graph_system();

@@ -86,11 +86,8 @@ static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, F
                              NV("CHORUS", 0, 4, FXL_EFFECT), NV("SLICER", 0, 5, FXL_EFFECT), NV("SL BUS", 0, 5, FXL_EFFECT),
                              NV("SL BUS 2", 0, 5, FXL_EFFECT), NV("SL PITCH", 0, 5, FXL_EFFECT),
                              NV("MASTER", 0, 6, FXL_EFFECT), NV("PUNCH", 0, 7, FXL_EFFECT)};
-static const nv_t CE_GLO[] = {NV("TEMPO", 0, 0, 1),   /* (2026-11-02: the MENU's rows its pages, NAV-LAYOUT.md;
-                                                         * MIXER, SENDS to HOME) */
-                              NV("SCREEN", 0, 1, 2), NV("LEDS", 0, 1, 2), NV("CONTROL", 0, 2, 2),
-                              NV("MIDI", 0, 2, 2), NV("AUDIO", 0, 3, 2), NV("CLICK", 0, 3, 2), NV("SYSTEM", 0, 4, 2),
-                              NV("SETUP", "TOOLS", 4, 2)};   /* (SETUP: SAVE has a TOOLS) */
+static const nv_t CE_GLO[] = {NV("MAIN", 0, 0, 1), NV("DEVICE", 0, 1, 2), NV("CONTROL", 0, 2, 2), NV("SYSTEM", 0, 3, 2)};   /* (topic C:
+                                                         * four lists; was nine pages) */
 static const nv_t CE_ENV[] = {NV("ENV", 0, 1, 1), NV("ENV DEST", 0, 1, 1), NV("STAGE", 0, 2, 2),   /* (this track's, then
                                                          * all six tracks') */
                               NV("ENV", "ALL ENV", 0, 0), NV("ENV DEST", "ALL DEST", 0, 0)};
