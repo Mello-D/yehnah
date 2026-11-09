@@ -55,33 +55,112 @@ static void graph_lib(void)
         }
     }
 }
-/* (2026-11-06) SONG STRUCTURE: every row inserted is a line across the screen (6 rows, 6 lines), its section's colour
- * and "A x4"; the next INSERT as a framed ghost line; the song's length under */
-static void graph_song(void)
+/* (2026-11-11, topic D) ARRANGE and SONG EDIT share one view: a lane per track, the song's bars left to right (SV_BARS on the screen,
+ * scrolled to keep the picked part in view), each part in its section's colour with a gap between, the bars a track sits out of
+ * dim. ARRANGE (trim 0): the picked part framed across every lane, the next INSERT a ghost frame at the end, a header strip with the
+ * sections' letters. SONG EDIT (trim 1): only the picked part of the picked track framed. The song playing: a line where it is. */
+#define SV_BARS 32
+static uint32_t sv_scroll;                            /* the first bar on the screen */
+static void graph_song_view(int trim)
 {
-    uint32_t i, n = chain_config.count, total = 0, end, lines = n;
-    int32_t h = lines ? 112 / (int32_t)lines : 14;
+    uint32_t i, q, n = chain_config.count, total = 0, nt = trk_live, r = ui.song_row, st = ui.sed_trk < nt ? ui.sed_trk : 0u;
+    uint32_t pa = 0, pb = 0, acc = 0, end;
+    int32_t h = 100 / (int32_t)(nt ? nt : 1u), top = 10, bw = 6;
+    int ghost = !trim && n && r >= n && n < CHAIN_ROWS;
     char b[24];
-    if (h > 14) h = 14;
-    for (i = 0; i < lines; i++) {
-        int32_t y = 2 + (int32_t)i * h;
-        int ghost = 0, sel = i == ui.song_row;
-        uint32_t sec = chain_config.row[i].slot;
-        uint32_t bars = chain_config.row[i].bars;
-        uint16_t c = lz_sec(sec, 1, !sel);
-        cv_rect(4, y, 232, h - 1, c);
+    if (!n) {
+        cv_text_in(4, 56, 232, &AF_X, trim ? "NO PARTS: ADD ONE IN ARRANGE" : "OCT+ INSERTS A SECTION", trim ? T_MID : T_THEME, T_SURF);
+        return;
+    }
+    if (h > 18) h = 18;
+    for (i = 0; i < n; i++) {
+        if (i == r) pa = total;
+        total += chain_config.row[i].bars;
+    }
+    if (r >= n) { r = n - 1u; pa = total - chain_config.row[r].bars; }
+    pb = pa + chain_config.row[r].bars;
+    if (ghost) { pa = total; pb = total + (uint32_t)arr_bars_get(); }
+    if (pa < sv_scroll) sv_scroll = pa;
+    else if (pb > sv_scroll + SV_BARS) sv_scroll = pb - pa > SV_BARS ? pa : pb - SV_BARS;
+    if (sv_scroll + SV_BARS > total + (ghost ? arr_bars_get() : 0u) && total + (ghost ? arr_bars_get() : 0u) > SV_BARS)
+        sv_scroll = total + (ghost ? arr_bars_get() : 0u) - SV_BARS;
+    if (total + (ghost ? arr_bars_get() : 0u) <= SV_BARS) sv_scroll = 0;
+    for (i = 0; i < SV_BARS / 4u + 1u; i++)            /* a tick every 4 bars */
+        if ((sv_scroll + i * 4u) % 4u == 0u && sv_scroll + i * 4u <= total)
+            cv_rect(20 + (int32_t)(i * 4u) * bw, top - 3, 1, 2, T_DIM);
+    for (i = 0; i < n; i++) {
+        uint32_t bars = chain_config.row[i].bars, a = acc, e = acc + bars;
+        acc = e;
+        if (e <= sv_scroll || a >= sv_scroll + SV_BARS) continue;
+        if (!trim && a >= sv_scroll) {                   /* the section's letter over its first bar */
+            b[0] = (char)('A' + chain_config.row[i].slot); b[1] = 0;
+            cv_text_on(20 + (int32_t)(a - sv_scroll) * bw + 1, 0, &AF_X, b, i == r ? T_TEXT : T_DIM, T_SURF);
+        }
+    }
+    for (q = 0; q < nt; q++) {
+        int32_t y = top + (int32_t)q * h;
+        acc = 0;
         if (h >= 10) {
-            b[0] = (char)('A' + sec); b[1] = ' '; b[2] = 'x';
-            fmt_int(b + 3, (int32_t)bars);
-            GFX_HOOK_ALIGN(0, y, 0, y + h - 1, AL_V, "song structure line text centred up/down");
-            cv_text_on(10, y + CAP_IN(X, h - 1), &AF_X, b, T_INK, c);
+            b[0] = 'T'; b[1] = (char)('1' + q); b[2] = 0;
+            cv_text_on(4, y + CAP_IN(X, h - 2), &AF_X, b, trim && q == st ? T_TEXT : T_DIM, T_SURF);
         }
-        if (sel) {
-            cv_frame(3, y - 1, 234, h + 1, T_TEXT);
-            cv_frame(4, y, 232, h - 1, T_TEXT);
+        for (i = 0; i < n; i++) {
+            uint32_t bars = chain_config.row[i].bars, ta, tb, a = acc, e = acc + bars, va, ve;
+            int pick = trim ? (q == st && i == r) : i == r && !ghost;
+            uint16_t c = lz_sec(chain_config.row[i].slot, 1, !pick);
+            int32_t x0, x1, k0, k1;
+            acc = e;
+            if (e <= sv_scroll || a >= sv_scroll + SV_BARS) continue;
+            va = a < sv_scroll ? sv_scroll : a;
+            ve = e > sv_scroll + SV_BARS ? sv_scroll + SV_BARS : e;
+            x0 = 20 + (int32_t)(va - sv_scroll) * bw;
+            x1 = 20 + (int32_t)(ve - sv_scroll) * bw - (ve == e ? 1 : 0);
+            row_trims(&chain_config, song_cur, i, q, &ta, &tb);
+            cv_rect(x0, y, x1 - x0, h - 2, ux_mix(T_BG, c, 22));                      /* the whole part, dim: what is cut */
+            k0 = 20 + (int32_t)((a + ta > va ? a + ta : va) - sv_scroll) * bw;
+            k1 = 20 + (int32_t)((e - tb < ve ? e - tb : ve) - sv_scroll) * bw - (ve == e && tb == 0u ? 1 : 0);
+            if (k1 > k0) cv_rect(k0, y, k1 - k0, h - 2, c);
+            if (pick && trim)
+                cv_frame(x0 - 1, y - 1, x1 - x0 + 2, h, T_TEXT);
+            if (chain.running && i == chain.row) {
+                uint32_t at = a + bars - chain.remaining;
+                if (at >= sv_scroll && at < sv_scroll + SV_BARS)
+                    cv_rect(20 + (int32_t)(at - sv_scroll) * bw, y - 1, 1, h, T_ACCENT);
+            }
         }
-        (void)ghost;
-        total += bars;
+        if (ghost) {                                       /* the next INSERT, framed after the last part */
+            int32_t x0 = 20 + (int32_t)(total - sv_scroll) * bw, w = (int32_t)arr_bars_get() * bw - 1;
+            if (x0 + w > 236) w = 236 - x0;
+            if (w > 0 && q < nt) cv_frame(x0, y, w, h - 2, T_THEME);
+        }
+    }
+    {                                                      /* the whole song as a strip under the lanes, the window on it */
+        int32_t oy = top + (int32_t)nt * h + 3, tot = (int32_t)total + (ghost ? (int32_t)arr_bars_get() : 0);
+        acc = 0;
+        for (i = 0; i < n; i++) {
+            int32_t o0 = 20 + (int32_t)acc * 212 / tot, o1 = 20 + (int32_t)(acc + chain_config.row[i].bars) * 212 / tot;
+            acc += chain_config.row[i].bars;
+            cv_rect(o0, oy, o1 - o0 > 1 ? o1 - o0 - 1 : 1, 3, lz_sec(chain_config.row[i].slot, 1, i != r));
+        }
+        if (tot > SV_BARS)
+            cv_frame(19 + (int32_t)sv_scroll * 212 / tot, oy - 1, SV_BARS * 212 / tot + 2, 5, T_TEXT);
+    }
+    if (!trim && !ghost) {                                 /* the picked part framed across every lane */
+        uint32_t va = pa < sv_scroll ? sv_scroll : pa, ve = pb > sv_scroll + SV_BARS ? sv_scroll + SV_BARS : pb;
+        cv_frame(19 + (int32_t)(va - sv_scroll) * bw, top - 1, (int32_t)(ve - va) * bw + 1, (int32_t)nt * h, T_TEXT);
+    }
+    if (trim) {                                            /* the picked cell in words: PART 2 · BARS 5-12 · CUT 2 / 1 */
+        uint32_t k;
+        str_cpy(b, "PART ", sizeof b);
+        fmt_int(b + 5, (int32_t)r + 1);
+        k = str_len(b);
+        str_cpy(b + k, " \xB7 CUT ", 9);
+        row_trims(&chain_config, song_cur, r, st, &pa, &pb);
+        fmt_int(b + str_len(b), (int32_t)pa);
+        k = str_len(b); b[k] = '/'; b[k + 1u] = 0;
+        fmt_int(b + k + 1u, (int32_t)pb);
+        cv_text_r(236, 128, &AF_X, b, T_DIM, T_SURF);
+        return;
     }
     end = SONG_END(&chain_config);
     fmt_int(b, (int32_t)total);
@@ -90,49 +169,10 @@ static void graph_song(void)
     else if (end >= 2u) { uint32_t k = str_len(b); b[k] = 'x'; fmt_int(b + k + 1u, (int32_t)end); }
     else str_cpy(b + str_len(b), "STOP", 6);
     GFX_HOOK_ALIGN(0, 128, 0, 137, AL_V | AL_PASS, "song structure length");
-    cv_text_r(236, 128, &AF_X, n ? b : "OCT+ INSERTS A SECTION", ui.song_row >= n && n ? T_THEME : T_DIM, T_SURF);
+    cv_text_r(236, 128, &AF_X, b, r >= n ? T_THEME : T_DIM, T_SURF);
 }
-/* (2026-11-06) SONG EDIT: the tracks run down the screen, each line broken into the song's parts (the rows, their bars at one scale
- * across the width, a gap between); a part in its section's colour, the bars the track sits out of it dim; the part picked on the
- * track picked framed; the song playing: a line where it is */
-static void graph_sedit(void)
-{
-    uint32_t i, q, n = chain_config.count, total = 0, nt = trk_live, r = ui.song_row < n ? ui.song_row : 0u, st = ui.sed_trk < nt ? ui.sed_trk : 0u;
-    int32_t h = 112 / (int32_t)nt, acc = 0, W = 232 - (int32_t)n * 2;
-    char b[8];
-    if (!n) {
-        cv_text_in(4, 56, 232, &AF_X, "NO PARTS: ADD ONE IN ARRANGE", T_MID, T_SURF);
-        return;
-    }
-    if (h > 18) h = 18;
-    for (i = 0; i < n; i++)
-        total += chain_config.row[i].bars;
-    for (q = 0; q < nt; q++) {
-        int32_t y = 2 + (int32_t)q * h;
-        acc = 0;
-        if (h >= 10) {
-            b[0] = 'T'; b[1] = (char)('1' + q); b[2] = 0;
-            cv_text_on(4, y + CAP_IN(X, h - 2), &AF_X, b, q == st ? T_TEXT : T_DIM, T_SURF);
-        }
-        for (i = 0; i < n; i++) {
-            uint32_t bars = chain_config.row[i].bars, ta, tb;
-            int32_t x0 = 20 + (int32_t)i * 2 + (acc * (W - 16)) / (int32_t)total, x1;
-            int pick = q == st && i == r;
-            uint16_t c = lz_sec(chain_config.row[i].slot, 1, !pick);
-            acc += (int32_t)bars;
-            x1 = 20 + (int32_t)i * 2 + (acc * (W - 16)) / (int32_t)total;
-            row_trims(&chain_config, song_cur, i, q, &ta, &tb);
-            cv_rect(x0, y, x1 - x0, h - 2, ux_mix(T_BG, c, 22));                      /* the whole part, dim: what is cut */
-            cv_rect(x0 + (int32_t)(ta * (uint32_t)(x1 - x0) / bars), y, (int32_t)((bars - ta - tb) * (uint32_t)(x1 - x0) / bars), h - 2, c);
-            if (pick)
-                cv_frame(x0 - 1, y - 1, x1 - x0 + 2, h, T_TEXT);
-            if (chain.running && i == chain.row) {
-                uint32_t done = bars - chain.remaining;
-                cv_rect(x0 + (int32_t)(done * (uint32_t)(x1 - x0) / bars), y - 1, 1, h, T_ACCENT);
-            }
-        }
-    }
-}
+static void graph_song(void) { graph_song_view(0); }
+static void graph_sedit(void) { graph_song_view(1); }
 static void graph_lz_tools(void)
 {
     static const char *const WHAT[4] = {"CLEAR SEQ", "DELETE ROW", "CLEAR SONG", "NEW PROJECT"};

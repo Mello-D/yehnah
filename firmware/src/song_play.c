@@ -71,7 +71,7 @@ static void scene_apply(uint32_t row)
 /* (2026-11-06) SONG EDIT's cuts: the tracks that sit out the bar the row is at (a quick chain: none) */
 static void chain_gate(void)
 {
-    uint32_t t, a, b, at = (uint32_t)chain.config.row[chain.row].bars - chain.remaining, m = 0;
+    uint32_t t, a, b, at = (uint32_t)chain.config.row[chain.row].bars - chain.remaining, m = 0, was = chain.cut;
     if (!chain.loop && chain.row < chain.config.count)
         for (t = 0; t < NTRK; t++) {
             row_trims(&chain.config, song_cur, chain.row, t, &a, &b);
@@ -79,6 +79,10 @@ static void chain_gate(void)
                 m |= 1u << t;
         }
     chain.cut = (uint8_t)m;
+    for (t = 0; t < NTRK; t++)                        /* (2026-11-11) a track going out of the song lets go of what it holds: a cut
+                                                       * stopped only the next notes, a pad or a long gate rang on into it */
+        if (((m & ~was) >> t) & 1u)
+            trk_all_off(&trk[t]);
 }
 static void chain_apply(void)                         /* a song row's section in */
 {

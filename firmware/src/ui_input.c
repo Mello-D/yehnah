@@ -1322,8 +1322,7 @@ static void edit_param(uint32_t slot, int32_t steps)
             ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0, (int32_t)n - 1);
             return;
         }
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        bars = chain_config.row[ui.song_row].bars;
+        bars = chain_config.row[ui.song_row].bars;         /* (2026-11-11: editable while the song plays; in from the next bar) */
         row_trims(&chain_config, song_cur, ui.song_row, ui.sed_trk, &a, &b);
         cut = song_idx.scene[song_cur][ui.song_row].cut[ui.sed_trk];
         if (slot == 2u) a = (uint32_t)clamp((int32_t)a + steps, 0, (int32_t)(bars - 1u - b));

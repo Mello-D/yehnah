@@ -1195,8 +1195,12 @@ static uint32_t graph_signature(void)
         for (uint32_t r = 0; r < CHAIN_ROWS; r++)
             h = (h ^ (song_idx.scene[song_cur][r].on * (r + 1u))) * 16777619u;
         h ^= ui.song_row * 40503u + chain_config.count * 7919u + ui.arr_sect * 1299709u + ui.arr_bars * 15485863u;
-        for (i = 0; i < CHAIN_ROWS; i++)
+        for (i = 0; i < CHAIN_ROWS; i++) {
+            uint32_t q;
             h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
+            for (q = 0; q < NTRK; q++)                  /* (2026-11-11: the shared view shows the cuts) */
+                h = (h ^ (song_idx.scene[song_cur][i].cut[q][0] + 256u * song_idx.scene[song_cur][i].cut[q][1])) * 16777619u;
+        }
         h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u + chain.pass * 15485863u : 0u;
         h ^= SONG_END(&chain_config) * 2246822519u;      /* (0.6.22: the END) */
         for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (24u + i);

@@ -3187,8 +3187,11 @@ static int test_song_edit(void)
     ok = chain.cut == 2u;
     events_block(period);                              /* bar 3: T2 plays */
     ok &= chain.remaining == 6u && chain.cut == 0u;
-    events_block(period); events_block(period); events_block(period);   /* bars 4..6 */
-    events_block(period);                              /* bar 7: the last 3 bars cut */
+    events_block(period); events_block(period);        /* bars 4, 5 */
+    { uint32_t vi; for (vi = 0; vi < NVOICE; vi++) trk[1].v[vi].gate = 1; }   /* a long gate ringing into the cut */
+    events_block(period);                              /* bar 6: the last 3 bars are cut from here */
+    { uint32_t vi; for (vi = 0; vi < NVOICE; vi++) ok &= !trk[1].v[vi].gate; }   /* (2026-11-11: the cut lets go of it) */
+    events_block(period);
     ok &= chain.row == 0 && chain.remaining == 2u && chain.cut == 2u;
     events_block(period); events_block(period);        /* part 2: nothing cut */
     ok &= chain.row == 1 && chain.cut == 0u;
