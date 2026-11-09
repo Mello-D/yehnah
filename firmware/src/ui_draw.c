@@ -1343,25 +1343,19 @@ static void draw_cards(void)
                                                          * (the step off the grid, 0.6.88's TIMING; on a kit: STEP and MICRO) */
         const step_t *st = &seq_steps(TSEL)[ui.cursor];
         uint32_t kit = drum_track(TSEL), on = st->time == ST_NOTE && (kit ? st->hit != 0u : st->n != 0u);
-        uint32_t f = on && !kit && ui.pr_focus <= st->n ? ui.pr_focus : 0u;
-        int32_t m = ST_MICRO(st);
-        char fo[8], pn[8], sn[8], mo[10];
-        if (!f) str_cpy(fo, on && !kit && st->n > 1u ? "CHORD" : "ALL", 8);
-        else { str_cpy(fo, "NOTE ", 8); fmt_int(fo + 5, (int32_t)f); }
-        if (on && !kit) note_name(pn, st->note[f ? f - 1u : 0u]); else str_cpy(pn, kit ? "--" : "NONE", 8);
+        char vl[8], sn[8];
+        uint32_t fa = 0, fb = 0;
+        if (!kit) nf_pair(&fa, &fb);
+        fmt_int(vl, st->vel ? st->vel : 96);
         fmt_int(sn, (int32_t)ui.cursor + 1);
-        if (!m) str_cpy(mo, on ? "GRID" : "--", sizeof mo);
-        else { mo[0] = m < 0 ? '-' : '+'; fmt_int(mo + 1, m < 0 ? -m : m); str_cpy(mo + str_len(mo), "/64", 4); }   /* (0.9.1) */
-        if (kit) draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
-        else draw_column(0, "FOCUS", fo, "", on ? VAL(0u) : T_DIM, -1, ICON_AUTO);
-        draw_column(1, "PITCH", pn, "", on && !kit ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-        draw_column(2, "MOVE", kit ? "--" : sn, kit ? "" : "<>", on && !kit ? VAL(2u) : T_DIM, -1, ICON_AUTO);
-        draw_column(3, "MICRO", mo, "", on && m ? VAL(3u) : T_DIM, on ? (m - MICRO_MIN) * 1000 / (MICRO_MAX - MICRO_MIN) : -1,
+        draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
+        draw_column(1, "FLAG 1", kit ? "--" : NF_NAMES[fa], "", on && !kit ? VAL(1u) : T_DIM, kit ? -1 : pick_of(NF_N, fa), ICON_AUTO);
+        draw_column(2, "FLAG 2", kit ? "--" : NF_NAMES[fb], "", on && !kit ? VAL(2u) : T_DIM, kit ? -1 : pick_of(NF_N, fb), ICON_AUTO);
+        draw_column(3, "VELOCITY", vl, "", on ? VAL(3u) : T_DIM, on ? (int32_t)((st->vel ? st->vel : 96u) - 1u) * 1000 / 126 : -1,
                     ICON_ORDER);
         return;
     }
     if (cur_page()->scope == SC_STEP) {
-        static const char *const TIME_N[3] = {"NOTE", "TIE", "REST"};
         const step_t *st = &seq_steps(TSEL)[ui.cursor];
         char u[8];
         uint32_t cnt = st->n, first = st->note[0], l;
@@ -1383,19 +1377,16 @@ static void draw_cards(void)
             u[0] = 0;
         }
         {
-            static const char *const FLAG_N[4] = {"-", "ACC", "SLD", "A+S"};
             char sn[8], sl[8], tv[8];
             uint32_t nl = st->time == ST_NOTE && st->n ? note_len(TSEL, ui.cursor, (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)) : 1u;
             fmt_int(sn, (int32_t)ui.cursor + 1);
             str_cpy(sl, "/", 8);
             fmt_int(sl + 1, TSEL->p[P_SLEN]);
-            if (nl > 1u) fmt_int(tv, (int32_t)nl);            /* (0.8.4) a NOTE's length: 3 ST (NOTE: one step) */
-            else str_cpy(tv, TIME_N[st->time % 3u], sizeof tv);
+            fmt_int(tv, (int32_t)nl);                      /* (2026-11-10) the note's length in steps */
             draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
             draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-            draw_column(2, "TIME", tv, nl > 1u ? "ST" : "", VAL(2u), nl > 1u ? -1 : pick_of(3u, st->time % 3u), ICON_AUTO);
-            draw_column(3, "FLAG", FLAG_N[(st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u)], "",
-                        VAL(3u), pick_of(4u, (st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u)), ICON_AUTO);
+            draw_column(2, "LENGTH", tv, "ST", step_on(st) ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+            draw_column(3, "MOVE", step_on(st) && !st->hit ? sn : "--", step_on(st) && !st->hit ? "<>" : "", step_on(st) ? VAL(3u) : T_DIM, -1, ICON_AUTO);
         }
         return;
     }

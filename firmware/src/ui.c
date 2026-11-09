@@ -209,6 +209,8 @@ static struct {
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
     uint8_t ent_notes[8];
+    uint8_t fl_a, fl_b;          /* (2026-11-10) SEQ > NOTE: FLAG 1 / FLAG 2 shown (NF_*); fl_at: the step + 1 (+ the track x 64) */
+    uint16_t fl_at;
     uint8_t comp_sel;            /* (0.6.39) SEQ > COMP: the TYPE shown (COMP_*); comp_at: the step + 1 (+ the track x 64) */
     uint16_t comp_at;
     uint8_t lane;                /* SEQ > STEP on a DRUM track (the grid): the lane the keys and KNOB 3 / 4 edit */
@@ -765,6 +767,61 @@ static uint32_t comp_view1(void)                        /* the first's, CHANCE a
     if (s->comp && ui.comp_sel != COMP_ARPN + s->comp - CP_ARPN)   /* (changed elsewhere: the editor, a dice) */
         ui.comp_sel = (uint8_t)(COMP_ARPN + s->comp - CP_ARPN);
     return ui.comp_sel;
+}
+/* (2026-11-10) SEQ > NOTE's FLAG 1 and FLAG 2: two lists of the same eight (OFF, ACC, SLD, RATCH 2 .. 4, ECHO, CHANCE), any
+ * from each; the step holds them as its accent / slide bits, its ratchet, a component ECHO and its chance. The pair shown is
+ * kept (ui.fl_a / fl_b, as COMP's TYPE is) while the step holds exactly those; else (another step, the COMP pages, the editor)
+ * it is read from the step, the first two in the order of the list. The same flag in both lists is the one flag. A flag set
+ * takes another RATCH's place and ECHO the step's component; a flag put OFF takes only its own away */
+enum { NF_OFF, NF_ACC, NF_SLD, NF_R2, NF_R3, NF_R4, NF_ECHO, NF_CHANCE, NF_N };
+static const char *const NF_NAMES[NF_N] = {"OFF", "ACC", "SLD", "RATCH 2", "RATCH 3", "RATCH 4", "ECHO", "CHANCE"};
+static uint32_t nf_mask(const step_t *s)
+{
+    return (s->flags & SF_ACCENT ? 1u << NF_ACC : 0u) | (s->flags & SF_SLIDE ? 1u << NF_SLD : 0u) |
+           (step_ratchet(s) > 1u ? 1u << (NF_R2 + step_ratchet(s) - 2u) : 0u) | (s->comp == CP_ECHO ? 1u << NF_ECHO : 0u) |
+           (step_chance(s) < 100u ? 1u << NF_CHANCE : 0u);
+}
+static void nf_pair(uint32_t *a, uint32_t *b)           /* the cursor step's FLAG 1 and FLAG 2 */
+{
+    const step_t *s = &TSEL->step[ui.cursor];
+    uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u, m = nf_mask(s), k;
+    if (ui.fl_at != at || ui.fl_a >= NF_N || ui.fl_b >= NF_N ||
+        ((ui.fl_a ? 1u << ui.fl_a : 0u) | (ui.fl_b ? 1u << ui.fl_b : 0u)) != m) {
+        ui.fl_at = (uint16_t)at; ui.fl_a = ui.fl_b = 0;
+        for (k = 1; k < NF_N; k++)
+            if ((m >> k) & 1u) {
+                if (!ui.fl_a) ui.fl_a = (uint8_t)k;
+                else if (!ui.fl_b) ui.fl_b = (uint8_t)k;
+            }
+    }
+    *a = ui.fl_a; *b = ui.fl_b;
+}
+static void nf_put(step_t *s, uint32_t f, int on)       /* one flag on or off in the step */
+{
+    if (f == NF_ACC || f == NF_SLD) {
+        uint8_t bit = f == NF_ACC ? SF_ACCENT : SF_SLIDE;
+        s->flags = (uint8_t)(on ? s->flags | bit : s->flags & ~bit);
+    } else if (f >= NF_R2 && f <= NF_R4) {
+        step_set_ratchet(s, on ? f - NF_R2 + 2u : 1u);
+    } else if (f == NF_ECHO) {
+        if (on) { s->comp = CP_ECHO; s->carg = CP_ADEF[CP_ECHO]; }
+        else if (s->comp == CP_ECHO) s->comp = s->carg = 0;
+    } else if (f == NF_CHANCE) {
+        step_set_chance(s, on ? 50u : 100u);
+    }
+}
+static void nf_set(step_t *s, uint32_t which, uint32_t f)   /* FLAG 1 (0) or FLAG 2 (1) turned to f */
+{
+    uint32_t a, b, old, other;
+    nf_pair(&a, &b);
+    old = which ? b : a; other = which ? a : b;
+    if (which) ui.fl_b = (uint8_t)f; else ui.fl_a = (uint8_t)f;
+    if (f == old)
+        return;
+    if (old && old != other && !(f >= NF_R2 && f <= NF_R4 && old >= NF_R2 && old <= NF_R4))
+        nf_put(s, old, 0);                              /* (the other list holding it keeps it) */
+    if (f)
+        nf_put(s, f, 1);
 }
 static void step_clear(step_t *st)
 {

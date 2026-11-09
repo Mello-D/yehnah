@@ -452,9 +452,12 @@ them page by page, a **SEQ** tap jumps to the next group.
 | PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | BAR | BAR (0.9.2) | BAR (the bar you edit) | LEN | — | — |
-| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: the note's length in steps; REST clears the step) | FLAG (– / ACC / SLD / A+S) |
+| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps) | MOVE (the note and its TIEs a step left / right) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
-| BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−32/64 … +31/64; 0.9.1) |
+| BAR | NOTE | STEP | FLAG 1 | FLAG 2 | VELOCITY (1 … 127) |
+
+FLAG 1 and FLAG 2 are two lists of the same flags: OFF, ACC, SLD, RATCH 2, RATCH 3, RATCH 4, ECHO, CHANCE (50 %); take any from each (RATCH 2 with ACC); the same flag in both is one flag. VELOCITY sets how hard the step plays (an ACC step plays 127; engines with their own envelope — FM6, MODAL, GUITAR, OMNI, KALIMBA — do not take it as loudness).
+
 | STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
 | STEP | COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
 | AUTO | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
@@ -1042,9 +1045,9 @@ or counting in), a REC tap turns recording off, whichever track is selected.
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
 - **PATTERN** (the PATTERN group's first page): LEN (1–64), DIV, SWING, GATE — the pattern's length, its step's note value, its
-  swing and the length of every note (a step's own length: STEP's TIE, or MICRO for its start).
-- **Moving a note or a chord** that came in early or late: **NOTE**, KNOB 1 FOCUS on the step, KNOB 3 **MOVE** moves
-  it sideways a step at a time (FOCUS ALL: the whole chord with its TIEs; one note focused: that note alone).
+  swing and the length of every note (a step's own length: STEP's LENGTH).
+- **Moving a note or a chord** that came in early or late: **STEP**, KNOB 1 on the step, KNOB 4 **MOVE** moves
+  it sideways a step at a time (the whole chord with its TIEs).
 - **STRETCH** (0.6.85; the PATTERN group, after PATTERN): reshapes the whole sequence of the selected track **as the knob turns** (0.6.92;
   it used to wait for OCT+). Every turn works from the sequence as it was before the first one (its base), so x2 then
   x4 is x4, not x8, and back to the middle is back to where you started; the message says the LEN before and after

@@ -857,101 +857,65 @@ static void step_none(void)                             /* the cursor's step emp
     (void)motion_clear_locks(TSEL, ui.cursor);
     ui_message("NOTE: NONE");
 }
-static void note_edit(uint32_t slot, int32_t steps)
+/* STEP's KNOB 4 MOVE: the step (a chord and its TIEs) trades places with the step beside, the cursor with it */
+static void move_step(int32_t steps)
 {
     track_t *t = TSEL;
-    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, c = ui.cursor, i;
+    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, c = ui.cursor;
     step_t *st = &t->step[c];
-    uint32_t f = ui.pr_focus <= st->n ? ui.pr_focus : 0u;
-    if (st->time != ST_NOTE)
-        f = 0;
-    switch (slot) {
-    case 0:                                             /* FOCUS: ALL, 1 .. the chord's notes */
-        ui.pr_focus = (uint8_t)clamp((int32_t)f + (steps > 0 ? 1 : -1), 0, st->time == ST_NOTE ? (int32_t)st->n : 0);
-        break;
-    case 1:                                             /* PITCH (2026-11-03, the user's: below the lowest, NONE: what is
-                                                         * in focus goes, the note or the chord) */
-        if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
-        if (note_none(st, f, steps)) {
-            if (f && st->n > 1u) {
-                note_drop(st, f - 1u);
-                ui.pr_focus = 0;
-                ui_message("NOTE DELETED");
-            } else {
-                step_none();
-            }
-            break;
-        }
-        for (i = 0; i < st->n; i++)
-            if (!f || i == f - 1u)
-                st->note[i] = (uint8_t)clamp(st->note[i] + steps, 1, 127);
-        last_note = st->note[f ? f - 1u : 0u];
-        break;
-    case 2: {                                           /* MOVE, a step a detent */
-        int32_t dir = steps > 0 ? 1 : -1;
-        if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
-        if (!f) {                                       /* the chord and its TIEs change places with the step beside */
-            uint32_t l = note_len(t, c, len), k;
-            step_t blk[NSTEP], other;
-            if (l >= len) break;
-            for (k = 0; k < l; k++) blk[k] = t->step[(c + k) % len];
-            if (dir > 0) {
-                uint32_t nx = (c + l) % len, nl = note_len(t, nx, len);
-                if (t->step[nx].time == ST_NOTE && nl > 1u) { ui_message("BLOCKED: A LONG NOTE"); break; }
-                other = t->step[nx];
-                if (other.time == ST_TIE) { other.time = ST_REST; other.n = 0; }
-                t->step[c] = other;
-                for (k = 0; k < l; k++) t->step[(c + 1u + k) % len] = blk[k];
-                ui.cursor = (uint8_t)((c + 1u) % len);
-            } else {
-                uint32_t pv = (c + len - 1u) % len;
-                if (t->step[pv].time == ST_TIE) { ui_message("BLOCKED: A LONG NOTE"); break; }
-                other = t->step[pv];
-                for (k = 0; k < l; k++) t->step[(pv + k) % len] = blk[k];
-                t->step[(pv + l) % len] = other;
-                ui.cursor = (uint8_t)pv;
-            }
-        } else {                                        /* one note: into the step beside */
-            uint32_t to = (c + len + (uint32_t)dir) % len;
-            step_t *d = &t->step[to];
-            uint8_t n = st->note[f - 1u];
-            if (d->time == ST_TIE) { ui_message("BLOCKED: A LONG NOTE"); break; }
-            if (d->time == ST_NOTE && d->n >= 4u) { ui_message("BLOCKED: 4 NOTES THERE"); break; }
-            if (d->time != ST_NOTE) { memset(d, 0, sizeof *d); d->time = ST_NOTE; d->vel = st->vel; }
-            note_drop(st, f - 1u);
-            d->note[d->n++] = n;
-            ui.cursor = (uint8_t)to;
-            ui.pr_focus = d->n;
-        }
-        ui.bank = (uint8_t)(ui.cursor / 16u);
-        ui.entry_open = 0;
-        break;
+    int32_t dir = steps > 0 ? 1 : -1;
+    uint32_t l, k;
+    step_t blk[NSTEP], other;
+    if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); return; }
+    l = note_len(t, c, len);
+    if (l >= len) return;
+    for (k = 0; k < l; k++) blk[k] = t->step[(c + k) % len];
+    if (dir > 0) {
+        uint32_t nx = (c + l) % len, nl = note_len(t, nx, len);
+        if (t->step[nx].time == ST_NOTE && nl > 1u) { ui_message("BLOCKED: A LONG NOTE"); return; }
+        other = t->step[nx];
+        if (other.time == ST_TIE) { other.time = ST_REST; other.n = 0; }
+        t->step[c] = other;
+        for (k = 0; k < l; k++) t->step[(c + 1u + k) % len] = blk[k];
+        ui.cursor = (uint8_t)((c + 1u) % len);
+    } else {
+        uint32_t pv = (c + len - 1u) % len;
+        if (t->step[pv].time == ST_TIE) { ui_message("BLOCKED: A LONG NOTE"); return; }
+        other = t->step[pv];
+        for (k = 0; k < l; k++) t->step[(pv + k) % len] = blk[k];
+        t->step[(pv + l) % len] = other;
+        ui.cursor = (uint8_t)pv;
     }
-    default:                                            /* LEN: the chord's TIEs (0.8.4: STEP's KNOB 3 the same) */
-        if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
-        len_turn(t, c, steps > 0 ? 1 : -1);
-        break;
-    }
+    ui.bank = (uint8_t)(ui.cursor / 16u);
+    ui.entry_open = 0;
 }
-
-/* (0.6.88) SEQ > TIMING: KNOB 1 the step, KNOB 2 its OFFSET off the grid (-8 .. +7 sixteenths: early / late; a step
- * with nothing to play keeps 0), KNOB 3 the track's REC Q (how much live recording snaps to the grid). EDIT: back on it */
-/* (0.6.88) a step's own place off the grid (0.6.92: SEQ > NOTE's KNOB 4, MICRO; a DRUM track's too); (0.9.1) -32 .. +31
- * 64ths of a step, a detent each (faster turned: knob acceleration) */
-static void micro_edit(int32_t steps)
+/* SEQ > NOTE (2026-11-10): KNOB 1 STEP, KNOB 2 FLAG 1, KNOB 3 FLAG 2 (ui.c nf_set), KNOB 4 VELOCITY */
+static void note_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
-    if (st->time != ST_NOTE || (!st->n && !st->hit)) { ui_message("NO NOTE HERE"); return; }
-    ST_MICRO_SET(st, clamp(ST_MICRO(st) + accel(EN_K4, steps, MICRO_MAX - MICRO_MIN), MICRO_MIN, MICRO_MAX));
+    int32_t dir = steps > 0 ? 1 : -1;
+    if (slot == 0u) { cursor_turn(steps); return; }
+    if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); return; }
+    if (slot == 3u) {                                   /* VELOCITY 1 .. 127 (0 = the default 96; an ACC plays 127) */
+        st->vel = (uint8_t)clamp((int32_t)(st->vel ? st->vel : 96u) + steps, 1, 127);
+        return;
+    }
+    {
+        uint32_t a, b;
+        nf_pair(&a, &b);
+        nf_set(st, slot - 1u, (uint32_t)clamp((int32_t)(slot == 1u ? a : b) + dir, 0, NF_N - 1));
+    }
 }
 static void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
-    if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (0.6.92) KNOB 4 MICRO, on a kit too */
-        if (slot == 3u) micro_edit(steps);
-        else if (drum_track(TSEL)) { if (slot == 0u) cursor_turn(steps); else ui_message("A KIT: STEP + MICRO"); }
-        else note_edit(slot, steps);
+    if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (2026-11-10) FLAG 1, FLAG 2, VELOCITY */
+        if (drum_track(TSEL) && slot != 0u && slot != 3u) ui_message("A KIT: STEP + VELOCITY");
+        else if (drum_track(TSEL) && slot == 3u) {
+            if (!st->hit) ui_message("NO HIT HERE");
+            else st->vel = (uint8_t)clamp((int32_t)(st->vel ? st->vel : 96u) + steps, 1, 127);
+        } else note_edit(slot, steps);
         return;
     }
     if (drum_track(TSEL)) {
@@ -981,31 +945,15 @@ static void step_edit(uint32_t slot, int32_t steps)
         st->time = ST_NOTE;
         last_note = st->note[0];
         break;
-    case 2: {                                             /* TIME (0.8.4), one range: REST < TIE < NOTE < 2 ST .. 16 ST;
-                                                           * right a NOTE longer (len_turn), left shorter, then a TIE, a
-                                                           * REST (one detent at a time past NOTE: a fast turn stops there) */
-        uint32_t len = TSEL->p[P_SLEN] > 0 ? (uint32_t)TSEL->p[P_SLEN] : 1u;
-        if (st->time == ST_NOTE && (steps > 0 || note_len(TSEL, ui.cursor, len) > 1u)) {
-            if (!st->n && steps > 0) ui_message("NO NOTE HERE");   /* (an empty NOTE: nothing to hold) */
-            else len_turn(TSEL, ui.cursor, steps);
-        } else if (steps > 0)
-            st->time = (uint8_t)(st->time - 1u);          /* REST > TIE > NOTE (x1) */
-        else if (st->time < ST_REST) {
-            st->time = (uint8_t)(st->time + 1u);          /* NOTE x1 > TIE > REST */
-            if (st->time == ST_REST) {                    /* (0.9.2) a REST clears the step (its notes, locks: EDIT's
-                                                         * clear until 0.9.1; SEQ + G5 too) */
-                step_clear(st);
-                (void)motion_clear_locks(TSEL, ui.cursor);
-            }
-        }
+    case 2:                                               /* LENGTH (2026-11-10): the note longer or shorter, a step a
+                                                           * detent (TIEs over empty steps; no REST or TIE to pick) */
+        if (st->time != ST_NOTE || !st->n) ui_message("NO NOTE HERE");
+        else len_turn(TSEL, ui.cursor, steps);
         break;
-    }
-    default: {                                            /* FLAG: - / ACC / SLD / A+S */
-        uint32_t f = (st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u);
-        f = (uint32_t)clamp((int32_t)f + (steps > 0 ? 1 : -1), 0, 3);
-        st->flags = (uint8_t)((st->flags & ~(SF_ACCENT | SF_SLIDE)) | (f & 1u ? SF_ACCENT : 0u) | (f & 2u ? SF_SLIDE : 0u));
+    default:                                              /* MOVE (2026-11-10, was NOTE's KNOB 3): the step and its TIEs
+                                                           * change places with the step beside */
+        move_step(steps);
         break;
-    }
     }
 }
 

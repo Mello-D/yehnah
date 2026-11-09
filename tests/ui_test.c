@@ -7882,8 +7882,9 @@ static int test_trans_seq(void)
     ui_power_on();
     return bad;
 }
-/* (0.6.81) SEQ > NOTE: FOCUS a note of the cursor's chord, PITCH it alone, MOVE it into the next step, LEN the chord's
- * TIEs, EDIT deletes the note in focus (the chord stays); MOVE with the whole chord in focus takes its length along */
+/* (2026-11-10) SEQ > NOTE: KNOB 1 STEP, KNOB 2 / 3 FLAG 1 / FLAG 2 (OFF ACC SLD RATCH 2..4 ECHO CHANCE: any from each, the
+ * same in both is one), KNOB 4 VELOCITY; STEP's KNOB 3 LENGTH (TIEs over empty steps only), KNOB 4 MOVE (the chord and
+ * its TIEs change places with the step beside) */
 static int test_note_page(void)
 {
     int bad = 0, ok;
@@ -7897,31 +7898,46 @@ static int test_note_page(void)
     t->step[0].vel = 100;
     go_title("NOTE"); frame();
     cursor_set(0);
-    turn(EN_K1, 1); turn(EN_K1, 1);                    /* FOCUS: note 2 (E4) */
-    ok = ui.pr_focus == 2u;
-    turn(EN_K2, 1);                                     /* PITCH: E4 -> F4, the others stay */
-    ok &= t->step[0].note[1] == 65u && t->step[0].note[0] == 60u && t->step[0].note[2] == 67u;
-    turn(EN_K3, 1);                                     /* MOVE: F4 into step 2 */
-    ok &= t->step[0].n == 2u && t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 65u &&
-          ui.cursor == 1u;
-    bad += check("SEQ > NOTE: FOCUS one note of a chord, PITCH it alone, MOVE it into the next step", ok);
-    cursor_set(0);                                      /* the chord C4 G4: LEN 3, then MOVE it right (F4 changes places)
-                                                         * (0.6.92: KNOB 4 is MICRO; the chord's LEN is STEP's KNOB 4, note_edit's
-                                                         * third slot here) */
-    note_edit(3, 1); note_edit(3, 1);
-    ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST;   /* (blocked by F4) */
+    turn(EN_K1, 1);                                     /* STEP: the cursor moves on this page too */
+    ok = ui.cursor == 1u;
+    turn(EN_K1, -1);
+    turn(EN_K2, 1);                                     /* FLAG 1: ACC */
+    ok &= (t->step[0].flags & SF_ACCENT) && !(t->step[0].flags & SF_SLIDE);
+    turn(EN_K2, 1);                                     /* .. SLD: ACC goes */
+    ok &= !(t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE);
+    turn(EN_K3, 1);                                     /* FLAG 2: ACC, on top of FLAG 1's SLD */
+    ok &= (t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE);
+    turn(EN_K3, 1);                                     /* .. SLD again: the same flag in both lists, one flag */
+    ok &= !(t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE);
+    turn(EN_K2, 1);                                     /* FLAG 1: RATCH 2; SLD stays (FLAG 2 holds it) */
+    ok &= step_ratchet(&t->step[0]) == 2u && (t->step[0].flags & SF_SLIDE);
+    turn(EN_K3, 1);                                     /* FLAG 2: RATCH 2 as well: nothing more */
+    ok &= step_ratchet(&t->step[0]) == 2u && !(t->step[0].flags & SF_SLIDE);
+    bad += check("SEQ > NOTE: FLAG 1 and FLAG 2 are lists of the flags, any from each, STEP on KNOB 1", ok);
+    t->step[0].flags = 0; t->step[0].probability = 0; t->step[0].comp = t->step[0].carg = 0;   /* a bare step */
+    { uint32_t i; for (i = 0; i < 7u; i++) turn(EN_K3, 1); }                 /* FLAG 2: ACC SLD RATCH 2 3 4 ECHO CHANCE */
+    ok = step_chance(&t->step[0]) == 50u && !t->step[0].comp && step_ratchet(&t->step[0]) == 1u && !t->step[0].flags;
+    turn(EN_K3, -1);                                    /* .. ECHO */
+    ok &= t->step[0].comp == CP_ECHO && step_chance(&t->step[0]) == 100u;
+    turn(EN_K4, 1);                                     /* VELOCITY 100 > 101 */
+    ok &= t->step[0].vel == 101u;
+    bad += check("SEQ > NOTE: ECHO and CHANCE are flags too; KNOB 4 is the step's VELOCITY", ok);
+    t->step[0].comp = t->step[0].carg = 0; t->step[0].flags = 0;
+    t->step[1].time = ST_NOTE; t->step[1].n = 1; t->step[1].note[0] = 65;   /* F4 beside the chord */
+    go_title("STEP"); frame();
+    cursor_set(0);
+    turn(EN_K3, 1); turn(EN_K3, 1);                     /* LENGTH: blocked by F4 */
+    ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST;
     t->step[1].time = ST_REST; t->step[1].n = 0;
-    note_edit(3, 1); note_edit(3, 1);
+    turn(EN_K3, 1); turn(EN_K3, 1);                     /* LENGTH 3: two TIEs */
     ok &= t->step[1].time == ST_TIE && t->step[2].time == ST_TIE && t->step[3].time != ST_TIE;
-    turn(EN_K3, 1);                                     /* the chord and its TIEs a step right */
-    ok &= t->step[0].time == ST_REST && t->step[1].time == ST_NOTE && t->step[1].n == 2u && t->step[3].time == ST_TIE &&
+    turn(EN_K3, -1);                                    /* .. shorter: a TIE goes, never a REST or a TIE in its place */
+    ok &= t->step[1].time == ST_TIE && t->step[2].time == ST_REST && t->step[0].time == ST_NOTE;
+    turn(EN_K3, 1);
+    turn(EN_K4, 1);                                     /* MOVE: the chord and its TIEs a step right */
+    ok &= t->step[0].time == ST_REST && t->step[1].time == ST_NOTE && t->step[1].n == 3u && t->step[3].time == ST_TIE &&
           ui.cursor == 1u;
-    bad += check("SEQ > NOTE: LEN adds TIEs over empty steps only; MOVE the chord takes its length along", ok);
-    turn(EN_K1, 1);                                     /* FOCUS note 1, PITCH under 1 (NONE): deleted, the other stays */
-    t->step[1].note[0] = 1;
-    turn(EN_K2, -1); frame();
-    ok = t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 67u;
-    bad += check("2026-11-03 SEQ > NOTE: PITCH's NONE deletes the note in focus, the rest of the chord stays", ok);
+    bad += check("SEQ > STEP: LENGTH lengthens / shortens the note (TIEs over empty steps only); MOVE (KNOB 4) takes its length along", ok);
     ui_power_on();
     return bad;
 }
@@ -7960,16 +7976,12 @@ static int test_step_len(void)
     ok = note_len(t, 2, 16) == 3u && t->step[5].time == ST_REST;
     turn(EN_K3, -8);                                    /* a fast turn: down to x1, not past it */
     ok &= note_len(t, 2, 16) == 1u && t->step[3].time == ST_REST && t->step[4].time == ST_REST && t->step[2].time == ST_NOTE;
-    turn(EN_K3, -1);
-    ok &= t->step[2].time == ST_TIE;
-    turn(EN_K3, -1); turn(EN_K3, -1);
-    ok &= t->step[2].time == ST_REST && t->step[2].n == 0u;   /* (0.9.2: a REST clears the step, its chord gone) */
-    turn(EN_K3, 1); turn(EN_K3, 1);
-    ok &= t->step[2].time == ST_NOTE && t->step[2].n == 0u && note_len(t, 2, 16) == 1u;   /* (back: an empty NOTE; until
-                                                         * 0.9.1 the notes were kept) */
+    turn(EN_K3, -1); turn(EN_K3, -1);                   /* (2026-11-10: LENGTH only; never a TIE or a REST in place of the note) */
+    ok &= t->step[2].time == ST_NOTE && t->step[2].n == 3u && note_len(t, 2, 16) == 1u;
     turn(EN_K3, 1);
-    ok &= note_len(t, 2, 16) == 1u && msg_is("NO NOTE HERE");
-    bad += check("0.9.2 STEP KNOB 3: left shortens (TIEs to RESTs), a fast turn stops at NOTE, then TIE, REST: cleared", ok);
+    ok &= t->step[2].time == ST_NOTE && note_len(t, 2, 16) == 2u;
+    turn(EN_K3, -1);
+    bad += check("STEP KNOB 3 (2026-11-10): left shortens (TIEs to RESTs), a fast turn stops at x1, the note stays a NOTE", ok);
     t->step[2] = (step_t){.note = {60, 64, 67}, .n = 3, .time = ST_NOTE, .vel = 100};   /* (the chord back, for below) */
     t->step[14] = (step_t){.note = {57, 60}, .n = 2, .time = ST_NOTE, .vel = 80};
     t->step[0].time = ST_NOTE;                          /* (an empty NOTE: lengthened over) */
@@ -10361,7 +10373,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 5, 3, 3, 2, 6, 1, 4, 10, 12, 4};   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 6, 3, 3, 2, 6, 1, 4, 10, 12, 4};   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10390,8 +10402,8 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "STEP") && ui.cursor == 4u && note_len(TSEL, 4, 64) == 2u;
             break;
         case 4:                                         /* bar 3, an accent on its first step */
-            tk_start(1); tk_go(EN_SELECT, -1); tk_go(EN_K1, 2); tk_go(EN_SELECT, 1); tk_val(EN_K4, 1);
-            ok = str_eq(cur_page()->title, "STEP") && ui.cursor == 32u && (TSEL->step[32].flags & SF_ACCENT);
+            tk_start(1); tk_go(EN_SELECT, -1); tk_go(EN_K1, 2); tk_go(EN_SELECT, 2); tk_val(EN_K2, 1);   /* (2026-11-10: NOTE's FLAG 1) */
+            ok = str_eq(cur_page()->title, "NOTE") && ui.cursor == 32u && (TSEL->step[32].flags & SF_ACCENT);
             break;
         case 5:                                         /* the sound into U05 */
             { uint32_t u;                               /* (2026-11-06: SAVE held + G4 SAVE SOUND, then OCT+ twice) */
@@ -10447,7 +10459,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 75u + XS);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 76u + XS);
     ui_power_on();
     return bad;
 }
@@ -10475,22 +10487,14 @@ static int test_nav_rules(void)
     ok &= TSEL->step[0].time == ST_REST;                 /* (NONE the bottom) */
     turn(EN_K2, 1);
     ok &= TSEL->step[0].time == ST_NOTE && TSEL->step[0].n == 1u;   /* (right: a note again, the last one) */
-    go_title("NOTE"); frame();
-    TSEL->step[0].n = 2; TSEL->step[0].note[0] = 1; TSEL->step[0].note[1] = 64;
-    turn(EN_K1, 1);                                      /* FOCUS: note 1 */
-    turn(EN_K2, -1);                                     /* PITCH under 1: that note goes */
-    ok &= TSEL->step[0].n == 1u && TSEL->step[0].note[0] == 64 && msg_is("NOTE DELETED");
-    TSEL->step[0].note[0] = 1;
-    turn(EN_K2, -1);                                     /* (ALL) the chord goes */
-    ok &= TSEL->step[0].time == ST_REST && !TSEL->step[0].n;
     cursor_set(3);
     go_title("STEP"); frame();
     TSEL->step[3].time = ST_NOTE; TSEL->step[3].n = 1; TSEL->step[3].note[0] = 62;
-    turn(EN_K3, -1); turn(EN_K3, -1);                    /* TIME: NOTE > TIE > REST: cleared */
-    ok &= TSEL->step[3].time == ST_REST && !TSEL->step[3].n;
+    turn(EN_K3, -1); turn(EN_K3, -1);                    /* LENGTH: a one-step note stays a NOTE (no TIE, no REST) */
+    ok &= TSEL->step[3].time == ST_NOTE && TSEL->step[3].n == 1u;
     press(B_EDIT); frame();
     ok &= str_eq(cur_page()->title, "EDIT 1");           /* (EDIT: EDIT) */
-    bad += check("2026-11-03 NOTE / PITCH under the lowest: NONE (the step, the note in focus); TIME = REST clears; EDIT opens EDIT", ok);
+    bad += check("2026-11-03 STEP / NOTE under the lowest: NONE (the step); LENGTH never makes a REST; EDIT opens EDIT", ok);
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame(); frame();
     btn_down(B_REC); frames(800);
     (void)ly_keyname(LAYER_REC, 0, 14u, kn);

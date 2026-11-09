@@ -335,19 +335,16 @@ static void test_micro_edit(void)
         ;
     ui.page = (uint8_t)i; page_entered();
     ui.cursor = 2;
-    ST_MICRO_SET(st, 4);
-    turn(EN_K4, 1);
-    ok = ST_MICRO(st) == 5;
-    turn(EN_K4, -10);
-    ok &= ST_MICRO(st) == 4 || ST_MICRO(st) == -5 || ST_MICRO(st) < 4;
-    for (i = 0; i < 80u; i++) turn(EN_K4, -1);
-    ok &= ST_MICRO(st) == MICRO_MIN;
-    for (i = 0; i < 80u; i++) turn(EN_K4, 1);
-    ok &= ST_MICRO(st) == MICRO_MAX;
-    ck("SEQ > NOTE's KNOB 4: a 64th a detent, -32 .. +31 at the ends", ok);
+    turn(EN_K4, 1);                                     /* (2026-11-10: NOTE's KNOB 4 is VELOCITY, MICRO has no knob) */
+    ok = st->vel == 91u;
+    for (i = 0; i < 200u; i++) turn(EN_K4, -1);
+    ok &= st->vel == 1u;
+    for (i = 0; i < 200u; i++) turn(EN_K4, 1);
+    ok &= st->vel == 127u;
+    ck("SEQ > NOTE's KNOB 4: the step's VELOCITY, 1 .. 127 at the ends", ok);
     ST_MICRO_SET(st, 5);
     ui.force = 1; frame();
-    ck("  its card: \"+5/64\"", str_eq(ui.col[3] + str_len("MICRO|"), "+5/64||") || !memcmp(ui.col[3], "MICRO|+5/64|", 12));
+    ck("  its card: \"VELOCITY|127\"", !memcmp(ui.col[3], "VELOCITY|127|", 13));
 }
 
 int main(void)
