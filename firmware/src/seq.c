@@ -1826,7 +1826,6 @@ static int fl_ok(const track_t *t, uint32_t c, uint32_t a)   /* it turns the tra
     return 1;
 }
 /* -------------------------------------------------------- sequencer --- */
-static void fg_reset(void);                         /* (fugue.c) */
 static void seq_start(void)
 {
     uint32_t i;
@@ -1850,7 +1849,6 @@ static void seq_start(void)
         t->cpos = t->cv_on = 0;                    /* (0.6.47) C.LEN's lane from its first step */
         fl_reset(i), fl_pass[i] = 0;               /* (0.6.62) TIMES from the first pass */
     }
-    fg_reset();                                    /* (0.6.52) FUGUE's heads from their first step */
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
     bar_n = 0;
@@ -2216,7 +2214,6 @@ static void seq_stop(void)
         trk[i].pulse_from = trk[i].jump_to = trk[i].rev = 0;
         trk[i].cpos = trk[i].cv_on = 0;
     }
-    fg_reset();                                    /* (0.6.52) FUGUE's heads silent */
     mo_flush();                                    /* (0.6.72) MIDI OUT ALL: nothing left hanging */
     chain_stop();
     motion_end();
@@ -2726,7 +2723,6 @@ static __attribute__((noinline)) void pfx_resync(track_t *t, uint32_t period, ui
     t->seq_pos = pos;
 }
 
-#include "fugue.c"                                 /* (0.6.52) SEQ > FUGUE: three more playheads a track */
 #if FELUCCA_AMBIENT
 #include "amb.c"                                   /* (chord-harp fork) ARP > AMBIENT */
 #endif
@@ -2844,7 +2840,6 @@ static void seq_tick(track_t *t, uint32_t n)
         seq_ratchet(t, period);
     if (t->lr_on)
         seq_lane_rat(t, period, n);
-    fugue_tick(t, n, period, len);                      /* (0.6.52) */
 }
 
 /* MIDI in: the track a channel plays (0..15): G_ROUTE CH1-4 (0) channels 1..4 their parts (5..16 never get

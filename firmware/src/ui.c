@@ -18,15 +18,6 @@ static int section_jump(uint32_t s);    /* (song_main.c: 0.6.80, channel 16's PR
 static int song_select(uint32_t n);
 static void undo_mark(void);                    /* (0.6.21) project.c: the music before a change, */
 static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
-static uint32_t mut_progress(uint32_t k);       /* (0.6.43) project.c: MUTATE's next, 0..256 (0xFFFF: off) */
-static void mut_keep(void);                     /* .. the music now the anchor */
-static void mut_forget(void);                   /* (0.9.3) .. another music now: no going back to the anchor */
-static int mut_revert(uint32_t mask);           /* .. those tracks back to the anchor (0: done, 1: NO ANCHOR) */
-static void mut_revert_ui(int all);             /* .. REVERT (SEQ > TOOLS) / REVERT ALL (REC + F4), UNDO first */
-static int mut_back_ok(void);                   /* .. an anchor to go back to */
-static uint8_t mut_flash[NTRK];                 /* .. a mutation just now: frames left of its flash (HOME) */
-static uint8_t mut_freeze;                      /* .. MUTATE's OCT-: no mutation until again */
-static const uint8_t MUT_BARS[7] = {0, 1, 2, 4, 8, 16, 32};   /* .. SOUND / PATTERN every (OFF, bars) */
 static int undo_do(void);                       /* .. back (and again: forward) */
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);
@@ -49,10 +40,6 @@ static void up_name(uint32_t k, char *b);
 static void up_slot_label(char *b, uint32_t k);
 static void up_ui(uint32_t op, uint32_t k);
 static int up_has_pat(uint32_t k);               /* user presets that hold a pattern */
-static uint32_t up_pat_count(void);
-static uint32_t up_pat_nth(uint32_t n);
-static uint32_t up_pat_rank(uint32_t slot);
-static void up_pat_load(track_t *t, uint32_t k);
 static void up_auto_name(char *b, uint32_t e, uint32_t k);   /* naming (ui_name.c) */
 static void up_ui_named(uint32_t op, uint32_t k, const char *name);
 static int project_save_as(uint32_t slot, const char *name);
@@ -199,7 +186,7 @@ static int32_t ratio_d(const param_desc_t *d, int32_t v) { return ratio_of(d->mi
  * while SELECT walks past it), each at most HINT_MAX times ever. The count kept with the settings, a byte a hint in engine
  * 15's spare favourite bytes 0..12 (no engine 15: 0 in older settings, a hint not yet given; 4..12 held the layer buttons'
  * "HOLD [X] QUICK" counts, gone: kept as saved, unused); INIT SYSTEM starts them over */
-enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_N };
+enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_N };
 #define HINT_DWELL_MS 800u
 #define HINT_MAX 2u
 #define hint_given(k) (favorites.factory[15][(k)])
@@ -245,12 +232,9 @@ static struct {
     uint8_t confirm;             /* the OCT- / OCT+ dialog: CF_*, 0 = none */
     uint8_t confirm_trk;         /* the track it clears, the slot it overwrites */
     uint8_t uslot;               /* SAVE > USER: the selected user preset slot */
-    uint8_t ppick;               /* SEQ > PATTERNS: the pattern picked (pat_count list index) */
     uint8_t song_row;            /* SONG: row selected, count selects the next empty row */
     uint8_t sed_trk;             /* (2026-11-06) SONG EDIT: the track line picked (K1); the part along it is ui.song_row (K2) */
     uint8_t arr_sect, arr_bars;  /* (2026-11-05) ARRANGE: the section (0..3) and bars the next row gets (0 bars: 4) */
-    uint8_t ev_row;              /* SEQ > AUTO LIST (ui_input.c ev_*): the row selected (the track's count: + ADD LOCK) */
-    uint8_t ev_step, ev_id;      /* .. + ADD LOCK: the step and the parameter a lock is added on */
     uint8_t uboot;               /* main.c: seconds left before UPDATE MODE (OCT- + OCT+ held), 0 = none */
     uint32_t ly_t0;              /* the layer button's press time | 1, LY_* bits (ui_layer.c layer_gesture) */
     uint8_t ly;                  /* the layer whose button is down (LAYER_*), 0 = none */
@@ -281,10 +265,10 @@ static struct {
 } ui;
 static uint16_t val_col(uint32_t c) { return c == ui.hot_col && ui.hot_t ? T_ACCENT : T_THEME; }
 
-enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
+enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
        CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS,
-       CF_CPU_TEST, CF_MUT_BACK, CF_CALIB, CF_ABOUT,
+       CF_CPU_TEST, CF_CALIB, CF_ABOUT,
        CF_ERASE_SEC, CF_ERASE_PRJ };   /* (2026-11-05: SAVE > ERASE) */
 /* (2026-11-02: GLO > TOOLS' CALIBRATION, ABOUT) */   /* ui.confirm: TOOLS' clears; CF_DICE_ALL: HOME > IDEAS open
                                    * (chord-harp fork; was Yehnah's GEN, HOME + SELECT);
@@ -462,7 +446,7 @@ static int page_visible(uint32_t i)
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_DRIFT)   /* (chord-harp fork, 2026-10-30: was MORPH, ANALOG PHASE
                                                          * LOFI's waves, gone with Clipper's engines) DRIFT, VINTAGE */
         return trk_eng(TSEL) != ENGI_DRUM;
-    if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
+    if (PAGES[i].graph == GR_CHANCE)   /* (0.6.37) a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG)   /* (0.6.48: IMAGE) */
         return trk_eng(TSEL) == ENGI_DRUM &&           /* (chord-harp fork) an LCD-4 MACHINE: no DRUM-X patch to edit
@@ -556,7 +540,7 @@ static uint32_t fx_level(void)
 static uint32_t lens_level(void)                        /* SEQ: the level the page is drawn as */
 {
     uint32_t g = PAGES[ui.page].graph;
-    return g == GR_PATS || g == GR_SONG ? LV_PAT : g == GR_CHANCE ? LV_STEP : nav_lv();
+    return g == GR_SONG ? LV_PAT : g == GR_CHANCE ? LV_STEP : nav_lv();
 }
 static int home_lz(void) { return (ui.home && !ui.menu && !dlg_on()) || gen_on(); }   /* (GEN: HOME's) */
 static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || (ui.layer && !ui.menu); }
@@ -665,7 +649,6 @@ static uint32_t lock_id(uint32_t k)
     return id < P_COUNT && motion_param(id) ? id : 0xFFu;
 }
 
-static void ev_enter(void);
 /* (chord-harp fork) SCL's CHORD, HARP and OMNI tabs, kept apart: going to HARP or OMNI turns that mode on, going to
  * CHORD brings back the mode it had (1..11, TRIAD at first: no OFF in its list), going to SCL turns chords off (a key one
  * note); P_CVOI (VOICING, HARP's SET, OMNI's SET) is each tab's own, the one left kept in P_CTABS and the one come to
@@ -708,13 +691,10 @@ static void page_entered(void)
     chord_tab(pg);
     if (!ui.home && pg->fam == FAM_FX && fx_trk_k(ui.page) < 0 && pg->graph != GR_BUSES)
         ui.fxmod = (uint8_t)fx_mod_of(ui.page);  /* (FX: the effect shown, BUSES' tile lit) */
-    if (!ui.home && pg->graph == GR_EVENTS)      /* AUTO LIST: + ADD LOCK on the SEQ cursor's step */
-        ev_enter();
     if (!ui.home && lock_page_ok(ui.page))
         ui.plk_src = (uint8_t)(ui.page + 1u);
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
-    ui.hint_k = ui.home ? HK_NONE : pg->graph == GR_MOTION ? HK_MOTION : pg->graph == GR_PUNCH ? HK_PUNCH :
-                pg->graph == GR_MUTATE ? HK_MUTATE : HK_NONE;   /* (0.9.5: its hint once dwelt on: ui_layer.c hint_tick) */
+    ui.hint_k = ui.home ? HK_NONE : pg->graph == GR_MOTION ? HK_MOTION : pg->graph == GR_PUNCH ? HK_PUNCH : HK_NONE;   /* (0.9.5: its hint once dwelt on: ui_layer.c hint_tick) */
     ui.hint_at = (uint8_t)(ui.home ? 255u : ui.page + 1u);
     ui.hint_ms = fm1_ms;
     ui.entry_open = 0;
@@ -915,7 +895,6 @@ static void note_name(char *b, uint32_t n)
     fmt_int(b + str_len(b), (int32_t)(n / 12u) - 1);
 }
 
-static uint8_t fg_ui;                                /* (0.6.52) SEQ > FUGUE: the head edited (0..2: heads 2..4) */
 /* a section's button (rule 2, ui_lens.c nav_button): its first page; on it, HOME's TRACKS */
 static void open_family(uint32_t fam) { nav_button(sec_of_fam(fam)); }
 
@@ -1029,23 +1008,6 @@ static void load_pat16(track_t *t, const uint8_t *note, const uint8_t *flags)
     t->p[P_SLEN] = 16;
 }
 
-/* a 16-step drum grid (user presets of version 3: lane hits, their accents) into steps 1..16, the rest empty,
- * LEN 16 */
-static void load_grid16(track_t *t, const uint8_t *hit, const uint8_t *acc)
-{
-    uint32_t i;
-    for (i = 0; i < NSTEP; i++) {
-        step_t *s = &t->step[i];
-        step_clear(s);
-        if (i < 16u && hit[i]) {
-            s->time = ST_NOTE;
-            s->hit = hit[i];
-            s->acc = acc[i] & hit[i];
-        }
-    }
-    t->p[P_SLEN] = 16;
-}
-
 static void track_defaults_steps(track_t *t)
 {
     uint32_t i;
@@ -1057,64 +1019,6 @@ static void track_defaults_steps(track_t *t)
     motion_reset(t);
     for (i = 0; i < NSTEP; i++)
         step_clear(&t->step[i]);
-}
-
-/* SEQ > PATTERNS: the factory patterns (PATTERNS[], "01".."13"), then the used user presets that hold
- * one ("U07"): list index n. Loading one replaces the track's steps 1..16 (the rest cleared) and LEN;
- * a user preset's pattern brings its stored LEN (at most 16), DIV, SWING and GATE too. The notes are
- * loaded as they are: the patterns are written for the register of their kind of sound, DRUM and
- * SLICE patterns are drum and slice numbers, and SCL TRANS / OCT transpose what plays */
-static uint32_t pat_count(void) { return NPATTERNS + up_pat_count(); }
-
-static void pat_label(uint32_t n, char *tag, char *name)   /* tag: 4 bytes ("01", "U07"), name: 13 */
-{
-    if (n < NPATTERNS) {
-        tag[0] = (char)('0' + (n + 1u) / 10u);
-        tag[1] = (char)('0' + (n + 1u) % 10u);
-        tag[2] = 0;
-        str_cpy(name, PATTERNS[n].name, 13);
-    } else {
-        uint32_t k = up_pat_nth(n - NPATTERNS);
-        up_slot_label(tag, k);
-        up_name(k, name);
-    }
-}
-
-static void pat_load(track_t *t, uint32_t n)
-{
-    load_begin(t, LOAD_PAT);
-    if (n < NPATTERNS)
-        load_pat16(t, PATTERNS[n].note, PATTERNS[n].flags);
-    else
-        up_pat_load(t, up_pat_nth(n - NPATTERNS));
-    pat_sig[trk_index(t)] = steps_sig(t);
-    pat_last[trk_index(t)] = (uint8_t)(n + 1u);
-    load_end(t);
-    ui.force = 1;
-}
-
-/* a pattern load would throw away steps of the user's (recorded, edited, from a project): ask first */
-static int pat_needs_confirm(const track_t *t)
-{
-    return !seq_is_empty(t) && steps_sig(t) != pat_sig[trk_index(t)];
-}
-
-static uint32_t pat_pick(void)                   /* ui.ppick inside the list (user presets may be gone) */
-{
-    uint32_t n = pat_count();
-    return ui.ppick < n ? ui.ppick : n - 1u;
-}
-
-/* SEQ > PATTERNS LOAD: pattern n into track t, "LOADED 03 MELODY" */
-static void pat_load_ui(track_t *t, uint32_t n)
-{
-    char tag[4], nm[13], b[20];
-    pat_label(n, tag, nm);
-    pat_load(t, n);
-    str_cpy(b, tag, sizeof b);
-    str_cpy(b + str_len(b), " ", 2);
-    str_cpy(b + str_len(b), nm, sizeof b - str_len(b));
-    ui_say("LOADED ", b);
 }
 
 /* the track's settings, not the sound's: what a sound load (factory or user preset, an engine jump,
@@ -1129,8 +1033,7 @@ static int param_kept(uint32_t i)
            (i >= P_AMB && i <= P_ASPC) ||   /* (chord-harp fork) ARP > AMBIENT */   /* (chord-harp fork: PROG) */
            (!YEHNAH_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT || i == P_HRQ)) ||   /* (0.6.87) HUMAN: the sequencer's, a sound
                                                          * keeps it (YEHNAH_FM4: DIGITAL's OP SUS / LEVEL there) */
-           (!YEHNAH_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_CTABS || i == P_CLEN || i == P_TCHAN ||
-                             i == P_MSND || i == P_MPAT || i == P_MAMT || i == P_MMODE));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
+           (!YEHNAH_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_CTABS || i == P_CLEN || i == P_TCHAN));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
                                                          * MUTATE: the sequencer's too (a community report: browsing
                                                          * presets switched CHORD off) */
 }
@@ -1509,28 +1412,6 @@ static void preset_mark(int on)
     }
 }
 
-/* the pattern the selected track's sound suggests: its index in the SEQ > PATTERNS list, or -1. A factory
- * preset's PAT(n); a user preset that holds a pattern: that one ("U07") */
-static int32_t preset_pat_hint(void)
-{
-    const engine_t *e = trk_engp(TSEL);
-    uint32_t u = user_of(TSEL);
-    if (u < UP_SLOTS)
-        return up_has_pat(u) ? (int32_t)(NPATTERNS + up_pat_rank(u)) : -1;
-    if (!ENG_NP(e))
-        return -1;
-    u = e->presets[TSEL->preset % ENG_NP(e)].pat;
-    return u && u <= NPATTERNS ? (int32_t)u - 1 : -1;
-}
-
-static void preset_hinted(void)                     /* after a sound load: SEQ > PATTERNS starts at the suggested pattern */
-{
-    int32_t h;
-    if ((h = preset_pat_hint()) >= 0)
-        ui.ppick = (uint8_t)h;
-    ui.force = 1;
-}
-
 static void preset_go(uint32_t n)                    /* load list index n into the selected track (the sound only) */
 {
     uint32_t k, e = preset_at(n, &k);
@@ -1545,7 +1426,7 @@ static void preset_go(uint32_t n)                    /* load list index n into t
         }
         apply_preset(k);
     }
-    preset_hinted();
+    ui.force = 1;
 }
 
 /* (0.6.72) PROGRAM CHANGE (midi_control.c midi_pc_req): the list's n-th sound into the track whose channel it
@@ -1601,7 +1482,7 @@ static void preset_engine_step(int32_t direction)
             if (preset_in(e, k = preset_nth(ENGINES[e], n))) {
                 set_engine(e);
                 apply_preset(k);
-                preset_hinted();
+                ui.force = 1;
                 return;
             }
     }
@@ -1645,7 +1526,6 @@ static void sqt_knob(uint32_t slot, int32_t steps);
 static void sqt_do(void);
 static void sqt_cols(void);
 static void graph_sqtools(void);
-#include "ui_events.c"                            /* SEQ > AUTO LIST: the locks and events as a list (an action page) */
 /* EDIT > SOUND / SOUND 2 (ui_dx.c, included by ui_input.c): the DRUM-X sound edited and its patch (0 A, 1 B) */
 static uint8_t dx_ui_lane, dx_ui_side;
 static uint32_t dx_pagen(const page_t *pg)            /* SOUND 1..3; (0.5.1) X-MOD 4; (0.6.54) SOUND 4: 8 */
@@ -1674,15 +1554,12 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     if (ui.home)
         return 0;
     if (pg->graph == GR_MOTION || pg->graph == GR_PUNCH) return 8u;   /* (0.6.99) PUNCH: KNOB 4 CLEAR */
-    if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
     if (pg->graph == GR_TOOLS) return 15u;
     if (pg->graph == GR_SQTOOL) return 1u;      /* (2026-11-03) KNOB 1 the tool (KNOB 2: the lane, not an action) */
     if (pg->graph == GR_PROG) return ui.act ? 8u : 0u;   /* (chord-harp fork) SCL > PROG: F#4 WRITE, OCT+ does it
                                                          * (ui_input.c prog_write); KNOB 4 its PLATE, not the action */
     if (pg->graph == GR_SONG)
         return 8u;                               /* (2026-11-06) OCT+ is armed (INSERT); K4 is the row cursor, not an action (edit_param / draw_cards run first) */
-    if (pg->graph == GR_PATS)
-        return 2u;                               /* LOAD */
     if (pg->graph == GR_USER)
         return 14u;                              /* LOAD ERASE SAVE */
     if (pg->scope == SC_GLOBAL)
@@ -1705,8 +1582,7 @@ static uint32_t shp_rep(void) { return shp_r == 0u ? 1u : shp_r < 8u ? shp_r + 1
 static uint32_t act_col(void)
 {
     if (!ui.home && cur_page()->graph == GR_SONG) return 4u;
-    if (!ui.home && cur_page()->graph == GR_EVENTS) return 5u;
-    return !ui.home && cur_page()->graph == GR_PATS ? 2u : ui.act;
+    return ui.act;
 }
 
 
@@ -1718,7 +1594,6 @@ static int act_ready(void)
     if (!c--)
         return 0;
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
-    if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
     if (cur_page()->graph == GR_PROG) return !chain_busy();
     if (cur_page()->graph == GR_SQTOOL) return sqt_ready();
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, DELETE ROW, CLEAR SONG, NEW PROJECT */
@@ -1726,8 +1601,6 @@ static int act_ready(void)
                                  c == 1u ? ui.song_row < chain_config.count : chain_config.count != 0u);
     if (cur_page()->graph == GR_SONG)
         return !chain_busy() && chain_config.count < CHAIN_ROWS;
-    if (cur_page()->graph == GR_PATS)
-        return pat_last[s] != pat_pick() + 1u || steps_sig(TSEL) != pat_sig[s];
     if (cur_page()->graph == GR_USER)
         return c == 3u ? !song.playing : up_used(ui.uslot) && (c == 1u || !song.playing);
     if (cur_page()->graph == GR_ERASE)                  /* (2026-11-05) the section picked there / anything of the project */

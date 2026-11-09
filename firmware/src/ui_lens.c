@@ -69,9 +69,9 @@ static const nv_t CE_DRM[] = {NV("EDIT 1", "KIT", 0, 0), NV("EDIT 2", "KIT 2", 0
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };                 /* SEQ's pictures: the bars, the roll, the step large */
 static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR), NV("COMP", 0, 3, LV_STEP),   /* (2026-11-02:
                                                          * the main page first, the rest in their wrapped order) */
-                              NV("COMP 2", 0, 3, LV_STEP), NV("AUTOMATION", "AUTO", 4, LV_BAR), NV("AUTO LIST", 0, 4, LV_BAR),
-                              NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, LV_PAT), NV("PLAYHEADS", "PLAYHEAD", 0, LV_PAT),
-                              NV("TRACK", 0, 1, LV_PAT), NV("MUTATE", 0, 1, LV_PAT),
+                              NV("COMP 2", 0, 3, LV_STEP), NV("AUTOMATION", "AUTO", 4, LV_BAR),
+                              NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, LV_PAT),
+                              NV("TRACK", 0, 1, LV_PAT),
                               NV("SQ TOOLS", "TOOLS", 5, LV_PAT),   /* (2026-11-03: SEQ held's tools; BAR stays left of STEP) */
                               NV("BAR", 0, 2, LV_PAT)};
 enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };

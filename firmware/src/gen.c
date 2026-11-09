@@ -1789,37 +1789,6 @@ static void gx_comps(void)
         }
     }
 }
-/* PLAYHEADS: a head (or two, on two tracks) reading a melodic track at its own rate, way and interval in the scale */
-static void gx_heads(void)
-{
-    static const int8_t IV[10] = {-7, -5, -4, -3, -2, 2, 3, 4, 5, 7};
-    uint32_t n = gch(55) ? (gch(40) ? 2u : 1u) : 0u, tries;
-    for (tries = 0; tries < 16u && n; tries++) {
-        uint32_t ti = gr() % NTRK, r = gs.role[ti];
-        fg_set_t *f = &fg_set[ti][0];
-        if (!gs.act[r] || r == RL_DRUM || r == RL_TEX || f->rate || (r == RL_BASS && gch(70))) continue;
-        f->rate = (uint8_t)(1u + gr() % (trk[ti].p[P_SDIV] == 3 ? 5u : gch(15) ? 8u : 7u));   /* (1/4 .. x2; x3 now and
-                                                         * then; a 1/32 track's never past x1) */
-        f->dir = (uint8_t)(gr() % 4u);
-        f->ivl = IV[gr() % 10u];
-        n--;
-    }
-}
-/* MUTATE on a track or two (SOUND or PATTERN every 2 .. 16 bars, ORBIT mostly: round the piece) */
-static void gx_mutate(void)
-{
-    uint32_t n = gch(45) ? (gch(30) ? 2u : 1u) : 0u, tries;
-    for (tries = 0; tries < 16u && n; tries++) {
-        uint32_t ti = gr() % NTRK;
-        track_t *t = &trk[ti];
-        if (!gs.act[gs.role[ti]] || t->p[P_MSND] || t->p[P_MPAT]) continue;
-        if (gs.role[ti] == RL_DRUM || gch(50)) t->p[P_MPAT] = (int16_t)grr(2, 5); else t->p[P_MSND] = (int16_t)grr(2, 5);
-        t->p[P_MAMT] = (int16_t)grr(20, 60);
-        t->p[P_MMODE] = (int16_t)(gch(75) ? 0 : 1);
-        n--;
-    }
-}
-
 /* --------------------------------------------------------------------------------------------- the piece --- */
 static void gen_post(void)
 {
@@ -1920,7 +1889,6 @@ static void gen_make(void)
     if (!gx.on && gx.dirty) {                           /* (0.8.6) after an EXPLORE piece: DIV and PLAYHEADS as a genre's
                                                          * piece has them (1/16, none) */
         for (k = 0; k < NTRK; k++) trk[k].p[P_SDIV] = 2;
-        memset(fg_set, 0, sizeof fg_set);
         gx.dirty = 0;
     }
     if (gx.on) {                                        /* (0.8.6) EXPLORE: a genre of its own a seed */
@@ -1929,7 +1897,6 @@ static void gen_make(void)
         gx_genre(&gmut);
         gx.dirty = 1;
         for (k = 0; k < NTRK; k++) trk[k].p[P_SDIV] = 2;
-        memset(fg_set, 0, sizeof fg_set);
         g = gs.g = &gmut;
     } else {
         gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gr() % NGENRE;
@@ -2193,12 +2160,6 @@ static void gen_make(void)
     }
     rng_state = gq | 1u;
     macro_dice(3);
-    for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0;   /* (0.6.96) a new piece: MUTATE off on every
-                                                         * track, its anchor the piece (a reroll kept the lanes and
-                                                         * orbited the old piece's sounds) */
-    if (gx.on) { gx_mutate(); gx_heads(); }             /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:
-                                                         * each holds them) */
-    mut_keep();
     gen_parts();
 }
 /* the piece made from the settings (UNDO brings back what was there); the message */

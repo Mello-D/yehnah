@@ -780,89 +780,6 @@ static int lock_undo(void)
     bad += check("  again: NO LOCKS", !motion_lock_count(t) && str_eq(ui.msg, "NO LOCKS"));
     return bad;
 }
-/* 1.1.5: SEQ > AUTO LIST (ui_events.c) */
-static int auto_list(void)
-{
-    int bad = 0, ok;
-    int16_t v;
-    track_t *t;
-    uint32_t id0, id1, i;
-    uint8_t idx[MOTION_MAX];
-    ui_power_on();
-    song.sel = 0;
-    t = &trk[0];
-    track_defaults_steps(t);
-    t->p[P_SLEN] = 16;
-    go_home();
-    cursor_set(4);
-    go_page(GR_EVENTS);
-    frame();
-    id0 = ui.ev_id;
-    bad += check("AUTO LIST: empty, + ADD LOCK selected on the SEQ cursor's step, the first knob of the sound page",
-        cur_page()->graph == GR_EVENTS && ev_rows(idx) == 0u && ui.ev_step == 4u && id0 == lock_id(0) &&
-        act_ready());
-    press(B_OCTUP);
-    bad += check("  OCT+: a lock on step 5 at the sound's own value, its row selected",
-        motion_lock_get(t, 4, id0, &v) && v == motion_base_value(t, id0) && ev_row(ev_rows(idx)) == 0u &&
-        str_eq(ui.msg, "LOCK ADDED") && motion_enabled(t));
-    turn(EN_K4, 3);
-    bad += check("  KNOB 4: its value", motion_lock_get(t, 4, id0, &v) && v == motion_base_value(t, id0) + 3);
-    turn(EN_K2, 2);
-    bad += check("  KNOB 2: its step (5 -> 7), the value kept", !motion_lock_get(t, 4, id0, &v) &&
-        motion_lock_get(t, 6, id0, &v) && v == motion_base_value(t, id0) + 3);
-    turn(EN_K3, 1);
-    id1 = MOTION_ID(&motion.event[0]);
-    bad += check("  KNOB 3: the next parameter, from the sound's own value", id1 > id0 && ev_id_ok(t, id1) &&
-        motion_lock_get(t, 6, id1, &v) && v == motion_base_value(t, id1) && motion_count(t) == 1u);
-    press(B_OCTUP);
-    bad += check("  OCT+ on the row: LOCK -> AUTO", motion_count(t) == 1u && !motion_lock_count(t));
-    press(B_OCTUP);
-    ok = motion_lock_count(t) == 1u;
-    press(B_OCTUP);
-    bad += check("  and back (AUTO -> LOCK -> AUTO)", ok && !motion_lock_count(t));
-    turn(EN_K1, 1);
-    turn(EN_K2, -2);
-    bad += check("  KNOB 1: + ADD LOCK; KNOB 2 there: its step", ev_row(ev_rows(idx)) == 1u && ui.ev_step == 2u);
-    press(B_OCTUP);
-    bad += check("  OCT+: a second lock on step 3, first in the list (by step)", motion_count(t) == 2u &&
-        motion_lock_get(t, 2, ui.ev_id, &v) && ev_rows(idx) == 2u && ev_row(2u) == 0u &&
-        (motion.event[idx[0]].place & 63u) == 2u);
-    turn(EN_K1, 5);
-    press(B_OCTUP);
-    bad += check("  OCT+ on + ADD LOCK where one is: ALREADY LISTED, that row selected", motion_count(t) == 2u &&
-        str_eq(ui.msg, "ALREADY LISTED") && ev_row(2u) == 0u);
-    motion_delete_event(t, 2, ui.ev_id);                 /* (2026-11-03: no delete on the page, SEQ + G5's gone) */
-    frames(2000);
-    turn(EN_K1, -5);
-    v = motion.event[0].value;
-    turn(EN_K4, 2); turn(EN_K4, 2); turn(EN_K4, 2);
-    ok = motion.event[0].value == v + 6;
-    bad += check("  KNOB 4 turned on (three turns): the value", ok);
-    v = motion.event[0].value;
-    chain.running = 1;
-    turn(EN_K4, 1);
-    bad += check("  a song playing: STOP TO EDIT", motion.event[0].value == v && str_eq(ui.msg, "STOP TO EDIT"));
-    chain.running = 0;
-    for (i = 0; motion.count < MOTION_MAX; i++)          /* the 64 used (track 2) */
-        motion_set_event(&trk[1], i % NSTEP, i < NSTEP ? P_REV : P_DLY, 10);
-    turn(EN_K1, 5);
-    press(B_OCTUP);
-    bad += check("  the 64 used: OCT+ adds nothing, AUTOMATION FULL", motion_count(t) == 1u &&
-        str_eq(ui.msg, "AUTOMATION FULL") && !act_ready());
-    motion_clear(&trk[1]);
-    for (i = 0; i < P_COUNT; i++)                        /* names: an id each, none of DIGITAL's, lanes on DRUM only */
-        if (ev_id_ok(t, i) && ((i >= P_FM1_ATK && i <= P_FM4_LEVEL && i != P_TCHAN && i != P_KTRK && i != P_CLEN && i != P_DXIMG && i != P_HVEL && i != P_HTIM && i != P_HGAT && i != P_HRQ) || (i >= P_LN0 && i <= P_LN7) ||
-                               !motion_param(i)))       /* (0.6.37: SHIFT's CHANCE in DIGITAL's OP1 DEC slot) */
-            break;
-    bad += check("  KNOB 3's list: what motion records and the sound has (no OP ENV, no DRUM lanes off DRUM)", i == P_COUNT &&
-        ev_id_ok(&trk[3], P_LN0));
-    {
-        char a[12], b[12];
-        ev_name(t, P_ED_FLT, a); ev_name(t, P_LD_FLT, b);
-        bad += check("  names: ENV FILTER / LFO FILTER", str_eq(a, "ENV FILTER") && str_eq(b, "LFO FILTER"));
-    }
-    return bad;
-}
 /* SHIFT (Yehnah, the former chord keys): OFS plays the sequence that many steps later (wrapping in LEN; recording
  * writes where it was heard), PIT moves its notes (not a kit's lanes); both automatable */
 static int seq_shift(void)
@@ -899,6 +816,6 @@ int main(void)
 {
     int bad = motion_recording() + motion_capacity() + probability_playback() + compact_project() + fun7_89() + loads_and_song() + repeat_mode();
     bad += arp_new_modes() + seq_shift() + song_scenes();
-    bad += lock_playback() + lock_edit() + lock_project() + lock_ui() + lock_undo() + auto_list();
+    bad += lock_playback() + lock_edit() + lock_project() + lock_ui() + lock_undo();
     printf("%s\n", bad ? "MOTION TEST FAILED" : "motion/chance/compact storage tests passed"); return bad != 0;
 }

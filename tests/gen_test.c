@@ -442,16 +442,6 @@ int main(void)
         bad += gcheck("POST PUNK x 4: the bass between E2 and A#4 (Hook's neck), its tempo 118..148", lo >= 40u && hi <= 70u && song.g[G_BPM] >= 118 && song.g[G_BPM] <= 148);
         bad += gcheck("  the leads not all at full sustain", !leads || sus_lt > 0u);
     }
-    /* ---- (0.6.96) a new piece: MUTATE off on every track (a reroll kept the lanes), the anchor the piece */
-    {
-        uint32_t on = 0;
-        gen_reset();
-        gen_with(1, 5, 50, 0);
-        trk[3].p[P_MSND] = 3; trk[0].p[P_MPAT] = 2;
-        gen_go();
-        for (k = 0; k < NTRK; k++) on += trk[k].p[P_MSND] || trk[k].p[P_MPAT];
-        bad += gcheck("a new piece: MUTATE SOUND / PATTERN OFF on every track, the anchor kept", !on && mut.ok);
-    }
     /* ---- (0.6.95) a throw its own: HOUSE over twelve seeds takes more than one drum map and more than one chord
      * play; RANDOM over forty seeds throws mutants ("A+B") a third of the time or so, each playable and storable */
     {
@@ -513,7 +503,7 @@ int main(void)
     {
         static const uint32_t SEEDS = 60u;
         uint32_t sd, nmel_bad = 0, page_bad = 0, chord_bad = 0, key_bad = 0, key_col = 0, key_appr = 0, nn = 0;
-        uint32_t store_bad = 0, budget_bad = 0, quiet = 0, loud = 0, odd = 0, poly = 0, divs = 0, comps = 0, lms = 0, heads = 0;
+        uint32_t store_bad = 0, budget_bad = 0, quiet = 0, loud = 0, odd = 0, poly = 0, divs = 0, comps = 0, lms = 0;
         uint32_t nbpm = 0, nsc = 0, nlen = 0, ndm = 0, neng = 0, same = 0, bpm_lo = 999, bpm_hi = 0, name_bad = 0;
         uint8_t seen_bpm[256] = {0}, seen_sc[16] = {0}, seen_len[NSTEP + 1] = {0}, seen_dm[64] = {0}, seen_eng[NENGINES] = {0};
         uint32_t sig[60];
@@ -576,7 +566,6 @@ int main(void)
                     }
                 }
                 mel += on > 0u;
-                for (kk = 0; kk < FG_HEADS; kk++) heads += fg_set[k][kk].rate != 0;
             }
             poly += lens_differ;
             if (mel < 2u) { nmel_bad++; printf("  EXPLORE seed %u: %u melodic parts playing\n", gp.seed, mel); }
@@ -610,9 +599,9 @@ int main(void)
             if (clip * 100u > 800u * 2u * CTL) { loud++; printf("  EXPLORE seed %u: %u samples at full scale\n", gp.seed, clip); }
         }
         printf("gen: EXPLORE x %u: %u tempos (%u..%u BPM), %u keys, %u loop lengths (%u odd), %u drum maps, %u engines, polyrhythm in %u,\n"
-               "gen:   %u DIVs off 1/16, %u components, %u DRUM-X octave steps, %u playheads; %u notes: %u coloured, %u approaches;\n"
+               "gen:   %u DIVs off 1/16, %u components, %u DRUM-X octave steps; %u notes: %u coloured, %u approaches;\n"
                "gen:   RMS %.0f at least, peak %d, %u voices at most (the genres: %u)\n",
-               SEEDS, nbpm, bpm_lo, bpm_hi, nsc, nlen, odd, ndm, neng, poly, divs, comps, lms, heads, nn, key_col, key_appr, rms_min,
+               SEEDS, nbpm, bpm_lo, bpm_hi, nsc, nlen, odd, ndm, neng, poly, divs, comps, lms, nn, key_col, key_appr, rms_min,
                peak_max, vmax_all, vref);
         bad += gcheck("  60 seeds: each named EXPLORE nnnn, each another piece (no two the same)", !name_bad && !same);
         bad += gcheck("  each plays: two melodic parts at least, sound (RMS), never stuck at full scale", !nmel_bad && !quiet && !loud);
@@ -625,13 +614,13 @@ int main(void)
         bad += gcheck("  varied: 20 tempos from under 90 to over 150 BPM, 6 keys, 12 loop lengths (odd ones), 12 drum maps",
                       nbpm >= 20u && bpm_lo < 90u && bpm_hi > 150u && nsc >= 6u && nlen >= 12u && odd > 0u && ndm >= 12u);
         bad += gcheck("  the rules broken: polyrhythm (a third of the pieces), DIVs, components, DRUM-X octaves, PLAYHEADS",
-                      poly * 3u >= SEEDS && divs && comps && lms && heads);
+                      poly * 3u >= SEEDS && divs && comps && lms);
         bad += gcheck("  any engine: six at least, ANIMAL and VOICE among them",
                       neng >= 6u && seen_eng[ENGI_ANIMAL] && seen_eng[EG_VO]);
         bad += gcheck("  every piece storable, the automation inside its 64", !store_bad);
     }
     {   /* EXPLORE deterministic; its FORMs; a genre's piece the same before and after it (DIV 1/16, no PLAYHEADS) */
-        uint32_t h1, h2, h3, h4, divs = 0, fg = 0, sec_bad = 0, f;
+        uint32_t h1, h2, h3, h4, divs = 0, sec_bad = 0, f;
         static project_t ps;
         gen_reset();
         gen_with(GEN_EXPLORE, 77, 50, 0); h1 = all_sig();
@@ -641,8 +630,8 @@ int main(void)
         gen_with(1, 421, 50, 0); h3 = all_sig();
         for (f = 0; f < 6u; f++) gen_with(GEN_EXPLORE, 300u + f, 50, f % 3u);
         gen_with(1, 421, 50, 0); h4 = all_sig();
-        for (k = 0; k < NTRK; k++) { divs += trk[k].p[P_SDIV] != 2; for (i = 0; i < FG_HEADS; i++) fg += fg_set[k][i].rate != 0; }
-        bad += gcheck("  HOUSE 0421 the same piece before and after six EXPLORE pieces (DIV 1/16, no PLAYHEADS)", h3 == h4 && !divs && !fg);
+        for (k = 0; k < NTRK; k++) { divs += trk[k].p[P_SDIV] != 2; }
+        bad += gcheck("  HOUSE 0421 the same piece before and after six EXPLORE pieces (DIV 1/16)", h3 == h4 && !divs);
         for (f = 1; f <= 12u; f++) {                    /* PARTS and SONG: each section in its own key, playing, storable */
             uint32_t s2;
             gen_reset();

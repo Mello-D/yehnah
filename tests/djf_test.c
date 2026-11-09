@@ -249,7 +249,6 @@ static void test_automation(void)
     seq_stop();
     ck("stop again: 5", song.g[G_DJF] == 5);
     ck("no lock for it (the editor's MOTION op 5 refused)", motion_set_lock(t, 3, MOT_DJF, 10) == 1 && motion_param(MOT_DJF));
-    ck("AUTO LIST lists it, named", ev_id_ok(t, MOT_DJF) && str_eq(track_desc(t, MOT_DJF)->label, "DJ FILT"));
     (void)motion_set_event(t, 7, P_REV, 90);            /* (another record, a track parameter's) */
     project_capture(&q);
     ck("packed (FUND)", proj_pack(&st, &q));

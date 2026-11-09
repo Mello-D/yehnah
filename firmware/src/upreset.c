@@ -460,54 +460,6 @@ static int up_load(uint32_t k)
     return 0;
 }
 
-/* the patterns of the user presets (SEQ > PATTERNS lists them after the factory ones, ui.c pat_count) */
-static int up_has_pat(uint32_t k) { return up_used(k) && !up_pat_empty(up_rec(k)); }
-
-static uint32_t up_pat_count(void)
-{
-    uint32_t k, n = 0;
-    for (k = 0; k < UP_SLOTS; k++)
-        n += (uint32_t)up_has_pat(k);
-    return n;
-}
-
-static uint32_t up_pat_nth(uint32_t n)         /* slot of the n-th one that holds a pattern (n < up_pat_count()) */
-{
-    uint32_t k;
-    for (k = 0; k < UP_SLOTS; k++)
-        if (up_has_pat(k) && !n--)
-            return k;
-    return 0;
-}
-
-static uint32_t up_pat_rank(uint32_t slot)     /* ones that hold a pattern before it */
-{
-    uint32_t k, n = 0;
-    for (k = 0; k < slot && k < UP_SLOTS; k++)
-        n += (uint32_t)up_has_pat(k);
-    return n;
-}
-
-/* slot k's pattern -> track t's steps 1..16 (the rest cleared), with the record's LEN (at most 16), DIV,
- * SWING and GATE; the sound stays (ui.c pat_load) */
-static void up_pat_load(track_t *t, uint32_t k)
-{
-    const up_rec_t *r;
-    int16_t v[P_COUNT];
-    uint32_t i;
-    if (!up_has_pat(k))
-        return;
-    r = up_rec(k);
-    up_values(r, v);
-    if (up_grid(r))
-        load_grid16(t, r->note, r->flags);
-    else
-        load_pat16(t, r->note, r->flags);
-    for (i = P_SDIV; i <= P_SGATE; i++)
-        t->p[i] = v[i];
-    t->p[P_SLEN] = (int16_t)clamp(v[P_SLEN], 1, 16);   /* (the pattern has 16 steps) */
-}
-
 /* the engine a used slot's sound plays on (a DIGITAL record: FM6, without YEHNAH_FM4) */
 static uint32_t up_engine(uint32_t k) { return eng_live(up_rec(k)->engine); }   /* (PHYS: ANALOG) */
 
@@ -552,8 +504,6 @@ static void up_ui_named(uint32_t op, uint32_t k, const char *name)   /* 0 load, 
     }
     if (op == 0u) {
         up_load(k);
-        if (up_has_pat(k))                              /* SEQ > PATTERNS starts at its pattern */
-            ui.ppick = (uint8_t)(NPATTERNS + up_pat_rank(k));
         ui_say("LOADED ", l);
         return;
     }

@@ -258,10 +258,6 @@ static void hint_tick(void)
         ui_message("REC + PLAY, TURN A KNOB");          /* (0.6.92) how it is recorded */
     else if (k == HK_PUNCH)
         ui_message("REC + PLAY, HOLD FX + A KEY");      /* (0.6.99) the lane's recording */
-    else {                                              /* HK_MUTATE */
-        ui_message("OCT+ KEEP  OCT- FREEZE");
-        str_cpy(ui.msg2, "SEQ>TOOLS REVERT  REC+F4 ALL", sizeof ui.msg2);   /* (0.9.3) back to the anchor */
-    }
     ui.hint_pg = (uint8_t)at;                           /* (0.9.0: this page's only) */
 }
 
@@ -326,7 +322,7 @@ static void rec_clear(void)
 #define RK_CIN 4u
 #define RK_UNDO 5u
 #define RK_RST 6u
-#define RK_RVA 7u                                      /* (0.9.3, GLO + B4 until 2026-11-02) every track back to MUTATE's anchor */
+#define RK_RVA 7u                                      /* (the key F4 was REVERT ALL: gone with MUTATE) */
 #define RK_PLAY 8u                                     /* G4 A4 B4 C5: PLAY A..D */
 #define RK_LOOP 12u                                    /* D5: LOOP / SONG (what PLAY plays) */
 #define RK_SREC 13u                                    /* E5: SONG REC */
@@ -452,10 +448,6 @@ static void rec_key(uint32_t p)
             ui_message("NOTHING TO UNDO");
         else
             ui_message("UNDONE (AGAIN: REDO)");
-        return;
-    }
-    if (p == RK_RVA) {                                  /* project.c: UNDO first */
-        mut_revert_ui(1);
         return;
     }
     if (p == RK_RST) {                                  /* from the top, playing on; stopped: PLAY */
@@ -633,7 +625,7 @@ static uint32_t layer_leds(uint32_t *br)
         } else if (l == LAYER_REC && !b && p <= RK_RVA) {   /* the click / count-in on, LOOP: lit, else they breathe; CLEAR: */
             on = p == RK_MODE && rec_loop;   /* something to clear, not
                                                          * while a song plays; TAP breathes; UNDO: one to undo */
-            can = p == RK_RVA ? mut_back_ok() : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p == 1u || p == RK_CIN ? 0u : p ? 1u : !chain_busy() && rec_clearable();
+            can = p == RK_RVA ? 0u : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p == 1u || p == RK_CIN ? 0u : p ? 1u : !chain_busy() && rec_clearable();
         }
         m |= on << k;
         n |= (can & !on) << k;
@@ -706,10 +698,6 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         if (p == RK_NAME) {
             str_cpy(nm, "NAME", 12);
             return name_here() ? LS_OFF : LS_DIM;
-        }
-        if (p == RK_RVA) {
-            str_cpy(nm, "REVERT ALL", 12);
-            return mut_back_ok() ? LS_OFF : LS_DIM;
         }
         if (p == RK_UNDO) {
             str_cpy(nm, "UNDO", 12);
@@ -933,7 +921,7 @@ static void draw_layer(void)
     else if (l == LAYER_REC)
         sig += (uint32_t)ui_rec_prefs * 31u + (uint32_t)chain_busy() * 3u + (uint32_t)rec_clearable() * 5u + song.sel * 977u +
                rec_loop * 7919u + (uint32_t)song.g[G_BPM] * 65537u + undo_ok * 104729u + (uint32_t)song.g[G_CLOCK] * 13u +
-               song.playing * 17u + (uint32_t)mut_back_ok() * 19u +   /* (the song keys) */
+               song.playing * 17u +   /* (the song keys) */
                (uint32_t)(live.cur + 1) * 23u + (uint32_t)(live.req + 1) * 131u + live.srec * 7u + live.mode * 11u +
                lys.nqc * 4099u + (chain.running ? chain.row * 13u + chain.remaining * 17u : 0u) + (uint32_t)name_here() * 29u +
                up_gen * 37u;

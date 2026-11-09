@@ -1068,18 +1068,6 @@ static void draw_cards(void)
         draw_column(3, "ROTATE", val, "ST", ofs ? VAL(3u) : T_DIM, (ofs + 32) * 1000 / 64, ICON_ORDER);
         return;
     }
-    if (cur_page()->graph == GR_FUGUE) {               /* (0.6.52) HEAD RATE DIR INTERVAL */
-        const fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
-        fmt_int(val, (int32_t)(fg_ui % FG_HEADS) + 2);
-        draw_column(0, "HEAD", val, "", VAL(0u), pick_of(FG_HEADS, fg_ui % FG_HEADS), ICON_X_PATTERN);
-        draw_column(1, "RATE", N_FGRATE[f->rate % FG_NRATE], "", f->rate ? VAL(1u) : T_DIM, pick_of(10u, f->rate),
-                    ICON_RATE);
-        draw_column(2, "DIR", N_FGDIR[f->dir & 3u], "", f->rate ? VAL(2u) : T_DIM, pick_of(4u, f->dir & 3u), ICON_ORDER);
-        val[0] = f->ivl > 0 ? '+' : 0;
-        fmt_int(val + (f->ivl > 0), f->ivl);
-        draw_column(3, "INTVL", val, "DEG", f->rate ? VAL(3u) : T_DIM, (int32_t)(f->ivl + 14) * 1000 / 28, ICON_PITCH);
-        return;
-    }
     if (cur_page()->graph == GR_COMP) {                /* (0.6.39) STEP TYPE and the TYPE's two values */
         const step_t *cs = &TSEL->step[ui.cursor];
         uint32_t v = comp_view(), ca = comp_arg(cs), ct = comp_type(cs);
@@ -1170,44 +1158,6 @@ static void draw_cards(void)
         draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
         return;
     }
-    if (cur_page()->graph == GR_EVENTS) {              /* AUTO LIST (ui_events.c): ROW STEP PARAM VALUE */
-        const track_t *t = TSEL;
-        uint8_t idx[MOTION_MAX];
-        uint32_t n = ev_rows(idx), r = ev_row(n), step, id;
-        int16_t v;
-        char nm[12];
-        const param_desc_t *d;
-        if (r < n) {
-            const motion_event_t *e = &motion.event[idx[r]];
-            fmt_int(val, (int32_t)r + 1);
-            str_cpy(val + str_len(val), "/", 4);
-            fmt_int(val + str_len(val), (int32_t)n);
-            step = MOTION_STEP(e);
-            id = MOTION_ID(e);
-            v = MOTION_VAL(e);
-        } else {
-            ev_fix();
-            str_cpy(val, "ADD", sizeof val);
-            step = ui.ev_step;
-            id = ui.ev_id;
-            v = id < P_COUNT ? motion_base_value(t, id) : 0;
-        }
-        draw_column(0, "ROW", val, "", VAL(0u), -1, ICON_AUTO);
-        fmt_int(val, (int32_t)step + 1);
-        draw_column(1, "STEP", val, "", r < n || step < (uint32_t)t->p[P_SLEN] ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-        if ((id >= P_COUNT && id != MOT_DJF) || !ev_id_ok(t, id)) {
-            draw_column(2, "PARAM", "--", "", T_DIM, -1, ICON_AUTO);
-            draw_column(3, "VALUE", "--", "", T_DIM, -1, ICON_AUTO);
-            return;
-        }
-        ev_name(t, id, nm);
-        draw_column(2, "PARAM", nm, "", VAL(2u), -1, ICON_AUTO);
-        d = track_desc(t, id);
-        param_format(d, v, val, &unit);
-        draw_column(3, r == n ? "VALUE" : (motion.event[idx[r]].param & MOTION_LOCK) ? "LOCK" : "AUTO", val, unit,
-                    r < n ? VAL(3u) : T_DIM, gauge(d, v), param_icon(d, v));
-        return;
-    }
     if (cur_page()->graph == GR_PUNCH) {               /* (0.6.99) the punch-in lane: LEN, RES, its state, CLEAR */
         uint32_t n = 0, i;
         for (i = 0; i < 64u; i++) n += pfx_lane_at(i) != 0u;
@@ -1262,16 +1212,6 @@ static void draw_cards(void)
                     engine_icon(ENGINES[TSEL->eng_req]->name));   /* (2026-11-03, the user's: all four their grids) */
         draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), pick_of(2u, (uint32_t)preset_favorite()), ICON_X_STAR);
         draw_column(3, "LIST", favorites.filter ? "FAV" : "ALL", "", VAL(3u), pick_of(2u, favorites.filter), ICON_X_FOLDER);
-        return;
-    }
-    if (cur_page()->graph == GR_PATS) {                  /* PAT, then LOAD (a GO button) */
-        uint32_t n = pat_count(), k = pat_pick();
-        char tag[4], nm[13];
-        pat_label(k, tag, nm);
-        draw_column(0, "PAT", tag, "", VAL(0u), pick_of(n, k), ICON_X_PATTERN);
-        draw_act_column(1, "LOAD", T_THEME, ICON_AUTO);
-        draw_column(2, "", "", "", T_THEME, -1, ICON_AUTO);
-        draw_column(3, "", "", "", T_THEME, -1, ICON_AUTO);
         return;
     }
     if (cur_page()->graph == GR_SLOTS) {                 /* (0.6.12) PROJECT, SECT A-D, then LOAD and SAVE */
@@ -1765,11 +1705,6 @@ static void confirm_text(char *a, char *b)
     case CF_CLEAR_ALL:
         str_cpy(a, "CLEAR ALL SEQUENCES?", 24);
         break;
-    case CF_MUT_BACK:                                /* (0.9.3) MUTATE turned OFF on track k (project.c mut_ask_poll) */
-        str_cpy(a, "BACK TO BEFORE MUTATE?", 24);
-        str_cpy(b, "T1: SOUND AND PATTERN", 24);
-        b[1] = (char)('1' + k % NTRK);
-        break;
     case CF_CALIB:                                   /* (2026-11-02) GLO > TOOLS */
         str_cpy(a, "OPEN CALIBRATION?", 24);
         break;
@@ -1812,13 +1747,6 @@ static void confirm_text(char *a, char *b)
         a[14] = (char)('1' + k % NSONG);
         str_cpy(b, "4 SECTS + SONG: NO UNDO", 24);
         break;
-    case CF_LOAD_PAT: {
-        char tag[4];
-        str_cpy(a, "REPLACE T1 SEQUENCE?", 24);
-        a[9] = (char)('1' + k % NTRK);
-        pat_label(pat_pick(), tag, b);               /* with the pattern picked */
-        break;
-    }
     default:
         str_cpy(a, "CLEAR T1 SEQUENCE?", 24);     /* the header (T1..T4) is hidden */
         a[7] = (char)('1' + k % NTRK);
@@ -1845,7 +1773,7 @@ static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
-    uint16_t hot = (ui.confirm == CF_DICE_ALL || ui.confirm == CF_MUT_BACK || ui.confirm == CF_LOAD_PAT ||
+    uint16_t hot = (ui.confirm == CF_DICE_ALL ||
                    ui.confirm == CF_CPU_TEST || ui.confirm == CF_CALIB || ui.confirm == CF_ABOUT) ? T_ACCENT : T_REC;
     confirm_text(a, b);
     ui.head_sig = ~0u;
@@ -1867,8 +1795,8 @@ static void draw_confirm(void)
     }
     cv_blit(0, TF_SC_Y);
     cv_begin(240, 240 - TF_KN_Y, T_BG);                /* the knob cells' row and the page row's: the two buttons */
-    dlg_button(1, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : ui.confirm == CF_MUT_BACK ? "KEEP" : "NO", 0, 0);
-    dlg_button(1 + DLG_BTN_W + 2, "OCT +", ui.confirm == CF_MUT_BACK ? "BACK" : "YES", 1, hot);
+    dlg_button(1, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : "NO", 0, 0);
+    dlg_button(1 + DLG_BTN_W + 2, "OCT +", "YES", 1, hot);
     cv_blit(0, TF_KN_Y);
 }
 

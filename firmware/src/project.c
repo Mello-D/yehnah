@@ -143,7 +143,7 @@ typedef struct {
     uint8_t dx_snd[8];                         /* (0.6.48) its sounds' SENDs (eng_drum.c): FUNC's 'D' 'S' block, 0 before */
     uint8_t dx_lay[8];                         /* (0.6.49) its sounds' LAYER, FEEDBK (drumx_voice.c): 'D' 'L', 0 before */
     uint8_t dx_mach;                           /* (chord-harp fork) its MACHINE (eng_drum.c DXK_*): FUND's 'D' 'K', 0 before */
-    uint8_t fugue[NTRK][3][2];                 /* (0.6.52) SEQ > FUGUE's heads (fugue.c): RATE | DIR << 4, INTERVAL (int8);
+    uint8_t fugue[NTRK][3][2];                 /* (0.6.52) SEQ > PLAYHEADS' heads (gone; kept for the layout, 0);
                                                 * FUNC's 'F' 'G' block, none before */
     uint8_t pfx_lane[32], pfx_ltgt;            /* the punch-in lane (pfx.c), in FUN9's spare bytes (PROJ_PFX_OFF) */
     uint8_t macro[4];                          /* the macros M1..M4 (mod.c macro_v), 0..127: after the lane's tracks */
@@ -740,15 +740,6 @@ static int proj_fm_kept(const project_t *q, uint32_t t)
 }
 static int16_t proj_pdef(uint32_t engine, uint32_t i) { return param_desc_of(engine, i)->def; }
 /* the bytes q takes as FUNC up to the tail (PROJC_PFX_OFF: the room); more than the room: SECTION FULL */
-static int proj_fg_used(const project_t *q)            /* (0.6.52) a FUGUE head on: its block is written */
-{
-    uint32_t t, h;
-    for (t = 0; t < NTRK; t++)
-        for (h = 0; h < 3u; h++)
-            if (q->fugue[t][h][0] & 15u)
-                return 1;
-    return 0;
-}
 /* (0.9.1) the DJ FILTER's records (core.h MOT_DJF) among m's: FUNC keeps them apart, in a block after the others ('M' 'G':
  * their count, then the records), so firmware before 0.9.1, which refuses a record it does not know, loads the project
  * without them */
@@ -837,8 +828,6 @@ static uint32_t proj_packed_size(const project_t *q)
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
         if (q->dx_lay[i]) { n += 2u + sizeof q->dx_lay; break; }
-    if (proj_fg_used(q))                                /* (0.6.52) FUGUE's */
-        n += 2u + sizeof q->fugue;
     for (t = 0; t < NTRK; t++) {
         uint32_t e = q->t[t].engine < NENGINES ? q->t[t].engine : 0u;
         n += 3u + PROJC_PMAP + 8u + (proj_fm_kept(q, t) ? FM6_PACKED : 0u);
@@ -934,11 +923,6 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'D'; b[pos++] = 'L';
         memcpy(b + pos, q->dx_lay, sizeof q->dx_lay);
         pos += sizeof q->dx_lay;
-    }
-    if (proj_fg_used(q)) {                              /* (0.6.52) FUGUE's heads */
-        b[pos++] = 'F'; b[pos++] = 'G';
-        memcpy(b + pos, q->fugue, sizeof q->fugue);
-        pos += sizeof q->fugue;
     }
     if (q->g[G_DMOD] != GP[G_DMOD].def) {               /* (0.6.86) the delay's MOD (biased), when not the default */
         b[pos++] = 'D'; b[pos++] = 'M';
@@ -1219,16 +1203,8 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         pos += 2u + sizeof q->dx_lay;
     }
     memset(q->fugue, 0, sizeof q->fugue);
-    if (pos + 2u + sizeof q->fugue <= room && b[pos] == 'F' && b[pos + 1u] == 'G') {   /* (0.6.52) FUGUE's heads */
-        uint32_t k;
-        memcpy(q->fugue, b + pos + 2u, sizeof q->fugue);
-        for (k = 0; k < sizeof q->fugue; k += 2u) {     /* (in range) */
-            uint8_t *f = &q->fugue[0][0][0] + k;
-            if ((f[0] & 15u) >= 10u || (f[0] >> 4) > 3u) f[0] = 0;
-            if ((int8_t)f[1] < -14 || (int8_t)f[1] > 14) f[1] = 0;
-        }
+    if (pos + 2u + sizeof q->fugue <= room && b[pos] == 'F' && b[pos + 1u] == 'G')   /* (0.6.52) FUGUE's heads, gone: skipped */
         pos += 2u + sizeof q->fugue;
-    }
     if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'M') {   /* (0.6.86) the delay's MOD (else its default) */
         q->g[G_DMOD] = (int16_t)clamp((int32_t)b[pos + 2u] - 64, GP[G_DMOD].min, GP[G_DMOD].max);
         pos += 3u;
@@ -1570,14 +1546,6 @@ static void project_capture(project_t *p)
     p->dx_hands = dx_hands;                             /* (0.7.9) */
     memcpy(p->dx_snd, dx_snd, sizeof p->dx_snd);        /* (0.6.48) */
     memcpy(p->dx_lay, dx_lay, sizeof p->dx_lay);        /* (0.6.49) */
-    {                                                   /* (0.6.52) FUGUE */
-        uint32_t a, h;
-        for (a = 0; a < NTRK; a++)
-            for (h = 0; h < FG_HEADS; h++) {
-                p->fugue[a][h][0] = (uint8_t)(fg_set[a][h].rate | fg_set[a][h].dir << 4);
-                p->fugue[a][h][1] = (uint8_t)fg_set[a][h].ivl;
-            }
-    }
     memcpy(p->pfx_lane, pfx_lane, sizeof p->pfx_lane);
     p->pfx_ltgt = pfx_ltgt;
     memcpy(p->macro, macro_v, sizeof p->macro);
@@ -1727,18 +1695,6 @@ static void sound_put(project_t *p, uint32_t k)
     ui.force = 1;
 }
 
-/* (0.6.52) a section's FUGUE settings into the heads' (fugue.c fg_set) */
-static void fg_load(const project_t *p)
-{
-    uint32_t a, h;
-    for (a = 0; a < NTRK; a++)
-        for (h = 0; h < FG_HEADS; h++) {
-            uint32_t r = p->fugue[a][h][0] & 15u;
-            fg_set[a][h].rate = (uint8_t)(r < FG_NRATE ? r : 0u);
-            fg_set[a][h].dir = (uint8_t)((p->fugue[a][h][0] >> 4) & 3u);
-            fg_set[a][h].ivl = (int8_t)clamp((int32_t)(int8_t)p->fugue[a][h][1], -14, 14);
-        }
-}
 static int project_restore_runtime(const project_t *input)
 {
     project_t *p = &proj_scratch;
@@ -1764,7 +1720,6 @@ static int project_restore_runtime(const project_t *input)
     dx_hands = p->dx_hands & 15u;                       /* (0.7.9: its HANDS) */
     memcpy(dx_snd, p->dx_snd, sizeof dx_snd);           /* (0.6.48: its SENDs) */
     memcpy(dx_lay, p->dx_lay, sizeof dx_lay);           /* (0.6.49: its LAYERs) */
-    fg_load(p);                                         /* (0.6.52: its FUGUE) */
     memcpy(pfx_lane, p->pfx_lane, sizeof pfx_lane);    /* (the section's punch-in lane) */
     pfx_ltgt = p->pfx_ltgt > 2u ? 0u : p->pfx_ltgt;
     for (i = 0; i < 4u; i++)
@@ -1828,7 +1783,6 @@ static int project_restore_runtime(const project_t *input)
         pat_sig[k] = ~steps_sig(t);                     /* a project's steps are the user's */
     }
     load_depth--;
-    mut_forget();                                       /* (0.9.3) REVERT: NO ANCHOR (UNDO: as it was, undo_do) */
     sync_reload = 1;
     ui.force = 1;
     ui_message("LOADED");
@@ -1863,7 +1817,6 @@ static void system_init(void)
     dx_hands = 0;
     memset(dx_snd, 0, sizeof dx_snd);
     memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
-    memset(fg_set, 0, sizeof fg_set);                   /* (0.6.52) no FUGUE */
     dx_mute_set(0);
     fm6_init();
     for (i = 0; i < NTRK; i++) {
@@ -1879,255 +1832,7 @@ static void system_init(void)
         latch_drop_req |= (uint8_t)(1u << i);
     }
     proj_name[0] = 0;
-    mut_forget();                                       /* (0.9.3: the anchor is the old music's) */
     ui.force = 1;
-}
-/* (0.6.43) MUTATE: each track's SOUND and PATTERN change by themselves every OFF / 1 .. 32 bars, on the bar (the
- * change made in the bar before's last sixteenth, so it lands on the one), by AMOUNT, in the clock with the rest of the
- * gear. ORBIT (the default): around the anchor, the music as it was when MUTATE came on, PLAY started or KEEP (the
- * MUTATE page's OCT+) took it, so it varies for minutes and stays itself; DRIFT: from what it is now, on and on.
- * SOUND: the engine's eight values and the filter, its envelope, DEC, REL and the sends (never LEVEL, PAN, MUTE; FM6's
- * SLOT stays); a list value now and then. PATTERN: notes up / down the scale, accents, a note added off the beat or
- * one taken (never on a beat); DRUM: hits on and off, never the kick. MUTATE's OCT- freezes them all; main loop only */
-static project_store_t mut_anchor __attribute__((section(".pool")));
-static struct { uint8_t ok, playing, moved, ask, stale; uint32_t en, done, sig[NTRK]; } mut;   /* sig: each track's steps
-                                                         * as the anchor or the last mutation left them (0.6.68); (0.9.3)
-                                                         * moved: the tracks mutated since the anchor, ask: those turned
-                                                         * OFF since (BACK TO BEFORE MUTATE?), stale: the anchor is another
-                                                         * music's (a load, NEW PROJECT): REVERT says NO ANCHOR */
-static const uint8_t MUT_COMMON[7] = {P_FCUT, P_FRES, P_ED_FLT, P_DEC, P_REL, P_DLY, P_REV};   /* SOUND's, past the eight */
-static uint32_t mut_every(const track_t *t, uint32_t id) { return MUT_BARS[(uint32_t)clamp(t->p[id], 0, 6)]; }
-static uint32_t mut_enabled(void)
-{
-    uint32_t k, m = 0;
-    for (k = 0; k < NTRK; k++)
-        if (k < trk_live && (mut_every(&trk[k], P_MSND) || mut_every(&trk[k], P_MPAT)))
-            m |= 1u << k;
-    return m;
-}
-static void mut_keep(void)
-{
-    project_capture(&proj_scratch);
-    mut.ok = (uint8_t)proj_pack(&mut_anchor, &proj_scratch);
-    mut.moved = mut.ask = mut.stale = 0;
-    for (uint32_t k = 0; k < NTRK; k++)
-        mut.sig[k] = steps_sig(&trk[k]);
-}
-static void mut_forget(void) { mut.stale = 1; mut.moved = mut.ask = 0; }   /* (0.9.3) another music: no going back */
-static int32_t mut_rr(int32_t lo, int32_t hi) { return hi <= lo ? lo : lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
-static void mut_value(track_t *t, uint32_t id, const int16_t *base, uint32_t amt)
-{
-    const param_desc_t *d = track_desc(t, id);
-    int32_t v = base[id];
-    if (d->max <= d->min)
-        return;
-    if (d->fmt == F_ENUM)
-        v = rng() % 254u < amt ? mut_rr(d->min, d->max) : v;
-    else {
-        int32_t span = (d->max - d->min) * (int32_t)amt / 256;
-        v += mut_rr(-span, span);
-    }
-    t->p[id] = (int16_t)clamp(v, d->min, d->max);
-}
-static void mut_sound(track_t *t, const proj_trk_t *a)
-{
-    const uint8_t *COMMON = MUT_COMMON;
-    uint32_t i, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), e = trk_eng(t);
-    const int16_t *base = a ? a->p : t->p;
-    for (i = 0; i < 8u; i++)
-        if (!(e == ENGI_FM6 && i == 7u))                /* (FM6's SLOT: its patch stays) */
-            mut_value(t, P_E0 + i, base, amt);
-    for (i = 0; i < 7u; i++)
-        if (!(e == ENGI_ANALOG && (COMMON[i] == P_FCUT || COMMON[i] == P_FRES)))   /* (ANALOG: its own CUT RES) */
-            mut_value(t, COMMON[i], base, amt);
-}
-static void mut_pattern(track_t *t, const proj_trk_t *a)
-{
-    uint32_t i, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), l;
-    int kit = drum_track(t);
-    int32_t last = -1;
-    for (i = 0, l = 0; i < len && i < NSTEP; i++)       /* (0.6.68) an empty pattern stays empty: nothing out of */
-        l += a ? step_on(&a->step[i]) : step_on(&t->step[i]);   /* silence (a cleared track, a blank kit) */
-    if (!l)
-        return;
-    for (i = 0; i < len && i < NSTEP; i++) {
-        step_t s = a ? a->step[i] : t->step[i];
-        if (kit) {                                      /* hits on and off, the kick never */
-            for (l = 1; l < NLANE; l++)
-                if (rng() % 640u < amt) {
-                    s.hit ^= (uint8_t)(1u << l);
-                    s.acc &= s.hit;
-                }
-            if (s.hit && s.time != ST_NOTE) s.time = ST_NOTE;
-            if (!s.hit && !s.n) s.time = ST_REST;
-        } else if (s.time == ST_NOTE && s.n) {
-            uint32_t j;
-            if (i % 4u && rng() % 1024u < amt) {        /* one taken (never on a beat) */
-                s.n = 0; s.time = ST_REST;
-            } else {
-                if (rng() % 256u < amt) {               /* up / down the scale */
-                    int32_t d = mut_rr(-2, 2);
-                    if (!d) d = 1;
-                    for (j = 0; j < s.n && j < 4u; j++)
-                        s.note[j] = (uint8_t)clamp(scale_steps(t, s.note[j], d), 0, 127);
-                }
-                if (rng() % 512u < amt) s.flags ^= SF_ACCENT;
-                last = s.note[0];
-            }
-        } else if (s.time == ST_REST && (i & 1u) && last >= 0 && rng() % 1024u < amt) {   /* one added, off the beat */
-            memset(&s, 0, sizeof s);
-            s.n = 1; s.time = ST_NOTE; s.vel = 90;
-            s.note[0] = (uint8_t)clamp(scale_steps(t, last, mut_rr(-1, 1)), 0, 127);
-        }
-        t->step[i] = s;
-    }
-}
-static uint32_t mut_progress(uint32_t k)
-{
-    const track_t *t = &trk[k % NTRK];
-    uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), e = s && q ? (s < q ? s : q) : s ? s : q;
-    if (!e || k >= trk_live)
-        return 0xFFFFu;
-    if (!song.playing || mut_freeze)
-        return 0;
-    return (((bar_n % e) * 4u + beat_n) * 256u) / (e * 4u);
-}
-/* (0.9.3) MUTATE can go back: what SOUND and PATTERN change on a track (mut_sound's values, the steps) as the anchor holds
- * them; LEVEL PAN MUTE, the pattern's settings and the other tracks stay. SOUND's i-th value of engine e (P_COUNT: one it
- * never changes); the anchor of another engine (a sound loaded since): its steps only */
-static uint32_t mut_sid(uint32_t i, uint32_t e)
-{
-    uint32_t id = i < 8u ? P_E0 + i : MUT_COMMON[(i - 8u) % 7u];
-    if ((e == ENGI_FM6 && i == 7u) || (e == ENGI_ANALOG && (id == P_FCUT || id == P_FRES)))
-        return P_COUNT;
-    return id;
-}
-static int mut_back_ok(void) { return mut.ok && !mut.stale; }
-static int mut_anchor_get(void) { return mut_back_ok() && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor); }
-static int mut_differs(uint32_t k)                     /* track k against the anchor (in proj_scratch) */
-{
-    const track_t *t = &trk[k % NTRK];
-    const proj_trk_t *a = &proj_scratch.t[k % NTRK];
-    uint32_t i, id, d = memcmp(t->step, a->step, sizeof t->step) != 0;
-    for (i = 0; i < 15u && a->engine == trk_eng(t); i++)
-        if ((id = mut_sid(i, a->engine)) < P_COUNT)
-            d |= t->p[id] != a->p[id];
-    return (int)d;
-}
-static int mut_revert(uint32_t mask)                   /* the tracks of mask back to the anchor; 0 done, 1 NO ANCHOR */
-{
-    uint32_t k, i, id;
-    if (!mut_anchor_get())
-        return 1;
-    fm1_irq_off();                                      /* (one batch, as a mutation's: the ISR sees all or none) */
-    for (k = 0; k < NTRK; k++) {
-        track_t *t = &trk[k];
-        const proj_trk_t *a = &proj_scratch.t[k];
-        if (!((mask >> k) & 1u))
-            continue;
-        for (i = 0; i < 15u && a->engine == trk_eng(t); i++)
-            if ((id = mut_sid(i, a->engine)) < P_COUNT)
-                t->p[id] = (int16_t)param_fit(param_desc_of(a->engine, id), a->p[id]);
-        memcpy(t->step, a->step, sizeof t->step);
-    }
-    fm1_irq_on();
-    for (k = 0; k < NTRK; k++)
-        if ((mask >> k) & 1u)
-            mut.sig[k] = steps_sig(&trk[k]);            /* (not steps written: no new anchor on the bar) */
-    mut.moved &= (uint8_t)~mask;
-    mut.ask &= (uint8_t)~mask;
-    ui.force = 1;
-    return 0;
-}
-/* REVERT (SEQ > TOOLS: the selected track; all = every track that plays: REC + F4), UNDO first
- * (REC + D4) */
-static void mut_revert_ui(int all)
-{
-    char b[24] = "T1 BACK TO ANCHOR";
-    if (!mut_back_ok()) {
-        ui_message("NO ANCHOR");
-        return;
-    }
-    if (!chain_busy())
-        undo_mark();
-    if (mut_revert(all ? (1u << trk_live) - 1u : 1u << song.sel)) {
-        ui_message("NO ANCHOR");
-        return;
-    }
-    b[1] = (char)('1' + song.sel);
-    ui_message(all ? "ALL BACK TO ANCHOR" : b);
-}
-/* a track turned OFF after mutating, with something changed: the NOTICE, once (none open over it now: later) */
-static void mut_ask_poll(void)
-{
-    uint32_t k;
-    mut.ask &= (uint8_t)(mut.moved & ~mut.en & ((1u << trk_live) - 1u));
-    if (!mut.ask || ui.confirm || ui.menu || name_on())
-        return;
-    k = (uint32_t)__builtin_ctz(mut.ask);
-    mut.ask &= (uint8_t)~(1u << k);
-    if (!mut_anchor_get())
-        return;
-    if (mut_differs(k))
-        confirm_open(CF_MUT_BACK, k);
-    else
-        mut.moved &= (uint8_t)~(1u << k);               /* (nothing to go back to: no question) */
-}
-static void mutate_poll(void)
-{
-    uint32_t en = mut_enabled(), k, nx, anc;
-    mut.ask |= (uint8_t)(mut.en & ~en & mut.moved);    /* (0.9.3) OFF after mutating: BACK TO BEFORE MUTATE? */
-    for (k = 0; k < NTRK; k++)                          /* turned on: an AMOUNT to hear (0: half) */
-        if (((en & ~mut.en) >> k) & 1u && !trk[k].p[P_MAMT])
-            trk[k].p[P_MAMT] = 64;
-    if (en & ~mut.en)
-        mut_keep();                                     /* (the anchor: the music now) */
-    mut.en = en;
-    mut_ask_poll();
-    for (k = 0; k < NTRK; k++)
-        if (mut_flash[k]) mut_flash[k]--;
-    if (!song.playing) {
-        mut.playing = 0;
-        return;
-    }
-    if (!mut.playing) {                                 /* PLAY: the anchor as it starts */
-        mut.playing = 1;
-        mut.done = 0;
-        if (en) mut_keep();
-    }
-    if (!en || mut_freeze)
-        return;
-    nx = bar_n + 1u;
-    if (beat_n != 3u || beat_pos < beat_samples() * 3u / 4u || mut.done == nx)
-        return;
-    mut.done = nx;
-    for (k = 0; k < NTRK; k++)                          /* (0.6.68) steps written or cleared since: the anchor is the
-                                                         * music now (a cleared sequence never comes back from it) */
-        if (((en >> k) & 1u) && steps_sig(&trk[k]) != mut.sig[k]) {
-            mut_keep();
-            break;
-        }
-    anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
-    for (k = 0; k < NTRK && anc; k++)                   /* (0.6.96) another engine on an enabled track since the anchor
-                                                         * (a sound loaded, a piece thrown): the anchor is the music now */
-        if (((en >> k) & 1u) && proj_scratch.t[k].engine != trk_eng(&trk[k])) {
-            mut_keep();
-            anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
-            break;
-        }
-    for (k = 0; k < NTRK; k++) {
-        track_t *t = &trk[k];
-        uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0;
-        const proj_trk_t *a = anc && !t->p[P_MMODE] && proj_scratch.t[k].engine == trk_eng(t) ?
-                              &proj_scratch.t[k] : 0;  /* (ORBIT, the same engine: around it; else from now) */
-        if (!((en >> k) & 1u))
-            continue;
-        if (s && nx % s == 0u) { mut_sound(t, a); hit = 1; }
-        if (q && nx % q == 0u) { mut_pattern(t, a); hit = 1; }
-        if (hit) { mut_flash[k] = 12; mut.moved |= (uint8_t)(1u << k); }
-    }
-    for (k = 0; k < NTRK; k++)
-        mut.sig[k] = steps_sig(&trk[k]);
 }
 static void undo_mark(void)
 {
@@ -2144,13 +1849,8 @@ static int undo_do(void)                                /* 0: done */
     if (!proj_pack(&undo_st[1], &proj_scratch) || !proj_import(&proj_scratch, &undo_st[0], sizeof undo_st[0]))
         return 1;
     str_cpy(name, proj_name, sizeof name);
-    {
-        uint8_t st = mut.stale, mv = mut.moved;         /* (0.9.3) the same music: its anchor still holds */
-        if (project_restore_runtime(&proj_scratch))
-            return 1;
-        mut.stale = st;
-        mut.moved = mv;
-    }
+    if (project_restore_runtime(&proj_scratch))
+        return 1;
     proj_cur = cur;                                     /* (the project's slot and name stay) */
     str_cpy(proj_name, name, sizeof proj_name);
     undo_st[0] = undo_st[1];                            /* (UNDO again: what it replaced) */

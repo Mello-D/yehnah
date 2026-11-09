@@ -134,38 +134,6 @@ static void graph_lfo(const track_t *t, uint16_t c)
 }
 
 
-/* (0.6.43) SEQ > MUTATE: a row a track, the next 32 bars: SOUND's changes an orange mark on top, PATTERN's a violet one
- * under it; the bar now ACCENT; the selected track's row lit; ORBIT / DRIFT at the right; FROZEN over it all */
-/* (0.6.92) the selected track's next 32 bars: a mark where its SOUND changes (warm) and where its PATTERN does (cool),
- * the bar now at the left; under it what it does (every project's steps written; ORBIT around the anchor OCT+ keeps,
- * DRIFT on and on) and the two hands */
-static void graph_mutate(void)
-{
-    const track_t *t = TSEL;
-    uint32_t b, now = song.playing ? bar_n : 0u, k = song.sel;
-    uint32_t s = MUT_BARS[(uint32_t)clamp(t->p[P_MSND], 0, 6)], q = MUT_BARS[(uint32_t)clamp(t->p[P_MPAT], 0, 6)];
-    int on = (s || q) && k < trk_live;
-    char nm[12] = "TRACK 1";
-    nm[6] = (char)('1' + k);
-    cv_text(PANEL_X0, 4, &AF_S, nm, T_THEME);
-    cv_text_r(PANEL_X0 + PANEL_W, 4, &AF_S, !on ? "MUTATE OFF" : t->p[P_MMODE] ? "DRIFT: ON AND ON" : "ORBIT: AROUND THE ANCHOR",
-              on ? T_TEXT : T_DIM, T_SURF);
-    cv_text(PANEL_X0, 24, &AF_S, "SOUND", on && s ? heat_col(190) : T_DIM);
-    cv_text(PANEL_X0, 44, &AF_S, "PATTERN", on && q ? heat_col(90) : T_DIM);
-    for (b = 0; b < 32u; b++) {
-        uint32_t bar = now + 1u + b;
-        int32_t x = PANEL_X0 + 52 + (int32_t)b * 5;
-        cv_rect(x, 31, 4, 1, T_RAISE);
-        cv_rect(x, 51, 4, 1, T_RAISE);
-        if (on && s && bar % s == 0u) cv_rect(x, 24, 4, 8, mut_freeze ? T_DIM : heat_col(190));
-        if (on && q && bar % q == 0u) cv_rect(x, 44, 4, 8, mut_freeze ? T_DIM : heat_col(90));
-    }
-    cv_rect(PANEL_X0 + 52, 20, 4, 36, ux_mix(T_SURF, T_ACCENT, 25));   /* (the next bar's column) */
-    cv_text(PANEL_X0, 68, &AF_S, "EVERY N BARS, BY AMOUNT, ON THE BAR", T_MID);
-    cv_text(PANEL_X0, 84, &AF_S, mut_freeze ? "FROZEN  [OCT-] GOES ON" : "OCT+ KEEP   OCT- FREEZE", mut_freeze ? T_ACCENT : T_DIM);
-    cv_text(PANEL_X0, 100, &AF_S, mut_back_ok() ? "TOOLS REVERT   REC+F4 ALL" : "REVERT: NO ANCHOR", T_DIM);   /* (0.9.3) */
-}
-
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
  * height; under it the two waves it is between */
 /* (0.6.48) EDIT > IMAGE (a DRUM track): the eight sounds from left to right as IMAGE places them (as wide as DRV,
@@ -845,13 +813,12 @@ static int bigstep_view(const page_t *pg)               /* .. its STEP level: th
     return pg == &PAGES[ui.page] && lens_on() && lens_level() == LV_STEP && (pg->graph == GR_ROLL || pg->graph == GR_COMP);
 }
 /* (0.8.3) LENTE's PATTERN; (0.8.5) as the mock-up: the pattern's bars side by side (up to four, LEN 64) as big cells
- * (2 .. 62); under them PLAYHEADS (S, DIM) and the whole pattern as one small roll (80 .. 140, a BG area: the scale's
+ * (2 .. 62); under them the whole pattern as one small roll (80 .. 140, a BG area: the scale's
  * rows LANE, the step lines GRID and every 4th LINE, the notes as hot as they play, held through their TIEs, a
  * component's mark on top, past LEN dark) with the sequencer's playhead (ACCENT) and FUGUE's heads (a tick each at the
  * foot, as hot as its lane on the PLAYHEADS page) */
 #define LB_Y 2
 #define LB_H 60
-#define LP_TY 65                                     /* "PLAYHEADS" (capitals 68..76) */
 #define LP_Y 80                                      /* the pattern's roll, to 140 */
 #define LP_H 60
 static void graph_bars(const track_t *t, uint16_t c)
@@ -860,8 +827,6 @@ static void graph_bars(const track_t *t, uint16_t c)
     uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, ti = song.sel % NTRK, mask = scale_mask(t);
     int32_t lo, hi, rows, rh = 2;
     bar_cells(t, PR_RX, PR_RW, LB_Y, LB_H, c);
-    GFX_HOOK_ALIGN(0, LP_TY + 3 + AF_X_CAP_Y, 0, LP_TY + 3 + AF_X_CAP_Y + AF_X_CAP_H, AL_V | AL_PASS, "PLAYHEADS title");
-    cv_text(6, LP_TY + 3, &AF_X, "PLAYHEADS", T_DIM);
     pat_range(t, &lo, &hi);
     rows = LP_H / rh;
     if (hi - lo + 1 < rows)
@@ -906,12 +871,6 @@ static void graph_bars(const track_t *t, uint16_t c)
     }
     if (ph < len)
         cv_rect(PR_RX + (int32_t)(ph * PR_RW / n), LP_Y, 1, LP_H, T_ACCENT);
-    for (k = 0; k < FG_HEADS && song.playing; k++) {   /* FUGUE's heads */
-        uint32_t hi2 = fg_head[ti][k].idx;
-        if (!fg_set[ti][k].rate || hi2 >= len)
-            continue;
-        cv_rect(PR_RX + (int32_t)(hi2 * PR_RW / n + PR_RW / n / 2) - 1, LP_Y + LP_H - 6, 2, 6, heat_col(70u + k * 60u));
-    }
 }
 /* (0.8.3) LENTE's STEP: the cursor step large; (0.8.5) as the mock-up, on a BG area (4 .. 236): on top "STEP n" (S,
  * THEME) and at the right what it is (NOTE, TIE, REST; a note longer than a step: LEN n, MID). At the left its notes as
@@ -1019,43 +978,6 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
     str_cpy(b + str_len(b), "%", 4);
     bs_chip(5, b, step_chance(st) < 100u);
 }
-static void graph_fugue(const track_t *t);
-
-static void graph_fugue(const track_t *t)
-{
-    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, k, ti = song.sel % NTRK;
-    int32_t w = PANEL_W / (int32_t)len, x0 = PANEL_X0 + (PANEL_W - w * (int32_t)len) / 2;
-    if (w < 2) w = 2;
-    for (i = 0; i < len; i++) {
-        const step_t *st = &seq_steps(t)[i];
-        int on = step_on(st);
-        cv_rect(x0 + (int32_t)i * w, on ? 4 : 14, w - (w > 3 ? 1 : 0), on ? 14 : 4, on ? (st->flags & SF_ACCENT ? T_ACCENT : ACC) : T_RAISE);
-        if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x0 + (int32_t)i * w, 20, w, 2, T_TEXT);
-    }
-    for (k = 0; k < FG_HEADS; k++) {
-        const fg_set_t *f = &fg_set[ti][k];
-        const fg_head_t *h = &fg_head[ti][k];
-        int32_t y = 28 + (int32_t)k * 23;
-        uint16_t c = f->rate ? heat_col(70u + k * 60u) : T_DIM;
-        char b[24] = {(char)('2' + k), ' ', 0};
-        if (k == fg_ui % FG_HEADS) cv_rrect(PANEL_X0, y - 2, PANEL_W, 22, 3, T_RAISE, T_SURF);
-        cv_rect(x0, y + 17, w * (int32_t)len, 1, T_MID);
-        if (f->rate && song.playing && h->idx < len)
-            cv_rect(x0 + (int32_t)h->idx * w, y + 14, w, 6, c);
-        str_cpy(b + 2, N_FGRATE[f->rate % FG_NRATE], sizeof b - 2u);
-        if (f->rate) {
-            uint32_t n = str_len(b);
-            b[n] = ' '; b[n + 1u] = 0;
-            str_cpy(b + n + 1u, N_FGDIR[f->dir & 3u], sizeof b - n - 1u);
-            n = str_len(b);
-            b[n] = ' ';
-            b[n + 1u] = f->ivl > 0 ? '+' : 0;
-            fmt_int(b + n + 1u + (f->ivl > 0), f->ivl);
-        }
-        cv_text(PANEL_X0 + 4, y, &AF_S, b, f->rate ? T_TEXT : T_DIM);
-    }
-}
-
 
 /* (0.6.61) the panels' cytoplasm: a few granules drifting behind the graph, as HOME's, so the screen breathes. LOAD
  * FULL and ANIM ON only, not on HOME (its own), the lists and the dense grids (the roll, the steps); (0.6.64) no
@@ -1069,9 +991,9 @@ static int drift_on(void)
     if (UI_NO_DRIFT)
         return 0;
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
-           g != GR_ROLL && g != GR_SHAPE && g != GR_COMP && g != GR_FUGUE &&   /* (0.8.3: LENTE's step, the heads) */
-           g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
-           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_PATS && g != GR_SQTOOL;
+           g != GR_ROLL && g != GR_SHAPE && g != GR_COMP &&   /* (0.8.3: LENTE's step, the heads) */
+           g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS &&
+           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_SQTOOL;
 }
 static void graph_drift(void)
 {
@@ -1187,8 +1109,7 @@ static uint32_t graph_signature(void)
         !ui.home)                                    /* (chord-harp fork) HARP / OMNI / PROG / CHORD's
                                                          * strings and keys alive: every other frame (ui_lzpage.c hk_*) */
         h ^= ui.frame / 2u * 2246822519u;
-    h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u +
-         ui.ppick * 1299709u;
+    h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u;
     if (pg->graph == GR_MSEQ)                        /* (Yehnah) the step picked, the one playing, the level now */
         h ^= (ms_ui_step + 1u) * 40503u + (song.playing ? ui.frame * 2654435761u : 0u);
     if (pg->graph == GR_SONG) {
@@ -1229,7 +1150,7 @@ static uint32_t graph_signature(void)
         h ^= ui.act * 7919u + ui.song_row * 104729u;
     if (pg->graph == GR_SQTOOL)                      /* (2026-11-03) the tool picked, the lane, what can be done */
         h ^= ui.act * 7919u + ui.lane * 31u + (uint32_t)drum_track(TSEL) * 3u + (uint32_t)chain_busy() * 5u +
-             (uint32_t)mut_back_ok() * 11u + motion_count(TSEL) * 131u;
+             motion_count(TSEL) * 131u;
     if (pg->graph == GR_SLOTS || pg->graph == GR_ERASE) {   /* (a checksum over each slot; the project, the music's section, the song) */
         for (i = 0; i < 4u; i++)
             h ^= (uint32_t)graph_project_used(i) << (20u + i);
@@ -1238,22 +1159,7 @@ static uint32_t graph_signature(void)
             h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
     }
     if (pg->graph == GR_MOTION) h ^= motion_count(t) * 131u + motion_enabled(t);
-    if (pg->graph == GR_EVENTS) {                    /* AUTO LIST: the rows, the one selected, + ADD LOCK's place */
-        uint8_t idx[MOTION_MAX];
-        uint32_t n = ev_rows(idx);
-        for (i = 0; i < n; i++)
-            h = (h ^ (((uint32_t)motion.event[idx[i]].place << 24 | (uint32_t)motion.event[idx[i]].param << 8) ^
-                      (uint16_t)motion.event[idx[i]].value)) * 16777619u;
-        h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
-    }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
-    if (pg->graph == GR_FUGUE) {                     /* (0.6.52) the heads, their settings, where they are */
-        uint32_t ti = song.sel % NTRK, k;
-        h = (h ^ (steps_hash(t) + (song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu) * 31u + fg_ui * 7u)) * 16777619u;
-        for (k = 0; k < FG_HEADS; k++)
-            h = (h ^ ((uint32_t)fg_set[ti][k].rate | (uint32_t)fg_set[ti][k].dir << 4 | (uint32_t)(uint8_t)fg_set[ti][k].ivl << 8 |
-                      (song.playing ? (uint32_t)fg_head[ti][k].idx << 16 : 0u))) * 16777619u;
-    }
     if (pg->graph == GR_DXIMG)                       /* (0.6.48) IMAGE and how wide it plays */
         h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (DX_KIT3(pg))                                 /* (0.8.8) KIT 3's colony lives every frame, as KIT's (was still) */
@@ -1265,11 +1171,6 @@ static uint32_t graph_signature(void)
         for (k = 0; k < NTRK; k++)
             h = (h ^ (trk[k].preset | (uint32_t)trk[k].user << 8 | (uint32_t)trk[k].eng_req << 9)) * 16777619u;
         h = (h ^ ((uint32_t)bl_now << 16 | (uint32_t)song.g[G_BLEND] << 8)) * 16777619u;
-    }
-    if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
-        h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u ^ (uint32_t)mut_back_ok() * 131u) * 16777619u;
-        for (i = 0; i < NTRK; i++)
-            h = (h ^ ((uint32_t)trk[i].p[P_MSND] | (uint32_t)trk[i].p[P_MPAT] << 4 | (uint32_t)trk[i].p[P_MMODE] << 8)) * 16777619u;
     }
     if (pg->graph == GR_COMP) {                      /* (0.6.39) the steps, their components, the arpeggio and the loop */
         const step_t *cs = &t->step[ui.cursor];
@@ -1348,11 +1249,6 @@ static uint32_t graph_signature(void)
         h = (h ^ (lens_level() + 1u) * 2654435761u) * 16777619u;
         h = (h ^ (song.playing ? seq_src(t, t->seq_idx) / 16u + 1u : 0u) * 40503u) * 16777619u;   /* (0.8.5) the bar
                                                          * playing: its number lit in the bars */
-        if (bars_view(pg) && song.playing) {          /* (0.8.5) PATTERN's roll: FUGUE's heads */
-            uint32_t ti = song.sel % NTRK, k;
-            for (k = 0; k < FG_HEADS; k++)
-                h = (h ^ (fg_set[ti][k].rate ? fg_head[ti][k].idx + 1u : 0u)) * 16777619u;
-        }
         if (bigstep_view(pg)) {
             const uint8_t *sb = (const uint8_t *)&seq_steps(t)[ui.cursor % NSTEP];
             for (i = 0; i < sizeof(step_t); i++)
@@ -1394,64 +1290,6 @@ static void list_row(int32_t y, int sel, const char *tag, uint16_t tc, const cha
     cv_free_text(54, y + CAP_IN(S, 16), &AF_S, name, sel ? T_INK : nc, bg, x1 - 54);
 }
 
-/* SEQ > PATTERNS: the pattern list around the one picked ("03  MELODY", "U07  MY BASS") */
-static void graph_pats(void)
-{
-    uint32_t n = pat_count(), cur = pat_pick();
-    int32_t row, first = clamp((int32_t)cur - 3, 0, (int32_t)n > 7 ? (int32_t)n - 7 : 0);
-    for (row = 0; row < 7 && (uint32_t)(first + row) < n; row++) {
-        uint32_t k = (uint32_t)(first + row);
-        char tag[4], nm[13];
-        pat_label(k, tag, nm);
-        list_row(LIST_Y(row), k == cur, tag, T_MID, nm, T_TEXT, 232);
-    }
-}
-/* SEQ > AUTO LIST (ui_events.c): the track's records around the one selected, a row each: the kind (LOCK in the
- * accent, AUTO), the step, the parameter's name, the value at the right; the last row + ADD LOCK */
-static void graph_events(void)
-{
-    const track_t *t = TSEL;
-    uint8_t idx[MOTION_MAX];
-    uint32_t n = ev_rows(idx), cur = ev_row(n), k;
-    int32_t row, first = clamp((int32_t)cur - 3, 0, (int32_t)n + 1 > 7 ? (int32_t)n + 1 - 7 : 0);
-    for (row = 0; row < 7 && (uint32_t)(first + row) <= n; row++) {
-        int32_t y = LIST_Y(row);
-        int sel;
-        uint16_t bg;
-        k = (uint32_t)(first + row);
-        sel = k == cur;
-        bg = sel ? T_THEME : T_SURF;
-        if (sel)
-            cv_rrect(6, y, 228, 16, 4, T_THEME, T_SURF);
-        if (k == n) {
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
-            cv_text_on(14, y + CAP_IN(S, 16), &AF_S, "+ ADD LOCK", sel ? T_INK : T_DIM, bg);
-            break;
-        }
-        {
-            const motion_event_t *e = &motion.event[idx[k]];
-            uint32_t id = MOTION_ID(e), lock = (e->param & MOTION_LOCK) != 0u;
-            char b[16], nm[12];
-            const char *unit;
-            const param_desc_t *d = track_desc(t, id);
-            b[0] = (char)('0' + (MOTION_STEP(e) + 1u) / 10u);
-            b[1] = (char)('0' + (MOTION_STEP(e) + 1u) % 10u);
-            b[2] = 0;
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
-            cv_text_on(14, y + CAP_IN(S, 16), &AF_S, lock ? "LOCK" : "AUTO", sel ? T_INK : lock ? T_ACCENT : T_MID, bg);
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
-            cv_text_on(54, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_MID, bg);
-            param_format(d, MOTION_VAL(e), b, &unit);
-            if (unit && unit[0] && str_len(b) + str_len(unit) < sizeof b)
-                str_cpy(b + str_len(b), unit, sizeof b - str_len(b));
-            ev_name(t, id, nm);
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
-            cv_free_text(80, y + CAP_IN(S, 16), &AF_S, nm, sel ? T_INK : T_TEXT, bg, 226 - text_w(&AF_S, b) - 8 - 80);
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
-            cv_text_r(226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_TEXT, bg);
-        }
-    }
-}
 /* MIXER page: four SURF columns, one under each card: the track number on its cushion (in the accent:
  * the selected track) with a REC / ARM / MUTE badge (P_MUTE: the GLO layer's black keys), the sound's short name (a MUTE badge
  * when armed and muted), the LEVEL knob (dB inside) with the output meter beside it, then the PAN and REV
@@ -1766,9 +1604,6 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_sqtools();
             break;
-        case GR_MUTATE:
-            graph_mutate();
-            break;
         case GR_BLEND:
             graph_blend();
             break;
@@ -1779,9 +1614,6 @@ static void draw_graph(void)
             } else
                 graph_dximg(t);
             break;
-        case GR_FUGUE:
-            graph_fugue(t);
-            break;
         case GR_ROLL:
         case GR_CHANCE:
         case GR_SHAPE:                               /* (0.6.85) STRETCH: the whole sequence, as the roll shows it */
@@ -1790,14 +1622,6 @@ static void draw_graph(void)
                 graph_grid(t, c);
             else
                 graph_roll(t, c);
-            break;
-        case GR_PATS:
-            cv_oy = 0;
-            graph_pats();
-            break;
-        case GR_EVENTS:
-            cv_oy = 0;
-            graph_events();
             break;
         case GR_FMOP:                                /* (0.6.10) FM6's operators: (0.9.6) the colony (ui_engvis.c), the operator */
         case GR_FMOP2:                               /* picked lit */

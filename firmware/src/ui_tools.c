@@ -503,14 +503,13 @@ static uint32_t tl_repeat(track_t *t, uint32_t k)       /* k: 2..8 times, 0: to 
 /* ------------------------------------------------- (2026-11-03) SEQ > TOOLS --- */
 /* The tools above as a page (was SEQ held, its layer: the user's, "no held layers but FX SCL REC"), built as SAVE >
  * TOOLS: a list, KNOB 1 picks (left past the first: none), OCT+ does it, OCT- drops the pick or goes HOME. The rows:
- * the track's tools (tl_cell; a DRUM track's BEAT and its lane's four), REVERT (the track back to MUTATE's anchor:
- * project.c mut_revert_ui) and CLEAR ALL (every track, its dialog: SEQ + REC's until then). KNOB 2 the lane on a DRUM
+ * the track's tools (tl_cell; a DRUM track's BEAT and its lane's four), CLEAR ALL (every track, its dialog: SEQ + REC's until then). KNOB 2 the lane on a DRUM
  * track (the grid's, ui.lane). Done at once but CLEAR ALL; the pick stays (COOK again: "COOKED 3"). ui.act: the row + 1 */
-enum { TL_MREV = TL_N, TL_ALL, TL_ROWS };
+enum { TL_ALL = TL_N, TL_ROWS };
 static const char *const TL_NAME[TL_ROWS] = {"CLEAR", "REVERSE", "SHIFT <", "SHIFT >", "RANDOM", "COOK", "BEAT",
-    "CLR AUTO", "CLR LANE", "REV LANE", "FILL LANE", "RND LANE", "REVERT", "CLR ALL"};
+    "CLR AUTO", "CLR LANE", "REV LANE", "FILL LANE", "RND LANE", "CLR ALL"};
 static const char *const TL_ON[TL_ROWS] = {"THE STEPS", "BACK TO FRONT", "A STEP LEFT", "A STEP RIGHT", "NEW NOTES",
-    "A LITTLE CHANGED", "A NEW BEAT", "AUTO + LOCKS", "", "", "", "", "MUTATE'S ANCHOR", "EVERY TRACK"};
+    "A LITTLE CHANGED", "A NEW BEAT", "AUTO + LOCKS", "", "", "", "", "EVERY TRACK"};
 static uint8_t sqt_cook;                                /* COOK in a row: "COOKED 3" */
 /* the selected track's rows into r (TL_ROWS at most); how many */
 static uint32_t sqt_rows(uint8_t *r)
@@ -532,7 +531,6 @@ static const char *sqt_name(void) { uint32_t p = sqt_pick(); return p < TL_ROWS 
 /* tool p would do something now (its row bright, OCT+ breathes) */
 static int sqt_can(uint32_t p)
 {
-    if (p == TL_MREV) return mut_back_ok();
     if (chain_busy()) return 0;
     return p == TL_CAUTO ? motion_count(TSEL) != 0u : p < TL_ROWS;
 }
@@ -555,10 +553,6 @@ static void sqt_do(void)
     char n[4];
     if (p >= TL_ROWS)
         return;
-    if (p == TL_MREV) {                                 /* (UNDO first; NO ANCHOR) */
-        mut_revert_ui(0);
-        return;
-    }
     if (chain_busy()) {
         ui_message("STOP TO EDIT");
         return;

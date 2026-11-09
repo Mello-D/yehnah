@@ -72,8 +72,7 @@ static uint32_t eco_step(void)
             eco_fc.c1[c] = vk_heat(h + st);
             eco_fc.c2[c] = vk_heat(h + 2 * st);
         }
-        eco_fc.fl[c] = (uint8_t)((mut_flash[c] ? EF_UP : 0u) |
-                                 ((uint16_t)((uint16_t)fm1_ms - eco_fc.ms[c]) < 100u && eco.en[c] > 77 ? EF_SHUT : 0u));
+        eco_fc.fl[c] = (uint8_t)(((uint16_t)((uint16_t)fm1_ms - eco_fc.ms[c]) < 100u && eco.en[c] > 77 ? EF_SHUT : 0u));
         if (eco.en[c] > 2) eco.tm[c] += dt * (uint32_t)(200 + eco.en[c] * 5);
         else eco.tm[c] += dt * 60u;                     /* (silent: it still breathes, slowly) */
         r = r * (256 + eco.en[c] * 5 / 4 + (bg_sin(eco.tm[c] / 3u) >> 11)) / 256;

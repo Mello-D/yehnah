@@ -147,12 +147,6 @@ enum {                          /* per-track parameters */
                                          * voice_start), in a slot of the retired DIGITAL's (0: OFF, its default) */
 #define P_TCHAN P_FM1_DEC              /* (0.6.37) SHIFT > CHANCE: how much of the track's steps it skips, 0 none (100 %,
                                          * every project and preset before it); seq.c trk_chance; DIGITAL's OP1 DEC slot */
-/* (0.6.43) MUTATE (project.c mutate_poll), in DIGITAL's OP1 REL / OP2 slots (0, every project and preset before it:
- * OFF, 0 %, ORBIT): SOUND and PATTERN every OFF / 1 / 2 / 4 / 8 / 16 / 32 bars, AMOUNT, MODE ORBIT / DRIFT */
-#define P_MSND P_FM1_REL
-#define P_MPAT P_FM2_ATK
-#define P_MAMT P_FM2_DEC
-#define P_MMODE P_FM2_REL
 #define P_KTRK P_FM3_ATK               /* (chord-harp fork, 2026-10-30; 0.6.45's MORPH slot, retired) KEY>F: the filter's
                                          * key tracking on top of the engine's own, % of 1:1 around C4 (voice.c; 0: the
                                          * engine's alone, every other sound): the Juno-106 bank's VCF KYBD */

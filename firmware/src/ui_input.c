@@ -1256,15 +1256,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         shape_knob(slot, steps);
         return;
     }
-    if (pg->graph == GR_FUGUE) {                        /* (0.6.52) HEAD, RATE, DIR, INTERVAL */
-        fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
-        int32_t d = steps > 0 ? 1 : -1;
-        if (slot == 0u) fg_ui = (uint8_t)wrap_add((int32_t)fg_ui, d, FG_HEADS);
-        else if (slot == 1u) f->rate = (uint8_t)wrap_add((int32_t)f->rate, d, FG_NRATE);
-        else if (slot == 2u) f->dir = (uint8_t)clamp((int32_t)f->dir + d, 0, 3);
-        else f->ivl = (int8_t)clamp((int32_t)f->ivl + d, -14, 14);
-        return;
-    }
     if (pg->graph == GR_CHANCE) {
         if (slot == 0u) cursor_set(ui.cursor + steps);
         else if (slot == 1u || slot == 2u) {
@@ -1297,10 +1288,6 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (DX_KIT3(pg)) {                                    /* (0.6.54) KIT 3: BP, FEEDBK (0.6.58: IMAGE on STEREO) */
         dx_kit3_knob(slot, steps);
-        return;
-    }
-    if (pg->graph == GR_EVENTS) {                         /* AUTO LIST (ui_events.c) */
-        ev_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_MOTION) {
@@ -1418,8 +1405,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph != GR_PROG && (act_cols() >> slot) & 1u) {   /* an action's knob picks it (right) or drops it (left); */
-        if (pg->graph != GR_PATS)                         /* OCT+ does it (act_do) */
-            ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
+        ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
         return;
     }
     if ((pg->graph == GR_SLOTS || pg->graph == GR_ERASE) && slot == 0u) {   /* (0.6.12) KNOB 1 the project: its sections, the music kept */
@@ -1430,11 +1416,6 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (pg->graph == GR_USER) {                           /* KNOB 1 the slot */
         if (slot == 0u)
             ui.uslot = (uint8_t)wrap_add((int32_t)ui.uslot, steps, UP_SLOTS);
-        return;
-    }
-    if (pg->graph == GR_PATS) {                          /* KNOB 1 the pattern */
-        if (slot == 0u)
-            ui.ppick = (uint8_t)wrap_add((int32_t)pat_pick(), steps, (int32_t)pat_count());
         return;
     }
     if (pg->graph == GR_SLPIT && slot == 0u) {           /* (0.6.3) SL PITCH: KNOB 1 the step, 2 its pitch */
@@ -1541,10 +1522,6 @@ static void act_do(void)
         confirm_open(CF_CLEAR_PFX, song.sel);
         return;
     }
-    if (cur_page()->graph == GR_EVENTS) {
-        ev_oct();
-        return;
-    }
     if (cur_page()->graph == GR_SQTOOL) {
         sqt_do();
         return;
@@ -1576,16 +1553,6 @@ static void act_do(void)
         ui.song_row = (uint8_t)at;                      /* (the cursor follows the new row) */
         song_idx_touch();
         ui_message("INSERTED");
-        return;
-    }
-    if (cur_page()->graph == GR_PATS) {
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (pat_needs_confirm(TSEL))                      /* the user's steps: the dialog */
-            confirm_open(CF_LOAD_PAT, song.sel);
-        else {                                            /* empty, or a pattern loaded and untouched */
-            undo_mark();
-            pat_load_ui(TSEL, pat_pick());
-        }
         return;
     }
     if (cur_page()->graph == GR_USER) {                   /* 1 LOAD, 2 ERASE, 3 SAVE (the NAME screen first) */
@@ -1800,25 +1767,8 @@ static void seq_entry(uint32_t pressed)
  * (preset_step; a sound load keeps the steps); in SEQ the patterns: the PHRASES loader over the page (KNOB 1 the pattern
  * too, OCT+ LOAD, OCT- back to the page), each detent the next one. Never a page, a track, a module, a step or a row
  * (until 0.9.1 it was the bar, the step, the row, the module, the track, ROOT ..: KNOB 1's now, rule 4) */
-static uint32_t phrases_page(void)
-{
-    uint32_t i;
-    for (i = 0; i < NPAGES && PAGES[i].graph != GR_PATS; i++) {}
-    return i;
-}
 static void presets_turn(int32_t s)
 {
-    if (!ui.home && PAGES[ui.page].fam == FAM_SEQ) {
-        uint32_t i = phrases_page();
-        ui.ppick = (uint8_t)clamp((int32_t)pat_pick() + s, 0, (int32_t)pat_count() - 1);
-        if (ui.page != i) {                             /* (the entry stays: SELECT, SEQ and OCT- go on from there) */
-            ui.page = (uint8_t)i;
-            page_entered();
-        }
-        ui.hot_col = 0;
-        ui.hot_t = 40;
-        return;
-    }
     preset_step(s);
 }
 
@@ -2391,8 +2341,6 @@ static void ui_input_frame(void)
                 project_erase_section(ui.confirm_trk);
             } else if (kind == CF_ERASE_PRJ) {
                 project_erase_all();
-            } else if (kind == CF_LOAD_PAT) {
-                pat_load_ui(&trk[ui.confirm_trk % NTRK], pat_pick());
             } else if (kind == CF_CLEAR_PFX) {         /* (0.6.99) FX > PUNCH > CLEAR */
                 if (!chain_busy()) { memset(pfx_lane, 0, sizeof pfx_lane); pfx_ltgt = 0; ui_message("PUNCH LANE CLEARED"); }
             } else if (kind == CF_CLEAR_MOTION) {
@@ -2419,10 +2367,6 @@ static void ui_input_frame(void)
                     ui.song_row = 0;
                     ui_message("SONG CLEARED");
                 }
-            } else if (kind == CF_MUT_BACK) {           /* (0.9.3) MUTATE OFF: the track as the anchor (UNDO: marked above) */
-                char mb[24] = "T1 BACK TO ANCHOR";
-                mb[1] = (char)('1' + ui.confirm_trk % NTRK);
-                ui_message(mut_revert(1u << (ui.confirm_trk % NTRK)) ? "NO ANCHOR" : mb);
             } else if (kind == CF_CALIB) {              /* (2026-11-02) GLO > TOOLS: as the MENU's row (OCT+) */
                 panel_setup();
                 scrn.idle = fm1_ms;
@@ -2472,8 +2416,6 @@ static void ui_input_frame(void)
                 }
             }
         } else if (oct & 1u) {
-            if (ui.confirm == CF_MUT_BACK)         /* (0.9.3) as it is (SEQ > TOOLS REVERT: later still) */
-                ui_message("KEPT AS IT IS");
             ui.confirm = 0;
             ui.force = 1;
         }
@@ -2517,11 +2459,6 @@ static void ui_input_frame(void)
             uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
             if (act_oct() || layer_set_open() || gen_on())   /* action pages: enter / back (below); SET layers: OCT-; GEN */
                 break;
-            if (!ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_MUTATE) {   /* (0.6.43) KEEP, FREEZE */
-                if (b == B_OCTUP) { mut_keep(); ui_message("ANCHOR: THE MUSIC NOW"); }
-                else { mut_freeze = (uint8_t)!mut_freeze; ui_message(mut_freeze ? "MUTATE FROZEN" : "MUTATE FREE"); }
-                break;
-            }
             if (!ui.home && !ui.menu && !ui.confirm && cur_page()->scope == SC_TRK && b == B_OCTUP) {   /* (2026-11-02)
                                                          * HOME > MIXER: every mute and solo off */
                 uint32_t t;
@@ -2578,10 +2515,8 @@ static void ui_input_frame(void)
             nav_go(SEC_HOME, 0, 0);
     } else if (act_oct() && (oct & 2u)) {               /* action pages: OCT+ does the picked action, */
         act_do();
-    } else if (act_oct() && (oct & 1u)) {               /* OCT- drops it, or (none picked) goes HOME; PHRASES: back to */
-        if (cur_page()->graph == GR_PATS && !ui.home)   /* the SEQ page it was opened on */
-            nav_go(SEC_SEQ, nav_cur(), 0);
-        else if (ui.act)
+    } else if (act_oct() && (oct & 1u)) {               /* OCT- drops it, or (none picked) goes HOME */
+        if (ui.act)
             ui.act = 0;
         else
             go_home();
@@ -2647,7 +2582,7 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
-            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS || BAR_PAGE(pg)) &&
+            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || BAR_PAGE(pg)) &&
              k == 0u)
             || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
