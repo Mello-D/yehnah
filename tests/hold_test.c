@@ -110,6 +110,27 @@ int main(void)
        t->step[1].time == ST_REST && t->step[2].time == ST_NOTE && t->step[2].note[0] == 64u);
     turn(EN_K3, -1); turn(EN_K3, -1);                   /* back to one step: no HOLD */
     ck("  shortened to one step: no HOLD", t->step[0].comp2 == CP_NONE && note_len(t, 0, 8) == 1u);
+    ui_power_on();                                        /* STEP's MOVE: each note on its own (2026-11-10) */
+    t = &trk[0];
+    t->p[P_SLEN] = 8;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100, .comp2 = CP_HOLD, .carg2 = 4};   /* a HOLD over steps 1 .. 3 */
+    t->step[1] = (step_t){{64}, 1, ST_NOTE, 0, 90};
+    go_title("STEP"); frame();
+    cursor_set(0);
+    turn(EN_K4, 1);                                     /* MOVE right: step 2 (the note on step 1 passed, not swapped) */
+    ck("MOVE: the held note passes the note on the next step (no swap)", t->step[1].time == ST_NOTE && t->step[1].note[0] == 64u &&
+       t->step[2].time == ST_NOTE && t->step[2].note[0] == 60u && t->step[2].comp2 == CP_HOLD && t->step[2].carg2 == 4u &&
+       t->step[0].time == ST_REST && !t->step[0].n && !t->step[0].comp2 && ui.cursor == 2u);
+    turn(EN_K4, 1);                                     /* on into the free step 3 */
+    ck("  on to the next free step", t->step[3].note[0] == 60u && t->step[2].time == ST_REST && t->step[1].note[0] == 64u && ui.cursor == 3u);
+    turn(EN_K4, -1); turn(EN_K4, -1);                   /* back: step 2, then past 64 to step 0 */
+    ck("  and back, passing the other note again", t->step[0].note[0] == 60u && t->step[1].note[0] == 64u && ui.cursor == 0u);
+    t->step[0].carg2 = 0;                               /* a HOLD to the pass's end: kept as it moves */
+    t->step[7] = (step_t){{67}, 1, ST_NOTE, 0, 100};
+    turn(EN_K4, -1);                                    /* left from 0: wraps past 7 (a note) to 6 */
+    ck("  wraps round the pattern's end, passing notes there too", t->step[6].note[0] == 60u && t->step[7].note[0] == 67u && ui.cursor == 6u);
     printf("%s\n", bad ? "HOLD TEST FAILED" : "hold tests passed");
     return bad != 0;
 }

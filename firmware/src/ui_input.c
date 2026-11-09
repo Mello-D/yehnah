@@ -897,35 +897,39 @@ static void step_none(void)                             /* the cursor's step emp
     (void)motion_clear_locks(TSEL, ui.cursor);
     ui_message("NOTE: NONE");
 }
-/* STEP's KNOB 4 MOVE: the step (a chord and its TIEs) trades places with the step beside, the cursor with it */
+/* STEP's KNOB 4 MOVE (2026-11-10, each note on its own): the note (a chord with its TIEs, a HOLD with its steps) goes one
+ * step left or right, on to the next step where it has room (an empty one, or its own); a note in the way is passed, never
+ * swapped or merged with. The HOLD's steps are plain RESTs, so a note moves over them; a HOLD that no longer fits before
+ * the pattern's end is cut to what does */
 static void move_step(int32_t steps)
 {
     track_t *t = TSEL;
-    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, c = ui.cursor;
-    step_t *st = &t->step[c];
+    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, c = ui.cursor, l, k, j, p = c;
+    step_t *st = &t->step[c], blk[NSTEP];
     int32_t dir = steps > 0 ? 1 : -1;
-    uint32_t l, k;
-    step_t blk[NSTEP], other;
-    if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); return; }
+    uint8_t *ha;
+    if (c >= len || st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); return; }
     l = note_len(t, c, len);
     if (l >= len) return;
-    for (k = 0; k < l; k++) blk[k] = t->step[(c + k) % len];
-    if (dir > 0) {
-        uint32_t nx = (c + l) % len, nl = note_len(t, nx, len);
-        if (t->step[nx].time == ST_NOTE && nl > 1u) { ui_message("BLOCKED: A LONG NOTE"); return; }
-        other = t->step[nx];
-        if (other.time == ST_TIE) { other.time = ST_REST; other.n = 0; }
-        t->step[c] = other;
-        for (k = 0; k < l; k++) t->step[(c + 1u + k) % len] = blk[k];
-        ui.cursor = (uint8_t)((c + 1u) % len);
-    } else {
-        uint32_t pv = (c + len - 1u) % len;
-        if (t->step[pv].time == ST_TIE) { ui_message("BLOCKED: A LONG NOTE"); return; }
-        other = t->step[pv];
-        for (k = 0; k < l; k++) t->step[(pv + k) % len] = blk[k];
-        t->step[(pv + l) % len] = other;
-        ui.cursor = (uint8_t)pv;
+    for (k = 1; k < len; k++) {                         /* the nearest place the whole of it fits */
+        uint32_t q = dir > 0 ? (c + k) % len : (c + len - k) % len, ok = 1;
+        for (j = 0; j < l && ok; j++) {
+            uint32_t x = (q + j) % len, own = (x + len - c) % len < l;
+            ok = own || (!step_on(&t->step[x]) && t->step[x].time != ST_TIE);
+        }
+        if (ok) { p = q; break; }
     }
+    if (p == c) { ui_message("NO ROOM"); return; }
+    for (k = 0; k < l; k++) blk[k] = t->step[(c + k) % len];
+    for (k = 0; k < l; k++) {                           /* its old place empty (REST), then the new one written */
+        step_t *e = &t->step[(c + k) % len];
+        memset(e, 0, sizeof *e);
+        e->time = ST_REST;
+    }
+    for (k = 0; k < l; k++) t->step[(p + k) % len] = blk[k];
+    ha = hold_arg(&t->step[p]);
+    if (ha && *ha && *ha > len - p) *ha = (uint8_t)(len - p > 1u ? len - p : 1u);   /* (a HOLD of 1 step: nothing more) */
+    ui.cursor = (uint8_t)p;
     ui.bank = (uint8_t)(ui.cursor / 16u);
     ui.entry_open = 0;
 }

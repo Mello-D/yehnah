@@ -429,6 +429,20 @@ static void graph_roll(const track_t *t, uint16_t c)
     for (r = 0; r < PR_ROWS; r++)                     /* the keys held: their rows marked at the left */
         if ((held >> r) & 1u)
             cv_rect(PR_RX, PR_Y0 + r * PR_RH, 2, PR_RH - 1, T_ACCENT);
+    pr_jnn = 0;
+    {   /* (2026-11-10) a HOLD: its bar on through the steps it rings over (drawn first: the notes over it come after) */
+        uint32_t h, k;
+        for (h = 0; h < len; h++) {
+            const step_t *hs = &seq_steps(t)[h];
+            uint32_t hl = hs->time == ST_NOTE && hs->n ? hold_len(hs, len - h) : 0u;
+            for (k = 1; k < hl; k++) {
+                uint32_t si = h + k;
+                int32_t y2 = -10000;
+                if (si >= base && si < base + ncol)
+                    pr_bars(hs, PR_CX(si - base) - 1, PR_CWI(si - base) + 1, 0, (hs->flags & SF_ACCENT) != 0u, &y2, 1u);
+            }
+        }
+    }
     for (i = 0; i < ncol; i++) {                      /* the notes */
         uint32_t si = base + i, s = pr_src(t, si, len), nx = (si + 1u) % len;
         const step_t *st, *ns = &seq_steps(t)[nx];

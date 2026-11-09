@@ -452,7 +452,7 @@ them page by page, a **SEQ** tap jumps to the next group.
 | PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | BAR | BAR (0.9.2) | BAR (the bar you edit) | LEN | — | — |
-| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps; turned on past another note it becomes a **HOLD**: the note rings for that many steps, to the pattern's end at most, with the other notes playing over it; back to 1 step: off. A later note of the same pitch ends a held note; it also takes a voice) | MOVE (the note and its TIEs a step left / right) |
+| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps; turned on past another note it becomes a **HOLD**: the note rings for that many steps, to the pattern's end at most, with the other notes playing over it; back to 1 step: off. A later note of the same pitch ends a held note; it also takes a voice) | MOVE (the note, with its TIEs or HOLD, to the next step left / right where it fits; a note in the way is passed, never swapped) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | STEP | FLAG 1 | FLAG 2 | VELOCITY (1 … 127) |
 
@@ -1047,7 +1047,7 @@ or counting in), a REC tap turns recording off, whichever track is selected.
 - **PATTERN** (the PATTERN group's first page): LEN (1–64), DIV, SWING, GATE — the pattern's length, its step's note value, its
   swing and the length of every note (a step's own length: STEP's LENGTH).
 - **Moving a note or a chord** that came in early or late: **STEP**, KNOB 1 on the step, KNOB 4 **MOVE** moves
-  it sideways a step at a time (the whole chord with its TIEs).
+  it sideways (the whole chord with its TIEs or HOLD), on to the next free step where another note is in the way.
 - **STRETCH** (0.6.85; the PATTERN group, after PATTERN): reshapes the whole sequence of the selected track **as the knob turns** (0.6.92;
   it used to wait for OCT+). Every turn works from the sequence as it was before the first one (its base), so x2 then
   x4 is x4, not x8, and back to the middle is back to where you started; the message says the LEN before and after
