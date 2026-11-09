@@ -513,6 +513,8 @@ static void graph_key(const track_t *t, const page_t *pg)
     param_format(&TP[P_SCALE], t->p[P_SCALE], v, &u);
     str_cpy(b + str_len(b), v, sizeof b - str_len(b));
     cv_text(10, HK_TOP + HK_H + 10 - AF_M_CAP_Y, &AF_M, b, T_TEXT);
+    if (!drum_track(t))                                 /* (2026-11-10) ui_input.c scale_link: the key is every melodic track's */
+        cv_text_r(230, HK_TOP + HK_H + 10 - AF_X_CAP_Y, &AF_X, "KEY: ALL TRACKS", T_DIM, T_SURF);
     str_cpy(b, "QUANT ", sizeof b);
     param_format(&TP[P_QUANT], t->p[P_QUANT], b + 6, &u);
     cv_text(10, HK_TOP + HK_H + 26 - AF_X_CAP_Y, &AF_X, b, T_DIM);
