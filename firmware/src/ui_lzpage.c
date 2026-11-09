@@ -467,30 +467,34 @@ static void graph_harp(const track_t *t)
  * others faint, the root's name in the accent (CHORD: HARP's keys, graph_harp) */
 static void hk_kb12(const track_t *t, uint32_t lit)
 {
-    static const uint8_t BX[5] = {0, 1, 2, 4, 5};
+    /* (2026-11-10) k is a pitch class from C here, but seq.c key_black / key_place count from F (the device's key 0): they drew
+     * F as a black key and F# as a white one. This keyboard has its own C-based tables. */
+    static const uint8_t WP[12] = {0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6};   /* the white keys below pc k (a black key: it sits after that one) */
     uint32_t mask = scale_mask(t), rt = (uint32_t)clamp(t->p[P_ROOT], 0, 11), k;
     const float X0 = 8.0f, W = 32.0f;
     hk_begin();
     for (k = 0; k < 12u; k++) {                         /* the white keys */
         uint32_t in = mask >> (k + 12u - rt) % 12u & 1u;
         int o = (int)(lit >> k & 1u);
-        float x = X0 + (float)key_place(k) * W, dy = o ? 1.5f : 0.0f;
-        uint16_t bg = o ? og_mix(T_SURF, hk_col(0), 22) : T_SURF;
-        if (key_black(k))
+        float x = X0 + (float)WP[k] * W, dy = o ? 1.5f : 0.0f;
+        uint16_t bg = o ? og_mix(T_SURF, hk_col(0), 22) : k == rt ? og_mix(T_SURF, T_ACCENT, 30) : T_SURF;
+        if (0x54Au >> k & 1u)
             continue;
-        if (o)
+        if (o || k == rt)
             cv_rect((int32_t)x + 2, HK_TOP + 2 + (int32_t)dy, (int32_t)W - 4, HK_H - 3, bg);
-        hk_box(x + 1.0f, (float)HK_TOP + dy, W - 2.0f, (float)HK_H, o ? hk_col(0) : og_mix(T_SURF, hk_col(0), in ? 60 : 22),
+        hk_box(x + 1.0f, (float)HK_TOP + dy, W - 2.0f, (float)HK_H, o ? hk_col(0) : k == rt ? T_ACCENT : og_mix(T_SURF, hk_col(0), in ? 60 : 22),
                k + 3u, 256, o ? 0.9f : 0.0f);
         cv_text_in((int32_t)x + 2, HK_TOP + HK_H - 18 + (int32_t)dy - AF_M_CAP_Y, (int32_t)W - 4, &AF_M, HARP_PC[k],
                    k == rt ? T_ACCENT : o ? T_TEXT : in ? T_MID : T_DIM, bg);
     }
     for (k = 0; k < 12u; k++)                           /* the black keys over them */
-        if (key_black(k)) {
+        if (0x54Au >> k & 1u) {
             uint32_t in = mask >> (k + 12u - rt) % 12u & 1u;
-            float x = X0 + (float)(BX[key_place(k)] + 1u) * W - 10.0f;
+            float x = X0 + (float)(WP[k] + 1u) * W - 10.0f;
             int o = lit >> k & 1u ? 1 : in ? 0 : -1;
             hk_black(x, (float)HK_TOP - 1.0f, 20.0f, (float)HK_BH, "", o, k + 40u);
+            if (k == rt)                                /* (the root: a bar of the accent at the key's foot) */
+                cv_rect((int32_t)x + 2, HK_TOP - 1 + (int32_t)HK_BH - 4, 16, 3, T_ACCENT);
             cv_text_in((int32_t)x + 1, HK_TOP + 6 + (o > 0) - AF_X_CAP_Y, 18, &AF_X, HARP_PC[k],
                        k == rt ? T_ACCENT : o > 0 ? T_TEXT : o ? T_DIM : T_MID,
                        o > 0 ? og_mix(T_SURF, hk_col(1), 30) : T_SURF);
