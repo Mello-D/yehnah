@@ -1548,6 +1548,11 @@ static void knobs_of(void (*f)(void))
         f();
         return;
     }
+    if (sets_full()) {                                  /* (topic E) a list page: no knob cells, nothing rolls */
+        for (c = 0; c < 4u; c++)
+            ui.roll[c].from[0] = 0;
+        return;
+    }
     for (c = 0; c < 4u; c++) {
         kn_buf[c].l[0] = kn_buf[c].u[0] = kn_buf[c].v[0] = 0;
         kn_buf[c].r = -1;
@@ -1817,39 +1822,46 @@ static void gen_cards(void);                            /* (0.8.5) gen.c: GEN in
  * panel a RAISE card under a THEME rule, "?" in the accent, the question, the detail; in the knob cells' row two buttons
  * two cells wide (OCT- NO, OCT+ YES in the accent, underlined); the page row one pill, NOTICE (page_row) */
 #define DLG_BTN_W (2 * KN_W + 2)                        /* a button: two knob cells */
-static void dlg_button(int32_t x, const char *k, const char *a, int yes)
+#define DLG_BTN_H (240 - TF_KN_Y - 3)                   /* (2026-11-09, topic E) the buttons run to the foot: no page pill */
+/* a button: its word in M, its keycap (OCT - / OCT +) as a chip; the YES fills (REC red when it destroys, else ACCENT) */
+static void dlg_button(int32_t x, const char *k, const char *a, int yes, uint16_t fill)
 {
-    cv_rrect(x, 0, DLG_BTN_W, TF_KN_H, 4, T_RAISE, T_BG);
-    cv_text_on(x + 7, 6 - AF_X_CAP_Y, &AF_X, k, T_DIM, T_RAISE);
-    cv_text_on(x + 7, 22 - AF_M_CAP_Y, &AF_M, a, yes ? T_ACCENT : T_TEXT, T_RAISE);
-    cv_rect(x + 7, TF_KN_H - 9, DLG_BTN_W - 14, yes ? 2 : 1, yes ? T_ACCENT : T_LINE);
+    uint16_t bg = yes ? fill : T_RAISE, ink = yes ? T_BG : T_TEXT;
+    uint32_t kw = text_w(&AF_X, k) + 10u;
+    cv_rrect(x, 1, DLG_BTN_W, DLG_BTN_H, 6, bg, T_BG);
+    cv_text_in(x, 12, DLG_BTN_W, &AF_M, a, ink, bg);
+    cv_rrect(x + (int32_t)(DLG_BTN_W - kw) / 2, DLG_BTN_H - 21, (int32_t)kw, 15, 3, yes ? T_BG : T_KEY, bg);
+    cv_text_on(x + (int32_t)(DLG_BTN_W - kw) / 2 + 5, DLG_BTN_H - 21 + 4 - AF_X_CAP_Y, &AF_X, k, yes ? T_TEXT : T_BG, yes ? T_BG : T_KEY);
 }
 static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
+    uint16_t hot = (ui.confirm == CF_DICE_ALL || ui.confirm == CF_MUT_BACK || ui.confirm == CF_LOAD_PAT ||
+                   ui.confirm == CF_CPU_TEST || ui.confirm == CF_CALIB || ui.confirm == CF_ABOUT) ? T_ACCENT : T_REC;
     confirm_text(a, b);
     ui.head_sig = ~0u;
     cv_begin(240, TF_KN_Y - TF_SC_Y, T_BG);            /* the panel: the card */
     cv_rrect(2, 2, 236, TF_SC_H - 4, 5, T_RAISE, T_BG);
-    cv_rect(6, 2, 228, 2, T_THEME);
-    cv_text_on(12, 14 - AF_M_CAP_Y, &AF_M, "?", T_ACCENT, T_RAISE);
+    cv_rect(6, 2, 228, 3, hot);
+    cv_rrect(106, 16, 28, 28, 14, hot, T_RAISE);        /* the ring and its mark */
+    cv_rrect(108, 18, 24, 24, 12, T_RAISE, hot);
+    cv_text_in(106, 30 - AF_M_CAP_Y - 1, 28, &AF_M, "!", hot, T_RAISE);
     if (text_w(tf, a) > 220)
         tf = &AF_S;
     GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H, "dialog question centred");
-    cv_text_in(0, 54, 240, tf, a, T_TEXT, T_RAISE);
+    cv_text_in(0, 58, 240, tf, a, T_TEXT, T_RAISE);
     if (b[0]) {
         char f[32];
         text_fit(f, sizeof f, b, &AF_S, 220);          /* a name: free text */
         GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H, "dialog detail centred");
-        cv_text_flags(ink_in(&AF_S, f, 240), 76, &AF_S, f, T_MID, T_RAISE, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
+        cv_text_flags(ink_in(&AF_S, f, 240), 84, &AF_S, f, T_MID, T_RAISE, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
     }
     cv_blit(0, TF_SC_Y);
-    cv_begin(240, TF_PG_Y - TF_KN_Y, T_BG);            /* the knob cells' row: the buttons */
-    dlg_button(1, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : ui.confirm == CF_MUT_BACK ? "KEEP" : "NO", 0);
-    dlg_button(1 + DLG_BTN_W + 2, "OCT +", ui.confirm == CF_MUT_BACK ? "BACK" : "YES", 1);
+    cv_begin(240, 240 - TF_KN_Y, T_BG);                /* the knob cells' row and the page row's: the two buttons */
+    dlg_button(1, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : ui.confirm == CF_MUT_BACK ? "KEEP" : "NO", 0, 0);
+    dlg_button(1 + DLG_BTN_W + 2, "OCT +", ui.confirm == CF_MUT_BACK ? "BACK" : "YES", 1, hot);
     cv_blit(0, TF_KN_Y);
-    page_row();
 }
 
 /* (0.8.5) the end of a lens screen drawn outside the page path (GEN): the second message, the timers, the page row */

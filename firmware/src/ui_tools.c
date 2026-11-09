@@ -508,7 +508,7 @@ static uint32_t tl_repeat(track_t *t, uint32_t k)       /* k: 2..8 times, 0: to 
  * track (the grid's, ui.lane). Done at once but CLEAR ALL; the pick stays (COOK again: "COOKED 3"). ui.act: the row + 1 */
 enum { TL_MREV = TL_N, TL_ALL, TL_ROWS };
 static const char *const TL_NAME[TL_ROWS] = {"CLEAR", "REVERSE", "SHIFT <", "SHIFT >", "RANDOM", "COOK", "BEAT",
-    "CLR AUTO", "CLR LANE", "REV LANE", "FILL LANE", "RND LANE", "REVERT", "CLEAR ALL"};
+    "CLR AUTO", "CLR LANE", "REV LANE", "FILL LANE", "RND LANE", "REVERT", "CLR ALL"};
 static const char *const TL_ON[TL_ROWS] = {"THE STEPS", "BACK TO FRONT", "A STEP LEFT", "A STEP RIGHT", "NEW NOTES",
     "A LITTLE CHANGED", "A NEW BEAT", "AUTO + LOCKS", "", "", "", "", "MUTATE'S ANCHOR", "EVERY TRACK"};
 static uint8_t sqt_cook;                                /* COOK in a row: "COOKED 3" */

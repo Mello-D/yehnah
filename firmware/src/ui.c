@@ -434,7 +434,9 @@ static int kn_cells(void);
 static uint32_t card_y(void) { return TF_KN_Y; }
 static uint32_t card_h(void) { return TF_KN_H; }
 static uint32_t graph_y(void) { return TF_SC_Y; }
-static uint32_t graph_h(void) { return TF_SC_H; }
+/* (2026-11-09, topic E) GLO's lists have no knob cells (the list and its choices say what the knobs do): the panel runs down to the page row */
+static int sets_full(void);
+static uint32_t graph_h(void) { return sets_full() ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
 enum { LAYER_NONE, LAYER_FX, LAYER_SCL, LAYER_REC, LAYER_SAVE, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
@@ -578,6 +580,7 @@ static int trk_face(void) { return home_nofoot() && !ui.layer && !ui.menu && hom
 static int pg_row(void) { return lz_on() && !ui.menu && !dlg_on() && !name_on(); }
 /* (2026-11-02, step 3) TRACKS' order on every button's page: the panel, the knob cells (ui_draw.c kn_row), the page row */
 static int kn_cells(void) { return trk_face() || pg_row(); }
+static int sets_full(void) { return PAGES[ui.page].graph == GR_SETS && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
 
 /* transient message in the top bar, right of the transport and the BPM: a + b */
 static void ui_say(const char *a, const char *b)

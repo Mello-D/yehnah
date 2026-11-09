@@ -283,11 +283,11 @@ async function editorMock() {
      names[0].length === E.parse[E.CMD.NAMES](await rq(E.req.names(0))).names.length,
      "editor: NAMES in pages (JUNO's 113 from FROM, ANALOG in one; chord-harp fork)");
   let prefs = await E.readDevicePreferences(rq, info, names);
-  ok(info.uiCaps === 9 && prefs.palettes.length === 3 && prefs.palettes[0] === "VAP DK" && prefs.palettes[1] === "VAP LT" && prefs.palettes[2] === "NOIRE",
+  ok(info.uiCaps === 9 && prefs.palettes.length === 5 && prefs.palettes[0] === "VAP DK" && prefs.palettes[1] === "VAP LT" && prefs.palettes[2] === "NOIRE" && prefs.palettes[4] === "CREAM",
      "editor: preference capabilities (palette, favorites) and palette names");
   const pal = E.parse[E.CMD.UI_SET](await rq(E.req.uiSet(0, 2)));
   ok(pal.rc === 0 && pal.palette === 2, "editor: display preference 0 (palette) round trip");
-  ok(E.parse[E.CMD.UI_SET](await rq(E.req.uiSet(0, 3))).rc === 1, "editor: out-of-range palette refused");
+  ok(E.parse[E.CMD.UI_SET](await rq(E.req.uiSet(0, 5))).rc === 1, "editor: out-of-range palette refused");
   ok(E.parse[E.CMD.UI_SET](await rq(E.req.uiSet(1, 1))).rc === 2, "editor: the retired font weight answers not supported");
   ok(E.parse[E.CMD.FAV_SET](await rq(E.req.favSet(info.nengines, 31, true))).rc === 1, "editor: empty user slot cannot be favorited");
   await rq(E.req.favSet(0, 0, true));

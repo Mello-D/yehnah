@@ -2076,7 +2076,7 @@ function makeMockDevice(opt = {}) {
     uiCaps: opt.legacy || opt.v3 || opt.v5 ? 0 : opt.uiCaps ?? 9,
     palette: 0, font: 0, monitor: 0, filter: 0, bankSig: 0,
     vbank: { valid: false, name: "", voices: new Array(32).fill(null) }, vtx: null,   /* (0.6.11) FM6's voice bank */
-    palettes: ["VAP DK", "VAP LT", "NOIRE"],
+    palettes: ["VAP DK", "VAP LT", "NOIRE", "DUSK", "CREAM"],
     favorites: Array.from({ length: ENG.length + 1 }, () => []),
     watch: false, v4: false, wide: false, lastReq: 0,
   };

@@ -42,8 +42,9 @@ int main(int argc, char **argv)
     static const uint8_t pd[] = {0x08, 0xf0};
     const aafont_t probe = {1, 1, 'A', 'A', 0, pg, pp, pd, 0};
     double worst = 100;
-    assert(NPALETTES == 3u && !strcmp(UI_PALETTES[0].name, "VAP DK") && !strcmp(UI_PALETTES[1].name, "VAP LT") &&
-           !strcmp(UI_PALETTES[2].name, "NOIRE") && UI_DEFAULT_INDEX == 0u);   /* (2026-11-02: the rest gone; VAP DK the default) */
+    assert(NPALETTES == 5u && !strcmp(UI_PALETTES[0].name, "VAP DK") && !strcmp(UI_PALETTES[1].name, "VAP LT") &&
+           !strcmp(UI_PALETTES[2].name, "NOIRE") && !strcmp(UI_PALETTES[3].name, "DUSK") &&
+           !strcmp(UI_PALETTES[4].name, "CREAM") && UI_DEFAULT_INDEX == 0u);   /* (2026-11-02: the rest gone; VAP DK the default) */
     for (unsigned p = 0; p < NPALETTES; p++) {
         uint16_t *tok = &ux.bg;
         palette_set(p);
@@ -64,7 +65,7 @@ int main(int argc, char **argv)
         if (min < worst) worst = min;
         printf("%-7s text %.1f:1, labels %.1f:1, values %.1f:1, selection %.1f:1\n", UI_PALETTES[p].name,
                contrast(T_TEXT, T_BG), contrast(T_MID, T_BG), contrast(T_THEME, T_BG), contrast(T_INK, T_SEL));
-        assert((p == 1u) == ux.light);                       /* VAP LT is the light one */
+        assert((p == 1u || p == 4u) == ux.light);            /* VAP LT and CREAM are the light ones */
         assert(T_REC == (ux.light ? UI_REC_LIGHT : UI_REC_DARK));
         /* the blend: transparent, solid and an edge between the two, on two backgrounds */
         for (unsigned b = 0; b < 2; b++) {
@@ -111,7 +112,7 @@ int main(int argc, char **argv)
     assert(swap16(cv_px[1]) != green);
     /* fonts: Chakra Petch (0.5) S 12 px; (0.8.9) M Inter Tight SemiBold 15 px (the values, as the 0.6);
      * tabular digits; the ellipsis (2026-11-02: the L face gone) */
-    assert(AF_S.h == 16 && AF_S.asc == 12 && AF_M.h == 19 && AF_M.asc == 15);
+    assert(AF_S.h == 16 && AF_S.asc == 12 && AF_M.h == 20 && AF_M.asc == 15);
     assert(text_w(&AF_M, "0000") == text_w(&AF_M, "1111") && text_w(&AF_S, "1.25") == text_w(&AF_S, "8.75"));
     assert(glyph(&AF_S, (uint8_t)ELLIPSIS) != glyph(&AF_S, '?') && glyph(&AF_M, (uint8_t)ELLIPSIS) != glyph(&AF_M, '?'));
     {

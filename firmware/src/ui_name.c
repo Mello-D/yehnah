@@ -315,17 +315,24 @@ static void nm_draw_field(void)                        /* the knob cells (every 
     }
     str_cpy(k[0].l, "CURSOR", sizeof k[0].l);
     fmt_int(k[0].v, (int32_t)nm.cur + 1);
-    k[0].r = nm.len ? (int32_t)(nm.cur * 1000u / nm.len) : 0;
+    k[0].pn = (uint8_t)NM_LEN;                          /* (2026-11-09, topic E) the knob cells as grids: the places of the name .. */
+    k[0].pi = nm.cur < NM_LEN ? (uint8_t)nm.cur : 255u;
     k[0].n = 0;
     while (NM_SET[i] && NM_SET[i] != ch)
         i++;
     str_cpy(k[1].l, "CHAR", sizeof k[1].l);
     str_cpy(k[1].v, ch == ' ' ? "SPACE" : (char[2]){ch, 0}, sizeof k[1].v);
     k[1].r = (int32_t)(i * 1000u / (sizeof NM_SET - 2u));
+    if (nm.key) {                                       /* .. the letters of the key being tapped */
+        k[1].pn = (uint8_t)str_len(nm_group(nm.key - 1u));
+        k[1].pi = (uint8_t)nm.tap;
+        k[1].r = -1;
+    }
     str_cpy(k[2].l, "LEN", sizeof k[2].l);
     fmt_int(k[2].v, nm.len);
     str_cpy(k[2].u, "/12", sizeof k[2].u);
-    k[2].r = (int32_t)(nm.len * 1000u / NM_LEN);
+    k[2].pn = (uint8_t)NM_LEN;                          /* .. and the length */
+    k[2].pi = nm.len ? (uint8_t)(nm.len - 1u) : 255u;
     k[2].n = 0;
     str_cpy(k[3].l, "OCT +", sizeof k[3].l);
     k[3].d = (uint8_t)busy;                             /* (no value: d only redraws the row when STOP TO SAVE comes and goes) */

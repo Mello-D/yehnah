@@ -1699,6 +1699,22 @@ static void draw_graph(void)
         gr_ms = fm1_ms;
     }
     ui.graph_sig = sig;
+    if (sets_full() && lz_on() && lz_fam() == LZ_GLO && pg->graph == GR_SETS) {   /* (2026-11-09, topic E) a list page: the panel is taller
+                                                         * than the canvas (164 rows): two bands */
+        uint32_t pass, h0 = graph_h() / 2u;
+        for (pass = 0; pass < 2u; pass++) {
+            cv_begin(240, pass ? graph_h() - h0 : h0, T_BG);
+            cv_oy = pass ? -(int32_t)h0 : 0;
+            cv_scroll = 1;
+            cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);
+            cv_bg = T_SURF;
+            graph_sets();
+            cv_scroll = 0;
+            cv_oy = 0;
+            cv_blit(0, graph_y() + pass * h0);
+        }
+        return;
+    }
     cv_begin(240, graph_h(), T_BG);
     if (lz_on())                                /* (0.8.5) a lens page: the mock-up's panel, 4 .. 236 (0.8.9 COLORS: */
         cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);   /* rounded, as the 0.6's) */

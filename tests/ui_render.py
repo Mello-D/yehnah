@@ -13,7 +13,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 out = Path(sys.argv[1] if len(sys.argv) > 1 else "build/ui_new")
-PALS = ("VAP DK", "VAP LT", "NOIRE")   # tools/gen_ui_palettes.py
+PALS = ("VAP DK", "VAP LT", "NOIRE", "DUSK", "CREAM")   # tools/gen_ui_palettes.py
 shots = {}
 for f in sorted((out / "ppm").glob("*.ppm")):
     pal, name = f.stem.split("_", 1)

@@ -277,23 +277,90 @@ static void sets_val(uint32_t id, char *v)
         str_cpy(v + str_len(v), unit, 24 - str_len(v));
     }
 }
-/* the list: every row of it, the one KNOB 1 is on lit (its value is KNOB 2's card) */
+/* (2026-11-09, topic E) a list page: the names on the left (the one KNOB 1 is on lit), on the right that row's choices with the
+ * one set lit (a range: the value large over its bar). No knob cells: the lit choice is KNOB 2's value */
+#define SETS_RX 126
+#define SETS_RW 106
+static void sets_choices(uint32_t id, uint32_t n, uint32_t cur, const param_desc_t *d)
+{
+    uint32_t k, row = id - ID_MENU;
+    int32_t rh = n <= 6u ? 28 : 22, y0 = 4;
+    for (k = 0; k < n; k++) {
+        int32_t y = y0 + (int32_t)k * (rh + 2);
+        uint16_t bg = k == cur ? T_TINT : T_SURF, tx = k == cur ? T_TEXT : T_MID;
+        char nm[24];
+        const char *unit = "";
+        if (d)
+            param_format(d, (int16_t)(d->min + (int16_t)k), nm, &unit);
+        else
+            str_cpy(nm, menu_vname(row, k), 24);
+        cv_rrect(SETS_RX, y, SETS_RW, rh, 4, bg, T_SURF);
+        if (k == cur) {
+            cv_rect(SETS_RX + 3, y, SETS_RW - 6, 1, T_THEME); cv_rect(SETS_RX + 3, y + rh - 1, SETS_RW - 6, 1, T_THEME);
+            cv_rect(SETS_RX, y + 3, 1, rh - 6, T_THEME); cv_rect(SETS_RX + SETS_RW - 1, y + 3, 1, rh - 6, T_THEME);
+        }
+        if (!d && row == MI_COLOR) {                    /* the palette's own colours */
+            const ui_pal_t *q = &UI_PALETTES[k % NPALETTES];
+            uint16_t sw[4] = {q->bg, q->surf, q->theme, q->accent};
+            uint32_t i;
+            for (i = 0; i < 4u; i++) {
+                cv_rect(SETS_RX + 7 + (int32_t)i * 8, y + rh / 2 - 6, 7, 12, T_LINE);
+                cv_rect(SETS_RX + 8 + (int32_t)i * 8, y + rh / 2 - 5, 5, 10, sw[i]);
+            }
+            cv_text_on(SETS_RX + 44, y + CAP_IN(S, rh), &AF_S, nm, tx, bg);
+        } else
+            cv_clip_text(SETS_RX + 8, y + CAP_IN(S, rh), &AF_S, nm, tx, bg, SETS_RW - 14);
+    }
+}
+static void sets_detail(uint32_t id)
+{
+    page_t fp = {"", FAM_GLO, SC_GLOBAL, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}};
+    int16_t *vp = 0;
+    const param_desc_t *d = 0;
+    char v[24], lo[16], hi[16];
+    const char *unit = "";
+    int menu = IS_MROW(id) && id - ID_MENU < MI_VALUES;
+    if (menu) {
+        uint32_t n = menu_n(id - ID_MENU);
+        if (n >= 2u && n <= 8u) {
+            sets_choices(id, n, menu_get(id - ID_MENU), 0);
+            return;
+        }
+    } else if (!IS_MROW(id)) {
+        fp.id[0] = (uint8_t)id;
+        d = page_desc(&fp, 0, &vp);
+        if (d && vp && (d->fmt == F_ENUM || d->fmt == F_ONOFF) && d->max > d->min && d->max - d->min < 8) {
+            sets_choices(id, (uint32_t)(d->max - d->min + 1), (uint32_t)(*vp - d->min), d);
+            return;
+        }
+    }
+    sets_val(id, v);                                    /* a range or an action: the value large */
+    cv_text_in(SETS_RX, 60, SETS_RW, &AF_M, v, T_THEME, T_SURF);
+    if (d && vp && id != G_INFO && d->max > d->min) {
+        int32_t w = SETS_RW - 20, f = (int32_t)(*vp - d->min) * w / (d->max - d->min);
+        param_format(d, d->min, lo, &unit);
+        param_format(d, d->max, hi, &unit);
+        cv_rrect(SETS_RX + 10, 92, w, 6, 3, T_RAISE, T_SURF);
+        if (f > 0)
+            cv_rrect(SETS_RX + 10, 92, f < 6 ? 6 : f, 6, 3, T_THEME, T_RAISE);
+        cv_text_on(SETS_RX + 10, 104 - AF_X_CAP_Y, &AF_X, lo, T_MID, T_SURF);
+        cv_text_r(SETS_RX + SETS_RW - 10, 104 - AF_X_CAP_Y, &AF_X, hi, T_MID, T_SURF);
+    }
+}
 static void graph_sets(void)
 {
     uint32_t ls = sets_of(&PAGES[ui.page]) & 3u, n = sets_n(ls), k;
     for (k = 0; k < n; k++) {
-        int32_t y = 4 + (int32_t)k * 16;
-        uint16_t bg = k == sets_cur[ls] ? T_TINT : T_RAISE;
-        char v[24], kn[2] = {(char)('1' + k), 0};
-        sets_val(SETS[ls][k], v);
-        cv_rect(8, y, 224, 15, bg);
-        if (k == sets_cur[ls])
-            cv_rect(8, y, 2, 15, T_ACCENT);
-        cv_text(13, y + 4 - AF_X_CAP_Y, &AF_X, kn, T_THEME);
-        GFX_HOOK_ALIGN(0, y, 0, y + 15, AL_V, "GLO row name centred up/down");
-        cv_text_on(24, y + CAP_IN(S, 15), &AF_S, sets_label(SETS[ls][k]), T_TEXT, bg);
-        cv_text_r(226, y + CAP_IN(S, 15), &AF_S, v, T_TEXT, bg);
+        int32_t y = 5 + (int32_t)k * 23;
+        int on = k == sets_cur[ls];
+        uint16_t bg = on ? T_SEL : T_SURF;
+        if (on)
+            cv_rrect(8, y, 112, 22, 4, T_SEL, T_SURF);
+        GFX_HOOK_ALIGN(0, y, 0, y + 22, AL_V, "GLO row name centred up/down");
+        cv_text_on(15, y + CAP_IN(S, 22), &AF_S, sets_label(SETS[ls][k]), on ? T_INK : T_TEXT, bg);
     }
+    cv_rect(SETS_RX - 4, 8, 1, (int32_t)graph_h() - 16, T_LINE);
+    sets_detail(SETS[ls][sets_cur[ls] % (n ? n : 1u)]);
 }
 static void confirm_open(uint32_t kind, uint32_t trk);   /* (0.6.58) INIT SYSTEM: ui_input.c */
 static void draw_menu(void)

@@ -1971,9 +1971,10 @@ static int test_display_preferences(void)
     bad += check("COLOR KNOB 1 shows the next palette (VAP LT, light) at once",
                  settings.palette == 1 && str_eq(UI_PALETTES[1].name, "VAP LT") && T_BG == UI_PALETTES[1].bg && ux.light &&
                  !song.octave && memcmp(before, host_screen, sizeof before) && !memcmp(sounds, trk, sizeof sounds));
-    bad += check("COLOR KNOB 1 steps on to NOIRE, then wraps to VAP DK (2026-11-02: the three palettes)",
+    bad += check("COLOR KNOB 1 steps on to NOIRE and the pastel DUSK and CREAM, then wraps to VAP DK",
                  (turn(EN_K2, 1), settings.palette == 2u) && str_eq(UI_PALETTES[2].name, "NOIRE") &&
-                 !ux.light && T_BG == 0u && (turn(EN_K2, 1), settings.palette == 0u) &&
+                 !ux.light && T_BG == 0u && (turn(EN_K2, 1), settings.palette == 3u) && !ux.light &&
+                 (turn(EN_K2, 1), settings.palette == 4u) && ux.light && (turn(EN_K2, 1), settings.palette == 0u) &&
                  str_eq(UI_PALETTES[0].name, "VAP DK") && !ux.light && (turn(EN_K2, 1), turn(EN_K2, 1), settings.palette == 2u));
     settings.lowcut = 0; fx_lowcut = 0;
     glo_row(MI_LOWCUT);                                 /* (GLO > AUDIO's KNOB 1) */
@@ -2093,10 +2094,20 @@ static int test_information(void)
  * value strip, its last frame is the static render; unchanged digits stay; the direction follows the sign; a
  * change mid-roll retargets; a fast turn, another shape, a page / track / palette change and ui.force snap. */
 static uint16_t roll_shot[240 * 240];
-static void roll_settle(void)                     /* CONTROL (TUNE, KNOB 2), nothing rolling, no knob hot */
+static void roll_page(uint32_t gid)                /* (topic E: GLO's lists have no knob cells) a page of its own: GLO's, KNOB 2 = the global gid */
+{
+    static page_t tp;
+    tp = PAGES[ui.page];
+    tp.graph = GR_NONE;
+    tp.id[0] = tp.id[2] = tp.id[3] = 0xFF;
+    tp.id[1] = (uint8_t)gid;
+    page_over = &tp;
+}
+static void roll_settle(void)                     /* TUNE on KNOB 2 of a page of its own, nothing rolling, no knob hot */
 {
     uint32_t k;
-    go_title("CONTROL"); sets_cur[2] = 7;            /* (topic C: TUNE is CONTROL's 8th row, KNOB 2's) */
+    page_over = 0;
+    go_title("CONTROL"); roll_page(G_TUNE);
     ui.hot_t = 0; ui.bpm_t = 0;
     for (k = 0; k < 12u; k++) frame();
 }
@@ -2208,7 +2219,7 @@ static int test_roll(void)
     /* BPM 120 -> 121 (SELECT): the header rolls, the digits 1 and 2 stay; the BPM card too (no unit:
      * the label says BPM: set in M, it rolls like any number) */
     ui_power_on(); roll_settle(); roll_nograph = 1;
-    sets_cur[0] = 0; go_title("MAIN");
+    page_over = 0; go_title("MAIN"); roll_page(G_BPM);
     for (k = 0; k < 12u; k++) frame();
     song.g[G_BPM]++; frame();                     /* (the tempo is REC + KNOB 3: set here) */
     ok = song.g[G_BPM] == 121 && str_eq(ui.roll[ROLL_BPM].from, "120") && ui.roll[ROLL_BPM].dir == 1 &&
@@ -2270,7 +2281,7 @@ static int test_roll(void)
     ui_power_on(); roll_settle();
     turn(EN_K2, -1);
     ok = song.g[G_TUNE] == -1 && !ui.roll[1].from[0] && roll_static_now();
-    go_title("CONTROL"); sets_cur[2] = 3;          /* (topic C: CLOCK is CONTROL's 4th row) */
+    page_over = 0; go_title("CONTROL"); roll_page(G_CLOCK);
     for (k = 0; k < 12u; k++) frame();
     turn(EN_K2, 1);
     ok &= song.g[G_CLOCK] != 0 && !ui.roll[1].from[0] && roll_static_now();
@@ -2294,6 +2305,7 @@ static int test_roll(void)
     ui.force = 1; frame();
     ok &= !ui.roll[ROLL_BPM].from[0];
     bad += check("roll: a page, track, palette or engine change and ui.force snap", ok);
+    page_over = 0;
     palette_set(UI_DEFAULT_INDEX);
     ui_power_on();
     return bad;
@@ -4484,6 +4496,25 @@ static int test_piano_roll(void)
 }
 
 /* bug fixes, second round (UI) */
+static uint32_t accent_half(int32_t x0, int32_t y0, int32_t x1, int32_t y1)   /* (Space Grotesk's thin strokes: pixels nearer the accent than SURF or TEXT) */
+{
+    uint32_t n = 0;
+    int32_t x, y;
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++) {
+            uint16_t p = swap16(host_screen[y * 240 + x]);
+            int32_t dp = 0, ds = 0, dx = 0, sh;
+            for (sh = 0; sh < 3; sh++) {
+                int32_t sft = sh == 0 ? 11 : sh == 1 ? 5 : 0, m = sh == 1 ? 63 : 31, w = sh == 1 ? 1 : 4,
+                        pc = (p >> sft) & m, ac = (T_ACCENT >> sft) & m, sc = (T_SURF >> sft) & m, tc = (T_TEXT >> sft) & m;
+                dp += (pc - ac) * (pc - ac) * w;
+                ds += (sc - ac) * (sc - ac) * w;
+                dx += (tc - ac) * (tc - ac) * w;
+            }
+            n += dp < ds && dp < dx;
+        }
+    return n;
+}
 static uint32_t accent_in(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
     uint32_t n = 0;
@@ -4529,18 +4560,26 @@ static int test_bughunt_ui2(void)
             Y = (int32_t)graph_y() + 9;
             turn(EN_K1 + k, 1);                                       /* (K4 right: the DJ FILTER, a high-pass) */
             ui.force = 1; frame();
-            a[k][0] = accent_in(X + 17, Y + 44, X + 37, Y + 57);      /* LEVEL's dB */
+            a[k][0] = accent_half(X + 17, Y + 44, X + 37, Y + 57);    /* LEVEL's dB */
             a[k][1] = accent_in(X + 4, Y + 100, X + 37, Y + 110);     /* PAN */
             a[k][2] = accent_in(X + 4, Y + 112, X + 37, Y + 117);     /* REV */
             a[k][3] = accent_in(X + 4, Y + 22, X + 37, Y + 37);       /* the name (in the accent: muted) */
             if (k == 3u)
                 ok &= song.g[G_DJF] == 1 && !trk[0].p[P_MUTE];
         }
+        {   /* (the dB's thin strokes: its accent pixels counted by closeness, so K1 against the others' count) */
+            uint32_t base = a[1][0] < a[2][0] ? a[1][0] : a[2][0];
+            for (k = 0; k < 4u; k++)
+                a[k][0] = a[k][0] > base ? a[k][0] - base : 0u;
+        }
         for (k = 0; k < 4u; k++) {
             uint32_t j;
             for (j = 0; j < 4u; j++)
                 ok &= j == k && k < 3u ? a[k][j] > 0u : a[k][j] == 0u;
         }
+        if (!ok)
+            for (k = 0; k < 4u; k++)
+                printf("  MIXER K%u: dB %u pan %u rev %u name %u\n", k + 1u, a[k][0], a[k][1], a[k][2], a[k][3]);
         bad += check("MIXER (six columns, any COLOR): K1..K3 light LEVEL / PAN / REV, K4 (the DJ FILTER) none of them", ok);
     }
     {   /* 4. renaming the slot the music came from renames the music: the next SAVE prefills the new name */
@@ -6243,7 +6282,7 @@ static int test_seq_tools(void)
         turn(EN_K1, 1);
         ok &= ui.act == 1u && str_eq(sqt_name(), "CLEAR") && !strncmp(ui.col[0], "TOOL|CLEAR|", 11);
         turn(EN_K1, 20);
-        ok &= str_eq(sqt_name(), "CLEAR ALL");
+        ok &= str_eq(sqt_name(), "CLR ALL");
         press(B_OCTUP); frame();
         ok &= ui.confirm == CF_CLEAR_ALL;
         press(B_OCTDN); frame();
@@ -10138,14 +10177,14 @@ static int test_lz_dialogs(void)
     uint32_t y, x, acc = 0;
     ui_power_on(); go_title("ENV"); frame();
     confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frame();
-    ok = swap16(host_screen[(TF_SC_Y + 2) * 240 + 120]) == T_THEME &&   /* (the card's THEME rule; the OCT+ button's
-                                                         * accent line; NOTICE alone in the page row) */
-         swap16(host_screen[(TF_KN_Y + TF_KN_H - 9) * 240 + 180]) == T_ACCENT &&
-         swap16(host_screen[(TF_PG_Y + TF_PG_H / 2) * 240 + 90]) == T_THEME &&
-         swap16(host_screen[(TF_PG_Y + TF_PG_H / 2) * 240 + 20]) == T_BG;
+    ok = swap16(host_screen[(TF_SC_Y + 3) * 240 + 120]) == T_REC &&   /* (topic E: the card's REC rule; the YES button filled in REC,
+                                                         * NO a RAISE one; no page pill: the buttons run to the foot) */
+         swap16(host_screen[(TF_KN_Y + 10) * 240 + 180]) == T_REC &&
+         swap16(host_screen[(TF_PG_Y + TF_PG_H / 2) * 240 + 20]) == T_RAISE &&
+         swap16(host_screen[(TF_PG_Y + TF_PG_H / 2) * 240 + 90]) == T_RAISE;
     press(B_OCTDN); frame();
     ok &= !ui.confirm;
-    bad += check("2026-11-02 NOTICE in the new layout: the card in the panel, OCT- / OCT+ in the knob row, NOTICE the page row; OCT- NO", ok);
+    bad += check("2026-11-02 NOTICE in the new layout: the card in the panel, OCT- / OCT+ as two buttons to the foot, no page pill; OCT- NO", ok);
     (void)x; (void)y; (void)acc;
     bad += test_toasts();                               /* (0.9.5: the toast a pill over the live page; was boxed alone in it) */
     ui_power_on();

@@ -50,7 +50,7 @@ HUFF = [("M", "B")]
 # (0.6.56) a face's ink raised by n px in its line: IBM Plex Mono's taller ascent put its values 1 px under where
 # Chakra Petch's sat (tests/ui_render.c alignment: a value centred in its window, its unit on its baseline)
 RISE = {"IBMPlexMono-SemiBold.ttf": 1}
-UI_PRESET = "yehnah-lab"            # the firmware's faces (tools/build.py; tests/text_spacing_test.py)
+UI_PRESET = "yehnah-grotesk"            # the firmware's faces (tools/build.py; tests/text_spacing_test.py)
 B_CHARS = " -./0123456789>ABCDEFGHIJKLMNOPQRSTUVWXYZ"   # (2026-11-02) the page row's middle pill: capitals
 
 
@@ -67,6 +67,11 @@ def preset(name):
                 ("M", str(f / "InterTight[wght].ttf") + "@600", 15, (32, 126), EXTRAS, 0.0, PHASES),
                 # (2026-11-02) the page row's middle pill (ui_draw.c page_row): every page name bold, M's face smaller
                 ("B", str(f / "InterTight[wght].ttf") + "@600", 12, (32, 32), [ord(c) for c in B_CHARS[1:]], 0.0, PHASES)]
+    if name == "yehnah-grotesk":                # (2026-11-09, topic E) Space Grotesk (SIL OFL 1.1, Google Fonts) for every face
+        g = str(FONTS.parent / "assets" / "fonts" / "SpaceGrotesk[wght].ttf")
+        return [("S", g + "@500", 12, (32, 126), EXTRAS, -0.01, PHASES),
+                ("M", g + "@600", 15, (32, 126), EXTRAS, 0.0, PHASES),
+                ("B", g + "@700", 12, (32, 32), [ord(c) for c in B_CHARS[1:]], 0.0, PHASES)]
     if name == "inter-tight":
         v = str(FONTS.parent / "assets" / "fonts" / "InterTight[wght].ttf")   # SIL OFL 1.1, Google Fonts
         return [("S", v + "@400", 12, (32, 126), EXTRAS, 0.0, PHASES),
@@ -248,7 +253,7 @@ RES_FACES = ("M", "B")   # (chord-harp fork, 2026-11-04) the big and medium face
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("out")
-    ap.add_argument("--preset", choices=["standin", "inter-tight", "chakra-petch", "yehnah-lab"])
+    ap.add_argument("--preset", choices=["standin", "inter-tight", "chakra-petch", "yehnah-lab", "yehnah-grotesk"])
     ap.add_argument("--face", action="append", default=[])
     ap.add_argument("--tracking", type=float, default=0.0, help="extra advance per glyph in em")
     ap.add_argument("--gamma", type=float, default=1.0, help="coverage curve; <1 thickens light-on-dark text")
