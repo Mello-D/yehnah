@@ -384,6 +384,14 @@ static uint32_t hk_keys(const track_t *t)
         if (d && hk_amp[k] < 90u)
             hk_amp[k] = 90;                             /* (a key held: its string stays lit) */
     }
+    {
+        uint32_t pc, pp = harp_playing(t, &pc);          /* (the sequencer's keys: held as the player's) */
+        for (k = 0; k < 27u; k++)
+            if ((pp >> k) & 1u && hk_amp[k] < 200u)
+                hk_amp[k] = 255u;
+        dn |= pp;
+        on |= pc;
+    }
     hk_down = dn;
     if (key_latch(t) && t->nheld)
         on |= 1u << cur;

@@ -358,6 +358,11 @@ static uint32_t harp_leds(const track_t *t, uint32_t *glow, uint32_t *mid)
             }
         }
     }
+    {
+        uint32_t pc, pp = harp_playing(t, &pc);          /* (the sequencer's chord key: as held; its plate notes lit) */
+        chords &= ~pc;
+        wave |= pp;
+    }
     return (chords & ~down) | wave | (t->p[P_AHOLD] ? latch : 0u) | (bends & down) | (ui.act ? wr : 0u);
 }
 

@@ -266,6 +266,13 @@ static int32_t harp_dt(const track_t *t, uint32_t k)
     return rn - HARP_LO;
 }
 static uint32_t harp_oct(int32_t n) { return (uint32_t)clamp(n + 12 * song.octave, 0, 127); }
+/* (chord-harp fork) the single-key mode: QUANT on (SNAP / WHITE / SEQ) keeps every note the chord keys and the plate
+ * play (HARP, OMNI, PROG, CHORD's modes) in the track's key (ROOT, SCALE): a note outside it moves down onto the scale,
+ * so the chords always sound good in it. QUANT off: the chords as they are */
+static uint32_t harp_inkey(const track_t *t, uint32_t n)
+{
+    return t->p[P_QUANT] != QN_OFF ? (uint32_t)clamp(scale_snap(t, (int32_t)n), 0, 127) : n;
+}
 /* CHORD's key k: its degree's root (no octave); a scale of fewer than 7 notes round again an octave up, CHR major's;
  * the last key I an octave up */
 static int32_t cm_root(const track_t *t, uint32_t k)
@@ -308,9 +315,9 @@ static uint32_t harp_map(const track_t *t, uint32_t k)   /* the note key k plays
         harp_plate(harp_set(t), harp_cur[trk_index(t) % NTRK], t->p[P_ROOT], pl);
     else
         hc_plate(harp_id(t, harp_cur[trk_index(t) % NTRK]), harp_rt(t), pl);
-    return harp_oct(pl[(key_place(k) - harp_p0(t)) % harp_np(t)] +
+    return harp_inkey(t, harp_oct(pl[(key_place(k) - harp_p0(t)) % harp_np(t)] +
                     12 * (clamp(t->p[harp_omni(t) ? P_OSTR : P_HPLATE], 0, 2) - 1) +   /* (PLATE / STRINGS: an octave down, up) */
-                    harp_dt(t, harp_cur[trk_index(t) % NTRK]));   /* (PROG: its chord's root) */
+                    harp_dt(t, harp_cur[trk_index(t) % NTRK])));   /* (PROG: its chord's root) */
 }
 /* chord key k's notes into out (HARP_NMAX), low to high */
 static __attribute__((noinline)) uint32_t harp_build(const track_t *t, uint32_t k, uint8_t *out)
@@ -318,20 +325,30 @@ static __attribute__((noinline)) uint32_t harp_build(const track_t *t, uint32_t 
     uint8_t nt[HARP_NMAX];
     uint32_t n, i, j = 0;
     if (!voice_poly(t->p[P_VOICE])) {
-        out[0] = (uint8_t)harp_root(t, k);
+        out[0] = (uint8_t)harp_inkey(t, harp_root(t, k));
         return 1;
     }
-    if (harp_cm(t))
-        return chord_build(t, harp_root(t, k), out);   /* (LEAD: the track's last chord, as the keys always did) */
+    if (harp_cm(t)) {                               /* (LEAD: the track's last chord, as the keys always did) */
+        n = chord_build(t, harp_root(t, k), out);
+        for (i = 0; t->p[P_QUANT] != QN_OFF && i < n; i++)
+            out[i] = (uint8_t)harp_inkey(t, out[i]);
+        for (i = j = 0; i < n; i++)
+            if (!j || out[j - 1u] != out[i])
+                out[j++] = out[i];
+        return j;
+    }
     n = harp_j6(t) ? harp_chord(harp_set(t), k, t->p[P_ROOT], nt) : hc_chord(harp_id(t, k), harp_rt(t), nt);
     {
         int32_t dt = harp_dt(t, k) + 12 * song.octave;   /* (PROG: its root; the octave) */
         for (i = 0; i < n; i++)
-            if (nt[i] + dt >= 0 && nt[i] + dt <= 127)
-                out[j++] = (uint8_t)(nt[i] + dt);
+            if (nt[i] + dt >= 0 && nt[i] + dt <= 127) {
+                uint32_t x = harp_inkey(t, (uint32_t)(nt[i] + dt));
+                if (!j || out[j - 1u] != x)             /* (two notes snapping together play once) */
+                    out[j++] = (uint8_t)x;
+            }
     }
     if (!j)
-        out[j++] = (uint8_t)harp_root(t, k);
+        out[j++] = (uint8_t)harp_inkey(t, harp_root(t, k));
     return j;
 }
 
@@ -1618,6 +1635,30 @@ static uint32_t harp_held(const track_t *t)
     for (k = 0; k < 27u; k++)
         m |= (uint32_t)(kb_sn[k] && kb_trk[k] == ti && harp_ck(t, k)) << k;
     return m;
+}
+/* (chord-harp fork) what the sequencer plays on track t in a harp mode, as keys: *chords, the chord key whose CHORD
+ * step plays (the id and the root's pitch class the step holds; none in CHORD's own modes: no id), and the return,
+ * the plate keys whose note sounds (any note a step plays: the chord's tones too). The screen and the key LEDs show it
+ * as a key held (ui_lzpage.c hk_keys, ui_input.c harp_leds) */
+static uint32_t harp_playing(const track_t *t, uint32_t *chords)
+{
+    uint32_t ti = trk_index(t) % NTRK, k, i, plate = 0, c = hp_now[ti] & 0xFFu;
+    *chords = 0;
+    if (!harp_on(t) || !t->seq_n)
+        return 0;
+    for (k = 0; k < 27u; k++) {
+        if (harp_ck(t, k)) {
+            if (c && !harp_cm(t) && !harp_j6(t) && harp_id(t, k) + 1u == c &&
+                harp_root(t, k) % 12u == (hp_now[ti] >> 8) % 12u)
+                *chords |= 1u << k;
+        } else if (!key_black(k)) {
+            uint32_t n = harp_map(t, k);
+            for (i = 0; n <= 127u && i < t->seq_n && i < sizeof t->seq_notes; i++)
+                if (t->seq_notes[i] == n)
+                    plate |= 1u << k;
+        }
+    }
+    return plate;
 }
 /* (chord-harp) key k going down on track t in HARP: a chord key's root (the plate follows its chord from now), the
  * LATCH key toggles and is silent; else kb_map */

@@ -263,7 +263,12 @@ int main(void)
         for (i = 0; i < t->seq_n; i++) got[i] = t->seq_notes[i];
         assert(same(got, t->seq_n, all, n + 1u));
         assert(same(got, sounding(t, got), all, n + 1u));   /* (their voices) */
+        {                                               /* the screen / LEDs: the playing chord key, the plate key hit */
+            uint32_t pc, pp = harp_playing(t, &pc);
+            assert(pc == 1u << 8 && (pp >> 12 & 1u));
+        }
         seq_stop();
+        assert(!harp_playing(t, &k) && !k);             /* (stopped: none lit) */
         t->p[P_CSTR] = 40;                              /* STRUM: every one of the 7, one after another (was 5 at most) */
         seq_start();
         events_block(CTL);
@@ -649,6 +654,29 @@ int main(void)
              "strings; LATCH on the top F#; recorded whole; AUTO's bass: ok");
     }
 
+    {                                                   /* the single-key mode: QUANT on keeps chords and plate in key */
+        static const int mmaj[12] = {1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1};   /* C major's pitch classes */
+        uint32_t modes[4] = {CD_HARP, CD_OMNI, CD_PROG, CD_MAJ}, m, q;
+        t->p[P_ROOT] = 0;
+        t->p[P_SCALE] = 1;                              /* MAJOR (SCALE_MASK[1]) */
+        assert(scale_mask(t) == 0xAB5u);
+        for (m = 0; m < 4u; m++)
+            for (q = 0; q < 2u; q++) {
+                t->p[P_CHRD] = (int16_t)modes[m];
+                t->p[P_CVOI] = 0;
+                t->p[P_QUANT] = q ? QN_SNAP : QN_OFF;
+                for (k = 0; k < HARP_NCH; k++) {
+                    keys(1u << k);
+                    for (i = 0; q && i < non; i++)
+                        assert(mmaj[ons[i] % 12u]);
+                    keys(0);
+                }
+                for (i = 0; q && i < 9u; i++)
+                    assert(mmaj[kb_map(t, PLATE_KEYS[i]) % 12u]);
+            }
+        t->p[P_QUANT] = QN_OFF;
+        puts("harp: single-key mode: QUANT on, every chord and plate note in C major (HARP OMNI PROG CHORD): ok");
+    }
     t->p[P_CHRD] = 0;                                   /* CHORD OFF: the keys as ever */
     for (k = 0; k < 27u; k++)
         assert(kb_map(t, k) == 53u + k);
