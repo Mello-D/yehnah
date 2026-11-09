@@ -64,6 +64,7 @@ static void drift_note_on(track_t *t, voice_t *v)
 {
     dr_voice_t *s = dr_of(t, v);
     uint32_t i;
+    int fresh = !s;
     if (!s) {                                           /* a pool entry: a free one, else the first (the oldest seldom) */
         for (i = 0; i < DR_POOL && dr_busy(&dr_pool[i]); i++)
             ;
@@ -82,8 +83,10 @@ static void drift_note_on(track_t *t, voice_t *v)
             s->q[i] = 0.5f + 0.5f * dr_rnd(s);
         }
     }
-    for (i = 0; i < DR_NP; i++)                         /* (a new note blooms again; a retriggered one too) */
-        s->g[i] = (float)clamp(t->p[P_E6], 0, 127) ? (i ? 0.0f : 0.3f) : 1.0f;
+    if (!v->env_out || fresh)                           /* (a new note blooms again; a voice still sounding (retriggered, stolen
+                                                         * in place) keeps its partials' levels: resetting them was a click) */
+        for (i = 0; i < DR_NP; i++)
+            s->g[i] = (float)clamp(t->p[P_E6], 0, 127) ? (i ? 0.0f : 0.3f) : 1.0f;
 }
 
 static void drift_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)

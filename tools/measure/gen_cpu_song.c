@@ -182,6 +182,29 @@ int main(int argc, char **argv)
                argc > 5 ? argv[5] : ENGINES[trk[kq].eng_req]->presets[trk[kq].preset].name, spikes, (double)n / FS, mx, sqrt(rms / n));
         return 0;
     }
+    if (argc > 3 && !strcmp(argv[1], "mixclicks")) {   /* mixclicks S SECS: the whole mix, both channels: jumps (as clicks) */
+        int s = atoi(argv[2]);
+        uint32_t nblk = (uint32_t)atoi(argv[3]) * FS / CTL, kk, j, c, n = 0, spikes[2] = {0, 0};
+        int32_t o[2 * CTL], prev[2] = {0, 0};
+        double ma[2] = {0, 0}, mx[2] = {0, 0};
+        build(s);
+        transport_req = 1;
+        for (kk = 0; kk < nblk; kk++) {
+            mix_block(o, CTL);
+            if (kk < FS / CTL) continue;
+            for (j = 0; j < CTL; j++, n++)
+                for (c = 0; c < 2; c++) {
+                    int32_t x = o[2 * j + c], d = x - prev[c];
+                    double ad = d < 0 ? -d : d;
+                    if (n > 64 && ad > 40.0 && ad > 8.0 * ma[c]) { spikes[c]++; if (getenv("JCLOG") && j == 0) printf("blk-start jump ch%u %.0f at blk %u\n", c, ad, kk); }
+                    ma[c] += (ad - ma[c]) / 64.0;
+                    prev[c] = x;
+                    if (ad > mx[c]) mx[c] = ad;
+                }
+        }
+        printf("(kills %u) mix section %c: L %u jumps (max step %.0f), R %u jumps (max step %.0f) in %.0f s\n", (unsigned)voice_kills, 'A' + s, spikes[0], mx[0], spikes[1], mx[1], (double)n / FS);
+        return 0;
+    }
     if (argc < 2) { fprintf(stderr, "usage: gen_cpu_song OUTDIR | list\n"); return 1; }
     {
         static const uint8_t BARS[4] = {8, 8, 8, 8};
