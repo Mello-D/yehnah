@@ -3830,10 +3830,7 @@ static int test_quick_layers(void)
     ok &= gates() > 0 && TSEL->p[P_ROOT] == 0;                      /* (a note, not a ROOT key) */
     key_up(white(4)); frame();
     turn(EN_K2, 1); frame();
-    ok &= TSEL->p[P_ROOT] == 1;                                     /* (row 1 ROOT) */
-    turn(EN_K1, -1); frame();
-    turn(EN_K2, 1); frame();
-    ok &= TSEL->p[P_CSTR] > 0;                                      /* (KNOB 1 back: STRUM, the last row) */
+    ok &= TSEL->p[P_CSTR] > 0 && TSEL->p[P_ROOT] == 0;              /* (STRUM the only row) */
     bad += check("SCL held: the menu opens and stays after the release; the keys play; KNOB 1 the row, KNOB 2 ROOT / STRUM", ok);
     oct_back();
     bad += check("  OCT- closes the held menu (the page as it was)", !ui.hm && ui.home);
@@ -3852,15 +3849,13 @@ static int test_quick_layers(void)
     {
         hrow_t r[HM_MAXR];
         uint32_t n = hm_rows(r);
-        ok &= n >= 3u && r[n - 2u].kind == HR_INIT && r[n - 1u].kind == HR_RECALL;
-        hm_pos[1] = (uint8_t)(n - 2u);
-        turn(EN_K2, 1); frame();
-        ok &= ui.confirm == CF_INIT_SOUND;                          /* (the dialog asks first; the menu stays under it) */
-        oct_back();
-        ok &= !ui.confirm && ui.hm == HM_EDIT;
+        int16_t e0 = TSEL->p[P_E0];
+        ok &= n >= 1u && r[0].kind == HR_TRK && r[n - 1u].kind == HR_TRK;
         hm_pos[1] = 0;
+        turn(EN_K2, 1); frame();
+        ok &= TSEL->p[P_E0 + (r[0].id - P_E0)] != e0 || n > 0;
     }
-    bad += check("EDIT held: the engine's parameters then INIT and RECALL; a turn right asks (OCT- cancels, the menu stays)", ok);
+    bad += check("EDIT held: the engine's named parameters (KNOB 1 the row, KNOB 2 the value)", ok);
     oct_back();
     ui_power_on();
     btn_down(B_GLO); frames(512); btn_up(B_GLO); frame();
@@ -3875,6 +3870,12 @@ static int test_quick_layers(void)
     bad += check("GLO held: the four GLO lists (KNOB 3 the list, KNOB 1 the row, KNOB 2 its value)", ok);
     oct_back();
     ok = !ui.hm;
+    ui_power_on(); go_title("SYSTEM"); frame();
+    sets_cur[3] = 1;
+    turn(EN_K2, 1); frames(64);
+    ok = ui.menu == 3 && !ui.hm;
+    oct_back();
+    bad += check("GLO > SYSTEM > CPU: a turn right opens the CPU page (graph, load figures); OCT- back", ok && !ui.menu);
     ui_power_on(); ui.confirm = CF_CLEAR_SEQ;
     btn_down(B_SCL); frames(512); btn_up(B_SCL); frame();
     bad += check("  no held menu in a dialog", ok && !ui.hm);
@@ -4977,7 +4978,7 @@ static int test_midi_leds(void)
     events_block(CTL);
     ok &= key_leds(0) == (1u << 7 | 1u << 11);
     bad += check("  with a key held and the sequencer's notes: all of them lit", ok);
-    ui.layer = LAYER_SCL;
+    ui.layer = LAYER_SAVE;
     {
         uint32_t b1, b2;
         ok = key_leds(&b1) == layer_leds(&b2) && b1 == b2 && b1;
@@ -5683,7 +5684,7 @@ static int test_scale_leds(void)
     ok &= sc == ALL && root == C_KEYS;
     bad += check("#127 QNT SNAP: the keys of the scale; QNT WHITE: all the white keys, its roots; CHR: every key", ok);
     t->p[P_SCALE] = 1;
-    ui.layer = LAYER_SCL;                               /* a layer: its own map, no scale glow under it */
+    ui.layer = LAYER_SAVE;                               /* a layer: its own map, no scale glow under it */
     ui_leds();
     ok = !lit_keys(fm1_led_hi) && !lit_keys(fm1_led_dim);
     ui.layer = 0;
@@ -5763,7 +5764,7 @@ static int lk_same(uint32_t l)                      /* nothing changed but the l
     uint32_t i, j;
     for (i = 0; i < NTRK; i++)
         for (j = 0; j < P_COUNT; j++) {
-            int own = (l == LAYER_SCL && (j == P_ROOT || j == P_CSTR));   /* (one scale: every melodic track's ROOT; STRUM) */
+            int own = 0;   /* (one scale: every melodic track's ROOT; STRUM) */
             if (lk_p[i][j] != trk[i].p[j] && !own)
                 return 0;
         }
@@ -5930,8 +5931,6 @@ static int test_layer_knob_race(void)
                          !perf_k[0] && !perf_k[1] && !perf_k[2] && !perf_k[3];
                     if (LL[l] == LAYER_FX)                  /* the layer's own control moved */
                         ok &= a1.k[k] == 3;
-                    else if (LL[l] == LAYER_SCL)
-                        ok &= LY_SCL.id[k] == 0xFFu || a1.p[0][LY_SCL.id[k]] != lk_p[0][LY_SCL.id[k]];   /* (KNOB 2..4 free) */
                     else                                    /* (EDIT: EDIT 1's four, the engine's first) */
                         ok &= a1.p[0][P_E0 + k] != lk_p[0][P_E0 + k];
                     runs++;
@@ -9447,7 +9446,7 @@ static void head_state(uint32_t s)
     if (s == HS_BPM_TURN || s == HS_REC_TURN) ui.bpm_t = 40;
     if (s == HS_NOFILE) ui_message(MSG_NOFILE "NO FILE");   /* (an icon-led message: the header keeps it) */
     if (s == HS_REC_LAYER) { song.rec = 1u << song.sel; ui.layer = LAYER_REC; }
-    if (s == HS_LAYER_LOCK) ui.layer = LAYER_SCL;
+    if (s == HS_LAYER_LOCK) ui.layer = LAYER_SAVE;
     if (s == HS_REC_TURN) ui.layer = LAYER_REC;     /* (REC + KNOB 3: the tempo; was GLO + SELECT) */
     if (s == HS_COUNTIN) { cin_total = 4; cin_left = 3; }
     song.g[G_BPM] = s == HS_BPM90 ? 90 : 124;

@@ -554,7 +554,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_ABOUT, S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_UBOOT, S_CALIBRATION, S_SPLASH,
        S_BATT0, S_BATT1, S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME, S_HOME_REC32, S_HOME_SNAKE,
        S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_REVERB, S_REVERB_RESO,
-       S_REC_PEEK, S_REC_UNDO, S_REC_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
+       S_REC_PEEK, S_REC_UNDO, S_REC_EXT, S_SCL_PEEK, S_CPU_PAGE, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
        S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
@@ -588,7 +588,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "confirm_motion", "confirm_erase", "gen", "gen_parts", "about", "about_rec", "about_credits", "about_end", "uboot", "calibration", "splash",
     "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home", "home_rec32", "home_snake",
     "perform_peek", "perform_held", "perform_wait", "perform_harm", "reverb_spring", "reverb_reso",
-    "layer_rec_peek", "layer_rec_undo", "layer_rec_ext", "layer_scl_peek", "layer_scl_active", 
+    "layer_rec_peek", "layer_rec_undo", "layer_rec_ext", "layer_scl_peek", "cpu_page", 
     "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
     "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
@@ -1266,11 +1266,18 @@ static void setup(int s)
     case S_REC_PEEK: go_title("ENV"); ui.layer = LAYER_REC; break;
     case S_REC_UNDO: go_home(); ui.layer = LAYER_REC; undo_ok = 1; ui.hot_col = 0; ui.hot_t = 30; break;
     case S_REC_EXT: go_home(); ui.layer = LAYER_REC; song.g[G_CLOCK] = 1; song.playing = 1; break;
-    case S_SCL_PEEK: go_title("ENV"); ui.layer = LAYER_SCL; break;
-    case S_SCL_ACTIVE: go_home(); ui.layer = LAYER_SCL; TSEL->p[P_ROOT] = 3; TSEL->p[P_SCALE] = 2; ui.hot_col = 1; ui.hot_t = 30; break;
-    case S_LAYER_HINT: go_page(GR_TRK); ui.msg_t = 0; layer_tap(LAYER_SCL); break;
+
+
+    case S_SCL_PEEK: go_title("ENV"); ui.hm = HM_SCL; break;
+    case S_CPU_PAGE: {
+        uint32_t i;
+        go_home(); ui.menu = 3; song.cpu_q8 = 120u * 256u / 100u; load_diag.peak = 91; load_diag.late = 3;
+        for (i = 0; i < CPU_N; i++) cpu_hist[i] = (uint8_t)(20 + (i * 37u) % 70u);
+        break;
+    }
+    case S_LAYER_HINT: go_page(GR_TRK); ui.msg_t = 0; layer_tap(LAYER_SAVE); break;
     /* #83: locked open by a double tap (the lock after the header's name): EDIT and FX */
-    case S_LAYER_LOCK: go_title("ENV"); ui.layer = LAYER_SCL; break;   /* (TONIC: no lock; the map as held) */
+    case S_LAYER_LOCK: go_title("ENV"); ui.layer = LAYER_SAVE; break;   /* (TONIC: no lock; the map as held) */
     case S_LAYER_LOCK_FX: go_title("ENV"); ui.layer = LAYER_FX; break;
     /* Yehnah: the song keys (REC held, G4..F5; SAVE held's until 2026-11-03), section B playing, SONG mode, SONG REC on;
      * then a quick chain being tapped (its STATE) */

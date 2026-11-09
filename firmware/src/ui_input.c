@@ -44,6 +44,7 @@ static uint32_t cur_fam(void) { return SEC_FAM[nav_sec()]; }
 
 /* (0.9.2) a section's button held + SELECT or PRESETS (2026-11-02: nothing but GLO's tempo): the button let go stays
  * there (its tap, its layer: not now) */
+static uint8_t hm_btn;                                   /* the held menu's button (ui_hmenu.c) */
 static uint8_t ly_used;                                  /* the held layer's knobs or keys used: PRESETS stays its */
 static int song_open(uint32_t n);                         /* (song_main.c: SAVE > PROJECT's KNOB 1) */
 static uint8_t pj_btn = 0xFFu;                           /* the button a SELECT combo was made with: no layer while held */
@@ -420,6 +421,8 @@ static void ui_leds(void)
         led_put(nl, panel.btn[B_FX], 1);                /* FX LATCH: lit while an effect or a macro is on */
     if (ui.layer)                                       /* the layer's button breathes while its map is up */
         led_put(nb, panel.btn[layer_btn()], 1);
+    if (ui.hm)                                          /* .. and a held menu's while it is open */
+        led_put(nb, panel.btn[hm_btn], 1);
     led_put(nl, panel.btn[B_REC], (song.rec != 0u || rp_state) && ui.layer != LAYER_REC);   /* (its layer: it breathes;
                                                          * chord-harp fork: a ONE PASS waiting for step 1 lit too) */
     k = oct_leds();
@@ -1460,6 +1463,14 @@ static void edit_param(uint32_t slot, int32_t steps)
         }
         if (slot != 1u)
             return;
+        if (pg->id[1] == G_INFO) {                      /* (2026-11-09) CPU: a turn right opens its page (graph, load figures) */
+            if (steps > 0) {
+                ui.menu = 3;
+                ui.menu_scroll = 0;
+                ui.force = 1;
+            }
+            return;
+        }
         if (IS_MROW(pg->id[1]) && pg->id[1] - ID_MENU >= MI_VALUES && steps <= 0)
             return;                                     /* (an action: a turn right asks, left nothing) */
     }
@@ -2417,19 +2428,6 @@ static void ui_input_frame(void)
                 scrn.idle = fm1_ms;
             } else if (kind == CF_ABOUT) {              /* .. the MENU's document; OCT- back to the page */
                 ui.menu = 2, ui.menu_scroll = 0, about_glo = 1;
-            } else if (kind == CF_INIT_SOUND) {         /* the EDIT held menu's INIT: the engine's defaults and first preset */
-                if (!chain_busy()) {
-                    set_engine(TSEL->eng_req);
-                    ui_message("SOUND INIT");
-                }
-            } else if (kind == CF_RECALL_SOUND) {       /* .. RECALL: the sound as the section playing stored it */
-                int sl = project_recall_slot();
-                if (chain_busy())
-                    ui_message("STOP TO EDIT");
-                else if (sl < 0 || project_recall_sound(song.sel, (uint32_t)sl))
-                    ui_message("NOTHING STORED");
-                else
-                    ui_message("SOUND RECALLED");
             } else if (kind == CF_INIT_SYS) {           /* (0.6.40) SAVE > TOOLS 5: everything as at power-on */
                 if (!chain_busy()) {
                     undo_mark();

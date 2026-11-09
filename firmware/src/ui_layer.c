@@ -49,20 +49,9 @@ typedef struct {
 static const layer_t LAYERS[LAYER_N] = {
     {0, 0, 0, "", {{0, 0}, {0, 0}, {0, 0}}},
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
-    {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_K14, "STRUM"}, {KC_SCL, "DONE"}}},
     {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
     {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SET", {{KC_KEYS, "CLEAR ERASE NEW"}, {0, 0}, {0, 0}}},   /* (2026-11-06) the generic save tools */
 };
-/* SCL's knob: STRUM (2026-10-27: the track's, every chord mode's: CHORD HARP OMNI PROG share P_CSTR) (cur_page()
- * while the layer edits or draws them: page_over) */
-static const page_t LY_SCL = {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_CSTR, 0xFF, 0xFF, 0xFF}};
-/* SCL's keys: C4..B4 (white 4..10, black 3..7) a pitch class, the rest -1 */
-static int scl_pc(uint32_t b, uint32_t p)
-{
-    static const uint8_t WPC[7] = {0, 2, 4, 5, 7, 9, 11}, BPC[5] = {1, 3, 6, 8, 10};
-    return b ? (p - 3u < 5u ? BPC[p - 3u] : -1) : (p - 4u < 7u ? WPC[p - 4u] : -1);
-}
-static const page_t *ly_page(uint32_t l) { return l == LAYER_SCL ? &LY_SCL : 0; }
 #define LY_OPEN 2u                     /* ui.ly_t0: the map opened (no tap any more) */
 #define LY_COMBO 4u                    /* .. by a combo */
 #define LY_DEAD 8u                     /* .. pressed where there is no layer: does nothing */
@@ -90,8 +79,7 @@ static uint32_t layer_bits(void)
 {
     uint32_t l, m = 0;
     for (l = LAYER_FX; l < LAYER_N; l++)
-        if (l != LAYER_SCL)                             /* (SCL held is a menu now: ui_hmenu.c) */
-            m |= ly_bit(l);
+        m |= ly_bit(l);
     return m;
 }
 static uint32_t layer_btn(void) { return LAYERS[ui.layer % LAYER_N].btn; }
@@ -143,7 +131,7 @@ static void layer_arm(uint32_t pressed, uint32_t now)
         return;
     }
     for (l = LAYER_FX; l < LAYER_N; l++)
-        if (l != LAYER_SCL && (pressed & ly_bit(l))) {
+        if (pressed & ly_bit(l)) {
             lys.used = 0;
             ui.ly = (uint8_t)l;
             ui.ly_t0 = (now & ~15u) | 1u | (layer_allowed() ? 0u : LY_DEAD);
@@ -557,9 +545,7 @@ static void session_dice(uint32_t seed)
 static void layer_key(uint32_t l, uint32_t k)
 {
     uint32_t p = key_place(k);
-    if (l == LAYER_SCL && scl_pc((uint32_t)key_black(k), p) >= 0) {   /* C4..B4: ROOT */
-        TSEL->p[P_ROOT] = (int16_t)scl_pc((uint32_t)key_black(k), p);
-    } else if (l == LAYER_REC) {
+    if (l == LAYER_REC) {
         if (!key_black(k) && p <= RK_NAME)
             rec_key(p);
     } else if (l == LAYER_SAVE) {
@@ -591,17 +577,6 @@ static void layer_knob(uint32_t k, int32_t s)
         if (k == 1u && s)
             rec_mode_set(!rec_loop);
     } else if (l == LAYER_SAVE) {                       /* (no knobs) */
-    } else if (l) {                                     /* the page's knobs, wherever the page is */
-        uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
-        memcpy(nm, ui.nmem, sizeof nm);                 /* (the sections' memories: not this borrowed page's) */
-        ui.home = 0;
-        ui.page = (uint8_t)page_first(LAYERS[l].fam);
-        page_over = ly_page(l);
-        edit_param(k, s);
-        page_over = 0;
-        ui.home = h;
-        ui.page = pg;
-        memcpy(ui.nmem, nm, sizeof nm);
     }
 }
 
@@ -648,10 +623,6 @@ static uint32_t layer_leds(uint32_t *br)
             e = perf_key(k);
             can = e < PF_N && ((ok >> e) & 1u);
             on = can && ((held >> e) & 1u);
-        } else if (l == LAYER_SCL && scl_pc(b, p) >= 0) {   /* the root lit, the scale's notes breathe */
-            e = ((uint32_t)scl_pc(b, p) + 12u - (uint32_t)clamp(TSEL->p[P_ROOT], 0, 11)) % 12u;
-            on = e == 0u;
-            can = (scale_mask(TSEL) >> e) & 1u;
         } else if (l == LAYER_SAVE && !b && p < 10u && SK_NAME[p][0]) {   /* the tools that would do something breathe */
             can = (uint32_t)sv_ok(p);
         } else if (l == LAYER_REC && !b && p >= RK_PLAY && p <= RK_NAME) {   /* the section playing lit, the saved
@@ -708,16 +679,6 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         str_cpy(nm, PF_NAME[p], 12);
         return !((perf_avail() >> e) & 1u) ? LS_DIM : !((held >> e) & 1u) ? LS_OFF :
                ((perf_act >> e) & 1u) || ((PF_MIDI >> e) & 1u) ? LS_HELD : LS_WAIT;
-    }
-    if (l == LAYER_SCL) {                               /* C4..B4 their notes: the root lit, the scale's plain, the rest dim */
-        static const char NN[12][3] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-        int n = scl_pc((uint32_t)blk, p);
-        uint32_t deg;
-        if (n < 0)
-            return LS_OFF;
-        str_cpy(nm, NN[n], 12);
-        deg = ((uint32_t)n + 12u - (uint32_t)clamp(TSEL->p[P_ROOT], 0, 11)) % 12u;
-        return !deg ? LS_SEL : (scale_mask(TSEL) >> deg) & 1u ? LS_OFF : LS_DIM;
     }
     if (l == LAYER_SAVE) {
         if (blk || p >= 10u || !SK_NAME[p][0])
@@ -860,19 +821,8 @@ static void ly_own_cards(void)                          /* FX REC: their own fou
 }
 static void layer_cards(uint32_t l)
 {
-    if (l == LAYER_FX || l == LAYER_REC || l == LAYER_SAVE) {
+    {
         knobs_of(ly_own_cards);
-    } else {                                            /* the page's four (SCL: LY_SCL) */
-        uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
-        memcpy(nm, ui.nmem, sizeof nm);
-        ui.home = 0;
-        ui.page = (uint8_t)page_first(LAYERS[l].fam);
-        page_over = ly_page(l);
-        draw_columns();
-        page_over = 0;
-        ui.home = h;
-        ui.page = pg;
-        memcpy(ui.nmem, nm, sizeof nm);
     }
 }
 
@@ -906,7 +856,7 @@ static void lst_chip(const char *a, const char *v, int on)
 }
 static void layer_state(uint32_t l)
 {
-    static const char *const LN[LAYER_N] = {"", "FX", "SCL", "REC", "SAVE"};
+    static const char *const LN[LAYER_N] = {"", "FX", "REC", "SAVE"};
     const khint_t *ft = layer_foot(l);
     uint32_t k, e;
     char b[48], v[8];
@@ -980,8 +930,6 @@ static void draw_layer(void)
     layer_cards(l);
     if (l == LAYER_FX)
         sig += (perf_kill ? 0u : perf_held | perf_latched) * 31u + perf_latch_on * 11u + perf_act * 131u + perf_avail() * 7u;
-    else if (l == LAYER_SCL)
-        sig += (uint32_t)TSEL->p[P_ROOT] * 31u + (uint32_t)TSEL->p[P_SCALE] * 373u;
     else if (l == LAYER_REC)
         sig += (uint32_t)ui_rec_prefs * 31u + (uint32_t)chain_busy() * 3u + (uint32_t)rec_clearable() * 5u + song.sel * 977u +
                rec_loop * 7919u + (uint32_t)song.g[G_BPM] * 65537u + undo_ok * 104729u + (uint32_t)song.g[G_CLOCK] * 13u +
@@ -992,9 +940,6 @@ static void draw_layer(void)
     else if (l == LAYER_SAVE)
         sig += (uint32_t)chain_busy() * 3u + song.playing * 5u + chain_config.count * 7u + ui.song_row * 11u + (uint32_t)rec_clearable() * 13u +
                (uint32_t)song.g[G_SLOT] * 17u + (user_of(TSEL) < UP_SLOTS) * 19u + up_gen * 37u + (uint32_t)project_used((uint32_t)song.g[G_SLOT] - 1u) * 23u;
-    else
-        sig += snd_id() * 31u + (uint32_t)chain_busy() * 3u + (uint32_t)(project_recall_slot() + 1) * 5u + dx_mute * 7919u +
-               (uint32_t)drum_track(TSEL) * 11u + up_gen * 101u;
     sig += (ui.lylv & 1u) * 0x9E3779B1u + (ui.lylv & 1u ? str_hash(7u, ly_card[0].v) + str_hash(9u, ly_card[1].v) * 3u +
                                      str_hash(11u, ly_card[2].v) * 5u + str_hash(13u, ly_card[3].v) * 7u : 0u);
     if (ui.force || sig != ui.layer_sig) {

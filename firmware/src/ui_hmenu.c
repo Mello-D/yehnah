@@ -2,13 +2,13 @@
 /* (2026-11-09, held menus) SCL, EDIT and GLO held past HOLD open a list menu (the GLO lists' look: names left, the row's
  * choices or its range right) that STAYS open after the button is let go. Left with OCT- or a tap of the button (any other
  * button's tap closes it and acts). The piano keys play as normal: no key shortcuts here.
- *   SCL   ROOT, SCALE, QUANT, ALL TR, STRUM
- *   EDIT  the sound's named parameters (E1..E8), INIT, RECALL
+ *   SCL   STRUM (the rest is SCL's page's)
+ *   EDIT  the sound's named parameters (E1..E8)
  *   GLO   the four GLO lists (MAIN DEVICE CONTROL SYSTEM): KNOB 3 picks the list, the rows are the GLO pages' own
  * KNOB 1 the row, KNOB 2 its value (an action: a turn right asks). A tap of the button is still its page (ui_input.c).
  * Included after ui_menu.c (the list's drawing) and ui_input.c (edit_param). */
 enum { HM_NONE, HM_SCL, HM_EDIT, HM_GLO };
-enum { HR_TRK, HR_ALLTR, HR_GLB, HR_INIT, HR_RECALL };
+enum { HR_TRK, HR_ALLTR, HR_GLB };
 typedef struct {
     const char *nm;
     uint16_t id;                       /* HR_TRK: the track parameter; HR_GLB: the list row (SETS) */
@@ -24,10 +24,7 @@ static uint32_t hm_rows(hrow_t *r)
 {
     uint32_t n = 0, k;
     if (ui.hm == HM_SCL) {
-        static const hrow_t S[5] = {{"ROOT", P_ROOT, HR_TRK}, {"SCALE", P_SCALE, HR_TRK}, {"QUANT", P_QUANT, HR_TRK},
-                                    {"ALL TR", 0, HR_ALLTR}, {"STRUM", P_CSTR, HR_TRK}};
-        for (; n < 5u; n++)
-            r[n] = S[n];
+        r[n].nm = "STRUM"; r[n].id = P_CSTR; r[n++].kind = HR_TRK;     /* (ROOT SCALE QUANT ALL TR are SCL's page's) */
     } else if (ui.hm == HM_EDIT) {
         for (k = 0; k < 8u; k++) {
             const param_desc_t *d = track_desc(TSEL, P_E0 + k);
@@ -37,8 +34,6 @@ static uint32_t hm_rows(hrow_t *r)
                 r[n++].kind = HR_TRK;
             }
         }
-        r[n].nm = "INIT"; r[n].id = 0; r[n++].kind = HR_INIT;
-        r[n].nm = "RECALL"; r[n].id = 0; r[n++].kind = HR_RECALL;
     } else if (ui.hm == HM_GLO) {
         uint32_t ln = sets_n(hm_list & 3u);
         for (; n < ln; n++) {
@@ -90,11 +85,6 @@ static void hm_detail(const hrow_t *r)
     const char *unit = "";
     if (r->kind == HR_GLB) {
         sets_detail(r->id);
-        return;
-    }
-    if (r->kind == HR_INIT || r->kind == HR_RECALL) {
-        cv_text_in(SETS_RX, 56, SETS_RW, &AF_S, "KNOB 2 RIGHT", T_THEME, T_SURF);
-        cv_text_in(SETS_RX, 78, SETS_RW, &AF_S, r->kind == HR_INIT ? "INIT THE SOUND" : "RECALL THE SOUND", T_MID, T_SURF);
         return;
     }
     if ((d = hm_desc(r, &vp)) == 0 || !vp)
@@ -159,8 +149,8 @@ static void hm_draw(void)
         hm_valstr(&r[k], v);
         sig = sig * 31u + str_hash(7u, v) + (uint32_t)(uintptr_t)r[k].nm * 3u;
     }
-    if (ui.force)
-        draw_frame();
+    if (ui.force)                                       /* (not draw_frame: it clears rows inside this panel: a black bar flickered) */
+        lcd_clear(0, graph_y() + graph_h(), 240, TF_PG_Y - graph_y() - graph_h(), T_BG);
     draw_head();
     if (!ui.force && sig == hm_sig)
         return;
@@ -189,6 +179,7 @@ static void hm_close(void)
 }
 static void hm_tick(void)
 {
+    cpu_sample();
     if (ui.hm && (ui.menu || ui.uboot || name_on()))
         hm_close();
 }
@@ -245,15 +236,6 @@ static void hm_knob(uint32_t k, int32_t s)
         ui.page = sp;
         break;
     }
-    case HR_INIT:
-    case HR_RECALL:
-        if (s > 0) {
-            if (chain_busy())
-                ui_message("STOP TO EDIT");
-            else
-                confirm_open(r[cur].kind == HR_INIT ? CF_INIT_SOUND : CF_RECALL_SOUND, song.sel);
-        }
-        break;
     default:
         d = hm_desc(&r[cur], &vp);
         if (!d || !vp || d->max == d->min)

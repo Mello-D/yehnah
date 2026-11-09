@@ -130,21 +130,7 @@ static int32_t menu_document(int32_t y, int draw)
     y = menu_text("cafecito.app/juanjiant (Argentina)", y, T_MID, draw);
     y = menu_text("Free software, GPL-3.0-only: the full notices and the sources it builds on travel with the source.", y + 4, T_TEXT, draw);
     y -= 216;
-    {   /* (0.6.17) the audio's load since power-on (voice.c load_diag): to tell what happened when it clicked */
-        char b[64], n[12];
-        y = menu_text("AUDIO LOAD", y + 216, T_THEME, draw);
-        str_cpy(b, "NOW ", sizeof b); fmt_int(n, (int32_t)((song.cpu_q8 * 100u) >> 8)); str_cpy(b + str_len(b), n, 8);
-        str_cpy(b + str_len(b), "%  PEAK ", 10); fmt_int(n, (int32_t)load_diag.peak); str_cpy(b + str_len(b), n, 8);
-        str_cpy(b + str_len(b), "%", 2);
-        y = menu_text(b, y, T_TEXT, draw);
-        str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
-        str_cpy(b + str_len(b), " (PLAYING ", 12); fmt_int(n, (int32_t)load_diag.late_play);   /* (chord-harp fork) */
-        str_cpy(b + str_len(b), n, 12); str_cpy(b + str_len(b), ")", 2);
-        str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
-        y = menu_text(b, y, T_TEXT, draw);
-        y = menu_text(mc_status(), y, T_TEXT, draw) - 216 + 8;   /* (0.6.71) the second core (fx.c) */
-    }
-    y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
+    y = menu_text("CREDITS", y + 216, T_THEME, draw)  + 8;
     for (i = 0; i < NELEM(MENU_CREDITS); i++) {
         const menu_credit_t *c = &MENU_CREDITS[i];
         const char *text = c->text;
@@ -362,6 +348,51 @@ static void graph_sets(void)
     cv_rect(SETS_RX - 4, 8, 1, (int32_t)graph_h() - 16, T_LINE);
     sets_detail(SETS[ls][sets_cur[ls] % (n ? n : 1u)]);
 }
+/* (2026-11-09) GLO > SYSTEM > CPU opens this (ui.menu 3): the load as a graph over the last ~15 s, the percentage, and the audio load
+ * figures that were on ABOUT (voice.c load_diag, fx.c mc_status). The history is sampled all the time (cpu_sample, every input pass) */
+#define CPU_N 58
+static uint8_t cpu_hist[CPU_N];
+static uint32_t cpu_ms;
+static void cpu_sample(void)
+{
+    uint32_t i;
+    if (fm1_ms - cpu_ms < 250u)
+        return;
+    cpu_ms = fm1_ms;
+    for (i = 0; i + 1u < CPU_N; i++)
+        cpu_hist[i] = cpu_hist[i + 1u];
+    cpu_hist[CPU_N - 1u] = (uint8_t)clamp((int32_t)((song.cpu_q8 * 100u) >> 8), 0, 100);
+}
+static void cpu_panel(void)
+{
+    char b[64], n[12];
+    uint32_t i;
+    int32_t gy = 44, gh = 80;
+    cv_text(6, 6, &AF_S, "CPU", T_THEME);
+    fmt_int(n, (int32_t)((song.cpu_q8 * 100u) >> 8));
+    str_cpy(n + str_len(n), " %", 4);
+    cv_text_r(232, 4, &AF_M, n, T_TEXT, T_BG);
+    cv_rrect(4, gy - 4, 232, gh + 8, 4, T_SURF, T_BG);
+    for (i = 1; i < 4u; i++)                            /* 25 / 50 / 75 % */
+        cv_rect(8, gy + gh - (int32_t)i * gh / 4, 224, 1, T_LINE);
+    for (i = 0; i < CPU_N; i++) {
+        int32_t h = (int32_t)cpu_hist[i] * gh / 100;
+        if (h < 1 && cpu_hist[i])
+            h = 1;
+        cv_rect(8 + (int32_t)i * 224 / CPU_N, gy + gh - h, 224 / CPU_N - 1, h, cpu_hist[i] > 85u ? T_REC : T_THEME);
+    }
+    cv_text(6, gy + gh + 14, &AF_X, "100 / 50 / 0 %", T_DIM);
+    str_cpy(b, "NOW ", sizeof b); str_cpy(b + str_len(b), n, 12);
+    str_cpy(b + str_len(b), "   PEAK ", 10); fmt_int(n, (int32_t)load_diag.peak); str_cpy(b + str_len(b), n, 8);
+    str_cpy(b + str_len(b), " %", 3);
+    cv_text(6, gy + gh + 34, &AF_S, b, T_TEXT);
+    str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
+    str_cpy(b + str_len(b), " (PLAYING ", 12); fmt_int(n, (int32_t)load_diag.late_play);
+    str_cpy(b + str_len(b), n, 12); str_cpy(b + str_len(b), ")", 2);
+    str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
+    cv_text(6, gy + gh + 52, &AF_S, b, T_TEXT);
+    cv_clip_text(6, gy + gh + 70, &AF_S, mc_status(), T_TEXT, T_BG, 228);
+}
 static void confirm_open(uint32_t kind, uint32_t trk);   /* (0.6.58) INIT SYSTEM: ui_input.c */
 static void draw_menu(void)
 {
@@ -372,14 +403,14 @@ static void draw_menu(void)
     sig += ui.menu * 7u + settings.palette * 1009u + settings.lowcut * 7919u + settings_hold * 3511u +
           settings_leds * 6151u + ui_prefs * 4099u + song.rec * 65537u + song.sel * 13u +
           ui_rec_prefs * 92821u + ui_scr * 131071u +   /* (#157: SCREEN OFF's value redraws its row) */
-          (ui.menu == 2 ? ui.menu_scroll * 48611u : 0u) +
-          (ui.menu == 2 ? (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u + load_diag.late * 1931u + load_diag.late_play * 1777u +
+          (ui.menu == 2 ? ui.menu_scroll * 48611u : 0u) + (ui.menu == 3 ? cpu_ms * 17u : 0u) +
+          (ui.menu >= 2 ? (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u + load_diag.late * 1931u + load_diag.late_play * 1777u +
                           load_diag.shed * 2671u : 0u);   /* (0.6.19) ABOUT's AUDIO LOAD: live (NOW in ~3 % steps) */
     draw_head();                                      /* (0.8.5: the pages' header, "MENU . DISPLAY") */
     if (!ui.force && sig == ui.menu_sig)
         return;
     ui.menu_sig = sig;
-    if (ui.menu >= 2) {                                 /* (2026-11-02: the MENU's only view left, GLO > TOOLS' ABOUT) */
+    if (ui.menu >= 2) {                                 /* (2026-11-02: the MENU's only view left, GLO > TOOLS' ABOUT; 3: the CPU page) */
         uint32_t pass;
         int32_t scroll = ui.menu_scroll, max = menu_scroll_max();
         int32_t thumb = MENU_DOC_H * MENU_DOC_H / (max + MENU_DOC_H);
@@ -388,17 +419,22 @@ static void draw_menu(void)
             cv_begin(240, pass ? MENU_DOC_H - 124u : 124u, T_BG);
             cv_oy = pass ? -124 : 0;
             cv_scroll = 1;
-            menu_document(-scroll, 1);
+            if (ui.menu == 3)
+                cpu_panel();
+            else
+                menu_document(-scroll, 1);
             cv_scroll = 0;
-            cv_rrect(235, 2, 3, MENU_DOC_H - 4, 1, T_LINE, T_BG);           /* the scroll bar */
-            cv_rrect(235, 2 + (max ? scroll * (MENU_DOC_H - 4 - thumb) / max : 0), 3, thumb, 1, T_MID, T_LINE);
+            if (ui.menu == 2) {
+                cv_rrect(235, 2, 3, MENU_DOC_H - 4, 1, T_LINE, T_BG);           /* the scroll bar */
+                cv_rrect(235, 2 + (max ? scroll * (MENU_DOC_H - 4 - thumb) / max : 0), 3, thumb, 1, T_MID, T_LINE);
+            }
             cv_oy = 0;
             cv_blit(0, H_HEAD + pass * 124u);
         }
         cv_begin(240, 240 - (H_HEAD + MENU_DOC_H), T_BG);
         {
             static const khint_t KH[2] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}};
-            cv_key_row(8, 232, 4, KH, 2, 3u, T_BG);
+            cv_key_row(8, 232, 4, KH + (ui.menu == 3), 2u - (ui.menu == 3), 3u, T_BG);
         }
         cv_blit(0, H_HEAD + MENU_DOC_H);
     }

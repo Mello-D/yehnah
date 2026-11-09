@@ -223,7 +223,7 @@ static uint16_t head_title(char *b)
     int glob = !ui.home && !ui.layer && (pg->graph == GR_SLOTS || pg->graph == GR_SONG || pg->graph == GR_TOOLS || pg->graph == GR_ERASE ||
                                          pg->fam == FAM_GLO || pg->fam == FAM_SAVE);
     if (ui.menu) {                                      /* ABOUT (GLO > TOOLS) */
-        str_cpy(b, "ABOUT / CREDITS", 40);
+        str_cpy(b, ui.menu == 3 ? "GLO / CPU" : "ABOUT / CREDITS", 40);
         return T_MID;
     }
     b[0] = 'T';
@@ -1761,16 +1761,6 @@ static void confirm_text(char *a, char *b)
         str_cpy(a, "BACK TO BEFORE MUTATE?", 24);
         str_cpy(b, "T1: SOUND AND PATTERN", 24);
         b[1] = (char)('1' + k % NTRK);
-        break;
-    case CF_INIT_SOUND:
-        str_cpy(a, "INIT SOUND T1?", 24);
-        a[12] = (char)('1' + k % NTRK);
-        str_cpy(b, "THE STEPS STAY", 24);
-        break;
-    case CF_RECALL_SOUND:
-        str_cpy(a, "RECALL SOUND T1?", 24);
-        a[14] = (char)('1' + k % NTRK);
-        str_cpy(b, "AS THE SECTION STORED IT", 24);
         break;
     case CF_CALIB:                                   /* (2026-11-02) GLO > TOOLS */
         str_cpy(a, "OPEN CALIBRATION?", 24);
