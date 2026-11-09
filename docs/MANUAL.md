@@ -452,7 +452,7 @@ them page by page, a **SEQ** tap jumps to the next group.
 | PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | BAR | BAR (0.9.2) | BAR (the bar you edit) | LEN | — | — |
-| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps) | MOVE (the note and its TIEs a step left / right) |
+| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps; turned on past another note it becomes a **HOLD**: the note rings for that many steps, to the pattern's end at most, with the other notes playing over it; back to 1 step: off. A later note of the same pitch ends a held note; it also takes a voice) | MOVE (the note and its TIEs a step left / right) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | STEP | FLAG 1 | FLAG 2 | VELOCITY (1 … 127) |
 

@@ -2188,6 +2188,26 @@ static void seq_release(track_t *t)
     t->ss_n = t->ss_i = 0;                          /* (0.6.84) a strum still coming in: never */
 }
 
+/* (2026-11-10) CP_HOLD: the notes a HOLD step sounds are taken out of seq_notes (the gate and the next step's release leave
+ * them), kept in hold_notes until the pattern comes round to step 1, the next HOLD step or STOP */
+static void seq_unhold(track_t *t)
+{
+    uint32_t i;
+    for (i = 0; i < t->hold_n; i++)
+        seq_note_off(t, t->hold_notes[i]);
+    t->hold_n = t->hold_left = 0;
+}
+static void seq_to_hold(track_t *t, uint32_t steps)
+{
+    uint32_t i;
+    seq_unhold(t);
+    for (i = 0; i < t->seq_n && i < sizeof t->hold_notes; i++)
+        t->hold_notes[t->hold_n++] = t->seq_notes[i];
+    t->seq_n = 0;
+    t->seq_hold = 0;
+    t->hold_left = (uint8_t)steps;                   /* (the steps it rings: seq_tick counts them down; 0: to the pass's end) */
+}
+
 static void seq_stop(void)
 {
     uint32_t i;
@@ -2208,6 +2228,7 @@ static void seq_stop(void)
                 arp_off(&trk[i]);
     for (i = 0; i < NTRK; i++) {
         seq_release(&trk[i]);
+        seq_unhold(&trk[i]);
         trk[i].rh_n = 0;                           /* a recorded note held over the stop: as far as it got */
         trk[i].rat_left = 0;
         trk[i].arp_from = 0;
@@ -2378,6 +2399,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
 {
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
     uint32_t vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
+    uint8_t ha = 0;                                 /* (HOLD's steps) */
     uint32_t slide_in = t->seq_hold && t->seq_n && !(skip & SEQ_REP);
     uint32_t len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
     uint32_t next_tie = seq_steps(t)[seq_src(t, (t->seq_idx + 1u) % len)].time == ST_TIE;
@@ -2559,6 +2581,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
                 t->seq_notes[t->seq_n++] = nn[i];
         t->seq_off = gate;
         t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie || chord_auto(t, len);
+        if (!kit && !arp && hits == 1u && CP_HAS(t, s, CP_HOLD, &ha))
+            seq_to_hold(t, ha);
         return;
     }
     t->slide_glide = (uint8_t)slide_in;
@@ -2658,6 +2682,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     t->seq_off = gate;
     t->seq_hold = hits == 1u && ((s->flags & SF_SLIDE) != 0 || next_tie ||   /* next step a TIE: keep the notes to it */
                                  (!kit && !arp && chord_auto(t, len)));   /* (0.6.81) GLIDE on POLY: to the next chord */
+    if (!kit && !arp && hits == 1u && CP_HAS(t, s, CP_HOLD, &ha))   /* (2026-11-10) HOLD: the notes ring on */
+        seq_to_hold(t, ha);
 }
 
 /* RATCH: the next part of the playing step once the sequencer is that far into it (seq_step played the first).
@@ -2794,10 +2820,13 @@ static void seq_tick(track_t *t, uint32_t n)
         } else {
             t->seq_idx = (uint16_t)((t->seq_idx + 1u) % (len ? len : 1u));
             if (!t->seq_idx && !start) {                /* (0.6.62) the pattern wrapped by itself: a new pass */
+                seq_unhold(t);                          /* (2026-11-10) HOLD ends with the pass */
                 fl_reset((uint32_t)(t - trk));
                 fl_pass[(t - trk) % NTRK]++;
             }
         }
+        if (t->hold_left && !start && !--t->hold_left)
+            seq_unhold(t);                              /* (2026-11-10) HOLD: its steps are over */
         t->jump_to = 0;
         if (start) t->rev = 0;
         if (!t->seq_idx) t->tonal = 0;                  /* (0.6.42) TONAL lasts to the loop's end */

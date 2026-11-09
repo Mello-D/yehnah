@@ -1379,13 +1379,16 @@ static void draw_cards(void)
         {
             char sn[8], sl[8], tv[8];
             uint32_t nl = st->time == ST_NOTE && st->n ? note_len(TSEL, ui.cursor, (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)) : 1u;
+            uint32_t hl = st->time == ST_NOTE && st->n && (uint32_t)ui.cursor < (uint32_t)TSEL->p[P_SLEN] ?
+                          hold_len(st, (uint32_t)TSEL->p[P_SLEN] - ui.cursor) : 0u;   /* (a HOLD's steps) */
+            if (hl) nl = hl;
             fmt_int(sn, (int32_t)ui.cursor + 1);
             str_cpy(sl, "/", 8);
             fmt_int(sl + 1, TSEL->p[P_SLEN]);
             fmt_int(tv, (int32_t)nl);                      /* (2026-11-10) the note's length in steps */
             draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
             draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-            draw_column(2, "LENGTH", tv, "ST", step_on(st) ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+            draw_column(2, "LENGTH", tv, hl ? "HOLD" : "ST", step_on(st) ? VAL(2u) : T_DIM, -1, ICON_AUTO);
             draw_column(3, "MOVE", step_on(st) && !st->hit ? sn : "--", step_on(st) && !st->hit ? "<>" : "", step_on(st) ? VAL(3u) : T_DIM, -1, ICON_AUTO);
         }
         return;

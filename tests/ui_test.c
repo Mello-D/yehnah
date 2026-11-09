@@ -7926,8 +7926,11 @@ static int test_note_page(void)
     t->step[1].time = ST_NOTE; t->step[1].n = 1; t->step[1].note[0] = 65;   /* F4 beside the chord */
     go_title("STEP"); frame();
     cursor_set(0);
-    turn(EN_K3, 1); turn(EN_K3, 1);                     /* LENGTH: blocked by F4 */
-    ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST;
+    turn(EN_K3, 1); turn(EN_K3, 1);                     /* LENGTH past F4: a HOLD of 3 steps (F4 stays whole) */
+    ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST && t->step[0].comp2 == CP_HOLD &&
+         t->step[0].carg2 == 3u && t->step[1].note[0] == 65u;
+    turn(EN_K3, -2);                                    /* .. back to one step: no HOLD */
+    ok &= t->step[0].comp2 == CP_NONE;
     t->step[1].time = ST_REST; t->step[1].n = 0;
     turn(EN_K3, 1); turn(EN_K3, 1);                     /* LENGTH 3: two TIEs */
     ok &= t->step[1].time == ST_TIE && t->step[2].time == ST_TIE && t->step[3].time != ST_TIE;
@@ -7967,15 +7970,19 @@ static int test_step_len(void)
     bad += check("STEP KNOB 3: right lengthens a recorded chord (TIEs after it), its notes kept", ok);
     turn(EN_K3, 1);
     ui.msg[0] = 0;
-    turn(EN_K3, 1);                                     /* step 7 holds a note: stopped there */
-    ok = note_len(t, 2, 16) == 4u && t->step[6].time == ST_NOTE && t->step[6].note[0] == 62u && str_eq(ui.msg, "NEXT NOTE");
+    turn(EN_K3, 1);                                     /* step 7 holds a note: the note is a HOLD over it (2026-11-10) */
+    ok = t->step[2].comp2 == CP_HOLD && t->step[2].carg2 == 5u && t->step[3].time == ST_REST && t->step[5].time == ST_REST &&
+         t->step[6].time == ST_NOTE && t->step[6].note[0] == 62u && str_eq(ui.msg, "HOLD 5");
     turn(EN_K3, 5);
-    ok &= note_len(t, 2, 16) == 4u && t->step[6].time == ST_NOTE && t->step[6].n == 1u;
-    bad += check("STEP KNOB 3: the next note stops the length (NEXT NOTE), never overwritten", ok);
-    turn(EN_K3, -1);
-    ok = note_len(t, 2, 16) == 3u && t->step[5].time == ST_REST;
+    ok &= t->step[2].carg2 == 10u && t->step[6].time == ST_NOTE && t->step[6].n == 1u;
+    turn(EN_K3, 20);                                    /* (to the pattern's end: 14 steps from step 3) */
+    ok &= t->step[2].carg2 == 14u;
+    bad += check("STEP KNOB 3: past another note the length becomes a HOLD (steps, to the pattern's end), the note is never overwritten", ok);
+    turn(EN_K3, -5);
+    ok = t->step[2].carg2 == 9u && t->step[2].comp2 == CP_HOLD;
     turn(EN_K3, -8);                                    /* a fast turn: down to x1, not past it */
-    ok &= note_len(t, 2, 16) == 1u && t->step[3].time == ST_REST && t->step[4].time == ST_REST && t->step[2].time == ST_NOTE;
+    ok &= note_len(t, 2, 16) == 1u && t->step[3].time == ST_REST && t->step[4].time == ST_REST && t->step[2].time == ST_NOTE &&
+          t->step[2].comp2 == CP_NONE;                  /* (a HOLD back to one step: no HOLD) */
     turn(EN_K3, -1); turn(EN_K3, -1);                   /* (2026-11-10: LENGTH only; never a TIE or a REST in place of the note) */
     ok &= t->step[2].time == ST_NOTE && t->step[2].n == 3u && note_len(t, 2, 16) == 1u;
     turn(EN_K3, 1);

@@ -538,7 +538,9 @@ static const uint8_t CT_DIVS[CT_NDIV] = {0, 2, 3, 4, 6, 8};
  * x2..x4; 0.6.82: .. x8); PULSE: its notes again on the empty steps after it (carg 0..3: every 1..4); JUMP: then step carg + 1;
  * REV: back from here to step 1 (ping-pong); FILL: only while FX is held; KILL: what the track sounds cut first */
 enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, CP_BEND, CP_ECHO, CP_PULSE, CP_JUMP,
-       CP_REV, CP_FILL, CP_KILL, CP_WALK, CP_CLIMB, CP_TOUCH, CP_CHORD, CP_N };
+       CP_REV, CP_FILL, CP_KILL, CP_WALK, CP_CLIMB, CP_TOUCH, CP_CHORD, CP_HOLD, CP_N };
+/* (2026-11-10) HOLD: a NOTE step's notes are not ended by its gate or by the steps after it: they ring for carg steps (the length turned
+ * past another note, ui_input.c step_edit; 0: until the pattern comes round to step 1), to the next HOLD step or STOP, the steps after it playing over them (seq.c seq_to_hold; on a kit or a ratchet: nothing) */
 /* (chord-harp fork) CHORD: the step plays a chord of SCL > CHORD HARP's sets whole from its first note, the chord's
  * root (seq.c step_notes; its other notes over it); carg the chord, set * 12 + its place (0..191), an OMNI chord 192 +
  * its type * 12 + its pitch class (..239, harp.c hc_chord). What a HARP chord
@@ -562,9 +564,9 @@ enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, C
 static const uint8_t CP_WRATES[CP_NWRATE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16};
 static const uint8_t CP_WDEGS[4] = {3, 5, 7, 12};
 /* the range of carg each component's KNOB 3 turns (ARP: KNOB 3 / 4 their own; WALK CLIMB: theirs) */
-static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0, 0, 0, 2, 239};
-static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0, 0x40, 0x00, 0, 0};
-static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0, 0, 0, 2, 239, 0};
+static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0, 0x40, 0x00, 0, 0, 0};
+static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #define CP_ORD(a) ((uint32_t)(a) & 3u)            /* UP DOWN UP-DN RND */
 /* (0.6.62) JUMP: its step (bits 0-5) and TIMES (bits 6-7); REV: TIMES (bits 0-1). TIMES: ALWAYS, x1 (once a pass of
  * the pattern, then it plays on), x2, 1:2 (once, every other pass). 0, ALWAYS: as a JUMP / REV of before (seq.c fl_ok) */
@@ -666,6 +668,7 @@ typedef struct track {
     uint16_t seq_idx;
     uint8_t seq_notes[4 + NLANE];   /* sounding seq notes (the step's notes, then its hits) */
     uint8_t seq_n;
+    uint8_t hold_n, hold_left, hold_notes[8];   /* (2026-11-10) CP_HOLD: the notes ringing over the steps (seq.c seq_to_hold) */
     uint8_t seq_hold;            /* last step slides: keep the notes until the next step */
     uint8_t slide_glide;         /* next legato note glides (slide) */
     uint8_t rat_left;            /* RATCH: repeats of the playing step still to come (seq.c seq_ratchet) */

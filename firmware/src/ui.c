@@ -717,7 +717,7 @@ static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)
 }
 
 enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
-       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_TOUCH, COMP_CHORD, COMP_N };   /* (CP_* in order) */
+       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_TOUCH, COMP_CHORD, COMP_HOLD, COMP_N };   /* (CP_* in order) */
 static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4",
                                            "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
@@ -735,7 +735,7 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
 }
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
                                                "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB",
-                                               "TOUCH", "CHORD"};
+                                               "TOUCH", "CHORD", "HOLD"};
 /* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
  * the step's LEN): which this is (0..2) */
 static uint32_t comp_slot(void)
@@ -822,6 +822,12 @@ static void nf_set(step_t *s, uint32_t which, uint32_t f)   /* FLAG 1 (0) or FLA
         nf_put(s, old, 0);                              /* (the other list holding it keeps it) */
     if (f)
         nf_put(s, f, 1);
+}
+static uint8_t *hold_arg(step_t *s) { return s->comp2 == CP_HOLD ? &s->carg2 : s->comp == CP_HOLD ? &s->carg : 0; }
+static uint32_t hold_len(const step_t *s, uint32_t room)   /* its steps (carg 0: to the pass's end); 0: no HOLD */
+{
+    uint32_t a = s->comp2 == CP_HOLD ? s->carg2 : s->comp == CP_HOLD ? s->carg : 0xFFFFu;
+    return a == 0xFFFFu ? 0u : a && a < room ? a : room;
 }
 static void step_clear(step_t *st)
 {

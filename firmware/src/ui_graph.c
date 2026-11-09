@@ -907,8 +907,12 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
     cv_text_on(10, BS_TY + 3, &AF_X, b, T_THEME, T_BG);
     nl = !dr && st->time == ST_NOTE && st->n ? note_len(t, ui.cursor % NSTEP, len) : 1u;   /* (0.8.4) a NOTE's length:
                                                          * LEN 3 (BAR > STEP's KNOB 3 sets it) */
-    str_cpy(b, nl > 1u ? "LEN " : TIME_N[st->time % 3u], sizeof b);
-    if (nl > 1u) fmt_int(b + 4, (int32_t)nl);
+    {
+        uint32_t hl = !dr && st->time == ST_NOTE && st->n && ui.cursor < (uint32_t)len ? hold_len(st, len - ui.cursor) : 0u;   /* (a HOLD) */
+        if (hl) nl = hl;
+        str_cpy(b, hl ? "HOLD " : nl > 1u ? "LEN " : TIME_N[st->time % 3u], sizeof b);
+        if (nl > 1u) fmt_int(b + str_len(b), (int32_t)nl);
+    }
     acc = nl > 1u;                                  /* (the text lit) */
     if (!dr && st->time == ST_NOTE && st->n && (st->comp == CP_CHORD || st->comp2 == CP_CHORD)) {   /* (chord-harp) a
                                                          * CHORD: its name (and LEN) */

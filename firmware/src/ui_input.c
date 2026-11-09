@@ -821,7 +821,7 @@ static uint32_t len_turn(track_t *t, uint32_t c, int32_t d)
         return 1;                                       /* (past LEN: nothing plays it) */
     for (; d > 0 && l < max; d--, l++) {
         step_t *nx = &t->step[(c + l) % len];
-        if (step_on(nx)) { ui_message("NEXT NOTE"); break; }
+        if (step_on(nx)) break;                         /* (the next note: length_turn makes it a HOLD) */
         memset(nx, 0, sizeof *nx);
         nx->time = ST_TIE;
         nx->vel = t->step[c].vel;
@@ -832,6 +832,46 @@ static uint32_t len_turn(track_t *t, uint32_t c, int32_t d)
         e->time = ST_REST;
     }
     return l;
+}
+/* (2026-11-10) STEP's LENGTH: len_turn's TIEs over empty steps; longer past another note, the note is a HOLD instead (its TIEs
+ * RESTs, comp2 CP_HOLD, carg the steps it rings: seq.c seq_to_hold) and the length goes on as HOLD's steps, up to the
+ * pattern's end; shorter back to one step, no HOLD */
+static void length_turn(track_t *t, uint32_t c, int32_t d)
+{
+    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, room = c < len ? len - c : 0u, l0, l1, j;
+    step_t *st = &t->step[c];
+    uint8_t *ha = hold_arg(st);
+    char m[16];
+    if (!room)
+        return;
+    if (ha) {
+        int32_t n = clamp((int32_t)hold_len(st, room) + d, 1, (int32_t)room);
+        if (n <= 1) {                                   /* back to a step: no HOLD */
+            if (st->comp2 == CP_HOLD) st->comp2 = st->carg2 = 0; else st->comp = st->carg = 0;
+            ui_message("HOLD OFF");
+            return;
+        }
+        *ha = (uint8_t)n;
+        str_cpy(m, "HOLD ", sizeof m); fmt_int(m + 5, n);
+        ui_message(m);
+        return;
+    }
+    l0 = note_len(t, c, len);
+    l1 = len_turn(t, c, d);
+    if (d > 0 && l1 - l0 < (uint32_t)d && l1 < room && l1 < 16u && step_on(&t->step[(c + l1) % len])) {   /* stopped by a note */
+        uint32_t n = l1 + (uint32_t)d - (l1 - l0);
+        if (n > room) n = room;
+        if (st->comp2 && st->comp) { ui_message("NO COMPONENT FREE"); return; }
+        for (j = 1; j < l1; j++) {                      /* its TIEs: the HOLD rings through them */
+            step_t *e = &t->step[(c + j) % len];
+            memset(e, 0, sizeof *e);
+            e->time = ST_REST;
+        }
+        if (!st->comp2) { st->comp2 = CP_HOLD; st->carg2 = (uint8_t)n; }
+        else { st->comp = CP_HOLD; st->carg = (uint8_t)n; }
+        str_cpy(m, "HOLD ", sizeof m); fmt_int(m + 5, (int32_t)n);
+        ui_message(m);
+    }
 }
 static void note_drop(step_t *st, uint32_t j)           /* note j out of the step (empty: a REST, its TIEs nothing) */
 {
@@ -948,7 +988,7 @@ static void step_edit(uint32_t slot, int32_t steps)
     case 2:                                               /* LENGTH (2026-11-10): the note longer or shorter, a step a
                                                            * detent (TIEs over empty steps; no REST or TIE to pick) */
         if (st->time != ST_NOTE || !st->n) ui_message("NO NOTE HERE");
-        else len_turn(TSEL, ui.cursor, steps);
+        else length_turn(TSEL, ui.cursor, steps);
         break;
     default:                                              /* MOVE (2026-11-10, was NOTE's KNOB 3): the step and its TIEs
                                                            * change places with the step beside */
