@@ -1346,12 +1346,12 @@ static void draw_cards(void)
         char vl[8], sn[8];
         uint32_t fa = 0, fb = 0;
         if (!kit) nf_pair(&fa, &fb);
-        fmt_int(vl, st->vel ? st->vel : 96);
+        fmt_int(vl, st->flags & SF_ACCENT && !kit ? 127 : st->vel ? st->vel : 96);   /* (an ACC plays 127: said, "ACC") */
         fmt_int(sn, (int32_t)ui.cursor + 1);
         draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
         draw_column(1, "FLAG 1", kit ? "--" : NF_NAMES[fa], "", on && !kit ? VAL(1u) : T_DIM, kit ? -1 : pick_of(NF_N, fa), ICON_AUTO);
         draw_column(2, "FLAG 2", kit ? "--" : NF_NAMES[fb], "", on && !kit ? VAL(2u) : T_DIM, kit ? -1 : pick_of(NF_N, fb), ICON_AUTO);
-        draw_column(3, "VELOCITY", vl, "", on ? VAL(3u) : T_DIM, on ? (int32_t)((st->vel ? st->vel : 96u) - 1u) * 1000 / 126 : -1,
+        draw_column(3, "VELOCITY", vl, !kit && (st->flags & SF_ACCENT) ? "ACC" : "", on ? VAL(3u) : T_DIM, on ? (int32_t)((st->vel ? st->vel : 96u) - 1u) * 1000 / 126 : -1,
                     ICON_ORDER);
         return;
     }
