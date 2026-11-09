@@ -262,6 +262,10 @@ static const preset_t FORMANT_PRESETS[] YEHNAH_RES = {
 };
 static const char FORMANT_PT[] = "VVBVVVVVVVVVVBN";
 _Static_assert(sizeof FORMANT_PT == NELEM(FORMANT_PRESETS) + 1u, "a type a preset");
+/* (Yehnah, 2026-11-09) each preset's level trim (P_TRIM, 1/2 dB): the loudest held back to -8 dBFS rms through the mix
+ * (a note at C3 / C4 / C5, dry; tests-free measurement, 3 pitches' median), the rest 0 */
+static const int8_t FORMANT_TRIM[] = {0, 0, -8, 0, 0, -6, -2, 0, 0, -4, 0, 0, 0, 0, -3};
+_Static_assert(sizeof FORMANT_TRIM == NELEM(FORMANT_PRESETS), "a trim a preset");
 
 static const engine_t ENG_FORMANT = {
     .name = "VOICE",
@@ -279,6 +283,7 @@ static const engine_t ENG_FORMANT = {
     .presets = FORMANT_PRESETS,
     .npresets = NELEM(FORMANT_PRESETS),
     .ptype = FORMANT_PT,
+    .trim = FORMANT_TRIM,
     .note_on = formant_note_on,
     .render = formant_render,
     .knob = {P_E0, P_E4, P_E5, P_E2},

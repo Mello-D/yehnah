@@ -186,7 +186,7 @@ static const preset_t DIGITAL_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char DIGITAL_PT[] = "KKKKIKEEMUEPBMMEMHBEUIBIERLIMON";
 _Static_assert(sizeof DIGITAL_PT == NELEM(DIGITAL_PRESETS) + 1u, "a type a preset");
-static const int8_t DIGITAL_TRIM[] = {23, 16, 23, 14, 20, 23, 6, 7, 23, 23, 16, -17, 11, 23, 7, 12, 23, 9, 17, 1, 23, 9, 9, 11, 0, -9, -4, 23, 16, -18, 0};
+static const int8_t DIGITAL_TRIM[] = {11, 16, 12, 8, 13, 12, 6, 7, 14, 10, 14, -17, 6, 13, 7, 5, 16, 7, 6, 1, 11, 9, 8, 11, 0, -9, -4, 12, 9, -18, 0};
 _Static_assert(sizeof DIGITAL_TRIM == NELEM(DIGITAL_PRESETS), "a trim a preset");
 _Static_assert(NELEM(DIGITAL_PRESETS) <= 128u, "DIGITAL's favourites");
 

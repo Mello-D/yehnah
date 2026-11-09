@@ -37,11 +37,11 @@ static uint32_t mfnv(uint32_t h, const void *p, uint32_t n)
 /* ---- 2. a project of before: the steps' MICRO set as 0.9.0 stored it (cwhen's bits 4-7, sixteenths) ---- */
 #define MICRO_OLD_090 0xee5890c3u    /* (chord-harp fork, 2026-10-30: Clipper's engines, presets and master limiter; 2026-10-26:
                                        * the chorus LFO a parabola a block, 0x3d67280e; was 0xd5c5b5c5) */
-#define MICRO_PACK_090 0xd39856beu   /* (chord-harp fork: FUND, P_COUNT 141 (2026-11-05, AMBIENT); 0x9b5e38f1 with 137, TRK_OLD T1 SYN BRASS (Clipper's; np and the engine values'
+#define MICRO_PACK_090 0x12fea8c4u   /* (2026-11-09: preset level trims re-levelled, T1 SYN BRASS (ANALOG 4) 23 -> -4: was 0xd39856be)  (chord-harp fork: FUND, P_COUNT 141 (2026-11-05, AMBIENT); 0x9b5e38f1 with 137, TRK_OLD T1 SYN BRASS (Clipper's; np and the engine values'
                                          * map bits move); was 0x33ca19b2 with 132, 0xce359c65 with 130, 0xe8df1a5c as FUNC with 130,
                                          * was 0x6fed60ab with 127, 0xbc0e6892 as FUNC with 127, 0x630df50d with 126,
                                          * 0x2ceea11c as FUNC with 126, 0x55f3c173 with 123) */
-#define MICRO_PACK_FUNC 0x57b818a3u  /* (chord-harp fork) the same bytes with FUNC's magic (no motion record: only it and the
+#define MICRO_PACK_FUNC 0xd90de558u /* (2026-11-09: was 0x57b818a3u) */  /* (chord-harp fork) the same bytes with FUNC's magic (no motion record: only it and the
                                          * hash differ from FUND's; 0x8b6f7e6d with P_COUNT 137, 0x1d2b8cce with 132) */
 static void old_steps(void)
 {

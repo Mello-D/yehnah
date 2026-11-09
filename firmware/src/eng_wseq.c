@@ -245,7 +245,7 @@ static const preset_t WSEQ_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char WSEQ_PT[] = "AAPLAABAEAPAXBAAN";
 _Static_assert(sizeof WSEQ_PT == NELEM(WSEQ_PRESETS) + 1u, "a type a preset");
-static const int8_t WSEQ_TRIM[] = {-6, -4, -2, -1, -4, -6, -3, 0, -4, -9, -2, -1, -3, -8, -4, -2, 0};
+static const int8_t WSEQ_TRIM[] = {-11, -4, -2, -7, -8, -17, -7, -6, -8, -12, -2, -2, -4, -17, -7, -5, -11};
 _Static_assert(sizeof WSEQ_TRIM == NELEM(WSEQ_PRESETS), "a trim a preset");
 _Static_assert(NELEM(WSEQ_PRESETS) <= 128u, "WSEQ's favourites");
 

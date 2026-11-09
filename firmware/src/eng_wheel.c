@@ -294,7 +294,7 @@ static const preset_t WHEEL_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char WHEEL_PT[] = "OOOOOOOOOOOOOON";
 _Static_assert(sizeof WHEEL_PT == NELEM(WHEEL_PRESETS) + 1u, "a type a preset");
-static const int8_t WHEEL_TRIM[] = {-14, -10, -8, -10, -7, -12, 11, 23, 2, -9, -1, -7, -9, -14, 0};
+static const int8_t WHEEL_TRIM[] = {-14, -10, -8, -10, -7, -12, 11, 7, 2, -9, -1, -7, -9, -14, 0};
 _Static_assert(sizeof WHEEL_TRIM == NELEM(WHEEL_PRESETS), "a trim a preset");
 _Static_assert(NELEM(WHEEL_PRESETS) <= 128u, "WHEEL's favourites");
 

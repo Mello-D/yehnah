@@ -155,7 +155,7 @@ static const preset_t ANALOG_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char ANALOG_PT[] = "BBBBBBBBBLURLPSPWLBLPBLPRBLKUBLN";
 _Static_assert(sizeof ANALOG_PT == NELEM(ANALOG_PRESETS) + 1u, "a type a preset");
-static const int8_t ANALOG_TRIM[] = {-9, -3, -10, -4, 23, -6, 3, 7, 16, -10, 23, 23, -18, -7, -4, -9, -7, -5, 14, -6, -23, 21, -3, -14, 15, 5, 2, 23, 23, 13, -2, 0};
+static const int8_t ANALOG_TRIM[] = {-9, -10, -10, -8, -4, -6, 3, 2, 6, -10, 7, 7, -18, -7, -4, -9, -7, -5, 4, -6, -23, 11, -3, -14, 8, 5, 2, 5, 9, 11, -2, 0};
 _Static_assert(sizeof ANALOG_TRIM == NELEM(ANALOG_PRESETS), "a trim a preset");
 _Static_assert(NELEM(ANALOG_PRESETS) <= 128u, "ANALOG's favourites");
 

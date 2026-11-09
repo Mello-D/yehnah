@@ -227,7 +227,7 @@ static const preset_t LOFI_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char LOFI_PT[] = "LBABKLLXPXAN";
 _Static_assert(sizeof LOFI_PT == NELEM(LOFI_PRESETS) + 1u, "a type a preset");
-static const int8_t LOFI_TRIM[] = {-4, 15, -4, 13, 4, 2, 0, 23, -12, 23, -4, 0};
+static const int8_t LOFI_TRIM[] = {-4, 10, -4, 10, 3, 0, 0, 16, -12, 0, -4, 0};
 _Static_assert(sizeof LOFI_TRIM == NELEM(LOFI_PRESETS), "a trim a preset");
 _Static_assert(NELEM(LOFI_PRESETS) <= 128u, "LOFI's favourites");
 

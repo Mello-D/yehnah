@@ -356,6 +356,44 @@ static uint32_t voices_busy(void)                       /* sounding voices of al
     return n;
 }
 
+/* (2026-11-09, the user's call after the CPU test song) the budget is also in COST: a voice weighs what it costs to
+ * render, in quarter ANALOG voices (4 = one ANALOG voice; host ns a voice 9.7 ANALOG, 20 JUNO, ~20 DRIFT, 15.7 FM6,
+ * ~16 PLAITS, ~15 HYBRID, 14.6 VOICE; the other engines count as ANALOG). The count caps stay (8, 12 with headroom);
+ * the cost caps hold the heavy engines back: 40 (10 ANALOG voices, ~6 heavy ones) and, with headroom, 56 (12 ANALOG,
+ * ~8 heavy). On the device (USB off, one section alone) six heavy parts at 8 voices peaked 108 % with ~100 late halves a
+ * minute; the same engines in threes (8 voices) 78..94 % and clean. LOAD ECO: the count cap only, as before */
+#define VCOST_ANALOG 4u
+#define UCAP_BASE 40u
+#define UCAP_FULL 56u
+static uint32_t vcost(const track_t *t)
+{
+    switch (t->engine) {
+    case ENGI_JUNO: case ENGI_DRIFT: return 8u;
+    case ENGI_FM6: case ENGI_PLAITS: return 7u;
+    case ENGI_HYBRID: case ENGI_VOICE: return 6u;
+    default: return VCOST_ANALOG;
+    }
+}
+static uint32_t voices_cost(void)                       /* the sounding voices' weight (not the fading ones) */
+{
+    uint32_t p, i, n = 0;
+    for (p = 0; p < NPART; p++) {
+        uint32_t c = vcost(&trk[p]);
+        for (i = 0; i < NVOICE; i++)
+            n += c * (trk[p].v[i].active && trk[p].v[i].stage != 4u);
+    }
+    return n;
+}
+static uint32_t ucap(void)
+{
+    return sys_load == LOAD_ECO ? ~0u : sys_load == LOAD_FULL && voice_headroom ? UCAP_FULL : UCAP_BASE;
+}
+/* no room for a new voice of part t: the count budget or the cost budget is full */
+static int voice_full(const track_t *t)
+{
+    return voices_busy() >= voice_cap() || voices_cost() + vcost(t) > ucap();
+}
+
 static uint32_t lowest_held(const track_t *t)           /* index of the lowest held note (the bass), NVOICE = none */
 {
     uint32_t i, low = NVOICE;
@@ -390,7 +428,10 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
                 c = 3;                                  /* held, not the bass */
             else
                 continue;
-            if (c < cat || (c == cat && v->age < (*pp)->v[best].age)) {
+            /* (2026-11-09) among the released the quietest tail goes (its cut is the smallest click), the oldest of equals;
+             * the held ones as before: the oldest */
+            if (c < cat || (c == cat && (c == 1 && v->env_out != (*pp)->v[best].env_out ? v->env_out < (*pp)->v[best].env_out
+                                                                                        : v->age < (*pp)->v[best].age))) {
                 cat = c;
                 best = i;
                 *pp = t;
@@ -439,19 +480,22 @@ static int voice_room(track_t *t, int soft)
 {
     track_t *vp = 0;
     uint32_t k;
-    if (voices_busy() < voice_cap()) {
+    if (!voice_full(t)) {
         if (load_tight && (k = quiet_tail(&vp)) < NVOICE) {
             voice_kill(&vp->v[k]);                      /* (the load budget: a dying tail makes the room) */
             voice_trims++;
         }
         return 1;
     }
-    k = voice_victim(t, soft, &vp);
-    if (k == NVOICE)
-        return !soft;                                   /* hard: over the budget (cannot happen: each of the
+    for (;;) {                                          /* (the cost budget: a cheap victim may not free enough: more) */
+        k = voice_victim(t, soft, &vp);
+        if (k == NVOICE)
+            return !soft;                               /* hard: over the budget (cannot happen: each of the
                                                          * NPART < NVOICE parts protects one voice at most) */
-    voice_kill(&vp->v[k]);
-    return 1;
+        voice_kill(&vp->v[k]);
+        if (!voice_full(t))
+            return 1;
+    }
 }
 
 static voice_t *voice_reuse(track_t *t, voice_t *v)
@@ -483,14 +527,19 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
             return voice_reuse(t, &t->v[i]);
         nfree += !t->v[i].active;
     }
-    if (nfree && (voices_busy() >= voice_cap() || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
+    if (nfree && (voice_full(t) || load_tight)) {       /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
         track_t *vp = 0;
-        uint32_t full = voices_busy() >= voice_cap(), k = full ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
+        uint32_t full = voice_full(t), k = full ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
         if (k < np && vp == t)
             return &t->v[k];                            /* our own: restart it in place (no click) */
         if (k < NVOICE) {
             voice_kill(&vp->v[k]);
             voice_trims += !full;                       /* (the load budget's quiet tail, not a steal) */
+        }
+        while (full && voice_full(t) && (k = voice_victim(t, 0, &vp)) < NVOICE) {   /* (the cost budget: a cheaper victim) */
+            if (k < np && vp == t)
+                return &t->v[k];
+            voice_kill(&vp->v[k]);
         }
     }
     if (t->p[P_ALLOC] || t->p[P_GLIDE]) {

@@ -164,7 +164,7 @@ static const preset_t VECTOR_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char VECTOR_PT[] = "PPRKPEBLOSXKLXLVLBN";
 _Static_assert(sizeof VECTOR_PT == NELEM(VECTOR_PRESETS) + 1u, "a type a preset");
-static const int8_t VECTOR_TRIM[] = {-3, -17, 9, -11, 0, -8, -1, -8, -9, -3, 23, 8, -3, 3, -6, -3, 2, 7, 0};
+static const int8_t VECTOR_TRIM[] = {-3, -17, -4, -11, 0, -8, -5, -8, -9, -3, 9, -1, -3, 3, -6, -3, 2, 2, 0};
 _Static_assert(sizeof VECTOR_TRIM == NELEM(VECTOR_PRESETS), "a trim a preset");
 _Static_assert(NELEM(VECTOR_PRESETS) <= 128u, "VECTOR's favourites");
 

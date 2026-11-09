@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     for (k = 0; k < NTRK; k++) {
         uint32_t e = !strcmp(scene, "voice") ? ENGI_VOICE : !strcmp(scene, "parallel") ? (k & 1u ? ENGI_ANALOG : ENGI_FM6) : EN[k];
         if (!strcmp(scene, "twovoice") && k == 4u) e = ENGI_VOICE;
-        if (!strcmp(scene, "polyphony")) e = k & 1u ? ENGI_VOICE : ENGI_FM6;
+        if (!strcmp(scene, "polyphony")) e = k == 1u ? ENGI_VOICE : ENGI_ANALOG;   /* (2026-11-09: 12 voices must fit the cost budget, 56: 5 x 8 ANALOG + 2 VOICE = 52) */
         host_preset(&trk[k], e, 0);
         trk[k].p[P_VOICE] = !strcmp(scene, "polyphony") ? V_POLY : V_MONO;
         trk[k].p[P_SUS] = 127;

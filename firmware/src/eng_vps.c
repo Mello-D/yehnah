@@ -128,7 +128,7 @@ static const preset_t VPS_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char VPS_PT[] = "LPBXUKREBVN";
 _Static_assert(sizeof VPS_PT == NELEM(VPS_PRESETS) + 1u, "a type a preset");
-static const int8_t VPS_TRIM[] = {-17, -25, -3, -21, -1, 14, 5, -7, -8, -29, 0};
+static const int8_t VPS_TRIM[] = {-17, -25, -7, -21, -2, -9, -9, -7, -9, -29, -9};
 _Static_assert(sizeof VPS_TRIM == NELEM(VPS_PRESETS), "a trim a preset");
 _Static_assert(NELEM(VPS_PRESETS) <= 128u, "VPS's favourites");
 

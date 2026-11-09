@@ -365,12 +365,12 @@ static void polyphony_headroom(void)
     shed_check(TIGHT_ON_ECO - 1);
     check("polyphony: 16 calm halves on two cores admit 12 shared voices", voice_cap() == 12);
     for (k = 0; k < NPART; k++) {
-        host_preset(&trk[k], k & 1 ? ENGI_VOICE : ENGI_FM6, 0);
+        host_preset(&trk[k], ENGI_ANALOG, 0);   /* (2026-11-09: ANALOG, cost 4: 12 voices = 48 of the 56; FM6 / VOICE weigh 7 / 6, below) */
         trk[k].p[P_VOICE] = V_POLY; trk[k].p[P_SUS] = 127;
         trk_note_on(&trk[k], 48, 100); trk_note_on(&trk[k], 55, 100);
     }
     kills = voice_kills;
-    check("polyphony: six FM6/VOICE parts keep both notes (12 voices)", voices_busy() == 12);
+    check("polyphony: six ANALOG parts keep both notes (12 voices)", voices_busy() == 12);
     for (i = 0; i < 128; i++) mix_block(out, CTL);
     for (k = 0; k < NPART; k++)
         for (i = 0; i < NVOICE; i++) gates += trk[k].v[i].active && trk[k].v[i].gate;
@@ -393,6 +393,25 @@ static void polyphony_headroom(void)
     fresh(); mc_host = 1; mc_off = 1;
     for (i = 0; i < 32; i++) shed_check(0);
     check("polyphony: disabled second core cannot open extra admission", voice_cap() == 8);
+    /* (2026-11-09) the cost budget: with the headroom open six FM6 / VOICE parts (7 / 6 quarter-ANALOG voices) fit 56, not 12 voices */
+    fresh(); mc_host = 1; mc_off = 0; sys_load = LOAD_FULL;
+    for (i = 0; i < 16; i++) shed_check(TIGHT_ON_ECO - 1);
+    for (k = 0; k < NPART; k++) {
+        host_preset(&trk[k], k & 1 ? ENGI_VOICE : ENGI_FM6, 0);
+        trk[k].p[P_VOICE] = V_POLY; trk[k].p[P_SUS] = 127;
+        trk_note_on(&trk[k], 48, 100); trk_note_on(&trk[k], 55, 100);
+    }
+    check("polyphony: six FM6/VOICE parts are held to the cost budget (56), 8 or 9 voices, not 12",
+          voice_cap() == 12 && voices_cost() <= UCAP_FULL && voices_busy() >= 8 && voices_busy() <= 9);
+    fresh(); mc_host = 1; mc_off = 0; sys_load = LOAD_FULL;                       /* no headroom: 40 */
+    for (k = 0; k < NPART; k++) {
+        host_preset(&trk[k], ENGI_JUNO, 0);
+        trk[k].p[P_VOICE] = V_POLY; trk[k].p[P_SUS] = 127;
+        trk_note_on(&trk[k], 48, 100); trk_note_on(&trk[k], 55, 100);
+    }
+    /* (each part keeps its lowest note, so six parts keep six voices whatever the cost: 48; the cost cap holds the rest back) */
+    check("polyphony: six JUNO parts without headroom keep 6 or 7 voices (each part's bass; cost cap 40), not 8",
+          voices_busy() >= 6 && voices_busy() <= 7);
     mc_host = mc_off = 0; sys_load = LOAD_FULL; fresh();
 }
 

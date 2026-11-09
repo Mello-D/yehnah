@@ -283,7 +283,7 @@ static const preset_t NOISE_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char NOISE_PT[] = "XXXXXXXXDXXXXXN";
 _Static_assert(sizeof NOISE_PT == NELEM(NOISE_PRESETS) + 1u, "a type a preset");
-static const int8_t NOISE_TRIM[] = {-1, 0, 14, 23, 23, 23, -12, 0, 23, 17, -9, 23, 10, 4, 0};
+static const int8_t NOISE_TRIM[] = {-1, 0, 11, 23, 23, 23, -12, 0, 23, 17, -9, 23, 10, 4, 0};
 _Static_assert(sizeof NOISE_TRIM == NELEM(NOISE_PRESETS), "a trim a preset");
 _Static_assert(NELEM(NOISE_PRESETS) <= 128u, "NOISE's favourites");
 

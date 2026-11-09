@@ -100,7 +100,7 @@ static const preset_t TERRAIN_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char TERRAIN_PT[] = "PPKBLXLXKUN";
 _Static_assert(sizeof TERRAIN_PT == NELEM(TERRAIN_PRESETS) + 1u, "a type a preset");
-static const int8_t TERRAIN_TRIM[] = {-10, -10, 9, 19, -10, -5, -18, -8, 23, 19, 0};
+static const int8_t TERRAIN_TRIM[] = {-10, -10, 5, 15, -10, -9, -18, -8, 1, -8, 0};
 _Static_assert(sizeof TERRAIN_TRIM == NELEM(TERRAIN_PRESETS), "a trim a preset");
 _Static_assert(NELEM(TERRAIN_PRESETS) <= 128u, "TERRAIN's favourites");
 

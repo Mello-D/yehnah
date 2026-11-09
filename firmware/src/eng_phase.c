@@ -198,7 +198,7 @@ static const preset_t PHASE_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char PHASE_PT[] = "BKSURLPLBOEPVULKN";
 _Static_assert(sizeof PHASE_PT == NELEM(PHASE_PRESETS) + 1u, "a type a preset");
-static const int8_t PHASE_TRIM[] = {23, 23, -21, 19, 15, -9, -23, 5, 1, -30, 23, -5, -18, 23, 3, 18, 0};
+static const int8_t PHASE_TRIM[] = {4, -5, -21, 14, -6, -9, -23, 5, -12, -30, 23, -5, -18, -6, 3, -5, -6};
 _Static_assert(sizeof PHASE_TRIM == NELEM(PHASE_PRESETS), "a trim a preset");
 _Static_assert(NELEM(PHASE_PRESETS) <= 128u, "PHASE's favourites");
 

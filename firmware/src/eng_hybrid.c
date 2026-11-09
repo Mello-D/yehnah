@@ -823,9 +823,9 @@ static void hybrid_spread(track_t *t, voice_t *v, uint32_t r)
 static const char HY_PT[] = "PPSBLEKBBLRPUXUBLPPBLUENBLPLPBEL"
                           "RSLKKLPKKOWEPLUBPVRX";
 _Static_assert(sizeof HY_PT == NELEM(HY_PRESETS) + 1u, "a type a preset");
-static const int8_t HY_TRIM[] = {-2, -14, 2, 23, -1, -7, -13, 23, 1, 6, 23, 14, 14, 2, 14, 6,
-                                 6, -7, -1, -2, 11, 23, -7, 3, 23, 2, -7, 0, -13, -1, -6, 3,
-                                 1, -3, 2, 1, 7, 0, -2, 2, 7, -3, -2, 0, -1, 0, 10, 1, -4, -2, 6, 20};
+static const int8_t HY_TRIM[] = {-2, -14, 2, 1, -1, -7, -13, 3, -1, 6, 4, 14, 8, 2, 8, 5,
+                                 6, -7, -1, -2, 11, 15, -7, 3, 8, 2, -7, 0, -13, -8, -6, 3,
+                                 1, -3, 2, 1, 7, 0, -2, 2, 7, -3, -2, 0, -1, 0, 9, 1, -4, -2, 4, 16};
 _Static_assert(sizeof HY_TRIM == NELEM(HY_PRESETS), "a trim a preset");
 _Static_assert(NELEM(HY_PRESETS) <= 128u, "HYBRID's favourites");
 _Static_assert(HY_NFACTORY <= 255u, "hy_act.seen");

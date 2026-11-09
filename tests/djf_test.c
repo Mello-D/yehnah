@@ -26,7 +26,8 @@ static void ck(const char *what, int ok)
 }
 
 /* ---- 1. centred: the render whose hash 0.9.0's sources give (the same code, built against them) ---- */
-#define DJF_CENTRE_090 0x6787ca8cu   /* (chord-harp fork, 2026-10-30: Clipper's engines, presets and master limiter, was
+#define DJF_CENTRE_090 0xa4f55194u   /* (chord-harp fork, 2026-11-09: the voice cost budget (voice.c UCAP_BASE) and the quietest-tail
+                                       * steal, was 0x6787ca8c, which a UCAP_BASE of 4000 still gives; 2026-10-30: Clipper's engines, presets and master limiter, was
                                        * 0x34c65b31; 2026-10-26: the chorus LFO a parabola a block, the GRAIN's own
                                        * random numbers; was 0x8b898fe6) */
 static int32_t centre_peak;

@@ -222,10 +222,10 @@ static const char JUNO_PT[] = "PRBSKLKIPBRAXOLLA"
                               "RRRWSSVIOOOOPEIIEMMRRSSSWRRGGUKBLLLKBKIKPPXUXUPKESSMOKWUEPSPOORGKSWBPKKPEKOBRPPWORIXBWMBEKERPSO"   /* the 106's bank */
                               "N";
 _Static_assert(sizeof JUNO_PT == NELEM(JUNO_PRESETS) + 1u, "a type a preset");
-static const int8_t JUNO_TRIM[] = {1, 5, 11, 2, 7, 3, 23, 16, 1, 3, 7, 23, 3, 3, 5, 17, 23, 23, -1, 5, 15, -6, 13, 4, 33, -25, -7, -5, -2, 0,
-    64, 21, 23, 45, 53, 70, 6, 1, -9, 67, 0, 7, 19, -8, 27, 71, 46, -5, 23, -11, -8, -5, 16, -20, -12, -10, 11, -4, 2, -1, 0,
-    28, 7, 40, 12, -5, -7, 5, 87, 3, 49, 59, 83, 53, 24, 26, 24, -5, 13, 7, 71, -5, -15, -1, 4, 2, 17, 57, 9, 40, 25,
-    -6, 52, -5, -5, 32, 11, -7, 23, 8, -6, -5, 33, 52, -6, 18, 1, 36, 3, -5, -3, -1,
+static const int8_t JUNO_TRIM[] = {1, 5, 10, 2, 7, 3, 14, 16, 1, 3, 7, 23, 3, 3, 5, 10, 22, 12, -1, 5, 15, -6, 13, 4, 15, -25, -7, -5, -2, 0,
+    16, 21, 15, 8, 14, 18, 6, 1, -9, 30, 0, 7, 19, -8, 13, 39, 14, -5, 6, -11, -8, -5, 16, -20, -12, -10, 11, -4, 2, -1, 0,
+    23, 7, 5, 12, -5, -7, 5, 42, 3, 28, 59, 30, 17, 24, 13, 14, -5, 13, 7, 46, -5, -15, -1, 4, 2, 17, 10, 9, 8, 25,
+    -6, 52, -5, -5, 29, 11, -7, 23, 8, -6, -5, 33, 26, -6, 15, 1, 15, 3, -5, -3, -1,
     0};   /* INIT; the 106 bank (ours, not Clipper's) levelled: from
  * its VCA LEVEL (tools/gen_juno106.py, with its VCF KYBD as KEY>F), its loud windows (95th percentile of 50 ms RMS) at
  * the median of Clipper's 17 through the whole mix, up to +50 dB (fx.c), then held back where that went past Clipper's
