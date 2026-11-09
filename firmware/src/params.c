@@ -418,7 +418,7 @@ static int32_t wrap_add(int32_t v, int32_t s, int32_t n) { return n > 0 ? ((v + 
 static int32_t param_pick(const param_desc_t *d)
 {
     int32_t n = d->max - d->min + 1;
-    return ((d->fmt == F_ENUM || d->fmt == F_NOTE) && n >= 2 && n <= 32) ||
+    return ((d->fmt == F_ENUM || d->fmt == F_NOTE || d->fmt == F_ONOFF) && n >= 2 && n <= 32) ||
            ((d->fmt == F_INT || d->fmt == F_STEPS) && n >= 2 && n <= 16) ? n : 0;
 }
 /* a knob turned `steps` (signed) from v: clamped (a pick: wrapped), over the shown order, past aliases (enum_step) */

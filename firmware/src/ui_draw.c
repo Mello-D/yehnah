@@ -983,9 +983,9 @@ static void draw_cards(void)
         draw_column(0, "STAGE", TP[id].label, "", VAL(0u), pick_of(4u, ui.stage & 3u), ICON_NONE);
         param_format(&TP[id], *vp, val, &unit);
         card_mot_of(vp);
-        draw_column(1, TP[id].label, val, unit, VAL(1u), RATIO(&TP[id], *vp), ICON_NONE);
+        draw_column(1, TP[id].label, val, unit, VAL(1u), gauge(&TP[id], *vp), ICON_NONE);
         param_format(&TP[P_ELOOP], TSEL->p[P_ELOOP], val, &unit);
-        draw_column(2, TP[P_ELOOP].label, val, unit, VAL(2u), RATIO(&TP[P_ELOOP], TSEL->p[P_ELOOP]), ICON_NONE);
+        draw_column(2, TP[P_ELOOP].label, val, unit, VAL(2u), gauge(&TP[P_ELOOP], TSEL->p[P_ELOOP]), ICON_NONE);
         draw_column(3, "", "", "", T_DIM, -1, ICON_NONE);
         return;
     }
@@ -1073,7 +1073,7 @@ static void draw_cards(void)
         draw_column(0, "HEAD", val, "", VAL(0u), pick_of(FG_HEADS, fg_ui % FG_HEADS), ICON_X_PATTERN);
         draw_column(1, "RATE", N_FGRATE[f->rate % FG_NRATE], "", f->rate ? VAL(1u) : T_DIM, pick_of(10u, f->rate),
                     ICON_RATE);
-        draw_column(2, "DIR", N_FGDIR[f->dir & 3u], "", f->rate ? VAL(2u) : T_DIM, (int32_t)(f->dir & 3u) * 333, ICON_ORDER);
+        draw_column(2, "DIR", N_FGDIR[f->dir & 3u], "", f->rate ? VAL(2u) : T_DIM, pick_of(4u, f->dir & 3u), ICON_ORDER);
         val[0] = f->ivl > 0 ? '+' : 0;
         fmt_int(val + (f->ivl > 0), f->ivl);
         draw_column(3, "INTVL", val, "DEG", f->rate ? VAL(3u) : T_DIM, (int32_t)(f->ivl + 14) * 1000 / 28, ICON_PITCH);
@@ -1211,7 +1211,7 @@ static void draw_cards(void)
         uint32_t n = 0, i;
         for (i = 0; i < 64u; i++) n += pfx_lane_at(i) != 0u;
         fmt_int(val, song.g[G_PFXLEN]);
-        draw_column(0, "LEN", val, "ST", VAL(0u), RATIO(&GP[G_PFXLEN], song.g[G_PFXLEN]), ICON_AUTO);
+        draw_column(0, "LEN", val, "ST", VAL(0u), gauge(&GP[G_PFXLEN], song.g[G_PFXLEN]), ICON_AUTO);
         draw_column(1, "RES", N_PFXRES[(uint32_t)clamp(song.g[G_PFXRES], 0, 2)], "", VAL(1u), pick_of(3u, (uint32_t)clamp(song.g[G_PFXRES], 0, 2)), ICON_RATE);
         fmt_int(val, (int32_t)n);
         draw_column(2, pfx_rec_ok() ? "REC" : song.playing ? "PLAY" : "STEPS", pfx_rec_ok() ? "ON" : song.playing ? "ON" : val, "",
@@ -1220,7 +1220,7 @@ static void draw_cards(void)
         return;
     }
     if (cur_page()->graph == GR_MOTION) {
-        draw_column(0, "PLAY", motion_enabled(TSEL) ? "ON" : "OFF", "", VAL(0u), kn_cells() ? ratio_of(0, 1, motion_enabled(TSEL) != 0) : -1,
+        draw_column(0, "PLAY", motion_enabled(TSEL) ? "ON" : "OFF", "", VAL(0u), pick_of(2u, motion_enabled(TSEL) != 0),
                     motion_icon());   /* (2026-11-02) on / off: all the pixels or none */
         fmt_int(val, (int32_t)(motion_count(TSEL) - motion_lock_count(TSEL)));
         draw_column(1, "EVENT", val, "", T_MID, -1, ICON_NONE);
@@ -1308,11 +1308,11 @@ static void draw_cards(void)
         draw_column(0, "STEP", val, "/16", sl_ui_step < (uint32_t)song.g[G_SLPLEN] ? VAL(0u) : T_DIM,
                     pick_of(16u, sl_ui_step), ICON_AUTO);
         param_format(&GP[id], song.g[id], val, &unit);
-        draw_column(1, "PITCH", val, unit, song.g[id] ? VAL(1u) : T_DIM, RATIO(&GP[id], song.g[id]), ICON_AUTO);
+        draw_column(1, "PITCH", val, unit, song.g[id] ? VAL(1u) : T_DIM, gauge(&GP[id], song.g[id]), ICON_AUTO);
         param_format(&GP[G_SLPLEN], song.g[G_SLPLEN], val, &unit);
-        draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&GP[G_SLPLEN], song.g[G_SLPLEN]), ICON_AUTO);
+        draw_column(2, "LEN", val, unit, VAL(2u), gauge(&GP[G_SLPLEN], song.g[G_SLPLEN]), ICON_AUTO);
         param_format(&GP[G_SLPQ], song.g[G_SLPQ], val, &unit);
-        draw_column(3, "QUANT", val, unit, VAL(3u), -1, ICON_AUTO);
+        draw_column(3, "QUANT", val, unit, VAL(3u), gauge(&GP[G_SLPQ], song.g[G_SLPQ]), ICON_AUTO);
         return;
     }
     if (cur_page()->graph == GR_MSEQ) {                  /* (Yehnah) STEP, its LVL, LEN, SLEW */
@@ -1322,9 +1322,9 @@ static void draw_cards(void)
         draw_column(0, "STEP", val, "/16", ms_ui_step < (uint32_t)t->p[P_MSLEN] ? VAL(0u) : T_DIM,
                     pick_of(16u, ms_ui_step), ICON_AUTO);
         param_format(&TP[id], t->p[id], val, &unit);
-        draw_column(1, "LEVEL", val, unit, VAL(1u), RATIO(&TP[id], t->p[id]), ICON_LEVEL);
+        draw_column(1, "LEVEL", val, unit, VAL(1u), gauge(&TP[id], t->p[id]), ICON_LEVEL);
         param_format(&TP[P_MSLEN], t->p[P_MSLEN], val, &unit);
-        draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&TP[P_MSLEN], t->p[P_MSLEN]), ICON_AUTO);
+        draw_column(2, "LEN", val, unit, VAL(2u), gauge(&TP[P_MSLEN], t->p[P_MSLEN]), ICON_AUTO);
         param_format(&TP[P_MSSLW], t->p[P_MSSLW], val, &unit);
         draw_column(3, "SLEW", val, unit, t->p[P_MSSLW] ? VAL(3u) : T_DIM, RATIO(&TP[P_MSSLW], t->p[P_MSSLW]), ICON_GLIDE);
         return;
@@ -1340,6 +1340,12 @@ static void draw_cards(void)
                 continue;
             }
             on = fop_card(c, &lb, val, &u, &r, &ic);
+            if (str_eq(lb, "OP"))                        /* (a pick: its grid; the amounts keep their fill) */
+                r = pick_of(6u, fop_op);
+            else if (str_eq(lb, "STAGE"))
+                r = pick_of(4u, fop_stg);
+            else if (str_eq(lb, "MODE"))
+                r = pick_of(2u, str_eq(val, "FIXED"));
             draw_column(c, lb, val, u, on ? VAL(c) : T_DIM, r, ic);
         }
         return;
@@ -1446,9 +1452,9 @@ static void draw_cards(void)
             else str_cpy(tv, TIME_N[st->time % 3u], sizeof tv);
             draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
             draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-            draw_column(2, "TIME", tv, nl > 1u ? "ST" : "", VAL(2u), -1, ICON_AUTO);
+            draw_column(2, "TIME", tv, nl > 1u ? "ST" : "", VAL(2u), nl > 1u ? -1 : pick_of(3u, st->time % 3u), ICON_AUTO);
             draw_column(3, "FLAG", FLAG_N[(st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u)], "",
-                        VAL(3u), -1, ICON_AUTO);
+                        VAL(3u), pick_of(4u, (st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u)), ICON_AUTO);
         }
         return;
     }
@@ -1463,12 +1469,12 @@ static void draw_cards(void)
                 fmt_int(u + 1, (int32_t)PROG_N);
                 draw_column(1, "PROG", val, u, VAL(1u), pick_of(PROG_N, (uint32_t)TSEL->p[P_PROG]), ICON_AUTO);
             } else
-                draw_column(2, "RATE", N_PRATE[prog_rate % 3u], "", VAL(2u), (int32_t)prog_rate * 500, ICON_RATE);
+                draw_column(2, "RATE", N_PRATE[prog_rate % 3u], "", VAL(2u), pick_of(3u, prog_rate % 3u), ICON_RATE);
             continue;
         }
         if (c == 1u && HARP_PAGE(cur_page())) {         /* (2026-10-27) SCL > HARP: KNOB 2 the set's genre */
             uint32_t g = harp_genre((uint32_t)clamp(TSEL->p[P_CVOI], 0, (int32_t)HARP_NALL - 1));
-            draw_column(1, "GENRE", J6_GNAME[g], "", VAL(1u), (int32_t)(g * 1000u / J6_NGEN), ICON_AUTO);
+            draw_column(1, "GENRE", J6_GNAME[g], "", VAL(1u), pick_of(J6_NGEN, g), ICON_AUTO);
             continue;
         }
         if (c == 0u && BAR_PAGE(cur_page())) {          /* (0.9.2) SEQ > BAR: KNOB 1 the bar ("2/4") */
