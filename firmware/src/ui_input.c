@@ -280,7 +280,7 @@ static uint32_t scale_leds(uint32_t *root)
     uint32_t k, m = 0, r = 0, mask = scale_mask(t), note;
     int32_t pc;
     *root = 0;
-    if (!(ui_rec_prefs & (PREF_SCALE_LEDS >> 8)))
+    if (!(ui_rec_prefs & (PREF_SCALE_LEDS >> 8)) && !t->p[P_QUANT])   /* (2026-11-10: a QUANT mode on shows the scale as well) */
         return 0;
     for (k = 0; k < 27u; k++) {
         if (e->keys && e->keys(t, k) >= 0)
@@ -397,7 +397,7 @@ static void ui_leds(void)
 {
     uint8_t nl[FM1_NCOL] = {0}, nd[FM1_NCOL] = {0}, own[FM1_NCOL] = {0}, og[FM1_NCOL] = {0}, nb[FM1_NCOL] = {0};
     uint8_t nm[FM1_NCOL] = {0}, sg[FM1_NCOL] = {0}, sm[FM1_NCOL] = {0};
-    uint32_t k, c, g, br, beat, sc, sr = 0;
+    uint32_t k, c, g, br, beat, sc, sr = 0, full;
     uint32_t fam = cur_fam(), mode = settings_leds;
     int keys_map = keys_own();
     static uint8_t ready;
@@ -429,6 +429,7 @@ static void ui_leds(void)
     if (!keys_map && harp_on(TSEL)) {                   /* (chord-harp) HARP's map in their place */
         c = harp_leds(TSEL, &sc, &sr);
     }
+    full = sc && !keys_map && !harp_on(TSEL) && TSEL->p[P_QUANT] && mode != LEDS_INV;
     for (k = 0; k < 27u; k++) {
         uint32_t in = (sc >> k) & 1u, rt = (sr >> k) & 1u, idle = !((c >> k) & 1u);
         led_put(nm, 14u + k, (int)((beat >> k) & 1u));
@@ -437,6 +438,11 @@ static void ui_leds(void)
         led_put(nb, 14u + k, (int)((br >> k) & 1u));
         if (!sc)
             continue;
+        if (full) {                                     /* (2026-11-10) QUANT on: the scale's keys lit in full, the root breathing */
+            led_put(nl, 14u + k, (int)in);
+            led_put(nb, 14u + k, (int)rt);
+            continue;
+        }
         led_put(sg, 14u + k, mode == LEDS_INV ? !in && idle : (int)in);   /* (INV: the active ones dark) */
         led_put(sm, 14u + k, mode == LEDS_INV ? in && !rt && idle : (int)rt);
     }

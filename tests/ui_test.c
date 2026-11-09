@@ -5603,7 +5603,7 @@ static int test_scale_leds(void)
     sc = scale_leds(&root);
     ok &= sc == white && root == (1u << 7 | 1u << 16 | 1u << 24);
     ui_leds();
-    ok &= lit_keys(fm1_led_dim) == white && lit_keys(fm1_led_hi) == root;
+    ok &= lit_keys(fm1_led) == (white & ~root) && lit_keys(fm1_led_breath) == root;   /* (2026-11-10: QUANT on: the scale lit in full, the root breathing) */
     t->p[P_QUANT] = QN_OFF;
     t->p[P_SCALE] = 0;                                  /* CHR: every key, the C keys brighter */
     sc = scale_leds(&root);

@@ -482,10 +482,10 @@ static void hk_kb12(const track_t *t, uint32_t lit)
             continue;
         if (o || k == rt)
             cv_rect((int32_t)x + 2, HK_TOP + 2 + (int32_t)dy, (int32_t)W - 4, HK_H - 3, bg);
-        hk_box(x + 1.0f, (float)HK_TOP + dy, W - 2.0f, (float)HK_H, o ? hk_col(0) : k == rt ? T_ACCENT : og_mix(T_SURF, hk_col(0), in ? 60 : 22),
+        hk_box(x + 1.0f, (float)HK_TOP + dy, W - 2.0f, (float)HK_H, o ? hk_col(0) : k == rt ? T_ACCENT : og_mix(T_SURF, hk_col(0), in ? 100 : 10),
                k + 3u, 256, o ? 0.9f : 0.0f);
         cv_text_in((int32_t)x + 2, HK_TOP + HK_H - 18 + (int32_t)dy - AF_M_CAP_Y, (int32_t)W - 4, &AF_M, HARP_PC[k],
-                   k == rt ? T_ACCENT : o ? T_TEXT : in ? T_MID : T_DIM, bg);
+                   k == rt ? T_ACCENT : o ? T_TEXT : in ? T_TEXT : T_DIM, bg);
     }
     for (k = 0; k < 12u; k++)                           /* the black keys over them */
         if (0x54Au >> k & 1u) {
@@ -496,7 +496,7 @@ static void hk_kb12(const track_t *t, uint32_t lit)
             if (k == rt)                                /* (the root: a bar of the accent at the key's foot) */
                 cv_rect((int32_t)x + 2, HK_TOP - 1 + (int32_t)HK_BH - 4, 16, 3, T_ACCENT);
             cv_text_in((int32_t)x + 1, HK_TOP + 6 + (o > 0) - AF_X_CAP_Y, 18, &AF_X, HARP_PC[k],
-                       k == rt ? T_ACCENT : o > 0 ? T_TEXT : o ? T_DIM : T_MID,
+                       k == rt ? T_ACCENT : o > 0 ? T_TEXT : o ? T_DIM : T_TEXT,
                        o > 0 ? og_mix(T_SURF, hk_col(1), 30) : T_SURF);
         }
 }
