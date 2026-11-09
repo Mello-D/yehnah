@@ -773,13 +773,29 @@ static uint32_t comp_view1(void)                        /* the first's, CHANCE a
  * kept (ui.fl_a / fl_b, as COMP's TYPE is) while the step holds exactly those; else (another step, the COMP pages, the editor)
  * it is read from the step, the first two in the order of the list. The same flag in both lists is the one flag. A flag set
  * takes another RATCH's place and ECHO the step's component; a flag put OFF takes only its own away */
-enum { NF_OFF, NF_ACC, NF_SLD, NF_R2, NF_R3, NF_R4, NF_ECHO, NF_CHANCE, NF_N };
-static const char *const NF_NAMES[NF_N] = {"OFF", "ACC", "SLD", "RATCH 2", "RATCH 3", "RATCH 4", "ECHO", "CHANCE"};
+enum { NF_OFF, NF_ACC, NF_SLD, NF_R2, NF_R3, NF_R4, NF_R5, NF_R6, NF_R7, NF_R8, NF_ECHO, NF_CHANCE, NF_N };
+static const char *const NF_NAMES[NF_N] = {"OFF", "ACC", "SLD", "RATCH 2", "RATCH 3", "RATCH 4", "RATCH 5", "RATCH 6", "RATCH 7",
+                                           "RATCH 8", "ECHO", "CHANCE"};
+/* RATCH 2 .. 4 are the step's ratchet (SF_RATCH); RATCH 5 .. 8 an ECHO with EVEN (all strikes at one level: a ratchet; core.h
+ * CP_ECHO_EVEN, carg = hits - 2), so they and ECHO share the step's first component */
 static uint32_t nf_mask(const step_t *s)
 {
-    return (s->flags & SF_ACCENT ? 1u << NF_ACC : 0u) | (s->flags & SF_SLIDE ? 1u << NF_SLD : 0u) |
-           (step_ratchet(s) > 1u ? 1u << (NF_R2 + step_ratchet(s) - 2u) : 0u) | (s->comp == CP_ECHO ? 1u << NF_ECHO : 0u) |
-           (step_chance(s) < 100u ? 1u << NF_CHANCE : 0u);
+    uint32_t m = (s->flags & SF_ACCENT ? 1u << NF_ACC : 0u) | (s->flags & SF_SLIDE ? 1u << NF_SLD : 0u) |
+                 (step_ratchet(s) > 1u ? 1u << (NF_R2 + step_ratchet(s) - 2u) : 0u) |
+                 (step_chance(s) < 100u ? 1u << NF_CHANCE : 0u);
+    if (s->comp == CP_ECHO)
+        m |= s->carg & CP_ECHO_EVEN ? 1u << (NF_R2 + (uint32_t)(s->carg & ~CP_ECHO_EVEN) % 7u) : 1u << NF_ECHO;
+    return m;
+}
+/* the parts a step's bar is drawn in (the roll, the big step): its ratchet, or an EVEN ECHO's hits; a HOLD's are over its whole
+ * length (seq.c seq_hold_parts), not drawn: one bar */
+static uint32_t step_hits(const step_t *s)
+{
+    if (s->comp == CP_HOLD || s->comp2 == CP_HOLD)
+        return 1u;
+    if (s->comp == CP_ECHO && (s->carg & CP_ECHO_EVEN))
+        return 2u + (uint32_t)(s->carg & ~CP_ECHO_EVEN) % 7u;
+    return step_ratchet(s);
 }
 static void nf_pair(uint32_t *a, uint32_t *b)           /* the cursor step's FLAG 1 and FLAG 2 */
 {
@@ -802,7 +818,11 @@ static void nf_put(step_t *s, uint32_t f, int on)       /* one flag on or off in
         uint8_t bit = f == NF_ACC ? SF_ACCENT : SF_SLIDE;
         s->flags = (uint8_t)(on ? s->flags | bit : s->flags & ~bit);
     } else if (f >= NF_R2 && f <= NF_R4) {
+        if (on && s->comp == CP_ECHO && (s->carg & CP_ECHO_EVEN)) s->comp = s->carg = 0;   /* (one ratchet) */
         step_set_ratchet(s, on ? f - NF_R2 + 2u : 1u);
+    } else if (f >= NF_R5 && f <= NF_R8) {
+        if (on) { step_set_ratchet(s, 1); s->comp = CP_ECHO; s->carg = (uint8_t)(CP_ECHO_EVEN | (f - NF_R2)); }
+        else if (s->comp == CP_ECHO) s->comp = s->carg = 0;
     } else if (f == NF_ECHO) {
         if (on) { s->comp = CP_ECHO; s->carg = CP_ADEF[CP_ECHO]; }
         else if (s->comp == CP_ECHO) s->comp = s->carg = 0;
@@ -818,7 +838,7 @@ static void nf_set(step_t *s, uint32_t which, uint32_t f)   /* FLAG 1 (0) or FLA
     if (which) ui.fl_b = (uint8_t)f; else ui.fl_a = (uint8_t)f;
     if (f == old)
         return;
-    if (old && old != other && !(f >= NF_R2 && f <= NF_R4 && old >= NF_R2 && old <= NF_R4))
+    if (old && old != other && !(f >= NF_R2 && f <= NF_R8 && old >= NF_R2 && old <= NF_R8))
         nf_put(s, old, 0);                              /* (the other list holding it keeps it) */
     if (f)
         nf_put(s, f, 1);

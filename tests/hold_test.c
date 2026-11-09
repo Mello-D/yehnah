@@ -19,6 +19,13 @@ static uint32_t sounding(const track_t *t, uint32_t note)   /* a gated voice of 
         n += t->v[i].active && t->v[i].gate && t->v[i].note == note;
     return n;
 }
+static uint32_t age_of(const track_t *t, uint32_t note)   /* the age (strike) of its gated voice */
+{
+    uint32_t i, a = 0;
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && t->v[i].gate && t->v[i].note == note) a = t->v[i].age;
+    return a;
+}
 /* a 4-step loop: 0 NOTE 48 (comp2 HOLD if hold), 1 NOTE 60, 2 NOTE 64, 3 REST; the transport started */
 static track_t *loop4(int hold)
 {
@@ -78,11 +85,11 @@ int main(void)
     ck("the next HOLD step lets the first go: 64 held, 48 ended", sounding(t, 64) == 1u && sounding(t, 48) == 0u && t->hold_n == 1u);
     seq_stop();
 
-    t = loop4(1);                                         /* a ratchet: no hold */
+    t = loop4(0);                                         /* a ratchet without HOLD: as before, no hold */
     step_set_ratchet(&t->step[0], 2);
     L = slen(t, 0);
     run_to(t, L * 3 / 2);
-    ck("a ratcheted step does not hold", t->hold_n == 0u && sounding(t, 48) == 0u);
+    ck("a ratcheted step without HOLD does not hold", t->hold_n == 0u && sounding(t, 48) == 0u);
     seq_stop();
 
     t = loop4(1);                                         /* carg: the steps it rings */
@@ -110,6 +117,47 @@ int main(void)
        t->step[1].time == ST_REST && t->step[2].time == ST_NOTE && t->step[2].note[0] == 64u);
     turn(EN_K3, -1); turn(EN_K3, -1);                   /* back to one step: no HOLD */
     ck("  shortened to one step: no HOLD", t->step[0].comp2 == CP_NONE && note_len(t, 0, 8) == 1u);
+    t = loop4(1);                                         /* a RATCH on the HOLD: its parts over the whole length (2026-11-10) */
+    t->step[0].carg2 = 4;
+    step_set_ratchet(&t->step[0], 2);
+    L = slen(t, 0);
+    { uint32_t a1, a2, a3, a4;
+      run_to(t, L / 2);       a1 = age_of(t, 48);
+      run_to(t, L);           a2 = age_of(t, 48);          /* in step 1 */
+      ck("HOLD + RATCH 2: the note rings from step 0 into step 1 (one strike so far)", sounding(t, 48) == 1u && a1 == a2);
+      run_to(t, L);           a3 = age_of(t, 48);          /* in step 2: the second part, struck again */
+      ck("  struck again half way through the hold (step 2), still held", sounding(t, 48) == 1u && a3 != a2);
+      run_to(t, L);           a4 = age_of(t, 48);          /* in step 3 */
+      ck("  and rings to the end: no third strike", sounding(t, 48) == 1u && a4 == a3);
+    }
+    seq_stop();
+
+    ui_power_on();                                        /* RATCH 5 .. 8: an EVEN ECHO (2026-11-10) */
+    t = &trk[0];
+    memset(t->step, 0, sizeof t->step);
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    go_title("NOTE"); frame();
+    cursor_set(0);
+    { uint32_t i; for (i = 0; i < 4u; i++) turn(EN_K2, 1); }             /* FLAG 1: ACC SLD RATCH 2 RATCH 3 */
+    ck("NOTE FLAG 1: RATCH 3 is the step's ratchet", step_ratchet(&t->step[0]) == 3u && !t->step[0].comp);
+    { uint32_t i; for (i = 0; i < 3u; i++) turn(EN_K2, 1); }             /* .. RATCH 4, 5, 6 */
+    ck("  RATCH 6 is an EVEN ECHO of 6 hits (the ratchet back to x1)", t->step[0].comp == CP_ECHO && t->step[0].carg == (CP_ECHO_EVEN | 4u) &&
+       step_ratchet(&t->step[0]) == 1u);
+    turn(EN_K2, 1); turn(EN_K2, 1);                                       /* .. 7, 8 */
+    ck("  RATCH 8: hits 8", t->step[0].carg == (CP_ECHO_EVEN | 6u));
+    turn(EN_K2, -1); turn(EN_K2, -1); turn(EN_K2, -1); turn(EN_K2, -1);   /* back to RATCH 4: the ECHO gone */
+    ck("  back to RATCH 4: the step's ratchet again, no ECHO", step_ratchet(&t->step[0]) == 4u && !t->step[0].comp);
+    { uint32_t hits = 0, b, v0;                           /* RATCH 8 plays 8 strikes a step */
+      track_t *u = &trk[0];
+      track_defaults_steps(u);
+      u->p[P_SLEN] = 1; u->p[P_SGATE] = 64; u->p[P_SSWING] = 0; song.g[G_SWING] = 0;
+      u->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100, .comp = CP_ECHO, .carg = CP_ECHO_EVEN | 6u};
+      seq_start();
+      for (b = 0; b < slen(u, 0) / CTL * 2u - 2u; b++) { v0 = vage; seq_tick(u, CTL); hits += vage - v0; }
+      ck("  and plays 8 strikes a pass of the step (two passes: 16)", hits == 16u);
+      seq_stop();
+    }
+
     ui_power_on();                                        /* STEP's MOVE: each note on its own (2026-11-10) */
     t = &trk[0];
     t->p[P_SLEN] = 8;

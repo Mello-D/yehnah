@@ -452,11 +452,11 @@ them page by page, a **SEQ** tap jumps to the next group.
 | PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | BAR | BAR (0.9.2) | BAR (the bar you edit) | LEN | — | — |
-| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps; turned on past another note it becomes a **HOLD**: the note rings for that many steps, to the pattern's end at most, with the other notes playing over it; back to 1 step: off. A later note of the same pitch ends a held note; it also takes a voice) | MOVE (the note, with its TIEs or HOLD, to the next step left / right where it fits; a note in the way is passed, never swapped) |
+| BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | LENGTH (the note longer or shorter, 1 … 16 steps; TIEs over empty steps; turned on past another note it becomes a **HOLD**: the note rings for that many steps, to the pattern's end at most, with the other notes playing over it; back to 1 step: off. The note's RATCH or ECHO runs over the whole hold: RATCH 2 strikes it again half way through, RATCH 3 at thirds, ECHO fading; ACC applies to every strike, SLD and DIV do nothing on a hold. A later note of the same pitch ends a held note; it also takes a voice) | MOVE (the note, with its TIEs or HOLD, to the next step left / right where it fits; a note in the way is passed, never swapped) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | STEP | FLAG 1 | FLAG 2 | VELOCITY (1 … 127) |
 
-FLAG 1 and FLAG 2 are two lists of the same flags: OFF, ACC, SLD, RATCH 2, RATCH 3, RATCH 4, ECHO, CHANCE (50 %); take any from each (RATCH 2 with ACC); the same flag in both is one flag. VELOCITY sets how hard the step plays (an ACC step plays 127; engines with their own envelope — FM6, MODAL, GUITAR, OMNI, KALIMBA — do not take it as loudness).
+FLAG 1 and FLAG 2 are two lists of the same flags: OFF, ACC, SLD, RATCH 2 … RATCH 8, ECHO, CHANCE (50 %); (RATCH 5 … 8 are an ECHO with EVEN set: all strikes at one level, so they use the step's ECHO place); take any from each (RATCH 2 with ACC); the same flag in both is one flag. VELOCITY sets how hard the step plays (an ACC step plays 127; engines with their own envelope — FM6, MODAL, GUITAR, OMNI, KALIMBA — do not take it as loudness).
 
 | STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
 | STEP | COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |

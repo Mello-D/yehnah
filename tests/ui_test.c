@@ -7915,7 +7915,7 @@ static int test_note_page(void)
     ok &= step_ratchet(&t->step[0]) == 2u && !(t->step[0].flags & SF_SLIDE);
     bad += check("SEQ > NOTE: FLAG 1 and FLAG 2 are lists of the flags, any from each, STEP on KNOB 1", ok);
     t->step[0].flags = 0; t->step[0].probability = 0; t->step[0].comp = t->step[0].carg = 0;   /* a bare step */
-    { uint32_t i; for (i = 0; i < 7u; i++) turn(EN_K3, 1); }                 /* FLAG 2: ACC SLD RATCH 2 3 4 ECHO CHANCE */
+    { uint32_t i; for (i = 0; i < 11u; i++) turn(EN_K3, 1); }                /* FLAG 2: ACC SLD RATCH 2 .. 8 ECHO CHANCE */
     ok = step_chance(&t->step[0]) == 50u && !t->step[0].comp && step_ratchet(&t->step[0]) == 1u && !t->step[0].flags;
     turn(EN_K3, -1);                                    /* .. ECHO */
     ok &= t->step[0].comp == CP_ECHO && step_chance(&t->step[0]) == 100u;

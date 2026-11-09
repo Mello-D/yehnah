@@ -2078,6 +2078,9 @@ static uint32_t step_parts(const track_t *t, const step_t *s, uint32_t *div)
         cp_get(t, o, CP_ARPN, CP_ARPS, &a);
         return *div = CP_RATES[CP_RATE(a) % CP_NRATE];
     }
+    if (s->time == ST_NOTE && !trk_kit(t) && CP_HAS(t, s, CP_HOLD, 0))   /* (2026-11-10) a HOLD: one note; its RATCH / ECHO are the
+                                                         * parts over its whole length (seq_hold_parts) */
+        return *div = 1;
     h = s->time == ST_NOTE && CP_HAS(t, s, CP_ECHO, &a) ? 2u + (a & ~CP_ECHO_EVEN) % 7u : step_ratchet(s);
     d = CT_DIVS[CT_DIV(s) % CT_NDIV];
     if (h < 2u || !d)
@@ -2195,17 +2198,50 @@ static void seq_unhold(track_t *t)
     uint32_t i;
     for (i = 0; i < t->hold_n; i++)
         seq_note_off(t, t->hold_notes[i]);
-    t->hold_n = t->hold_left = 0;
+    t->hold_n = t->hold_left = t->hold_hits = 0;
 }
-static void seq_to_hold(track_t *t, uint32_t steps)
+/* steps: the steps it rings (0: to the pass's end); the step's RATCH / ECHO (hits parts) retrigger it over that whole length, every
+ * part span / hits long (ECHO fading unless EVEN), the last until the HOLD ends (seq_tick: seq_hold_parts) */
+static void seq_to_hold(track_t *t, const step_t *s, uint32_t steps, uint32_t period, uint32_t vel)
 {
-    uint32_t i;
+    uint32_t i, len = (uint32_t)t->p[P_SLEN], hits, span = 0;
+    uint8_t ea = 0;
     seq_unhold(t);
     for (i = 0; i < t->seq_n && i < sizeof t->hold_notes; i++)
         t->hold_notes[t->hold_n++] = t->seq_notes[i];
     t->seq_n = 0;
     t->seq_hold = 0;
     t->hold_left = (uint8_t)steps;                   /* (the steps it rings: seq_tick counts them down; 0: to the pass's end) */
+    hits = CP_HAS(t, s, CP_ECHO, &ea) ? 2u + (ea & ~CP_ECHO_EVEN) % 7u : step_ratchet(s);
+    if (hits > 1u && len) {
+        uint32_t n = steps ? steps : len - t->seq_idx;
+        for (i = 0; i < n; i++)
+            span += step_samples(t, period, (t->seq_idx + i) % len);
+        t->hold_hits = (uint8_t)hits;
+        t->hold_k = 1;
+        t->hold_vel = (uint8_t)clamp((int32_t)vel, 1, 127);
+        t->hold_fade = (uint8_t)(CP_HAS(t, s, CP_ECHO, 0) && !(ea & CP_ECHO_EVEN));
+        t->hold_part = t->hold_due = span / hits;
+    }
+}
+static void seq_hold_parts(track_t *t, uint32_t n)       /* the held notes struck again at each part */
+{
+    uint32_t i, vel;
+    if (!t->hold_hits || !t->hold_n)
+        return;
+    if (t->hold_due > n) {
+        t->hold_due -= n;
+        return;
+    }
+    t->hold_due = t->hold_due + t->hold_part - n;
+    vel = t->hold_fade ? (uint32_t)t->hold_vel * (t->hold_hits - t->hold_k) / t->hold_hits : t->hold_vel;
+    if (vel < 8u) vel = 8u;
+    for (i = 0; i < t->hold_n; i++) {
+        seq_note_off(t, t->hold_notes[i]);
+        seq_note_on(t, t->hold_notes[i], vel);
+    }
+    if (++t->hold_k >= t->hold_hits)
+        t->hold_hits = 0;
 }
 
 static void seq_stop(void)
@@ -2582,7 +2618,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         t->seq_off = gate;
         t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie || chord_auto(t, len);
         if (!kit && !arp && hits == 1u && CP_HAS(t, s, CP_HOLD, &ha))
-            seq_to_hold(t, ha);
+            seq_to_hold(t, s, ha, period, vel);
         return;
     }
     t->slide_glide = (uint8_t)slide_in;
@@ -2683,7 +2719,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     t->seq_hold = hits == 1u && ((s->flags & SF_SLIDE) != 0 || next_tie ||   /* next step a TIE: keep the notes to it */
                                  (!kit && !arp && chord_auto(t, len)));   /* (0.6.81) GLIDE on POLY: to the next chord */
     if (!kit && !arp && hits == 1u && CP_HAS(t, s, CP_HOLD, &ha))   /* (2026-11-10) HOLD: the notes ring on */
-        seq_to_hold(t, ha);
+        seq_to_hold(t, s, ha, period, vel);
 }
 
 /* RATCH: the next part of the playing step once the sequencer is that far into it (seq_step played the first).
@@ -2786,6 +2822,8 @@ static void seq_tick(track_t *t, uint32_t n)
             t->ss_due = t->ss_gap;
         }
     }
+    if (song.playing)
+        seq_hold_parts(t, n);                         /* (2026-11-10) a HOLD's RATCH / ECHO over its length */
     if (t->seq_n && !t->seq_hold) {
         if (t->seq_off <= n)
             seq_release(t);

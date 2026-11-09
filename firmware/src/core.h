@@ -668,7 +668,9 @@ typedef struct track {
     uint16_t seq_idx;
     uint8_t seq_notes[4 + NLANE];   /* sounding seq notes (the step's notes, then its hits) */
     uint8_t seq_n;
-    uint8_t hold_n, hold_left, hold_notes[8];   /* (2026-11-10) CP_HOLD: the notes ringing over the steps (seq.c seq_to_hold) */
+    uint8_t hold_n, hold_left, hold_notes[8];
+    uint8_t hold_hits, hold_k, hold_vel, hold_fade;   /* (HOLD with a RATCH / ECHO: its parts over the whole length: seq.c seq_hold_parts) */
+    uint32_t hold_part, hold_due;   /* (2026-11-10) CP_HOLD: the notes ringing over the steps (seq.c seq_to_hold) */
     uint8_t seq_hold;            /* last step slides: keep the notes until the next step */
     uint8_t slide_glide;         /* next legato note glides (slide) */
     uint8_t rat_left;            /* RATCH: repeats of the playing step still to come (seq.c seq_ratchet) */
