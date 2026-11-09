@@ -1491,6 +1491,14 @@ static void draw_cards(void)
             draw_column(1, "GENRE", J6_GNAME[g], "", VAL(1u), pick_of(J6_NGEN, g), ICON_AUTO);
             continue;
         }
+        if (c == 2u && HARP_PAGE(cur_page()) && d && vp) {   /* (2026-11-09) KNOB 3 the set within the genre: a grid as GENRE's */
+            uint32_t cs = (uint32_t)clamp(TSEL->p[P_CVOI], 0, (int32_t)HARP_NALL - 1), g = harp_genre(cs), f = harp_genre_set(g), e = f;
+            while (e < HARP_NALL && harp_genre(e) == g)
+                e++;
+            param_format(d, *vp, val, &unit);
+            draw_column(2, d->label, val, unit, VAL(2u), pick_of(e - f, cs - f), param_icon(d, *vp));
+            continue;
+        }
         if (c == 0u && BAR_PAGE(cur_page())) {          /* (0.9.2) SEQ > BAR: KNOB 1 the bar ("2/4") */
             uint32_t nb = ((uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP) + 15u) / 16u;
             char u[4] = "/1";
