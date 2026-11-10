@@ -782,14 +782,14 @@ static const page_t PAGES[] = {
                                                          * it (2026-10-27, ui_input.c edit_param; STRUM on SCL held) */
     {"OMNI", FAM_SCL, SC_TRACK, GR_NONE, {P_ROOT, P_CVOI, P_OAUTO, P_OSTR}},
     {"GUITAR", FAM_SCL, SC_TRACK, GR_NONE, {P_ROOT, 0xFF, P_GSET, P_HPLATE}},   /* (2026-11-10) SCL > GUITAR: guitchordi's chord
-                                                         * styles on HARP's keys; KNOB 2 FAMILY, KNOB 3 the style within it */
+                                                         * styles on HARP's keys; KNOB 2 GENRE, KNOB 3 the style within it */
     {"PROG", FAM_SCL, SC_TRACK, GR_PROG, {P_ROOT, P_PROG, 0xFF, P_HPLATE}},   /* (chord-harp fork) SCL > PROG: the chord
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
                                                          * (2026-10-27, ui_input.c prog_write) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
-#define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)          /* (2026-11-10) SCL > GUITAR: KNOB 2 FAMILY, KNOB 3 STYLE */
+#define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)          /* (2026-11-10) SCL > GUITAR: KNOB 2 GENRE, KNOB 3 STYLE */
 #define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu && !GTR_PAGE(pg))   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
                                                          * (CHORD has PLATE too) */
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))

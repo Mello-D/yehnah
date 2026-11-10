@@ -1129,12 +1129,12 @@ gate). STRUM at 0: the steps' chords as before, all at once. A drum track, MONO,
 ### GUITAR (2026-11-10)
 
 **SCL > GUITAR** (the last SCL tab, after HARP, OMNI and PROG) plays chords as a guitar does, on HARP's keys: the lowest 12 keys are
-chord keys (the 12th plays chord 1 again), the white keys above them the strum plate. KNOB 2 **FAMILY** picks one of nine
-families (GT ORIG, GT JAZZ, GT LOFI, GT ROCK, GT BLUES, GT POP, GT SOUL, GT FOLK, GT AMB), KNOB 3 the **style** within it
+chord keys (the 12th plays chord 1 again), the white keys above them the strum plate. KNOB 2 **GENRE** picks one of nine
+genres (GT ORIG, GT JAZZ, GT LOFI, GT ROCK, GT BLUES, GT POP, GT SOUL, GT FOLK, GT AMB), KNOB 3 the **style** within it
 (50 in all: Jazz Essentials, Classic Rock, Chicago Blues …). The chords are guitchordi's (stoogs/guitchordi, GPL-3.0): each is the
 six strings of a guitar in standard tuning, as it voices them (a muted string is left out, so some chords have 3 to 6 notes), in
 the style's own key; **ROOT** moves them. It works on any sound; STRUM spreads the notes low to high as for HARP, and the
-chord records as its notes. The GUITAR engine's PHYS model (guitchordi's string) and its presets suit it. Other tunings are not
+chord records as its notes. Other tunings are not
 in yet.
 
 ### ARP

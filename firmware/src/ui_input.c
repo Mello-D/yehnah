@@ -1189,7 +1189,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         cursor_set((int32_t)(at < len ? at : len - 1u));
         return;
     }
-    if (GTR_PAGE(pg) && slot < 3u && slot) {            /* (2026-11-10) FAMILY: the next / last family's first style; STYLE: within it */
+    if (GTR_PAGE(pg) && slot < 3u && slot) {            /* (2026-11-10) GENRE: the next / last family's first style; STYLE: within it */
         uint32_t s = (uint32_t)clamp(TSEL->p[P_GSET], 0, (int32_t)GT_NSET - 1), g = GT_GEN[s], f = gt_genre_set(g), n = f;
         if (slot == 1u) {
             TSEL->p[P_GSET] = (int16_t)gt_genre_set((uint32_t)clamp((int32_t)g + steps, 0, (int32_t)GT_NGEN - 1));

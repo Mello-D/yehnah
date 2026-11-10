@@ -1387,7 +1387,7 @@ static void draw_cards(void)
         }
         if (c == 1u && GTR_PAGE(cur_page())) {          /* (2026-11-10) SCL > GUITAR: KNOB 2 the style's family */
             uint32_t g = GT_GEN[(uint32_t)clamp(TSEL->p[P_GSET], 0, (int32_t)GT_NSET - 1)];
-            draw_column(1, "FAMILY", GT_GNAME[g], "", VAL(1u), pick_of(GT_NGEN, g), ICON_AUTO);
+            draw_column(1, "GENRE", GT_GNAME[g], "", VAL(1u), pick_of(GT_NGEN, g), ICON_AUTO);
             continue;
         }
         if (c == 2u && GTR_PAGE(cur_page()) && d && vp) {   /* .. KNOB 3 the style within it */
