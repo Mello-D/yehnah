@@ -620,7 +620,8 @@ static int pfx_rec_ok(void) { return song.rec && song.playing && !chain.running;
 enum { AM_OFF, AM_UP, AM_DN, AM_UPDN, AM_RND, AM_ORD, AM_REPEAT, AM_DNUP, AM_UP8, AM_CONV, AM_DIVG, AM_PINKY,
        AM_THUMB, AM_WALK, AM_CHORD,
        AM_TRNS, AM_SKIP, AM_HOLD,
-       AM_TURING };                  /* (chord-harp fork, 2026-10-30: Clipper 0.9's TURNG, turing_step; its 15) */
+       AM_TURING,
+       AM_STRDN, AM_STRUP, AM_STRALT, AM_BLOCK, AM_BSCH, AM_SHUF, AM_HALF, AM_TWO3, AM_FAST };   /* (strum-on-hold: the strokes) */                  /* (chord-harp fork, 2026-10-30: Clipper 0.9's TURNG, turing_step; its 15) */
 /* (chord-harp fork) SKIP: UP, about a third of its notes left out at random;
                                        * HOLD: UP, now and then a note held 1 or 2 steps more (its count in arp_walk).
                                        * (Yehnah) TRNS: a key no note but the track's sequence transposed by its interval from C4 (t->trn, kept
@@ -664,8 +665,21 @@ static __attribute__((noinline)) void arp_chord(track_t *t, const uint32_t *list
     }
 }
 
+static void arp_stroke_off(track_t *t, int rec)  /* a stroke's later notes that have come in end */
+{
+    uint32_t q;
+    for (q = 0; q < t->as_i && q < t->as_n; q++) {
+        if (rec)
+            rec_release(t, t->as_nn[q]);
+        seq_note_off(t, t->as_nn[q]);
+    }
+    t->as_n = t->as_i = 0;
+}
+
 static void arp_silence(track_t *t)              /* the sounding arp note(s) end */
 {
+    if (t->as_n)
+        arp_stroke_off(t, 0);
     if (t->arp_ch[0] | t->arp_ch[1] | t->arp_ch[2])
         arp_chord_off(t, 0);
     seq_note_off(t, t->arp_note);
@@ -674,6 +688,8 @@ static void arp_silence(track_t *t)              /* the sounding arp note(s) end
 
 static void arp_off(track_t *t)                  /* the sounding arp note(s) end (a recorded one too) */
 {
+    if (t->as_n)
+        arp_stroke_off(t, rec_on(t));
     if (t->arp_ch[0] | t->arp_ch[1] | t->arp_ch[2])
         arp_chord_off(t, rec_on(t));
     seq_note_off(t, t->arp_note);
@@ -812,6 +828,25 @@ static int click_wanted(void)                  /* CLICK REC: while a track is ar
     return click_mode == CLICK_ON || (click_mode == CLICK_REC && song.rec && !chain.running);
 }
 static void arp_fire(track_t *t, uint32_t period);
+static uint32_t hum_amt(const track_t *t, uint32_t id);   /* (SEQ > HUMAN, below: the arp's too) */
+static uint32_t hum_rnd(void);
+static int32_t hum_pm(uint32_t r);
+/* a stroke's later notes coming in, one gap apart (noinline, in the flash: arp_step is inlined into the RAM code) */
+static __attribute__((noinline)) void arp_stroke_run(track_t *t, uint32_t n)
+{
+    if (t->as_due > n) {
+        t->as_due -= n;
+        return;
+    }
+    do {
+        uint32_t nt = t->as_nn[t->as_i];
+        if (rec_on(t))
+            rec_note(t, nt, t->as_vv[t->as_i]);
+        seq_note_on(t, nt, t->as_vv[t->as_i]);
+        t->as_i++;
+    } while (!t->as_gap && t->as_i < t->as_n);
+    t->as_due = t->as_gap;
+}
 static void arp_step(track_t *t, uint32_t n, uint32_t gate_n)
 {
     uint32_t period;
@@ -822,24 +857,112 @@ static void arp_step(track_t *t, uint32_t n, uint32_t gate_n)
         else
             t->arp_off -= gate_n;
     }
+    if (t->as_i < t->as_n)
+        arp_stroke_run(t, n);
     if (!t->p[P_AMODE] || !t->nheld || t->p[P_AMODE] == AM_TRNS) {   /* (TRNS: no arpeggio) */
         if ((!t->nheld || t->p[P_AMODE] == AM_TRNS) && t->arp_note)
             arp_off(t);
         return;
     }
-    period = div_samples((uint32_t)t->p[P_ARATE]);
+    period = t->p[P_ARATE] >= 10 ? div_samples((uint32_t)t->p[P_ARATE] - 10u) * 3u / 2u : div_samples((uint32_t)t->p[P_ARATE]);
     sw = t->p[P_ASWING] * (int32_t)period / 250;
     t->arp_pos += n;
-    if (t->arp_pos < period + (uint32_t)((t->arp_idx & 1u) ? sw : -sw) && t->arp_pos != 0xFFFFFFF + n)
+    if (t->arp_pos < period + t->arp_hd + (uint32_t)((t->arp_idx & 1u) ? sw : -sw) && t->arp_pos != 0xFFFFFFF + n)
         return;
     t->arp_pos = 0;
+    t->arp_hd = 0;
     arp_fire(t, period);
+}
+/* (strum-on-hold) the STR* modes: one stroke of the held chord (up to 6 notes, the lowest 6; FAST: up, down, up) each
+ * repeat. The first note now, the rest by arp_stroke_run, one gap (SCL > GUITAR's STRUM, KNOB 4; FAST: that is the
+ * sweep of one stroke, 30 .. 120 ms) apart; all inside 3/4 of the step. HUMAN moves each note's velocity */
+#define ST_MAX 6u
+static __attribute__((noinline)) void arp_stroke(track_t *t, const uint32_t *list, uint32_t cnt, uint32_t period, uint32_t vel)
+{
+    uint8_t o[ST_MAX * 3u];
+    uint32_t m = (uint32_t)t->p[P_AMODE], p = t->arp_idx & 1u, c = cnt < ST_MAX ? cnt : ST_MAX, i, j, k = c, tot, gap, hv, up = 1;
+    for (i = 0; i < c; i++)
+        o[i] = (uint8_t)i;                              /* (low to high) */
+    switch (m) {
+    case AM_STRDN: up = 0; break;
+    case AM_STRALT: up = p; break;                      /* (down, up, ..) */
+    case AM_BSCH:
+        if (!p) k = 1;                                  /* the bass alone .. */
+        else if (c > 1u) {                              /* .. then the rest */
+            for (i = 0; i + 1u < c; i++)
+                o[i] = (uint8_t)(i + 1u);
+            k = c - 1u;
+        }
+        break;
+    case AM_SHUF: case AM_HALF: case AM_TWO3:
+        for (i = c; i > 1u; i--) {                      /* a random order */
+            j = rng() % i;
+            k = o[i - 1u], o[i - 1u] = o[j], o[j] = (uint8_t)k;
+        }
+        k = m == AM_SHUF ? c : m == AM_HALF ? (c + 1u) / 2u : (2u * c + 2u) / 3u;
+        if (m != AM_SHUF)                               /* a part: in the physical order, low to high */
+            for (i = 1; i < k; i++)
+                for (j = i; j > 0 && o[j - 1u] > o[j]; j--) {
+                    uint32_t x = o[j];
+                    o[j] = o[j - 1u];
+                    o[j - 1u] = (uint8_t)x;
+                }
+        break;
+    default:
+        break;
+    }
+    if (m == AM_STRDN || m == AM_STRALT) {
+        if (!up)
+            for (i = 0; i < k / 2u; i++) {
+                uint8_t x = o[i];
+                o[i] = o[k - 1u - i];
+                o[k - 1u - i] = x;
+            }
+    }
+    if (m == AM_FAST) {                                 /* up, down, up */
+        for (i = 0; i < c; i++) {
+            o[c + i] = (uint8_t)(c - 1u - i);
+            o[2u * c + i] = (uint8_t)i;
+        }
+        k = 3u * c;
+    }
+    tot = k;
+    if (m == AM_BLOCK)
+        gap = 0;
+    else if (m == AM_FAST)
+        gap = c > 1u ? (30u + 90u * (uint32_t)clamp(t->p[P_CSTR], 0, 127) / 127u) * (FS / 1000u) / (c - 1u) : 0u;
+    else
+        gap = chord_gap(t);
+    if (tot > 1u && gap > period * 3u / 4u / (tot - 1u))
+        gap = period * 3u / 4u / (tot - 1u);
+    hv = hum_amt(t, P_HVEL);
+    t->as_n = t->as_i = 0;
+    for (i = 0; i < tot; i++) {
+        uint32_t nt = (uint32_t)clamp((int32_t)list[o[i]], 1, 127), v = vel;
+        if (m == AM_FAST ? (i / c) != 1u : (m == AM_STRUP || m == AM_BSCH || (m == AM_STRALT && up)))
+            v = v * 90u / 100u;                         /* (an up-stroke a little softer) */
+        if (hv)
+            v = (uint32_t)clamp((int32_t)v + hum_pm(hv * 50u / 127u), 1, 127);
+        if (!i) {
+            t->arp_note = (uint8_t)nt;
+            if (rec_on(t))
+                rec_note(t, nt, v);
+            seq_note_on(t, nt, v);
+        } else {
+            t->as_nn[t->as_n] = (uint8_t)nt;
+            t->as_vv[t->as_n++] = (uint8_t)v;
+        }
+    }
+    t->as_gap = gap;
+    t->as_due = gap;
+    if (!gap)
+        arp_stroke_run(t, 0);
 }
 /* (chord-harp fork) an arp step: the next note. noinline, in the flash: arp_step is inlined into the RAM code
  * (mix_block), and this runs only once a step */
 static __attribute__((noinline)) void arp_fire(track_t *t, uint32_t period)
 {
-    uint32_t cnt, list[64], len = 0, i, j, o, vel = 100;
+    uint32_t cnt, list[64], len = 0, i, j, o, vel = 100, hv;
     spice_t sp = {0, 0, 100, 64};
     if (t->p[P_AMODE] == AM_HOLD && t->arp_note && t->arp_walk && t->arp_walk <= 2u) {   /* HOLD: this step the note held */
         t->arp_walk--;
@@ -874,6 +997,11 @@ static __attribute__((noinline)) void arp_fire(track_t *t, uint32_t period)
     }
     if (t->arp_note)
         arp_off(t);
+    hv = hum_amt(t, P_HVEL);
+    if (hv) {                                       /* HUMAN: the next step up to 40 ms late (never early) */
+        uint32_t d = hum_rnd() % ((FS * 40u / 1000u) * hv / 127u + 1u);
+        t->arp_hd = d < period / 3u ? d : period / 3u;
+    }
     if (t->p[P_AMODE] != AM_TURING && sp.skip)
         return;                                     /* (SPICE: a rest; the walk goes on) */
     if ((uint32_t)(rng() & 127u) <= (uint32_t)t->p[P_APROB] && !(t->p[P_AMODE] == AM_SKIP && rng() % 3u == 0u)) {
@@ -882,11 +1010,17 @@ static __attribute__((noinline)) void arp_fire(track_t *t, uint32_t period)
             t->arp_walk = rng() % 10u < 3u ? (uint8_t)(1u + rng() % 2u) : 0u;
             t->arp_off += period * t->arp_walk;
         }
+        if (t->p[P_AMODE] >= AM_STRDN) {            /* the strokes */
+            arp_stroke(t, list, cnt, period, vel);
+            return;
+        }
         if (t->p[P_AMODE] == AM_CHORD) {            /* CHORD: the first 4 notes, an octave up each step */
             arp_chord(t, list, cnt);
             return;
         }
         t->arp_note = (uint8_t)clamp((int32_t)list[j] + (t->p[P_AMODE] == AM_TURING ? 0 : sp.oct), 1, 127);
+        if (hv)
+            vel = (uint32_t)clamp((int32_t)vel + hum_pm(hv * 50u / 127u), 1, 127);
         if (rec_on(t))
             rec_note(t, t->arp_note, vel);           /* recording: what the arp plays */
         seq_note_on(t, t->arp_note, vel);

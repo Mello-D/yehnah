@@ -7207,7 +7207,7 @@ static int test_div_order(void)
         ok &= d == &GP[G_DTIME] ? param_turn(d, v, -1) == v : enum_rank(d, param_turn(d, v, -1)) == d->max;
         for (n = 0; n <= (d == &GP[G_DTIME] ? DT_FREE - 1 : d->max - d->min); n++) {   /* (TIME: its divisions; the
                                                          * free times past them: test_dtime_free) */
-            len = d->names == N_SLDIV ? 1000000u / SL_DEN[v] : div_samples((uint32_t)v);
+            len = d->names == N_SLDIV ? 1000000u / SL_DEN[v] : d == &TP[P_ARATE] && v >= 10 ? div_samples((uint32_t)v - 10u) * 3u / 2u : div_samples((uint32_t)v);   /* (ARP RATE: 10..12 dotted) */
             if (!(len < prev && enum_rank(d, v) == d->min + n && !((seen >> v) & 1))) {
                 printf("  %s: %s (value %d, place %d, length %u) after %u\n", d->label, d->names[v], (int)v,
                        (int)enum_rank(d, v), len, prev);

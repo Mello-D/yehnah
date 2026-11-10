@@ -8,8 +8,12 @@ static const char *const N_LSYNC[12] = {"4BAR", "2BAR", "1BAR", "1/2", "1/4", "1
                                         "1/16T", "1/32"};
 static const char *const N_AMODE[] = {"OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT",   /* (append-only: seq.c AM_*) */
                                        "DNUP", "UP+8", "CONV", "DIVG", "PINKY", "THUMB", "WALK", "CHORD",
-                                       "TRNS", "SKIP", "HOLD", "TURNG"};         /* (Yehnah: seq.c AM_TRNS; chord-harp fork: SKIP
+                                       "TRNS", "SKIP", "HOLD", "TURNG",
+                                       "STRDN", "STRUP", "STRALT", "BLOCK", "BS+CH", "SHUF", "HALF", "2/3", "FAST"};   /* (strum-on-hold:
+                                                         * strokes of the held chord; seq.c arp_stroke) */         /* (Yehnah: seq.c AM_TRNS; chord-harp fork: SKIP
                                                                          * HOLD) */
+/* the ARP's RATE: N_DIV's ten and the dotted 1/4D 1/8D 1/16D (10..12; seq.c arp_step: 3/2 of the division 0..2) */
+static const char *const N_ADIV[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR", "1/4D", "1/8D", "1/16D"};
 static const char *const N_AMB[] = {"OFF", "HOLD", "LATCH"};   /* (chord-harp fork) ARP > AMBIENT (seq.c amb.c) */
 static const char *const N_DIV[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR"};
 /* the PATTERN's DIV: N_DIV's ten and a 1/64 (index 10; the delay's TIME, which has free times from 10, never takes it) */
@@ -112,7 +116,7 @@ static const param_desc_t TP[P_COUNT] = {
     [P_LD_SHP] = PD("SHAPE", F_BIPCT, -64, 63, 0),
     [P_LD_AMP] = PD("AMP", F_PCT, 0, 127, 0),
     [P_AMODE] = PE("MODE", N_AMODE, 0),
-    [P_ARATE] = PE("RATE", N_DIV, 2),
+    [P_ARATE] = PE("RATE", N_ADIV, 2),
     [P_AOCT] = PD("OCT", F_INT, 1, 4, 1),
     [P_AGATE] = PD("GATE", F_PCT, 1, 127, 64),
     [P_ASWING] = PD("SWING", F_PCT, 0, 100, 0),
@@ -381,6 +385,7 @@ static int32_t enum_step(const param_desc_t *d, int32_t from, int32_t v)
  * -> the shown order of d's values (index: position, entry: value), 0 = the values' own order */
 static const uint8_t DIV_ORDER[10] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3};   /* 4BAR 2BAR 1/1 1/2 1/4 1/8 8T 1/16 16T 1/32 */
 static const uint8_t PDIV_ORDER[11] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3, 10};   /* ... 1/32, 1/64 */
+static const uint8_t ADIV_ORDER[13] = {9, 8, 7, 6, 10, 0, 11, 1, 12, 4, 2, 5, 3};   /* ... 1/2 1/4D 1/4 1/8D 1/8 1/16D 8T 1/16 16T 1/32 */
 static const uint8_t SLDIV_ORDER[6] = {0, 3, 1, 4, 2, 5};              /* 1/8 8T 1/16 16T 1/32 32T */
 static const uint8_t RWAVE_ORDER[7] = {5, 6, 0, 1, 2, 3, 4};   /* (0.4) LOFI's WAVE: BYTE first (0.5.1: FLOAT
                                                          * next), then PLS .. WRAM */
@@ -395,7 +400,7 @@ static const uint8_t DTIME_ORDER[NELEM(N_DTIME)] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3
                                                          * then the free times, short to long */
 static const uint8_t *enum_order(const param_desc_t *d)
 {
-    return d->names == N_DIV ? DIV_ORDER : d->names == N_PDIV ? PDIV_ORDER : d->names == N_SLDIV ? SLDIV_ORDER : d->names == N_DTIME ? DTIME_ORDER :
+    return d->names == N_DIV ? DIV_ORDER : d->names == N_PDIV ? PDIV_ORDER : d->names == N_ADIV ? ADIV_ORDER : d->names == N_SLDIV ? SLDIV_ORDER : d->names == N_DTIME ? DTIME_ORDER :
            d->names == N_RWAVE ? RWAVE_ORDER : 0;
 }
 static int32_t enum_rank(const param_desc_t *d, int32_t v)   /* v's place in the shown order (+ min): the gauges */

@@ -286,15 +286,15 @@ static int arp_new_modes(void)
     track_t *t;
     ui_power_on();
     t = &trk[0];
-    ok = TP[P_AMODE].max == 18 && str_eq(TP[P_AMODE].names[15], "TRNS") && str_eq(TP[P_AMODE].names[16], "SKIP") &&
+    ok = TP[P_AMODE].max == 27 && str_eq(TP[P_AMODE].names[15], "TRNS") && str_eq(TP[P_AMODE].names[16], "SKIP") &&
          str_eq(TP[P_AMODE].names[17], "HOLD") && str_eq(TP[P_AMODE].names[18], "TURNG") && str_eq(TP[P_AMODE].names[6], "REPEAT") && str_eq(TP[P_AMODE].names[7], "DNUP") &&
          str_eq(TP[P_AMODE].names[8], "UP+8") && str_eq(TP[P_AMODE].names[9], "CONV") &&
          str_eq(TP[P_AMODE].names[10], "DIVG") && str_eq(TP[P_AMODE].names[11], "PINKY") &&
          str_eq(TP[P_AMODE].names[12], "THUMB") && str_eq(TP[P_AMODE].names[13], "WALK") &&
          str_eq(TP[P_AMODE].names[14], "CHORD");
-    for (i = 0; i <= 18u; i++)
+    for (i = 0; i <= 27u; i++)
         ok &= strlen(TP[P_AMODE].names[i]) <= 6u;
-    bad += check("ARP modes: OFF..REPEAT keep their numbers, DNUP UP+8 CONV DIVG PINKY THUMB WALK CHORD TRNS SKIP HOLD TURNG appended (<= 6 chars)", ok);
+    bad += check("ARP modes: OFF..REPEAT keep their numbers, DNUP UP+8 CONV DIVG PINKY THUMB WALK CHORD TRNS SKIP HOLD TURNG, then the strokes STRDN .. FAST appended (<= 6 chars)", ok);
     /* the modes before 1.2 play as they did */
     arp_fresh(t, AM_UP, 1, CEG, 3);   ok = arp_plays(t, (const uint8_t[]){60, 64, 67, 60}, 4);
     arp_fresh(t, AM_DN, 1, CEG, 3);   ok &= arp_plays(t, (const uint8_t[]){67, 64, 60, 67}, 4);
@@ -348,6 +348,66 @@ static int arp_new_modes(void)
     arp_tick(t, CTL);                                  /* let go: the chord ends */
     ok &= !t->nheld && !t->arp_note && !t->arp_ch[0] && !t->arp_ch[1];
     bad += check("ARP CHORD: C E G together, then an octave up (OCT 2); 5 held: the first 4; the gate and a release end them all", ok);
+    /* (strum-on-hold) the STR* modes: a stroke each repeat; the first note now, the rest queued a gap apart */
+    {
+        uint32_t u;
+        t->p[P_CSTR] = 20;
+        arp_fresh(t, AM_STRDN, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok = t->arp_note == 67 && t->as_n == 2 && t->as_nn[0] == 64 && t->as_nn[1] == 60 && !t->as_i;
+        for (u = 0; u < 12u; u++)
+            arp_tick(t, 100u);                             /* the sweep comes in */
+        ok &= t->as_i == 2;
+        t->arp_off = 1; arp_tick(t, 2);
+        ok &= !t->arp_note && !t->as_n;
+        arp_fresh(t, AM_STRUP, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok &= t->arp_note == 60 && t->as_nn[0] == 64 && t->as_nn[1] == 67;
+        arp_fresh(t, AM_STRALT, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok &= t->arp_note == 67 && t->as_nn[1] == 60;
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok &= t->arp_note == 60 && t->as_nn[1] == 67;
+        bad += check("ARP STRDN / STRUP / STRALT: high to low, low to high, alternating; the gate ends the stroke", ok);
+        arp_fresh(t, AM_BLOCK, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok = t->as_n == 2 && t->as_i == 2;
+        arp_fresh(t, AM_BSCH, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok &= t->arp_note == 60 && !t->as_n;
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok &= t->arp_note == 64 && t->as_n == 1 && t->as_nn[0] == 67;
+        bad += check("ARP BLOCK: all at once; BS+CH: the bass alone, then the rest", ok);
+        arp_fresh(t, AM_FAST, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        {
+            static const uint8_t W[8] = {64, 67, 67, 64, 60, 60, 64, 67};
+            ok = t->arp_note == 60 && t->as_n == 8;
+            for (i = 0; i < 8u; i++)
+                ok &= t->as_nn[i] == W[i];
+        }
+        bad += check("ARP FAST: up, down, up (9 notes of 3)", ok);
+        ok = 1;
+        for (u = 0; u < 20u; u++) {
+            arp_fresh(t, AM_HALF, 1, CEGB, 4);
+            t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+            ok &= t->as_n == 1 && t->arp_note >= 60 && t->as_nn[0] > t->arp_note;
+            arp_fresh(t, AM_TWO3, 1, CEG, 3);
+            t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+            ok &= t->as_n == 1 && t->as_nn[0] > t->arp_note;
+            arp_fresh(t, AM_SHUF, 1, CEG, 3);
+            t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+            ok &= t->as_n == 2 && t->arp_note != t->as_nn[0] && t->arp_note != t->as_nn[1] && t->as_nn[0] != t->as_nn[1];
+        }
+        bad += check("ARP HALF (2 of 4), 2/3 (2 of 3): distinct notes in physical order; SHUF: all 3 once", ok);
+        t->p[P_CSTR] = 0;
+        arp_fresh(t, AM_OFF, 1, CEG, 3);
+        t->p[P_ARATE] = 11;                                /* 1/8D */
+        ok = t->p[P_ARATE] <= TP[P_ARATE].max && TP[P_ARATE].max == 12 && str_eq(TP[P_ARATE].names[10], "1/4D");
+        t->p[P_ARATE] = 2;
+        bad += check("ARP RATE: 1/4D 1/8D 1/16D appended", ok);
+        arp_fresh(t, AM_OFF, 1, CEG, 3);
+    }
     /* WALK: from the bottom, one place up or down each step, inside the list; the same from the same seed */
     ok = 1;
     for (k = 0; k < 2u; k++) {

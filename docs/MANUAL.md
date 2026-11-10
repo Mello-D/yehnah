@@ -1144,6 +1144,14 @@ REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD, **TRNS** (the keys an
 sequence by their distance from C4, without playing notes). **Key latch**: with MODE OFF, **HOLD ON** keeps the notes
 sounding after you let go; the next chord replaces them.
 
+**Strum on hold.** The nine strokes play the held chord (the lowest six notes) as a strum each time the ARP repeats: **STRDN**
+(high to low), **STRUP** (low to high), **STRALT** (down, up, ..), **BLOCK** (all together), **BS+CH** (the bass alone, then the rest
+as a strum), **SHUF** (the notes in a random order), **HALF** and **2/3** (a random half / two thirds of the chord each time, in
+physical order), **FAST** (up, down, up: three quick strokes a repeat). The strum's speed is SCL > CHORD's / GUITAR's **STRUM** (0 =
+all together); FAST's is a stroke of 30 to 120 ms from it. Up-strokes are a little softer. They work with any chord mode, best with SCL >
+GUITAR (hold a chord key, or LATCH it). **RATE** also has the dotted **1/4D, 1/8D, 1/16D**. **SEQ > HUMAN** now moves the arp too: each
+note's velocity and each repeat's start (up to 40 ms late).
+
 ### Clearing
 
 | To clear | Do |

@@ -660,6 +660,10 @@ typedef struct track {
     int16_t tm_seed;             /* .. the DICE it was seeded with (+ 1; 0: not yet) */
     uint8_t arp_ch[3];           /* CHORD: the other notes sounding with arp_note, 0 = none */
     uint32_t arp_off;            /* q8 sample time of its note-off */
+    /* (strum-on-hold) the STR* ARP modes: a stroke's notes after the first, as_i of as_n sounding, as_due samples to the
+     * next, as_gap between; arp_hd: the next step late by this many samples (HUMAN) */
+    uint8_t as_n, as_i, as_nn[18], as_vv[18];
+    uint32_t as_due, as_gap, arp_hd;
     /* sequencer */
     step_t step[NSTEP];
     uint32_t seq_pos;            /* q8 samples into the current step */
