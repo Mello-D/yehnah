@@ -23,17 +23,18 @@ static const char *const N_GTMODEL[] = {"NYLON", "STEEL", "ELEC"};
 typedef struct {                       /* a model: its decay, its pluck, its body (two resonances: f, Q, level) */
     float t60, bright, loss;           /* T60 of A2 (s); the pluck's brightness; TONE's averaging at its middle */
     float bf[2], bq[2], bg[2];
+    float sh;                          /* the low shelf: how much of the string's bottom (below ~200 Hz) is added back */
 } gt_model_t;
 static const gt_model_t GT_MODELS[GT_N] = {
-    {4.0f, 0.55f, 0.42f, {98.0f, 205.0f}, {6.0f, 5.0f}, {0.9f, 0.6f}},      /* NYLON: dark, a round body */
-    {6.0f, 0.85f, 0.30f, {110.0f, 230.0f}, {7.0f, 6.0f}, {0.7f, 0.5f}},     /* STEEL: bright, longer */
-    {7.0f, 0.75f, 0.26f, {2600.0f, 0.0f}, {1.4f, 1.0f}, {0.6f, 0.0f}},      /* ELEC: no body, the pickup's peak */
+    {4.0f, 0.55f, 0.42f, {98.0f, 205.0f}, {6.0f, 5.0f}, {0.9f, 0.6f}, 0.9f},      /* NYLON: dark, a round body */
+    {6.0f, 0.85f, 0.30f, {110.0f, 230.0f}, {7.0f, 6.0f}, {0.7f, 0.5f}, 0.7f},     /* STEEL: bright, longer */
+    {7.0f, 0.75f, 0.26f, {2600.0f, 0.0f}, {1.4f, 1.0f}, {0.6f, 0.0f}, 0.4f},      /* ELEC: no body, the pickup's peak */
 };
 typedef struct {
     float ap_c, ap_x1, ap_y1;          /* the tuning allpass: its coefficient, last input, last output */
     float z1, g, s;                    /* the loss filter's last input; the loop gain; its averaging (0 .. 0.5) */
     float b[2][5], bz[2][2];           /* the body's band-passes (b0 b1 b2 a1 a2) and their states */
-    float bmix, dc_x, dc_y;            /* how much body; the DC blocker */
+    float bmix, dc_x, dc_y, lo;   /* how much body; the DC blocker; the shelf's one-pole */
     float prev;                        /* the last half-rate output (the interpolation's) */
     float level, period;               /* the loudness lately (the steal); the line's length now (samples) */
     int32_t cents, nz;                 /* the pitch it is tuned for; the noise */
@@ -118,7 +119,7 @@ static void guitar_note_on(track_t *t, voice_t *v)
     s->rel = 0;
     gt_tune(t, s, (int32_t)v->note * 100);
     if (!s->on) {                                       /* (a string at rest: its filters too; a ringing one keeps its body's) */
-        s->ap_x1 = s->ap_y1 = s->z1 = s->dc_x = s->dc_y = s->prev = 0.0f;
+        s->ap_x1 = s->ap_y1 = s->z1 = s->dc_x = s->dc_y = s->prev = s->lo = 0.0f;
         s->bz[0][0] = s->bz[0][1] = s->bz[1][0] = s->bz[1][1] = 0.0f;
     }
     for (k = 0; k < 2u; k++)                            /* the body (or the pickup) */
@@ -153,7 +154,7 @@ static void guitar_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     gt_voice_t *s = gt_of(t, v);
     float amp = (float)m->amp0, damp = (float)(m->amp1 - m->amp0) * (1.0f / CTL), pk = 0.0f;
     const float kq = (float)VOICE_FS * 1.5f / (32768.0f * 16384.0f);
-    float apc, apx, apy, z1, g, sv, bm, dcx, dcy, b0[5], b1[5], z[2][2], prev = s ? s->prev : 0.0f;
+    float apc, apx, apy, z1, g, sv, bm, dcx, dcy, lo, b0[5], b1[5], z[2][2], prev = s ? s->prev : 0.0f;
     uint32_t j, w, len, k;
     int16_t *L;
     if (!s || !s->on)
@@ -170,13 +171,14 @@ static void guitar_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     L = gt_line[s - gt_pool];
     apc = s->ap_c, apx = s->ap_x1, apy = s->ap_y1, z1 = s->z1, g = s->g, sv = s->s, dcx = s->dc_x, dcy = s->dc_y;
     bm = s->bmix;
+    lo = s->lo;
     w = s->w, len = s->len;
     for (k = 0; k < 5u; k++)
         b0[k] = s->b[0][k], b1[k] = s->b[1][k];
     z[0][0] = s->bz[0][0], z[0][1] = s->bz[0][1], z[1][0] = s->bz[1][0], z[1][1] = s->bz[1][1];
     {
         const gt_model_t *md = &GT_MODELS[s->model];
-        float g0 = md->bg[0] * bm, g1 = md->bg[1] * bm;
+        float g0 = md->bg[0] * bm, g1 = md->bg[1] * bm, gs = md->sh * bm;
         for (j = 0; j < n; j += 2u, amp += 2.0f * damp) {   /* (a string sample a pair of output samples) */
             float x = (float)L[(w + GT_LEN - len) % GT_LEN], y, o, bp;
             y = g * ((1.0f - sv) * x + sv * z1);        /* the loss: the averaging, the loop gain */
@@ -188,7 +190,8 @@ static void guitar_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
             w = w + 1u < GT_LEN ? w + 1u : 0u;
             dcy = x - dcx + 0.995f * dcy;               /* the string's output, its DC out */
             dcx = x;
-            o = dcy;
+            lo += 0.056f * (dcy - lo);                  /* the shelf: ~200 Hz at this rate, the string's bottom back in */
+            o = dcy + lo * gs;
             if (g0 > 0.0f) {                            /* the body: band-passes added (transposed direct form II) */
                 bp = b0[0] * dcy + z[0][0];
                 z[0][0] = b0[1] * dcy - b0[3] * bp + z[0][1];
@@ -208,7 +211,7 @@ static void guitar_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
             prev = o;
         }
     }
-    s->ap_x1 = apx, s->ap_y1 = fm_flush(apy), s->z1 = z1, s->dc_x = dcx, s->dc_y = fm_flush(dcy), s->prev = fm_flush(prev);
+    s->ap_x1 = apx, s->ap_y1 = fm_flush(apy), s->z1 = z1, s->lo = fm_flush(lo), s->dc_x = dcx, s->dc_y = fm_flush(dcy), s->prev = fm_flush(prev);
     s->bz[0][0] = fm_flush(z[0][0]), s->bz[0][1] = fm_flush(z[0][1]), s->bz[1][0] = fm_flush(z[1][0]),
     s->bz[1][1] = fm_flush(z[1][1]);
     s->w = (uint16_t)w;
@@ -257,9 +260,14 @@ static const preset_t GUITAR_PRESETS[] YEHNAH_RES = {
     {"OUD", {GT_NYLON, 20, 80, 45, 60, 90, 0, 45}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 30)},
     {"KOTO", {GT_STEEL, 15, 100, 60, 90, 40, 0, 50}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 10, 40)},
     {"SHAMISEN", {GT_STEEL, 5, 120, 30, 110, 20, 0, 70}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 25)},
+    /* (2026-11-10) a bass and a cello: the models' low strings (notes below D2 fold an octave up: play from D2, or TRANS up) */
+    {"PICK BASS", {GT_ELEC, 50, 30, 70, 20, 90, 0, 40}, {0, 64, 127, 40}, 0, 1, FX(10, 0, 0, 6),
+     XP(P_TRANS + 1, -12)},
+    {"PIZZ CELLO", {GT_NYLON, 70, 40, 75, 30, 100, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 10, 36),
+     XP(P_TRANS + 1, -12)},
     {"INIT", {1, 25, 70, 64, 64, 64, 0, 30}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
-static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGN";
+static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGGGN";
 _Static_assert(sizeof GUITAR_PT == NELEM(GUITAR_PRESETS) + 1u, "a type a preset");
 /* (engine 19: its favourites in favorites.factory[3]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(GUITAR_PRESETS) <= 128u, "GUITAR's favourites");
