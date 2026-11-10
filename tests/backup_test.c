@@ -216,8 +216,8 @@ int main(void)
     bad += check("settings with LEDS INV restore",
                  put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_INV);
     ps.zoom = 1;                                         /* an older backup (its large readout): LEDS DIM */
-    bad += check("settings of an older backup restore with LEDS DIM",
-                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_DIM);
+    bad += check("settings of an older backup restore with LEDS HIGH",
+                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_DEF);
     before = erases;
     ps.zoom = LEDS_TAG | LEDS_DIM_LO;                    /* LEDS DIM LO, OFF (appended) */
     bad += check("settings with LEDS DIM LO restore",
@@ -226,7 +226,7 @@ int main(void)
     bad += check("settings with LEDS OFF restore",
                  put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_OFF);
     before = erases;
-    ps.zoom = LEDS_TAG + 4u;
+    ps.zoom = LEDS_TAG + 5u;
     bad += check("settings with an unknown LEDS value are refused, nothing written",
                  put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 2u && erases == before);
     ps.zoom = 0;

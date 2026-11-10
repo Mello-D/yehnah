@@ -79,7 +79,7 @@ static struct {
     float bp;
     int8_t dy;
     uint8_t sh, vm, pulse, face, on;
-    uint8_t n, ns, sk[16];                              /* the steps: 16 or 32, how many shown, each one's colour + 1 (a nibble) */
+    uint8_t n, ns, sk[16];                              /* the steps: 16, how many shown, each one's colour + 1 (a nibble) */
     uint8_t nr;
     struct {
         uint8_t ri, sc;
@@ -505,7 +505,7 @@ static void rd_robot(const track_t *t, uint32_t ri, int32_t cx, int32_t fy, int3
     rd_blitq(ri, cx - 15 * q / 4, y0, q, sh);
     rb_shear = 0.0f;
 }
-/* (2026-11-02, the redesign) TRACKS: the track's steps (16, or 32 when longer: the 32 being played) as the road's
+/* (2026-11-02, the redesign) TRACKS: the track's steps (the 16 of the page being played) as the road's
  * road's markings, painted on the road (the user's: they move with it, the 16 a ring the road's 120 px: one leaving
  * on the left comes back on the right; 2026-11-04: under the robot's feet, not behind it: rd_marks): a note the track's robot's colour, an empty step a road marking's white (2026-11-03, the user's: to stand
  * out), the playhead TEXT, a step written since recording began REC; past
@@ -521,7 +521,7 @@ static uint8_t rd_hash(const step_t *st)
 static void rd_steps(const track_t *t)
 {
     const step_t *sp = seq_steps(t);
-    uint32_t me = song.sel % NTRK, len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), n = len > 16u ? 32u : 16u;
+    uint32_t me = song.sel % NTRK, len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), n = 16u;   /* (the user, 2026-11-10: always the 16 of the page played) */
     uint32_t pos = song.playing ? seq_src(t, t->seq_idx) : 0u, base = pos / n * n, s, k, ri = rb_of(trk_eng(t));
     if ((song.rec >> me & 1u) && rd.recw != me + 1u) {  /* recording began (or moved to this track): its steps now */
         for (s = 0; s < NSTEP; s++)

@@ -150,7 +150,7 @@ static const preset_t DIGITAL_PRESETS[] YEHNAH_RES = {
     {"WURLI", {4, 1, 2, 3, 62, 35, 8, 0}, {0, 75, 30, 45}, 0, 0, FX(10, 20, 10, 20), XP(P_LD_AMP + 1, 16, P_LRATE + 1, 89)},
     {"CLAV", {3, 1, 3, 5, 84, 25, 7, 0}, {0, 58, 34, 18}, 0, 0, FX(10, 10, 6, 10)},
     /* house piano: bright, fast hammer, the tine stack for the attack */
-    {"M1 PIANO", {4, 1, 2, 13, 74, 30, 12, 0}, {0, 86, 30, 48}, 0, 0, FX(0, 24, 14, 26)},
+    {"PIANO", {4, 1, 2, 13, 74, 30, 12, 0}, {0, 86, 30, 48}, 0, 0, FX(0, 24, 14, 26)},
     /* afro house / amapiano: round keys with a bell on top */
     {"AFRO KEYS", {4, 1, 1, 7, 40, 50, 0, 0}, {0, 82, 40, 60}, 0, 0, FX(0, 30, 26, 36)},
     {"TRAP BELL", {4, 8, 1, 4, 80, 70, 0, 0}, {0, 92, 0, 70}, 0, 0, FX(0, 0, 30, 40)},

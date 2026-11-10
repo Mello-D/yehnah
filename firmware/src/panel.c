@@ -84,23 +84,25 @@ static uint32_t hold_to_stored(uint32_t old, uint32_t i)
 }
 static int hold_stored_ok(uint32_t v) { return v <= 1u || (v & ~3u) == HOLD_TAG; }
 
-/* LEDS (menu): OFF, DIM LO, DIM HI, INV. DIM HI (the default), the idle buttons and keys glow dim (~1/30) and the
- * active ones are lit (#35); DIM LO the same, darker (~1/60, hal/fm1_input.h FM1_LED_DIM_LO_NS); OFF no glow,
- * the active ones lit (as 1.0); INV the idle ones lit and the active ones dark, as the stock firmware (ui_input.c
- * ui_leds). Saved in the settings record's retired zoom field as LEDS_TAG | mode, the modes append-only: DIM 0
- * (now DIM HI) and INV 1 keep their values, OFF 2 and DIM LO 3 are new; any other value there (0 or 1 from older
- * firmware) is DIM HI. LEDS_MENU: the menu's order, darkest first */
+/* LEDS (menu): OFF, DIM LO, DIM HI, HIGH, INV. HIGH (the default, the user 2026-11-10): the idle buttons and keys glow at
+ * twice DIM HI's mid level (hal/fm1_input.h FM1_LED_MID_N_HIGH), the active ones are lit; DIM HI the idle glow dim (~1/30
+ * pulse + the mid level 1 in 8, #35); DIM LO the same, darker (~1/60, FM1_LED_DIM_LO_NS); OFF no glow, the active
+ * ones lit (as 1.0); INV the idle ones lit and the active ones dark, as the stock firmware (ui_input.c ui_leds).
+ * Saved in the settings record's retired zoom field: 0 is the default (HIGH), else LEDS_TAG | mode, the modes
+ * append-only: DIM 0 (now DIM HI) INV 1 OFF 2 DIM LO 3 HIGH 4. LEDS_MENU: the menu's order, darkest first */
 #define LEDS_TAG 0x4C454400u                    /* "LED" */
-enum { LEDS_DIM, LEDS_INV, LEDS_OFF, LEDS_DIM_LO, LEDS_COUNT };
-static const uint8_t LEDS_MENU[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_INV};
-static const char *const LEDS_NAME[LEDS_COUNT] = {"DIM HI", "INV", "OFF", "DIM LO"};
-static uint8_t settings_leds = LEDS_DIM;
-static uint32_t leds_from_stored(uint32_t v) { return (v & ~3u) == LEDS_TAG && (v & 3u) < LEDS_COUNT ? v & 3u : LEDS_DIM; }
+enum { LEDS_DIM, LEDS_INV, LEDS_OFF, LEDS_DIM_LO, LEDS_HIGH, LEDS_COUNT };
+#define LEDS_DEF LEDS_HIGH
+static const uint8_t LEDS_MENU[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_HIGH, LEDS_INV};
+static const char *const LEDS_NAME[LEDS_COUNT] = {"DIM HI", "INV", "OFF", "DIM LO", "HIGH"};
+static uint8_t settings_leds = LEDS_DEF;
+static uint32_t leds_from_stored(uint32_t v) { return (v & ~7u) == LEDS_TAG && (v & 7u) < LEDS_COUNT ? v & 7u : LEDS_DEF; }
 static uint32_t leds_to_stored(uint32_t old, uint32_t m)
 {
-    return m != LEDS_DIM && m < LEDS_COUNT ? LEDS_TAG | m : old > 1u ? 0u : old;
+    (void)old;
+    return m != LEDS_DEF && m < LEDS_COUNT ? LEDS_TAG | m : 0u;
 }
-static int leds_stored_ok(uint32_t v) { return v <= 1u || ((v & ~3u) == LEDS_TAG && (v & 3u) < LEDS_COUNT); }
+static int leds_stored_ok(uint32_t v) { return v <= 1u || ((v & ~7u) == LEDS_TAG && (v & 7u) < LEDS_COUNT); }
 
 static void settings_init(void)
 {

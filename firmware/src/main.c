@@ -145,9 +145,9 @@ static void boot_leds(void)
     uint32_t crashed = fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count != crash_seen;
     crash_seen = fm1_crash.count;
     boot_clean = !crashed && !bootguard.failed && !(fm1_boot.p3_rst & 4u);
-    fm1_led_dim_level(settings_leds == LEDS_DIM_LO);
+    fm1_led_dim_level(settings_leds == LEDS_DIM_LO ? 1u : settings_leds == LEDS_HIGH ? 2u : 0u);
     if (boot_clean)
-        fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO);
+        fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO || settings_leds == LEDS_HIGH);
 }
 
 static void fm1_main(void)

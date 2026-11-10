@@ -461,8 +461,8 @@ static void ui_leds(void)
     for (c = 0; c < FM1_NCOL; c++) {
         if (mode == LEDS_INV)                           /* INV: the active ones dark, the rest lit */
             nl[c] = (uint8_t)(nd[c] & ~nl[c]);
-        nd[c] = mode == LEDS_DIM || mode == LEDS_DIM_LO ? (uint8_t)(nd[c] | og[c]) : nm[c];   /* OFF, INV: no glow but */
-        if (mode != LEDS_DIM && mode != LEDS_DIM_LO)    /* the grid's beats (the one level above dark there); DIM HI */
+        nd[c] = mode == LEDS_DIM || mode == LEDS_DIM_LO || mode == LEDS_HIGH ? (uint8_t)(nd[c] | og[c]) : nm[c];   /* OFF, INV: no glow but */
+        if (mode != LEDS_DIM && mode != LEDS_DIM_LO && mode != LEDS_HIGH)    /* the grid's beats (the one level above dark there); DIM HI */
             nm[c] = 0;                                  /* / LO: the beats at the mid level over the glow */
         nd[c] |= sg[c];                                 /* SCALE LEDS: in every mode (INV: inverted above) */
         nm[c] |= sm[c];
@@ -473,14 +473,14 @@ static void ui_leds(void)
     }
     if (song.playing || (seq_counting() && cin_pos < click_beat_len() / 4u))   /* counting in: green on each beat */
         nl[LED_PLAY_GREEN >> 3] |= (uint8_t)(1u << (LED_PLAY_GREEN & 7u));
-    fm1_led_dim_level(mode == LEDS_DIM_LO);
+    fm1_led_dim_level(mode == LEDS_DIM_LO ? 1u : mode == LEDS_HIGH ? 2u : 0u);
     for (c = 0; c < FM1_NCOL; c++) {                    /* (0.6.96) DIM HI: the idle glow at the mid level (the pulse
                                                          * alone was too dim to find the keys: ~1/30 of lit; now ~15 %),
                                                          * the beats and the scale's root a level above (fm1_led_hi) */
         fm1_led_dim[c] = nd[c];
         fm1_led_breath[c] = nb[c];
-        fm1_led_hi[c] = mode == LEDS_DIM ? nm[c] : 0u;
-        fm1_led_mid[c] = mode == LEDS_DIM ? (uint8_t)((nd[c] | nm[c]) & ~(nb[c] | nl[c])) : nm[c];
+        fm1_led_hi[c] = mode == LEDS_DIM || mode == LEDS_HIGH ? nm[c] : 0u;
+        fm1_led_mid[c] = mode == LEDS_DIM || mode == LEDS_HIGH ? (uint8_t)((nd[c] | nm[c]) & ~(nb[c] | nl[c])) : nm[c];
     }
     for (c = 0; c < FM1_NCOL; c++)
         fm1_led[c] = nl[c];

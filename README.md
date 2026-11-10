@@ -21,8 +21,8 @@ web installer, a patch editor and a browser emulator.
 - **Sound morphing**: MORPH slides ANALOG, PHASE and LOFI continuously between waves (with DRIFT, and LFOs or
   envelopes that sweep the morph); DRUM-X morphs between drum voices; ANIMAL and VOICE morph creatures and vowels;
   macros M1-M4 and dice (EDIT + SELECT) move many parameters at once.
-- **Nine engines**: DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL and NOISE, plus MODAL (kalimba, rhodes,
-  piano), each with its own on-screen drawing.
+- **24 engines**: ACID, ANALOG, ANIMAL, DIGITAL, DRIFT, DRUM-X, FM6, GUITAR, HYBRID, JUNO, KALIMBA, LOFI, MODAL, NOISE,
+  OMNI, PHASE, PLAITS, STRINGS, TERRAIN, VECTOR, VOICE, VPS, WHEEL and WSEQ, many with their own on-screen drawing.
 - **Songs**: step sequencer with parameter locks and an arpeggiator, four sections (SAVE > ARRANGE) with scenes and
   SONG REC, and SAVE > ERASE to clear a section or the whole project.
 - **Effects**: per-track and bus FX, delay, five reverbs, chorus, slicer, master and DJ filter.

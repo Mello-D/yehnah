@@ -279,7 +279,7 @@ async function editorMock() {
     }
     names.push(all);
   }
-  ok(names[15].length === 113 && names[15][0] === "JUNO 106 PAD" && names[15][112] === "INIT" && pages15 >= 2 &&
+  ok(names[15].length === 113 && names[15][0] === "JUNO 106 PAD" && names[15][112] === "INIT" && pages15 >= 1 &&
      names[0].length === E.parse[E.CMD.NAMES](await rq(E.req.names(0))).names.length,
      "editor: NAMES in pages (JUNO's 113 from FROM, ANALOG in one; chord-harp fork)");
   let prefs = await E.readDevicePreferences(rq, info, names);

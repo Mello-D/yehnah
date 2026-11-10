@@ -45,7 +45,7 @@
 #define FM1_NCOL 11u
 static const int8_t FM1_KEYMAP[6][FM1_NCOL];
 static uint8_t fm1_led[FM1_NCOL], fm1_led_dim[FM1_NCOL], fm1_led_breath[FM1_NCOL], fm1_led_mid[FM1_NCOL], fm1_led_hi[FM1_NCOL];
-static uint32_t host_dim_lo;                      /* hal/fm1_input.h: the glow MENU > LEDS asked for (1: DIM LO) */
+static uint32_t host_dim_lo;                      /* hal/fm1_input.h: the glow MENU > LEDS asked for (1: DIM LO, 2: HIGH) */
 static void fm1_led_dim_level(uint32_t lo) { host_dim_lo = lo; }
 static int host_anim;                             /* hal/fm1_input.h: the power-on sweep running (it has the LEDs) */
 static int fm1_led_anim_on(void) { return host_anim; }
@@ -2635,28 +2635,29 @@ static int test_layer(void)
     /* the LEDS setting: KNOB 1 / OCT+ up to INV, left / OCT- down to OFF; saved in the retired zoom field */
     ui_power_on();
     k = glo_row(MI_LEDS);                               /* (GLO > LEDS) */
-    ok = settings_leds == LEDS_DIM;
+    ok = settings_leds == LEDS_HIGH;
     turn(EN_K1 + k, 1); ok &= settings_leds == LEDS_INV;
     turn(EN_K1 + k, 1); ok &= settings_leds == LEDS_OFF;           /* (2026-11-03: it wraps) */
     turn(EN_K1 + k, -1); ok &= settings_leds == LEDS_INV;
+    turn(EN_K1 + k, -1); ok &= settings_leds == LEDS_HIGH;
     turn(EN_K1 + k, -1); ok &= settings_leds == LEDS_DIM;
     turn(EN_K1 + k, -1); ok &= settings_leds == LEDS_DIM_LO;
     turn(EN_K1 + k, -1); ok &= settings_leds == LEDS_OFF;
     ok &= !strcmp(LEDS_NAME[LEDS_OFF], "OFF") && !strcmp(LEDS_NAME[LEDS_DIM_LO], "DIM LO") &&
-          !strcmp(LEDS_NAME[LEDS_DIM], "DIM HI") && !strcmp(LEDS_NAME[LEDS_INV], "INV");
+          !strcmp(LEDS_NAME[LEDS_DIM], "DIM HI") && !strcmp(LEDS_NAME[LEDS_HIGH], "HIGH") && !strcmp(LEDS_NAME[LEDS_INV], "INV");
     {   /* a setting changed from elsewhere (the editor's MENU_SET: menu_put) while its GLO page is shown: redrawn */
         static uint16_t before[240 * 240];
         frame();
         memcpy(before, host_screen, sizeof before);
-        menu_put(MI_LEDS, 3);                          /* (OFF -> INV, the row shown) */
+        menu_put(MI_LEDS, 4);                          /* (OFF -> INV, the row shown) */
         frame();
-        ok &= settings_leds == LEDS_INV && memcmp(before, host_screen, sizeof before) && menu_get(MI_LEDS) == 3u;
+        ok &= settings_leds == LEDS_INV && memcmp(before, host_screen, sizeof before) && menu_get(MI_LEDS) == 4u;
         menu_put(MI_LEDS, 0);
         frame();
         ok &= !memcmp(before, host_screen, sizeof before);
     }
     go_home();
-    bad += check("GLO > LEDS: DIM HI by default; its knob OFF < DIM LO < DIM HI < INV (wrapping); "
+    bad += check("GLO > LEDS: HIGH by default; its knob OFF < DIM LO < DIM HI < HIGH < INV (wrapping); "
                  "a change from the editor redraws the page", ok && !ui.menu);
     {
         persist_t p = {0};
@@ -2666,16 +2667,16 @@ static int test_layer(void)
         settings.zoom = 0;                              /* (DIM HI keeps an older record's 0 / 1 as saved) */
         for (m = 0; m < LEDS_COUNT; m++) {
             settings_leds = (uint8_t)m;
-            settings_export(&p); settings_leds = LEDS_DIM;
+            settings_export(&p); settings_leds = LEDS_DEF == m ? LEDS_DIM : LEDS_DEF;
             ok &= settings_import(&p, sizeof p) && settings_leds == m && leds_stored_ok(p.zoom) &&
-                  p.zoom == (m == LEDS_DIM ? 0u : LEDS_TAG | m);
+                  p.zoom == (m == LEDS_DEF ? 0u : LEDS_TAG | m);
             settings_export(&p);                    /* (idempotent: saved again, the same field) */
-            ok &= p.zoom == (m == LEDS_DIM ? 0u : LEDS_TAG | m);
+            ok &= p.zoom == (m == LEDS_DEF ? 0u : LEDS_TAG | m);
         }
-        settings_leds = LEDS_DIM;
+        settings_leds = LEDS_DEF;
         settings_export(&p);
-        bad += check("  LEDS is saved with the settings and read back (all four); DIM HI saves the field as before (0)",
-                     ok && p.zoom == 0u && settings_import(&p, sizeof p) && settings_leds == LEDS_DIM);
+        bad += check("  LEDS is saved with the settings and read back (all five); HIGH, the default, saves the field as 0",
+                     ok && p.zoom == 0u && settings_import(&p, sizeof p) && settings_leds == LEDS_DEF);
     }
     /* combo: a key with FX: at once, silent, no MIDI, no recording, no step */
     ui_power_on();
@@ -4814,7 +4815,7 @@ static int test_breath(void)
                 }
                 ok &= br0 == want_br && lit0 == want_lit && br0 && !(br0 & lit0);
                 ok &= !held || (((lit0 >> hk) & 1u) && !((br0 >> hk) & 1u));   /* held: lit, not breathing */
-                okm &= host_dim_lo == (MODES[m] == LEDS_DIM_LO);
+                okm &= host_dim_lo == (MODES[m] == LEDS_DIM_LO ? 1u : MODES[m] == LEDS_HIGH ? 2u : 0u);
                 key_up(hk); frame();
                 if (lk)
                     press(LB[i]);
@@ -4940,7 +4941,7 @@ static int test_step_leds(void)
         { 0,  1, 15, 14, 17, 16, 19, 18, 20, 21, 22},
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     };
-    static const uint8_t MODES[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_INV};
+    static const uint8_t MODES[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_HIGH, LEDS_INV};
     int bad = 0;
     uint32_t id, p, r, mi, drum, run, k;
     ui_power_on();
@@ -4955,7 +4956,7 @@ static int test_step_leds(void)
     for (drum = 0; drum < 2u; drum++)
         for (run = 0; run < 2u; run++)
             for (mi = 0; mi < LEDS_COUNT; mi++) {
-                uint32_t m = MODES[mi], glow = m == LEDS_DIM || m == LEDS_DIM_LO, keys_lit = 0, keys_dim = 0, btn_bad = 0;
+                uint32_t m = MODES[mi], glow = (m == LEDS_DIM || m == LEDS_HIGH) || m == LEDS_DIM_LO, keys_lit = 0, keys_dim = 0, btn_bad = 0;
                 uint32_t want_dim = 0, kc, keys;
                 char what[128];
                 ui_power_on();
@@ -5002,13 +5003,13 @@ static int test_step_leds(void)
                 snprintf(what, sizeof what, "STEP %s, %s, LEDS %s: buttons and keys as the mode says (%u lit, %u glow)",
                          drum ? "DRUM grid" : "piano roll", run ? "playing" : "stopped", LEDS_NAME[m],
                          (unsigned)keys_lit, (unsigned)keys_dim);
-                bad += check(what, !btn_bad && host_dim_lo == (m == LEDS_DIM_LO) &&
+                bad += check(what, !btn_bad && host_dim_lo == (m == LEDS_DIM_LO ? 1u : m == LEDS_HIGH ? 2u : 0u) &&
                                        grid_on() == (int)drum && (!run || kc) &&
                                        keys_dim == want_dim && keys_lit == (m == LEDS_INV && !drum ? 27u - kc : kc) &&
                                        (!glow || keys_lit + keys_dim >= 25u) &&
                                        ((fm1_led[LED_PLAY_GREEN >> 3] >> (LED_PLAY_GREEN & 7u)) & 1u) == run);
                 bad += check("  the mid level: the grid's beats in DIM LO (DIM HI: a level above, its glow at the mid level), never a lit key",
-                             (m == LEDS_DIM ? lit_keys(fm1_led_hi) == (drum ? grid_beats() & ~keys : 0u) &&
+                             ((m == LEDS_DIM || m == LEDS_HIGH) ? lit_keys(fm1_led_hi) == (drum ? grid_beats() & ~keys : 0u) &&
                                               lit_keys(fm1_led_mid) == (lit_keys(fm1_led_dim) & ~lit_keys(fm1_led))
                                             : lit_keys(fm1_led_mid) == (glow && drum ? grid_beats() & ~keys : 0u) && !lit_keys(fm1_led_hi)) &&
                              !(lit_keys(fm1_led_mid) & lit_keys(fm1_led)));
@@ -5022,7 +5023,7 @@ static int test_step_leds(void)
          * four whatever LEN / DIV; DIM HI / LO: fm1_led_mid over the glow, OFF / INV: the glow alone */
         uint32_t want, beats, keys, kick = 1u << DV_KICK, ok = 1, mi;
         for (mi = 0; mi < LEDS_COUNT; mi++) {
-            uint32_t m = MODES[mi], glow = m == LEDS_DIM || m == LEDS_DIM_LO;
+            uint32_t m = MODES[mi], glow = (m == LEDS_DIM || m == LEDS_HIGH) || m == LEDS_DIM_LO;
             char what[128];
             ui_power_on();
             song.sel = 0;
@@ -5045,16 +5046,16 @@ static int test_step_leds(void)
             beats = grid_beats();
             want = step_keys(1u << 0 | 1u << 8 | 1u << 12);   /* steps 1, 9, 13 (5 holds a hit: lit) */
             ok = beats == want && (keys & step_keys(1u << 4 | 1u << 2)) == step_keys(1u << 4 | 1u << 2) &&
-                 (m == LEDS_DIM ? lit_keys(fm1_led_hi) == want && (lit_keys(fm1_led_mid) & want) == want &&   /* (0.6.96) DIM HI: the glow
+                 ((m == LEDS_DIM || m == LEDS_HIGH) ? lit_keys(fm1_led_hi) == want && (lit_keys(fm1_led_mid) & want) == want &&   /* (0.6.96) DIM HI: the glow
                                                          * at the mid level, the beats a level above */
                                   lit_keys(fm1_led_mid) == (lit_keys(fm1_led_dim) & ~lit_keys(fm1_led))
                                 : lit_keys(fm1_led_mid) == (glow ? want : 0u) && !lit_keys(fm1_led_hi)) &&
                  (lit_keys(fm1_led_dim) & want) == want &&
-                 (glow || !(lit_keys(fm1_led_dim) & ~want)) && host_dim_lo == (m == LEDS_DIM_LO);
+                 (glow || !(lit_keys(fm1_led_dim) & ~want)) && host_dim_lo == (m == LEDS_DIM_LO ? 1u : m == LEDS_HIGH ? 2u : 0u);
             snprintf(what, sizeof what, "DRUM grid beats, LEDS %s: steps 1 9 13 %s, the hits 3 5 lit", LEDS_NAME[m],
-                     m == LEDS_DIM ? "a level above the glow (the glow at the mid level)" : glow ? "at the mid level over the glow" : "glow (nothing else does)");
+                     (m == LEDS_DIM || m == LEDS_HIGH) ? "a level above the glow (the glow at the mid level)" : glow ? "at the mid level over the glow" : "glow (nothing else does)");
             bad += check(what, ok);
-            if (m != LEDS_DIM)
+            if ((m != LEDS_DIM && m != LEDS_HIGH))
                 continue;
             ui.lane = 1;                                /* another lane: none of its hits there, 1 5 9 13 */
             ok = grid_beats() == step_keys(0x1111u);
@@ -5322,7 +5323,7 @@ static int test_scale_leds(void)
         { 0,  1, 15, 14, 17, 16, 19, 18, 20, 21, 22},
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     };
-    static const uint8_t MODES[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_INV};
+    static const uint8_t MODES[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_HIGH, LEDS_INV};
     const uint32_t ALL = 0x7FFFFFFu, C_KEYS = 1u << 7 | 1u << 19;
     int bad = 0, ok;
     uint32_t id, p, r, k, mi, root = 0, sc, white = 0;
@@ -5353,7 +5354,7 @@ static int test_scale_leds(void)
                  ok && sc == white && root == C_KEYS);
     for (mi = 0; mi < LEDS_COUNT; mi++) {
         uint32_t m = MODES[mi], held = 1u << 1 | 1u << 7;   /* F#3 (out of the scale) and C4 (the root) held */
-        const uint8_t *up = m == LEDS_DIM ? fm1_led_hi : fm1_led_mid;   /* (0.6.96) the level above the glow: DIM HI's
+        const uint8_t *up = (m == LEDS_DIM || m == LEDS_HIGH) ? fm1_led_hi : fm1_led_mid;   /* (0.6.96) the level above the glow: DIM HI's
                                                          * fm1_led_hi (its glow at the mid level), the others' mid */
         char what[128];
         settings_leds = (uint8_t)m;

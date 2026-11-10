@@ -338,7 +338,7 @@ def sound():
         t += (f'<tr><td class="n" style="--c:{c}">{e(n)}</td><td style="width:22%">{knobs(*e1.split())}</td>'
               f'<td style="width:22%">{knobs(*e2.split())}</td><td>{d}</td></tr>')
     t += '</table>'
-    b.append(card('NINE ENGINES, ALL SYNTHESIS', HEAT[7], t))
+    b.append(card('THE ENGINES, ALL SYNTHESIS', HEAT[7], t))
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('FILTER · EVERY ENGINE', HEAT[3], knobs('TYPE', 'CUT', 'RES', 'DRV') +
                   '<p style="margin-top:8px"><b>LP · HP · BP · COMB</b>. COMB rings tuned to the note: CUT moves it '

@@ -130,6 +130,9 @@
 #ifndef FM1_LED_MID_N
 #define FM1_LED_MID_N 8u              /* the steady mid level: lit 1 frame in N (DIM HI, OFF, INV) */
 #endif
+#ifndef FM1_LED_MID_N_HIGH
+#define FM1_LED_MID_N_HIGH 4u         /* with HIGH (MENU > LEDS): the idle glow twice as bright (1 frame in 4) */
+#endif
 #ifndef FM1_LED_MID_N_LO
 #define FM1_LED_MID_N_LO 12u          /* with DIM LO */
 #endif
@@ -420,11 +423,11 @@ static uint8_t fm1__br_sel;                       /* FM1__BR_K[it]: 0 DIM HI (OF
 static uint8_t fm1__mid_n = FM1_LED_MID_N, fm1__mid_ph;   /* the mid level: 1 frame lit in fm1__mid_n; this frame's */
 /* the glow (main loop, any time; fm1__dim_k follows it in a few frames): 0 FM1_LED_DIM_NS, 1 FM1_LED_DIM_LO_NS;
  * and the breath's peak with it: 0 FM1_LED_BREATH_PK, 1 FM1_LED_BREATH_PK_LO */
-static void fm1_led_dim_level(uint32_t lo)
+static void fm1_led_dim_level(uint32_t lo)   /* 0 DIM HI, 1 DIM LO, 2 HIGH (DIM HI's pulse, the mid level at 1 in 4) */
 {
-    fm1__dim_t = (uint16_t)(lo ? FM1__DIM_T(FM1_LED_DIM_LO_NS) : FM1__DIM_T(FM1_LED_DIM_NS));
-    fm1__br_sel = lo != 0u;
-    fm1__mid_n = (uint8_t)(lo ? FM1_LED_MID_N_LO : FM1_LED_MID_N);
+    fm1__dim_t = (uint16_t)(lo == 1u ? FM1__DIM_T(FM1_LED_DIM_LO_NS) : FM1__DIM_T(FM1_LED_DIM_NS));
+    fm1__br_sel = lo == 1u;
+    fm1__mid_n = (uint8_t)(lo == 1u ? FM1_LED_MID_N_LO : lo == 2u ? FM1_LED_MID_N_HIGH : FM1_LED_MID_N);
 }
 /* (0.7.3) the mid level's phase of column c this frame: the frame count shifted a frame a column, so the mid frames
  * of the columns are spread over the N frames (one or two columns lit a frame) instead of every column lit in the
@@ -433,8 +436,7 @@ static void fm1_led_dim_level(uint32_t lo)
 static inline uint32_t fm1__mid_q(uint32_t c)
 {
     uint32_t q = (uint32_t)fm1__mid_ph + c;
-    if (q >= fm1__mid_n) q -= fm1__mid_n;
-    if (q >= fm1__mid_n) q -= fm1__mid_n;      /* (c < 2 N: two steps at most) */
+    while (q >= fm1__mid_n) q -= fm1__mid_n;   /* (c < 3 N with HIGH's 4: a loop, a few steps at most) */
     return q;
 }
 /* column c's lit lines this frame: lit, a breath's lit frame (not dim), the mid level's lit frame */

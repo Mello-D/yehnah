@@ -251,7 +251,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .lfo = {HLFO(SINE, 86, HL_KEY, 90), HLFO(SINE, 40, 0, 0)},
      .mod = {HMOD(LFO2, MW, PITCH, 6), HMOD(AT, NONE, CUT, 20), HMOD(M1, NONE, CUT, 40), HMOD(VEL, NONE, CUT, 10),
              HMOD(M2, NONE, RES1, 40)},
-     .bend = 2, .level = 100, .name = "P5 BRASS"},
+     .bend = 2, .level = 100, .name = "BRASS"},
     /* 28 strings: a pulse whose width LFO 2 moves and a saw; M2 deepens the movement */
     {.osc = {HOSC(SAW, 0, 6, 80, 0, 0), HOSC(PULSE, 0, -5, 100, 30, 0), HNOOSC},
      .drift = 40, .route = HR_SER,
@@ -259,7 +259,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {85, 100, 110, 92}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(TRI, 50, 0, 0), HLFO(SINE, 86, HL_KEY, 100)},
      .mod = {HMOD(LFO2, NONE, SH2, 30), HMOD(LFO3, MW, PITCH, 6), HMOD(M1, NONE, CUT, 40), HMOD(LFO2, M2, SH2, 40)},
-     .bend = 2, .level = 100, .name = "P5 STRING"},
+     .bend = 2, .level = 100, .name = "STRING"},
     /* 29 the sync sweep: osc 2 synced to osc 1, ENV2 sweeping its pitch (the filter envelope's poly-mod on A) */
     {.osc = {HOSC(SAW, 0, 0, 40, 0, 0), HOSC(SYNC, 0, 0, 115, 10, 0), HNOOSC},
      .drift = 20, .route = HR_SER,
@@ -285,7 +285,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 66, 20, 50}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 60, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(M1, NONE, CUT, 40), HMOD(VEL, NONE, CUT, 14), HMOD(M2, NONE, SH2, 30)},
-     .bend = 2, .level = 110, .name = "P5 CLAV"},
+     .bend = 2, .level = 110, .name = "CLAV"},
     /* 32 bass: a saw and a pulse an octave down into the four-pole, a punchy envelope; M2 the resonance */
     {.osc = {HOSC(PULSE, -12, 3, 90, 20, HOF_RESET), HOSC(SAW, 0, 0, 110, 0, HOF_RESET), HNOOSC},
      .drift = 20, .route = HR_SER,
@@ -293,7 +293,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 70, 30, 50}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 60, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(M1, NONE, CUT, 50), HMOD(M2, NONE, RES1, 50), HMOD(VEL, NONE, CUT, 10), HMOD(AT, NONE, CUT, 16)},
-     .drive = 20, .bend = 2, .level = 100, .name = "P5 BASS"},
+     .drive = 20, .bend = 2, .level = 100, .name = "BASS"},
     /* 33 the unison lead (the preset stacks it): a saw and a pulse; aftertouch opens the filter */
     {.osc = {HOSC(PULSE, 0, 6, 90, 20, 0), HOSC(SAW, 0, -6, 100, 0, 0), HNOOSC},
      .drift = 30, .route = HR_SER,
@@ -309,7 +309,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {95, 100, 90, 100}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(TRI, 30, 0, 0), HLFO(SINE, 86, HL_KEY, 110)},
      .mod = {HMOD(LFO2, NONE, CUT, 6), HMOD(LFO3, MW, PITCH, 6), HMOD(M1, NONE, CUT, 40), HMOD(M2, NONE, RES1, 30)},
-     .bend = 2, .level = 100, .name = "P5 PAD"},
+     .bend = 2, .level = 100, .name = "PAD"},
     /* 35 keys: a triangle and a narrow pulse an octave up, velocity on the filter; M2 a tremolo */
     {.osc = {HOSC(PULSE, 12, 0, 50, 60, HOF_RESET), HOSC(TRI, 0, 0, 110, 0, HOF_RESET), HNOOSC},
      .drift = 10, .route = HR_SER,
@@ -317,7 +317,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 84, 30, 70}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 82, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(M1, NONE, CUT, 40), HMOD(VEL, NONE, CUT, 14), HMOD(LFO2, M2, AMP, 30)},
-     .bend = 2, .level = 110, .name = "P5 KEYS"},
+     .bend = 2, .level = 110, .name = "KEYS"},
     /* 36 harpsichord: two narrow pulses an octave apart, bright, a quick decay */
     {.osc = {HOSC(PULSE, 12, 3, 80, 100, HOF_RESET), HOSC(PULSE, 0, 0, 100, 80, HOF_RESET), HNOOSC},
      .drift = 10, .route = HR_SER,
@@ -333,7 +333,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 64, 127, 40}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 86, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(LFO2, MW, PITCH, 6), HMOD(M1, NONE, CUT, 40), HMOD(M2, NONE, LV1, 50)},
-     .bend = 2, .level = 100, .name = "P5 ORGAN"},
+     .bend = 2, .level = 100, .name = "ORGAN"},
     /* 38 flute: a triangle and a breath of noise, a delayed vibrato; M2 more breath */
     {.osc = {HOSC(OFF, 0, 0, 0, 0, 0), HOSC(TRI, 0, 0, 110, 0, 0), HOSC(NOISE, 0, 0, 25, 60, 0)},
      .drift = 20, .route = HR_SER,
@@ -341,7 +341,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {50, 80, 100, 60}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 86, HL_KEY, 100), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(LFO2, NONE, PITCH, 3), HMOD(LFO2, MW, PITCH, 6), HMOD(M1, NONE, CUT, 40), HMOD(M2, NONE, LV3, 40)},
-     .bend = 2, .level = 110, .name = "P5 FLUTE"},
+     .bend = 2, .level = 110, .name = "FLUTE"},
     /* 39 bell: osc 1's triangle at three times the pitch into osc 2's phase, the depth falling with ENV2 */
     {.osc = {HOSC(TRI, 19, 0, 0, 0, HOF_RESET), HOSC(FM, 0, 0, 115, 20, HOF_RESET), HNOOSC},
      .drift = 10, .route = HR_SER,
@@ -349,7 +349,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 100, 0, 100}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 60, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(ENV2, NONE, SH2, 50), HMOD(M2, NONE, SH2, 40), HMOD(VEL, NONE, SH2, 20), HMOD(M1, NONE, CUT, 30)},
-     .bend = 2, .level = 105, .name = "P5 BELL"},
+     .bend = 2, .level = 105, .name = "BELL"},
     /* 40 ghost pad: a saw, a triangle a fifth up and noise, a resonant filter drifting with LFO 2 */
     {.osc = {HOSC(TRI, 7, 0, 60, 0, 0), HOSC(SAW, 0, 0, 70, 0, 0), HOSC(NOISE, 0, 0, 40, 40, 0)},
      .drift = 50, .route = HR_SER,
@@ -373,7 +373,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 72, 0, 66}, .env3 = {0, 64, 64, 64},
      .lfo = {HLFO(SINE, 60, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(M1, NONE, CUT, 40), HMOD(VEL, NONE, CUT, 16), HMOD(M2, NONE, LV1, 50)},
-     .bend = 2, .level = 110, .name = "P5 PLUCK"},
+     .bend = 2, .level = 110, .name = "PLUCK"},
     /* 43 funk bass: a square and a saw an octave down, a very resonant quick envelope */
     {.osc = {HOSC(SAW, -12, 0, 70, 0, HOF_RESET), HOSC(PULSE, 0, 0, 110, 50, HOF_RESET), HNOOSC},
      .drift = 20, .route = HR_SER,
@@ -398,7 +398,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .lfo = {HLFO(TRI, 46, 0, 0), HLFO(SINE, 86, HL_KEY, 100)},
      .mod = {HMOD(LFO2, NONE, SH1, 30), HMOD(LFO2, NONE, SH2, -30), HMOD(LFO3, MW, PITCH, 6), HMOD(M1, NONE, CUT, 40),
              HMOD(M2, NONE, LV3, 40)},
-     .bend = 2, .level = 100, .name = "P5 CHOIR"},
+     .bend = 2, .level = 100, .name = "CHOIR"},
     /* 46 brass stab: two saws, a short swell, a little pitch fall at the start (ENV3) */
     {.osc = {HOSC(SAW, 0, -5, 105, 0, 0), HOSC(SAW, 0, 5, 105, 0, 0), HNOOSC},
      .drift = 30, .route = HR_SER,
@@ -406,7 +406,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {20, 76, 40, 60}, .env3 = {0, 50, 0, 50},
      .lfo = {HLFO(SINE, 60, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(ENV3, NONE, PITCH, 5), HMOD(M1, NONE, CUT, 40), HMOD(VEL, NONE, CUT, 14), HMOD(M2, NONE, RES1, 40)},
-     .bend = 2, .level = 100, .name = "P5 STAB"},
+     .bend = 2, .level = 100, .name = "STAB"},
     /* 47 zap: a square with its pitch falling fast (ENV3), a resonant filter falling with it */
     {.osc = {HOSC(OFF, 0, 0, 0, 0, 0), HOSC(PULSE, 0, 0, 100, 0, HOF_RESET), HNOOSC},
      .drift = 0, .route = HR_SER,
@@ -414,7 +414,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .env2 = {0, 70, 0, 50}, .env3 = {0, 70, 0, 50},
      .lfo = {HLFO(SINE, 60, 0, 0), HLFO(SINE, 60, 0, 0)},
      .mod = {HMOD(ENV3, NONE, PITCH, 40), HMOD(M1, NONE, CUT, 30), HMOD(M2, NONE, PITCH, 20)},
-     .bend = 2, .level = 100, .name = "P5 ZAP"},
+     .bend = 2, .level = 100, .name = "ZAP"},
 };
 #define HY_INIT 23u              /* the INIT patch (a start for your own) */
 #define HY_NFACTORY ((uint32_t)NELEM(HY_FACTORY))
@@ -422,10 +422,10 @@ static const char *const N_HY_PATCH[] = {"CLIPPER", "POLY PAD", "STRINGS", "ACID
                                          "WOBBLE", "REESE", "HOOVER", "BRASS", "VOX", "PLUCK", "RISER", "METAL",
                                          "FOLD BASS", "CHIP LEAD", "GLASS PAD", "DRONE", "808 SUB", "TRANCE",
                                          "SAW PLUCK", "SPACE BEL", "INIT", "MOOG BASS", "MOOG LEAD", "LADDER PAD",
-                                         "P5 BRASS", "P5 STRING", "SYNC SWP", "POLYMOD", "P5 CLAV", "P5 BASS",
-                                         "UNI LEAD", "P5 PAD", "P5 KEYS", "HARPSI", "P5 ORGAN", "P5 FLUTE", "P5 BELL",
-                                         "GHOST PAD", "SYNC SOLO", "P5 PLUCK", "FUNK BASS", "SWEEP PAD", "P5 CHOIR",
-                                         "P5 STAB", "P5 ZAP"};
+                                         "BRASS", "STRING", "SYNC SWP", "POLYMOD", "CLAV", "BASS",
+                                         "UNI LEAD", "PAD", "KEYS", "HARPSI", "ORGAN", "FLUTE", "BELL",
+                                         "GHOST PAD", "SYNC SOLO", "PLUCK", "FUNK BASS", "SWEEP PAD", "CHOIR",
+                                         "STAB", "ZAP"};
 _Static_assert(NELEM(N_HY_PATCH) == NELEM(HY_FACTORY), "a name per factory patch");
 
 /* the presets: {CUT, RES, FENV, PTCH, M1..M4}, {A D S R}, ENV -> FILTER (the part's), mono */
@@ -468,26 +468,26 @@ static const preset_t HY_PRESETS[] = {
     HYP("BRIGHT BEL", 22, 80, 0, 0, 110, 0, 104, 0, FX(0, 30, 30, 70)),
     HYP("SOFT SYNC", 4, 70, 0, 10, 80, 110, 60, 1, FX(0, 20, 26, 30), XP(P_GLIDE + 1, 40)),
     /* (chord-harp fork, 2026-11-04) the Prophet-5-style patches (ours), one preset each */
-    HYP("P5 BRASS", 27, 40, 0, 30, 80, 110, 60, 0, FX(0, 20, 0, 30)),
-    HYP("P5 STRINGS", 28, 40, 0, 80, 100, 120, 92, 0, FX(0, 50, 0, 55)),
+    HYP("BRASS", 27, 40, 0, 30, 80, 110, 60, 0, FX(0, 20, 0, 30)),
+    HYP("STRINGS", 28, 40, 0, 80, 100, 120, 92, 0, FX(0, 50, 0, 55)),
     HYP("SYNC SWEEP", 29, 40, 0, 2, 84, 100, 60, 0, FX(0, 20, 20, 30)),
     HYP("POLYMOD KEYS", 30, 40, 0, 0, 96, 40, 76, 0, FX(0, 20, 10, 30)),
-    HYP("P5 CLAV", 31, 40, 0, 0, 74, 40, 50, 0, FX(0, 0, 10, 16)),
+    HYP("CLAV", 31, 40, 0, 0, 74, 40, 50, 0, FX(0, 0, 10, 16)),
     HYP("UNISON LEAD", 33, 40, 20, 2, 80, 110, 50, 1, FX(0, 10, 26, 24),
         XP(P_VOICE + 1, V_UNISON, P_DETUNE + 1, 30, P_GLIDE + 1, 30)),
-    HYP("P5 PAD", 34, 40, 0, 90, 100, 115, 100, 0, FX(0, 40, 10, 60)),
-    HYP("P5 KEYS", 35, 40, 0, 0, 96, 50, 70, 0, FX(0, 30, 0, 26)),
+    HYP("PAD", 34, 40, 0, 90, 100, 115, 100, 0, FX(0, 40, 10, 60)),
+    HYP("KEYS", 35, 40, 0, 0, 96, 50, 70, 0, FX(0, 30, 0, 26)),
     HYP("HARPSICHORD", 36, 40, 0, 0, 90, 30, 70, 0, FX(0, 0, 0, 30)),
-    HYP("P5 ORGAN", 37, 40, 40, 0, 64, 127, 40, 0, FX(0, 40, 0, 26)),
-    HYP("P5 FLUTE", 38, 40, 20, 40, 80, 120, 60, 0, FX(0, 10, 20, 40)),
-    HYP("P5 BELL", 39, 40, 0, 0, 108, 0, 104, 0, FX(0, 20, 20, 60)),
+    HYP("ORGAN", 37, 40, 40, 0, 64, 127, 40, 0, FX(0, 40, 0, 26)),
+    HYP("FLUTE", 38, 40, 20, 40, 80, 120, 60, 0, FX(0, 10, 20, 40)),
+    HYP("BELL", 39, 40, 0, 0, 108, 0, 104, 0, FX(0, 20, 20, 60)),
     HYP("GHOST PAD", 40, 40, 30, 100, 100, 127, 104, 0, FX(0, 40, 20, 80)),
     HYP("SYNC SOLO", 41, 40, 0, 2, 80, 110, 50, 1, FX(0, 0, 28, 24), XP(P_GLIDE + 1, 34)),
-    HYP("P5 PLUCK", 42, 40, 0, 0, 82, 20, 64, 0, FX(0, 10, 30, 30)),
+    HYP("PLUCK", 42, 40, 0, 0, 82, 20, 64, 0, FX(0, 10, 30, 30)),
     HYP("FUNK BASS", 43, 40, 30, 0, 68, 60, 30, 1, FX(0, 0, 0, 6), XP(P_TRANS + 1, -12)),
     HYP("SWEEP PAD", 44, 40, 30, 80, 100, 120, 100, 0, FX(0, 40, 20, 70)),
-    HYP("P5 CHOIR", 45, 40, 20, 90, 100, 120, 96, 0, FX(0, 50, 0, 70)),
-    HYP("P5 BRASS STAB", 46, 40, 0, 10, 76, 50, 56, 0, FX(0, 20, 0, 30)),
-    HYP("P5 ZAP", 47, 40, 0, 0, 76, 0, 60, 0, FX(0, 0, 20, 20)),
+    HYP("CHOIR", 45, 40, 20, 90, 100, 120, 96, 0, FX(0, 50, 0, 70)),
+    HYP("BRASS STAB", 46, 40, 0, 10, 76, 50, 56, 0, FX(0, 20, 0, 30)),
+    HYP("ZAP", 47, 40, 0, 0, 76, 0, 60, 0, FX(0, 0, 20, 20)),
 };
 _Static_assert(NELEM(HY_PRESETS) >= NELEM(HY_FACTORY), "a preset per factory patch (Clipper: and more)");
