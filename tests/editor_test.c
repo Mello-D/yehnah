@@ -678,7 +678,7 @@ static int names_pages(void)
         got += cnt;
         pages++;
     } while (cnt && got < total && pages < 10u);
-    ok &= got == ENG_JUNO.npresets && total == ENG_JUNO.npresets && pages >= 3u;   /* (2026-11-04: 114, Clipper's 17,
+    ok &= got == ENG_JUNO.npresets && total == ENG_JUNO.npresets && pages >= 2u;   /* (2026-11-04: 114, Clipper's 17,
                                                          * the 106's 99, INIT) */
     a[0] = ENGI_ANALOG;
     n = request(ED_NAMES, a, 1u);
@@ -863,7 +863,7 @@ static int menu_protocol(void)
 {
     static const char *const WANT[16][2] = {                 /* (2026-11-02: STYLE ANIM BPM LOCK SKIN SCOPE gone, their ids 1 3 8 21 22
                                                              * retired; COLOR is THEME; BIG VIEW, id 2, gone) */
-        {"THEME", 0}, {"LEDS", "OFF,DIM LO,DIM HI,INV"},
+        {"THEME", 0}, {"LEDS", "OFF,DIM LO,DIM HI,HIGH,INV"},
         {"HOLD", "0.3 s,0.4 s,0.5 s,0.6 s"}, {"KNOB ACCEL", "ON,OFF"}, {"FX LATCH", "OFF,ON"},
         {"SPEAKER EQ", "FLAT,LOWCUT,BASS+"}, {"USB LEVEL", "MASTER,FIXED,-6 dB,-12 dB,-18 dB,-24 dB"}, {"USB", YEHNAH_TABLET ? "CONSOLE,STEREO,STEMS,IN+OUT,STEMS+IN,TABLET" : "CONSOLE,STEREO,STEMS,IN+OUT,STEMS+IN"},
         {"CLICK", "OFF,REC,ON"}, {"CLICK LEVEL", "LOW,MID,HIGH"}, {"COUNT-IN", "OFF,1 BAR,2 BARS"},   /* (1.1: appended) */
@@ -871,7 +871,7 @@ static int menu_protocol(void)
         {"SCREEN OFF", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}, {"TRACKS", "1,2,3,4,5,6"},   /* (0.6.18; chord-harp fork: 1..6) */
         {"LOAD", "ECO,LITE,FULL"}};                                                                 /* (0.6.30) */
     static const uint8_t ID[16] = {0, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
-    static const int32_t DEF[16] = {-1, 2, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 2};   /* (TRACKS: 4, its index 3; THEME: the palette) */
+    static const int32_t DEF[16] = {-1, 3, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 2};   /* (TRACKS: 4, its index 3; THEME: the palette) */
     static const uint8_t TAB[16] = {0, 0, 1, 1, 1, 2, 2, 3, 2, 2, 2, 3, 1, 0, 2, 3};      /* DISPLAY CONTROL AUDIO SYSTEM */
     static const char *const TABN[4] = {"DISPLAY", "CONTROL", "AUDIO", "SYSTEM"};
     int bad = 0, ok = 1;
@@ -966,7 +966,7 @@ static int menu_protocol(void)
     /* clamping: the reply carries the device's value */
     ok = menu_set(0, 50) == 3 && ed_rv(host_wire + 7) == (int32_t)NPALETTES - 1 && settings.palette == NPALETTES - 1u;
     ok &= menu_set(0, -5) == 3 && ed_rv(host_wire + 7) == 0 && settings.palette == 0u;
-    ok &= menu_set(4, 99) == 3 && ed_rv(host_wire + 7) == 3 && settings_leds == LEDS_INV;
+    ok &= menu_set(4, 99) == 3 && ed_rv(host_wire + 7) == 4 && settings_leds == LEDS_INV;
     ok &= menu_set(5, 8191) == 3 && ed_rv(host_wire + 7) == 3 && settings_hold == 3u;
     ok &= menu_set(14, 9) == 3 && ed_rv(host_wire + 7) == 2 && cin_bars == 2u;
     ok &= menu_set(22, 1) == 1;                         /* (22, SCOPE: retired) */

@@ -420,7 +420,7 @@ function drawAnim(anim) {
 }
 function drawLights([litB, litK, dimB, dimK, dimLo = 0, brB = 0, brK = 0, midK = 0], anim = null) {
   drawAnim(anim);
-  document.documentElement.classList.toggle("dimlo", !!dimLo);   // (the breath's lower peak)
+  document.documentElement.classList.toggle("dimlo", dimLo === 1);   // (the breath's lower peak)
   for (const b of buttons) {
     const bit = 1 << b.bit, green = b.bit === B.PLAY && (litB & (1 << PLAY_GREEN));
     b.g.classList.toggle("lit", !!(litB & bit) && !green);

@@ -566,7 +566,7 @@ int main(void)
         ed_repn = 0; ed_menu_handle(ED_MENU_SET, leds_off, 3);   /* unchanged: still rc 0 (no write) */
         ok = ed_rep[0] == 0;
         {
-            const uint8_t leds_inv[] = {4, 3, 64};
+            const uint8_t leds_inv[] = {4, 4, 64};
             ed_repn = 0; ed_menu_handle(ED_MENU_SET, leds_inv, 3);
         }
         ok &= ed_rep[0] == 3 && settings_leds == LEDS_INV && persist_pending == 2 && leds_from_stored(persist_saved.zoom) == LEDS_OFF;
@@ -575,7 +575,7 @@ int main(void)
         fm1_ms += 1000;
         settings_poll();
         bad += check("... and retried by the settings path", !persist_pending && leds_from_stored(persist_saved.zoom) == LEDS_INV);
-        settings_hold = HOLD_DEF; settings_leds = LEDS_DIM;
+        settings_hold = HOLD_DEF; settings_leds = LEDS_DEF;
     }
     reset();
     settings.palette = 0;
@@ -601,7 +601,7 @@ int main(void)
     settings_poll();
     bad += check("STOP: latest settings saved and request cleared", !persist_pending && erases == 1u &&
                   st_load(OBJ_SETTINGS, &p, sizeof p) == (int)sizeof p && p.palette == palette_to_stored(2) &&
-                  p.lowcut == 2u && p.zoom == 1u && p.bold == 1u &&
+                  p.lowcut == 2u && p.zoom == 0u && p.bold == 1u &&
                   p.favorites.factory[8][0] == 1 && p.favorites.user == (1u << 31) &&
                   !memcmp(&p.panel, &panel, sizeof panel));
     settings_save();

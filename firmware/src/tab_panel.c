@@ -14,7 +14,7 @@
  * once a pass, 56 bytes), again after HELLO, and again once there is room if the ring refused it. */
 enum { TH_BUTTONS = 4, TH_KEYS = 5, TH_ENC = 6, TB_LEDS = 4 };
 #ifndef TAB_DIM_LO
-#define TAB_DIM_LO() (settings_leds == LEDS_DIM_LO)
+#define TAB_DIM_LO() (settings_leds == LEDS_DIM_LO ? 1u : settings_leds == LEDS_HIGH ? 2u : 0u)   /* the dim level: 0 HI, 1 LO, 2 HIGH (fm1_led_dim_level) */
 #endif
 static struct {
     uint8_t seen[4][FM1_NCOL + 1u];                     /* the LEDs last sent, each + DIM LO */
