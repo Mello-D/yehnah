@@ -7397,9 +7397,12 @@ static int test_div_order(void)
         bad += check("delay TIME: past 1/32 the free times 5 ms .. 1.48 s and on to the line's longest, each longer; the delay that long", okf);
     }
     ok &= str_eq(N_DIV[2], "1/16") && str_eq(N_DIV[4], "8T") && str_eq(N_DIV[9], "4BAR") && TP[P_SDIV].def == 2;
-    ok &= param_turn(&TP[P_SDIV], 2, 1) == 5 && param_turn(&TP[P_SDIV], 2, -1) == 4 &&   /* 1/16: right 16T, left 8T */
-          param_turn(&TP[P_SDIV], 3, 1) == 9 && param_turn(&TP[P_SDIV], 9, -1) == 3 &&   /* (2026-11-03) the ends wrap */
-          param_turn(&TP[P_SDIV], 2, -6) == 8 && param_turn(&TP[P_SDIV], 2, 40) == 2;    /* 6 left: 2BAR; 40: round 4 times */
+    /* the PATTERN's DIV has a 1/64 after 1/32 (index 10, N_PDIV); the rest as before, the ends wrap */
+    ok &= str_eq(N_PDIV[10], "1/64") && div_samples(10) == div_samples(0) / 16u && div_samples(10) == div_samples(2) / 4u &&
+          param_turn(&TP[P_SDIV], 2, 1) == 5 && param_turn(&TP[P_SDIV], 2, -1) == 4 &&   /* 1/16: right 16T, left 8T */
+          param_turn(&TP[P_SDIV], 3, 1) == 10 && param_turn(&TP[P_SDIV], 10, 1) == 9 &&  /* 1/32 right: 1/64; then round to 4BAR */
+          param_turn(&TP[P_SDIV], 9, -1) == 10 && param_turn(&TP[P_SDIV], 10, -1) == 3 &&
+          param_turn(&TP[P_SDIV], 2, -6) == 8 && param_turn(&TP[P_SDIV], 2, 44) == 2;    /* 6 left: 2BAR; 44: round 4 times (11 values) */
     bad += check("#48 DIV / RATE / TIME / SLICER RATE step longest -> shortest, every value once, TIME's ends hold, the picks wrap", ok);
     ok = 1;                                         /* the real knob on the pages that show them, the gauge follows */
     for (id = 0; id < NPAGES; id++)

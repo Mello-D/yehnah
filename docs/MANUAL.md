@@ -1038,7 +1038,7 @@ or counting in), a REC tap turns recording off, whichever track is selected.
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
-- **PATTERN** (the PATTERN group's first page): LEN (1–64), DIV, SWING, GATE — the pattern's length, its step's note value, its
+- **PATTERN** (the PATTERN group's first page): LEN (1–64), DIV (2BAR … 1/32, and now 1/64 after 1/32), SWING, GATE — the pattern's length, its step's note value, its
   swing and the length of every note (a step's own length: STEP's LENGTH).
 - **Moving a note or a chord** that came in early or late: **STEP**, KNOB 1 on the step, KNOB 4 **MOVE** moves
   it sideways (the whole chord with its TIEs or HOLD), on to the next free step where another note is in the way.

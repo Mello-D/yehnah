@@ -12,6 +12,8 @@ static const char *const N_AMODE[] = {"OFF", "UP", "DN", "UPDN", "RND", "ORD", "
                                                                          * HOLD) */
 static const char *const N_AMB[] = {"OFF", "HOLD", "LATCH"};   /* (chord-harp fork) ARP > AMBIENT (seq.c amb.c) */
 static const char *const N_DIV[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR"};
+/* the PATTERN's DIV: N_DIV's ten and a 1/64 (index 10; the delay's TIME, which has free times from 10, never takes it) */
+static const char *const N_PDIV[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR", "1/64"};
 /* (0.4) the delay's TIME: N_DIV's ten, then free times past the last division (5 ms .. 1.48 s, exponential;
  * fx.c delay_samples, DTIME_MS); (0.8.4) appended up to the longest the line holds at a quarter rate (the values
  * before them mean what they did) */
@@ -122,7 +124,7 @@ static const param_desc_t TP[P_COUNT] = {
     [P_QUANT] = PE("QUANT", N_QUANT, 0),
     [P_TRANS] = PD("TRANS", F_SEMI, -24, 24, 0),
     [P_SLEN] = PD("LEN", F_STEPS, 1, NSTEP, 16),
-    [P_SDIV] = PE("DIV", N_DIV, 2),
+    [P_SDIV] = PE("DIV", N_PDIV, 2),
     [P_SSWING] = PD("SWING", F_PCT, 0, 100, 0),
     [P_SGATE] = PD("GATE", F_PCT, 1, 127, 64),
     [P_DIST] = PD("DIST", F_PCT, 0, 127, 0),
@@ -376,6 +378,7 @@ static int32_t enum_step(const param_desc_t *d, int32_t from, int32_t v)
  * knobs and the gauges; the stored values (N_DIV, N_SLDIV indices: projects, presets, the editor protocol) stay.
  * -> the shown order of d's values (index: position, entry: value), 0 = the values' own order */
 static const uint8_t DIV_ORDER[10] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3};   /* 4BAR 2BAR 1/1 1/2 1/4 1/8 8T 1/16 16T 1/32 */
+static const uint8_t PDIV_ORDER[11] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3, 10};   /* ... 1/32, 1/64 */
 static const uint8_t SLDIV_ORDER[6] = {0, 3, 1, 4, 2, 5};              /* 1/8 8T 1/16 16T 1/32 32T */
 static const uint8_t RWAVE_ORDER[7] = {5, 6, 0, 1, 2, 3, 4};   /* (0.4) LOFI's WAVE: BYTE first (0.5.1: FLOAT
                                                          * next), then PLS .. WRAM */
@@ -390,7 +393,7 @@ static const uint8_t DTIME_ORDER[NELEM(N_DTIME)] = {9, 8, 7, 6, 0, 1, 4, 2, 5, 3
                                                          * then the free times, short to long */
 static const uint8_t *enum_order(const param_desc_t *d)
 {
-    return d->names == N_DIV ? DIV_ORDER : d->names == N_SLDIV ? SLDIV_ORDER : d->names == N_DTIME ? DTIME_ORDER :
+    return d->names == N_DIV ? DIV_ORDER : d->names == N_PDIV ? PDIV_ORDER : d->names == N_SLDIV ? SLDIV_ORDER : d->names == N_DTIME ? DTIME_ORDER :
            d->names == N_RWAVE ? RWAVE_ORDER : 0;
 }
 static int32_t enum_rank(const param_desc_t *d, int32_t v)   /* v's place in the shown order (+ min): the gauges */
@@ -573,8 +576,8 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_FOCUS, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SQTOOL, GR_SETS };   /* (0.8.5:
-                                                         * LENTE's EDIT > FOCUS, ENV > STAGE) */   /* (0.6.99) FX > PUNCH: the punch-in lane */   /* (0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
+       GR_PROG, GR_BLEND, GR_SQTOOL, GR_SETS };   /* (GR_FOCUS / GR_STAGE: LENTE's EDIT > FOCUS, ENV > STAGE; GR_PUNCH: FX > PUNCH;
+                                                         * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
     const char *title;

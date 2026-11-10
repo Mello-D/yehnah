@@ -4,8 +4,8 @@
  *   1 SELECT walks the section's pages as one chain (no levels, no zoom), stopping at its first and last page.
  *   2 The section's button: its chain's first page; already inside, HOME's first page, TRACKS (2026-11-02, the user's
  *     held notes a and b; HOME again on HOME: TRACKS).
- *   3 PRESETS loads presets: the sounds everywhere, the patterns in SEQ (the PHRASES loader), the genre in GEN; never a
- *     page, a track or a module (ui_input.c presets_turn).
+ *   3 PRESETS loads a SOUND, in every section (the SEQ pattern loader is gone); never a page, a track or a module
+ *     (ui_input.c presets_turn).
  *   4 A page that picks something picks it with KNOB 1 (the step, the bar, the slot, the kit's sound ..); the track is
  *     ALGORITHM's.
  *   5 A button held is its layer, as before (ui_layer.c); held + SELECT: GLO the tempo (2026-11-02: the others' went

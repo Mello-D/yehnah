@@ -723,13 +723,13 @@ static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3"
                                            "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
  * a triplet or a bar's DIV, or an odd count: "xn") */
-static const uint8_t RATE_BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};   /* N_DIV: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR */
+static const uint8_t RATE_BASE[11] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0, 64};   /* N_PDIV: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR 1/64 */
 static void rate_name(const track_t *t, uint32_t n, char *b)
 {
     const uint8_t *BASE = RATE_BASE;
-    uint32_t d = (uint32_t)clamp(t->p[P_SDIV], 0, 9), base = BASE[d], v = 0;
+    uint32_t d = (uint32_t)clamp(t->p[P_SDIV], 0, 10), base = BASE[d], v = 0;
     const char *tr = "";
-    if (n == 1u && base) { str_cpy(b, N_DIV[d], 8); return; }
+    if (n == 1u && base) { str_cpy(b, N_PDIV[d], 8); return; }
     if (base && (n == 2u || n == 4u || n == 8u)) v = base * n;
     else if (base && (n == 3u || n == 6u)) { v = base * n * 2u / 3u; tr = "T"; }
     if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
@@ -739,7 +739,7 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
  * the steps a note lasts (1/8, 1/4 at 1/16), else "/2" "/4" */
 static void arp_rate_name(const track_t *t, uint32_t r, char *b)
 {
-    uint32_t sl = CP_SLOW[r % CP_NRATE], base = RATE_BASE[(uint32_t)clamp(t->p[P_SDIV], 0, 9)];
+    uint32_t sl = CP_SLOW[r % CP_NRATE], base = RATE_BASE[(uint32_t)clamp(t->p[P_SDIV], 0, 10)];
     if (!sl) { rate_name(t, CP_RATES[r % CP_NRATE], b); return; }
     if (base >= sl) { b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)(base / sl)); return; }
     b[0] = '/'; fmt_int(b + 1, (int32_t)sl);
