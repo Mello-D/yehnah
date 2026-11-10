@@ -84,7 +84,7 @@ static const char *const N_MDST[] = {"OFF", "PITCH", "CUT", "SHP", "AMP", "PAN",
                                                          * globals (DELAY TIME FDBK TONE MIX, REVERB SIZE DAMP, CHORUS RATE
                                                          * DEPTH): mod.c macro_master, fx.c GFX() */
 static const char *const N_ENGNAME[] = {"ANALOG", "DIGITAL", "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-",
-                                             "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "MINI",
+                                             "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "FMINI",
                                              "GUITAR", "ACID", "DRIFT", "PLAITS", "STRINGS", "VPS",
                                              "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"};   /* (Yehnah:
                                              * SAMPLE 4, GRAIN 8, SLICE 13 retired; 0.8.3 ANIMAL; chord-harp fork 15 JUNO,
@@ -308,8 +308,27 @@ static const param_desc_t RECQ_DESC = {"REC Q", F_PCT, 0, 127, 127, 0, 0};   /* 
 static const param_desc_t DRIFT_DESC = {"DRIFT", F_PCTINV, 0, 127, 127, 0, 0};   /* (0.7.8) P_DRIFT: 127 = 0 % */
 static const param_desc_t WROT_DESC[2] = {               /* (0.7.8) WHEEL's ROTOR: P_WRDEP (127 = 100 %, as before), P_WDUST */
     {"DEPTH", F_PCT, 0, 127, 127, 0, 0}, {"DUST", F_PCTINV, 0, 127, 127, 0, 0}};
+/* (2026-11-11) FMINI's patch values (core.h P_FR1 ..): the descriptors by FMX_ID's order, found by id */
+static const char *const N_FRNG[] = {"LO", "32'", "16'", "8'", "4'", "2'"};
+static const char *const N_FCLR[] = {"WHITE", "PINK"}, *const N_FLFO[] = {"LFO", "SQUARE"}, *const N_FOUT[] = {"LOWPASS", "HIGHPASS"};
+static const char *const N_FWAV[] = {"TRI", "SHARK", "SAW", "SQR", "PLS W", "PLS N", "SIN"};
+static const param_desc_t FMX_DESC[NFMX] = {
+    PE("RANGE", N_FRNG, 3), PE("RANGE", N_FRNG, 3), PE("RANGE", N_FRNG, 3),
+    PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2),
+    PD("LEVEL", F_PCT, 0, 127, 0), PD("LEVEL", F_PCT, 0, 127, 0), PD("LEVEL", F_PCT, 0, 127, 0), PD("NOISE", F_PCT, 0, 127, 0),
+    {"DET", F_INT, -700, 700, 0, 0, "ct"}, {"DET", F_INT, -700, 700, 0, 0, "ct"},
+    {"TUNE", F_INT, -64, 63, 0, 0, 0}, PD("MIX", F_PCT, 0, 127, 0),
+    PE("COLOR", N_FCLR, 0), PE("MOD>OSC", N_ONOFF, 0), PE("MOD>FLT", N_ONOFF, 0), PE("LFO", N_FLFO, 0), PE("OUTPUT", N_FOUT, 0),
+};
+static const uint8_t FMX_ID[NFMX] = {P_FR1, P_FR2, P_FR3, P_FW1, P_FW2, P_FW3, P_FL1, P_FL2, P_FL3, P_FLN, P_FD2, P_FD3, P_FTU, P_FMM, P_FPK, P_FMO, P_FMF, P_FSQ, P_FHP};
 static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
+    if (t->eng_req == ENGI_MINI && ((id >= P_FM1_ATK && id <= P_FM4_LEVEL) || (id >= P_LN0 && id <= P_LN7))) {   /* (2026-11-11) FMINI's patch */
+        uint32_t k;
+        for (k = 0; k < NFMX; k++)
+            if (FMX_ID[k] == id)
+                return &FMX_DESC[k];
+    }
     if (id == MOT_DJF)                                /* (0.9.1) a DJ FILTER record (motion.c): the global's */
         return &GP[G_DJF];
     if (id >= P_E0 && id <= P_E7) {                   /* the engine asked for (t->engine follows after a fade) */
@@ -603,7 +622,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SETS };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -805,6 +824,8 @@ static const page_t PAGES[] = {
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
                                                          * (2026-10-27, ui_input.c prog_write) */
+    {"PATCH", FAM_EDIT, SC_TRACK, GR_PLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-11) FMINI's whole patch as a list: KNOB 1 the row,
+                                                         * KNOB 2..4 its settings (plist_page); on FMINI only (page_visible) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)
@@ -812,6 +833,34 @@ static const page_t PAGES[] = {
 #define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu && !GTR_PAGE(pg))   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
                                                          * (CHORD has PLATE too) */
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
+/* (2026-11-11) EDIT > PATCH on FMINI: every setting of the patch in one list. KNOB 1 picks the row, KNOB 2..4 are its (up to) three
+ * settings; the page cur_page() hands out is a copy with the row's ids in slots 1..3. The picture (ui_lzlist.c) is the list */
+typedef struct { const char *name; uint8_t id[3]; const char *s[3]; } plist_row_t;
+static const plist_row_t PLIST[] = {
+    {"OSC 1", {P_FR1, P_FW1, P_FL1}, {"RNG", "WAV", "LVL"}},
+    {"OSC 2", {P_FR2, P_FW2, P_FL2}, {"RNG", "WAV", "LVL"}},
+    {"OSC 3", {P_FR3, P_FW3, P_FL3}, {"RNG", "WAV", "LVL"}},
+    {"TUNING", {P_FD2, P_FD3, P_FTU}, {"DT2", "DT3", "TUN"}},
+    {"NOISE", {P_FLN, P_FPK, 0xFF}, {"LVL", "CLR", ""}},
+    {"FILTER", {P_E0, P_E1, P_E7}, {"CUT", "EMP", "KBD"}},
+    {"CONTOUR", {P_E2, P_E3, P_E4}, {"AMT", "ATK", "DEC"}},
+    {"SUSTAIN", {P_E5, P_FHP, 0xFF}, {"SUS", "OUT", ""}},
+    {"MOD", {P_E6, P_FMM, P_FSQ}, {"AMT", "MIX", "LFO"}},
+    {"MOD TO", {P_FMO, P_FMF, 0xFF}, {"OSC", "FLT", ""}},
+};
+#define PLIST_N (sizeof(PLIST) / sizeof(PLIST[0]))
+static uint8_t plist_cur;
+static const page_t *plist_page(const page_t *p)
+{
+    static page_t sh;
+    uint32_t k;
+    sh = *p;
+    if (plist_cur >= PLIST_N)
+        plist_cur = (uint8_t)(PLIST_N - 1u);
+    for (k = 0; k < 3u; k++)
+        sh.id[1 + k] = PLIST[plist_cur].id[k];
+    return &sh;
+}
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
 static uint8_t ms_ui_step;       /* (Yehnah) the MSEQ page: the step (0..15) KNOB 2 edits */
 static const char *const N_RFOLW[] = {"OFF", "T1", "T2", "T3", "T4", "T5", "T6"};

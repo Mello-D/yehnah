@@ -1385,6 +1385,11 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)wrap_add((int32_t)mod_ui_slot, steps > 0 ? 1 : -1, 4);
         return;
     }
+    if (pg->graph == GR_PLIST && slot == 0u) {          /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (round) */
+        plist_cur = (uint8_t)wrap_add((int32_t)plist_cur, steps > 0 ? 1 : -1, (int32_t)PLIST_N);
+        ui.force = 1;
+        return;
+    }
     if (pg->graph == GR_SETS) {                         /* (topic C) GLO's lists: KNOB 1 the row (top to bottom, round), KNOB 2 its value
                                                          * (cur_page()'s copy has the row in slot 1); the other two knobs: nothing */
         uint32_t ls = sets_of(&PAGES[ui.page]) & 3u;
@@ -2525,7 +2530,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || BAR_PAGE(pg)) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_STAGE) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (pg->graph == GR_PLIST && k == 0u)) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }

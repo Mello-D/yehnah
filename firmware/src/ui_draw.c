@@ -1372,6 +1372,14 @@ static void draw_cards(void)
                 draw_column(2, "RATE", N_PRATE[prog_rate % 3u], "", VAL(2u), pick_of(3u, prog_rate % 3u), ICON_RATE);
             continue;
         }
+        if (cur_page()->graph == GR_PLIST && c == 0u) {  /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (its name; n/N) */
+            char u[8];
+            fmt_int(u, (int32_t)plist_cur + 1);
+            str_cpy(u + str_len(u), "/", 2);
+            fmt_int(u + str_len(u), (int32_t)PLIST_N);
+            draw_column(0, "ROW", PLIST[plist_cur % PLIST_N].name, u, VAL(0u), pick_of(PLIST_N, plist_cur), ICON_NONE);
+            continue;
+        }
         if (cur_page()->graph == GR_SETS && c == 0u) {   /* (topic C) GLO's lists: KNOB 1 the row (its name; n/N) */
             uint32_t ls = sets_of(&PAGES[ui.page]) & 3u, n = sets_n(ls);
             char u[8];

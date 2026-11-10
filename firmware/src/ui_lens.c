@@ -56,7 +56,7 @@ static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV("PRESETS", 0, 1, SV_SOU
                                NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
                                NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2)};   /* IDEAS (ideas.c; was Yehnah's GEN) */
 static const nv_t CE_SYN[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("DRIFT", 0, 1, 1),
-                              NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1)};   /* (2026-10-30: MORPH now DRIFT; RETRIG,
+                              NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1), NV("PATCH", 0, 1, 1)};   /* (2026-11-11: PATCH, FMINI only; 2026-10-30: MORPH now DRIFT; RETRIG,
                                                          * ROTOR gone with our LOFI and WHEEL; FOCUS gone 2026-11-10) */
 static const nv_t CE_FM6[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("DRIFT", 0, 1, 1),
                               NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1), NV("OPERATOR", "OP 1", 2, 2), NV("OP ENV", 0, 2, 2),

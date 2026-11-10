@@ -21,7 +21,7 @@ web installer, a patch editor and a browser emulator.
 - **Sound morphing**: MORPH slides ANALOG, PHASE and LOFI continuously between waves (with DRIFT, and LFOs or
   envelopes that sweep the morph); DRUM-X morphs between drum voices; ANIMAL and VOICE morph creatures and vowels;
   macros M1-M4 and dice (EDIT + SELECT) move many parameters at once.
-- **25 engines**: ACID, ANALOG, ANIMAL, DIGITAL, DRIFT, DRUM-X, FM6, GUITAR, HYBRID, JUNO, KALIMBA, LOFI, MINI, MODAL, NOISE,
+- **25 engines**: ACID, ANALOG, ANIMAL, DIGITAL, DRIFT, DRUM-X, FM6, FMINI, GUITAR, HYBRID, JUNO, KALIMBA, LOFI, MODAL, NOISE,
   OMNI, PHASE, PLAITS, STRINGS, TERRAIN, VECTOR, VOICE, VPS, WHEEL and WSEQ, many with their own on-screen drawing.
 - **Songs**: step sequencer with parameter locks and an arpeggiator, four sections (SAVE > ARRANGE) with scenes and
   SONG REC, and SAVE > ERASE to clear a section or the whole project.
@@ -72,8 +72,9 @@ with a Seeed XIAO RP2040.
   contributors: keremimo, ChanceTheMaker, andreahaku, spinkham, zednaked, jasonpersinger.
 - **[SLOOP](https://github.com/isod89/sloop-fm1)** by isod89 (GPL-3.0): the sections, quick chain and SONG REC system
   the song mode is based on.
-- MINI (a Minimoog-style monosynth) follows the three-oscillator design of [FMini-1](https://github.com/ruppert/fmini-1) by
-  Guilherme Ruppert (GPL-3.0); the circuit is our own, on the ladder filter already in the firmware.
+- FMINI is the engine of [FMini-1](https://github.com/ruppert/fmini-1) by Guilherme Ruppert (GPL-3.0), ported: its Minimoog ladder
+  filter, oscillators and mixer, and its 200 factory patches (`firmware/src/eng_fmini.c`, `eng_fmini_data.h`, `eng_fmini_filter.h`;
+  `tools/gen_fmini_data.py` makes the data files).
 - SCL > GUITAR's chords: the 50 chord styles of [guitchordi](https://github.com/stoogs/guitchordi) by stoogs (GPL-3.0)
   (`tools/gtr/`, `firmware/src/harp_gtr.h`).
 - Fonts: [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) ([SIL OFL 1.1](LICENSES/OFL-ChakraPetch.txt)),

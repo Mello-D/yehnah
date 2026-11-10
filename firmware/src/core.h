@@ -261,7 +261,30 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_JUNO 15u            /* (chord-harp fork) eng_juno.c, from Clipper */
 #define ENGI_OMNI 16u            /* (chord-harp fork) eng_omni.c, from FoMni */
 #define ENGI_KALIMBA 17u         /* (chord-harp fork) eng_kalimba.c, from FiMba-1 */
-#define ENGI_MINI 18u            /* (2026-11-10) eng_mini.c: a Minimoog-style monosynth, our own (in the slot LCD-4 left) */
+#define ENGI_MINI 18u            /* (2026-11-11) eng_fmini.c: FMINI, FMini-1's Minimoog engine (GPL-3.0), in the slot LCD-4 left */
+/* FMINI's patch values live in DIGITAL's retired operator slots (inert: YEHNAH_FM4 0), so they are track parameters:
+ * saved, locked, automated like any; the descriptors are params.c's FMX_DESC (track_desc, engine FMINI). Not the three
+ * GUITAR keeps (P_FM1_REL P_FM2_ATK P_FM2_DEC: param_kept) */
+#define P_FR1 P_FM1_ATK          /* OSC 1..3 RANGE (LO 32' 16' 8' 4' 2') */
+#define P_FR2 P_FM1_DEC
+#define P_FR3 P_FM1_SUS
+#define P_FW1 P_FM1_LEVEL        /* OSC 1..3 WAVE (TRI SHARK SAW SQR PLS-W PLS-N SIN) */
+#define P_FW2 P_FM2_SUS
+#define P_FW3 P_FM2_REL
+#define P_FL1 P_FM2_LEVEL        /* mixer LEVEL of OSC 1..3 and the NOISE (0 = off) */
+#define P_FL2 P_FM3_ATK
+#define P_FL3 P_FM3_DEC
+#define P_FLN P_FM3_SUS
+#define P_FD2 P_FM3_REL          /* OSC 2, 3 DETUNE in cents (-700..700) */
+#define P_FD3 P_FM3_LEVEL
+#define P_FTU P_FM4_ATK          /* TUNE -64..63 (+-100 cents) */
+#define P_FMM P_FM4_DEC          /* MOD MIX: LFO .. noise */
+#define P_FPK P_LN0              /* NOISE colour: WHITE PINK (DRUM's lane levels, free on every other engine) */
+#define P_FMO P_LN1              /* MOD > OSC (pitch) OFF ON */
+#define P_FMF P_LN2              /* MOD > FILTER OFF ON */
+#define P_FSQ P_LN3              /* the LFO's shape for MOD: SINE-ish (the part's LFO) / SQUARE */
+#define P_FHP P_LN4              /* the output: LP HP */
+#define NFMX 19u
 #define ENGI_GUITAR 19u          /* (chord-harp fork) eng_guitar.c: a plucked string (Karplus-Strong), our own */
 #define ENGI_ACID 20u            /* (chord-harp fork) eng_acid.c, from Clipper: a TB-303 bass line */
 #define ENGI_DRIFT 21u           /* (chord-harp fork) eng_drift.c: wandering partials, ambient, our own */
@@ -444,6 +467,8 @@ typedef struct {                 /* an engine (engines.c ENGINES[]; the eng_*.c 
      * done() says so (once per control tick, before the render), not at the end of the ADSR's release */
     uint8_t ownenv;
     int (*done)(struct track *t, voice_t *v);
+    /* optional: after a preset's values are in p (engines.c preset_values), the engine's own: FMINI's patch into its parameters */
+    void (*pset)(int16_t *p, uint32_t pi);
 } engine_t;
 
 /* ------------------------------------------------- tracks, the song --- */

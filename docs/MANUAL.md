@@ -724,14 +724,19 @@ Japanese read best (their spelling is regular); English depends on the dictionar
 of flash (the English dictionary is most of it); about +9 % CPU over VOICE's vowels, so four voices singing still cost
 well under ANALOG's eight.
 
-### MINI (a Minimoog-style monosynth)
+### FMINI (FMini-1's Minimoog engine)
 
-MINI is a three-oscillator Moog-style voice (after the design of FMini-1 by Ruppert): OSC 1 at the note, OSC 2 slightly detuned,
-OSC 3 an octave below, one **WAVE** for all (SAW, TRI, SQR, PULSE), a **NOIS**e source, a hot mixer into the 24 dB ladder filter.
-EDIT 1 (OSC): **WAVE**, **DET** (OSC 2's detune, up to about 27 cents), **SUB** (OSC 3's level), **NOIS**. EDIT 2 (VCF): **CUT**,
-**EMPH** (the resonance; high, it sings), **CNTR** (how far the filter contour opens the cutoff) and **FDEC** (the contour's decay;
-it falls to a sustain while the key is held, and the same time after). The cutoff follows the keyboard by two thirds; loudness is
-the part's ADSR. 15 presets (basses, leads, a pad, a wind). It plays mono or poly (up to four voices).
+FMINI is the engine of FMini-1 (Guilherme Ruppert, GPL-3.0), ported: three oscillators (TRI, SHARK, SAW, SQR, wide and narrow pulse, SIN;
+ranges LO 32' 16' 8' 4' 2'), a noise source (white or pink), a mixer that overloads softly, and the 24 dB transistor-ladder filter
+calibrated to the Minimoog (it sings when EMPH is high), with its own filter contour and keyboard tracking. Its **200 factory patches**
+are the presets (the browser lists them by type). A patch's values are track parameters, so projects, parameter locks and
+automation carry them. Loudness is the part's ADSR; the mod wheel, the glide and the tuning are the part's (VOICE, GLO).
+EDIT 1: **CUT**, **EMPH**, **CNTR** (how far the contour opens the cutoff), **F.ATK**. EDIT 2: **F.DEC** (the release takes it too),
+**F.SUS**, **MOD** (the LFO or noise, depth), **KBD** (keyboard tracking of the cutoff, 1 V/octave at full).
+**EDIT > PATCH** is the whole patch as a list: KNOB 1 picks the row (OSC 1..3: RANGE, WAVE, LEVEL; TUNING: DET 2, DET 3, TUNE; NOISE; FILTER;
+CONTOUR; SUSTAIN with the LP / HP output; MOD with its source mix and shape; MOD TO: pitch, filter), KNOBS 2..4 its settings; the
+panel shows every row with its values. A patch's own arpeggiator and global FX settings (FMini-1 sets them per patch) are not loaded;
+its four sends are. Polyphony is four voices (FMini-1 plays twelve).
 
 ### Three engines draw their own creature (0.9.4)
 

@@ -406,7 +406,7 @@ static const page_t *page_over;   /* a quick layer's own four knobs (ui_layer.c)
 static const page_t *cur_page(void)
 {
     const page_t *p = page_over ? page_over : &PAGES[ui.page];
-    return p->graph == GR_SETS ? sets_page(p) : p;     /* (GLO's lists: params.c) */
+    return p->graph == GR_SETS ? sets_page(p) : p->graph == GR_PLIST ? plist_page(p) : p;     /* (GLO's lists, FMINI's PATCH: params.c) */
 }
 
 static int lens_on(void);
@@ -448,6 +448,8 @@ static int page_visible(uint32_t i)
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_DRIFT)   /* (chord-harp fork, 2026-10-30: was MORPH, ANALOG PHASE
                                                          * LOFI's waves, gone with Clipper's engines) DRIFT, VINTAGE */
         return trk_eng(TSEL) != ENGI_DRUM;
+    if (PAGES[i].graph == GR_PLIST)                     /* (2026-11-11) EDIT > PATCH: FMINI's */
+        return trk_eng(TSEL) == ENGI_MINI;
     if (PAGES[i].graph == GR_CHANCE)   /* (0.6.37) a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG)   /* (0.6.48: IMAGE) */
@@ -1283,6 +1285,8 @@ static void preset_values(int16_t *p, const engine_t *e, uint32_t pi)
             p[P_AMODE + i] = preset_arp(pr)[i];
     p[P_TRIM] = e->trim ? e->trim[pi] : 0;            /* (Clipper's level trim, 1/2 dB) */
     preset_extras(p, pr);                             /* (chord-harp fork) glide, pitch / LFO modulation, voice mode */
+    if (e->pset)                                      /* (2026-11-11) FMINI: the patch's values into the parameters */
+        e->pset(p, pi);
 }
 
 /* preset pi of the engine the track asked for: the sound only (not the steps, not param_kept) */

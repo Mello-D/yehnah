@@ -992,7 +992,7 @@ static void slug(char *d, const char *s, size_t n)
 }
 
 /* ------------------------------------------------------------- main --- */
-#define MAXJ 1536                                        /* (chord-harp fork: was 512, passed with the DRUM MACHINE presets; 768 with the preset pack; 1024 before the 106 bank) */
+#define MAXJ 2048                                        /* (chord-harp fork: was 512, passed with the DRUM MACHINE presets; 768 with the preset pack; 1024 before the 106 bank) */
 static job_t J[MAXJ];
 static uint32_t nj;
 static job_t *add(uint32_t kind, const char *name)

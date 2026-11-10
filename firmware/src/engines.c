@@ -54,7 +54,7 @@ static uint32_t hy_inc(int32_t pitch16, int32_t fine, int32_t off)
 #include "eng_kalimba.c"        /* (chord-harp fork) KALIMBA: FiMba-1's tine (GPL-3.0) */
 #include "eng_guitar.c"         /* (chord-harp fork) GUITAR: a plucked string, nylon, steel, electric */
 #include "eng_acid.c"           /* (chord-harp fork) ACID: Clipper's TB-303 (GPL-3.0) */
-#include "eng_mini.c"           /* (2026-11-10) MINI: a Minimoog-style monosynth (after FMini-1, GPL-3.0) */
+#include "eng_fmini.c"          /* (2026-11-11) FMINI: FMini-1's Minimoog engine and its 200 patches (GPL-3.0) */
 #include "eng_drift.c"          /* (chord-harp fork) DRIFT: wandering partials, ambient */
 #include "eng_plaits.c"         /* (chord-harp fork) PLAITS: four of Mutable Instruments Plaits' models (MIT, via Optimist) */
 #include "eng_strings.c"        /* (chord-harp fork) STRINGS: Clipper's string machine (GPL-3.0, via Optimist) */
@@ -173,7 +173,7 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_ANIMAL,
 #endif
     ENGI_DIGITAL,
-    ENGI_DRIFT, ENGI_DRUM, ENGI_FM6, ENGI_GUITAR, ENGI_HYBRID, ENGI_JUNO, ENGI_KALIMBA, ENGI_LOFI, ENGI_MINI, ENGI_MODAL,
+    ENGI_DRIFT, ENGI_DRUM, ENGI_FM6, ENGI_MINI, ENGI_GUITAR, ENGI_HYBRID, ENGI_JUNO, ENGI_KALIMBA, ENGI_LOFI, ENGI_MODAL,
 #if YEHNAH_NOISE
     ENGI_NOISE,
 #endif
