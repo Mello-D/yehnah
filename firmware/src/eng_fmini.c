@@ -41,21 +41,24 @@ static void fmini_pset(int16_t *p, uint32_t pi)
 {
     const uint8_t *g = FMINI_FACTORY[pi % FMINI_NFACTORY];
     const fmini_x_t *x = &FMINI_X[pi % FMINI_NFACTORY];
-    p[P_FR1] = g[FG_R1]; p[P_FR2] = g[FG_R2]; p[P_FR3] = g[FG_R3];
-    p[P_FW1] = g[FG_W1]; p[P_FW2] = g[FG_W2]; p[P_FW3] = g[FG_W3];
-    p[P_FL1] = (g[FG_SW1] & FS_O1) ? g[FG_L1] : 0;
-    p[P_FL2] = (g[FG_SW1] & FS_O2) ? g[FG_L2] : 0;
-    p[P_FL3] = (g[FG_SW1] & FS_O3) ? g[FG_L3] : 0;
-    p[P_FLN] = (g[FG_SW1] & FS_NZ) ? g[FG_LN] : 0;
-    p[P_FD2] = (int16_t)fmini_det(g, FG_DC2L);
-    p[P_FD3] = (int16_t)fmini_det(g, FG_DC3L);
-    p[P_FTU] = (int16_t)((int32_t)g[FG_TUNE] - 64);
-    p[P_FMM] = g[FG_MMIX];
-    p[P_FPK] = (g[FG_SW1] & FS_PINK) != 0;
-    p[P_FMO] = (g[FG_SW1] & FS_MOSC) != 0;
-    p[P_FMF] = (g[FG_SW1] & FS_MFLT) != 0;
-    p[P_FSQ] = (g[FG_SW2] & FTG_SQR) != 0;
-    p[P_FHP] = (g[FG_SW2] & FTG_HP) != 0;
+    uint32_t i;
+    for (i = P_LN0; i <= P_LN6; i++)                 /* the packed fields start clear */
+        p[i] = 0;
+    fmx_set(p, FX_R1, g[FG_R1]); fmx_set(p, FX_R2, g[FG_R2]); fmx_set(p, FX_R3, g[FG_R3]);
+    fmx_set(p, FX_W1, g[FG_W1]); fmx_set(p, FX_W2, g[FG_W2]); fmx_set(p, FX_W3, g[FG_W3]);
+    fmx_set(p, FX_L1, (g[FG_SW1] & FS_O1) ? g[FG_L1] : 0);
+    fmx_set(p, FX_L2, (g[FG_SW1] & FS_O2) ? g[FG_L2] : 0);
+    fmx_set(p, FX_L3, (g[FG_SW1] & FS_O3) ? g[FG_L3] : 0);
+    fmx_set(p, FX_LN, (g[FG_SW1] & FS_NZ) ? g[FG_LN] : 0);
+    fmx_set(p, FX_D2, (int16_t)fmini_det(g, FG_DC2L));
+    fmx_set(p, FX_D3, (int16_t)fmini_det(g, FG_DC3L));
+    fmx_set(p, FX_TU, (int16_t)((int32_t)g[FG_TUNE] - 64));
+    fmx_set(p, FX_MM, g[FG_MMIX]);
+    fmx_set(p, FX_PK, (g[FG_SW1] & FS_PINK) != 0);
+    fmx_set(p, FX_MO, (g[FG_SW1] & FS_MOSC) != 0);
+    fmx_set(p, FX_MF, (g[FG_SW1] & FS_MFLT) != 0);
+    fmx_set(p, FX_SQ, (g[FG_SW2] & FTG_SQR) != 0);
+    fmx_set(p, FX_HP, (g[FG_SW2] & FTG_HP) != 0);
     p[P_E7] = g[FG_KBD];
     p[P_GLIDE] = (g[FG_SW2] & FTG_GLIDE) ? g[FG_GLID] : 0;
     p[P_LRATE] = x->lfo[0];
@@ -109,11 +112,11 @@ static void fmini_block(track_t *t)
     }
     fmini_sm_ok |= (uint8_t)(1u << tr);
     fmini_mn[tr] = (int32_t)(fmini_noise(tr) >> 17) - 16384;
-    if (t->p[P_FLN] > 0) {
+    if (fmx_get(t->p, FX_LN) > 0) {
         int32_t b0 = fmini_pk[tr][0], b1 = fmini_pk[tr][1], b2 = fmini_pk[tr][2];
         for (i = 0; i < CTL; i++) {
             int32_t w = (int32_t)(fmini_noise(tr) >> 16) - 32768;   /* white, +-32768 */
-            if (t->p[P_FPK]) {
+            if (fmx_get(t->p, FX_PK)) {
                 b0 += ((w * 3245) >> 15) - ((b0 * 77) >> 15);              /* 0.0990 in, 0.99765 kept */
                 b1 += ((w * 9716) >> 15) - ((b1 * 1212) >> 15);            /* 0.2965 in, 0.963 kept */
                 b2 += ((w * 34495) >> 15) - ((b2 * 14090) >> 15);          /* 1.0527 in, 0.57 kept */
@@ -258,7 +261,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     int32_t mix[CTL];
     int32_t env15, mod, lfo, lc, p16, fine, k12, G16, gx16, c0, c1, c2, c3, inv14, kinv12, trim12;
     int32_t l1 = 0, l2 = 0, l3 = 0, ln = 0, dr1, dr2, dr3;
-    uint32_t hp = p[P_FHP] ? 1u : 0u;      /* the output: LP (the last stage) or HP ((1 - LP)^4 of the same stages) */
+    uint32_t hp = fmx_get(p, FX_HP) ? 1u : 0u;      /* the output: LP (the last stage) or HP ((1 - LP)^4 of the same stages) */
     uint32_t tr = (uint32_t)(t - trk) % NTRK, i;
     uint32_t inc1, inc2, inc3;
     int32_t s0 = v->s[0], s1 = v->s[1], s2 = v->s[2], s3 = v->s[3], sx = v->s[4];
@@ -269,14 +272,14 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 
     /* modulation: the LFO (the square with SQUARE) or noise held for the block, MOD deep */
     lfo = mulq15(t->lfo_val, t->lfo_fade);
-    if (p[P_FSQ])
+    if (fmx_get(p, FX_SQ))
         lfo = lfo >= 0 ? 32767 : -32767;
-    mod = mulq15(lfo, 32767 - (int32_t)p[P_FMM] * 258) + mulq15(fmini_mn[tr] << 1, (int32_t)p[P_FMM] * 258);
+    mod = mulq15(lfo, 32767 - (int32_t)fmx_get(p, FX_MM) * 258) + mulq15(fmini_mn[tr] << 1, (int32_t)fmx_get(p, FX_MM) * 258);
     mod = mulq15(mod, (int32_t)p[P_E6] * 258);                          /* MOD: Q15 of its depth */
 
     /* oscillator pitches */
-    p16 = m->pitch16 + (p[P_FMO] ? (mod * 16) >> 14 : 0);        /* full depth: +-2 semitones */
-    fine = m->fine + (int32_t)p[P_FTU] * 237 / 64;                        /* TUNE: +-100 cents */
+    p16 = m->pitch16 + (fmx_get(p, FX_MO) ? (mod * 16) >> 14 : 0);        /* full depth: +-2 semitones */
+    fine = m->fine + (int32_t)fmx_get(p, FX_TU) * 237 / 64;                        /* TUNE: +-100 cents */
     {   /* the VCOs wander a few cents (temperature, the integrators): a slow random walk per oscillator, about +-2 cents */
         int32_t d1 = v->s[5], d2 = v->s[6];
         d1 += ((int32_t)(fmini_noise(tr) >> 20) - 2048 >> 6) - (d1 >> 11);
@@ -287,27 +290,27 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         dr2 = d2 >> 8;
         dr3 = (d1 - d2) >> 9;
     }
-    inc1 = cents_inc(clamp(p16 + fmini_range16((uint32_t)p[P_FR1]), 0, 2047), dr1, fine);
-    inc2 = cents_inc(clamp(p16 + fmini_range16((uint32_t)p[P_FR2]), 0, 2047), (int32_t)p[P_FD2] + dr2, fine);
-    inc3 = cents_inc(clamp(p16 + fmini_range16((uint32_t)p[P_FR3]), 0, 2047), (int32_t)p[P_FD3] + dr3, fine);
+    inc1 = cents_inc(clamp(p16 + fmini_range16((uint32_t)fmx_get(p, FX_R1)), 0, 2047), dr1, fine);
+    inc2 = cents_inc(clamp(p16 + fmini_range16((uint32_t)fmx_get(p, FX_R2)), 0, 2047), (int32_t)fmx_get(p, FX_D2) + dr2, fine);
+    inc3 = cents_inc(clamp(p16 + fmini_range16((uint32_t)fmx_get(p, FX_R3)), 0, 2047), (int32_t)fmx_get(p, FX_D3) + dr3, fine);
 
     /* mixer levels: a squared curve */
-    l1 = (int32_t)(p[P_FL1] * p[P_FL1] * 2);
-    l2 = (int32_t)(p[P_FL2] * p[P_FL2] * 2);
-    l3 = (int32_t)(p[P_FL3] * p[P_FL3] * 2);
-    ln = (int32_t)(p[P_FLN] * p[P_FLN] * 2);
+    l1 = (int32_t)(fmx_get(p, FX_L1) * fmx_get(p, FX_L1) * 2);
+    l2 = (int32_t)(fmx_get(p, FX_L2) * fmx_get(p, FX_L2) * 2);
+    l3 = (int32_t)(fmx_get(p, FX_L3) * fmx_get(p, FX_L3) * 2);
+    ln = (int32_t)(fmx_get(p, FX_LN) * fmx_get(p, FX_LN) * 2);
     for (i = 0; i < n; i++)
         mix[i] = 0;
     if (l1)
-        fmini_wave((uint32_t)p[P_FW1], &ph0, inc1, l1, mix, n);
+        fmini_wave((uint32_t)fmx_get(p, FX_W1), &ph0, inc1, l1, mix, n);
     else
         ph0 += inc1 * n;
     if (l2)
-        fmini_wave((uint32_t)p[P_FW2], &ph1, inc2, l2, mix, n);
+        fmini_wave((uint32_t)fmx_get(p, FX_W2), &ph1, inc2, l2, mix, n);
     else
         ph1 += inc2 * n;
     if (l3)
-        fmini_wave((uint32_t)p[P_FW3], &ph2, inc3, l3, mix, n);
+        fmini_wave((uint32_t)fmx_get(p, FX_W3), &ph2, inc3, l3, mix, n);
     else
         ph2 += inc3 * n;
     if (ln)
@@ -324,7 +327,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     lc += (m->cutoff * 55) >> 10;                                                                           /* the host's steps (1/14 octave) in 1/16 semitones */
     lc += (int32_t)(((int64_t)env15 * fmini_sm[tr][2] / (127 * 65536)) * 960) >> 15;                          /* the contour: up to 5 octaves */
     lc += ((v->pitch_cur - FMINI_NOTE0 * 16) * (int32_t)p[P_E7] * 516) >> 16;                                /* the keyboard: 1 V/oct at 127, 0 V on F */
-    if (p[P_FMF])
+    if (fmx_get(p, FX_MF))
         lc += (mod * 547) >> 15;                                                                            /* +-2.85 octaves at full depth */
     lc = clamp(lc, FMINI_GM0 * 16, FMINI_FOSC_MAX16);
     {   /* the stage pole G and the lag pole's from the tables (one entry a semitone, linear between), the feedback solved ahead */

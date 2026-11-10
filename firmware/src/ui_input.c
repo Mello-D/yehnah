@@ -1427,6 +1427,10 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
     *vp = (int16_t)v;
+    if (vp == &fmx_ui) {                                /* (2026-11-11) FMINI's patch setting: into its packed field */
+        fmx_set(TSEL->p, fmx_ui_k, v);
+        return;
+    }
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
         trks_put(v);
         {

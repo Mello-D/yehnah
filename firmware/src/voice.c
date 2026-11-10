@@ -1098,7 +1098,12 @@ static int32_t env_tick(track_t *t, voice_t *v)
     int32_t sus = (int32_t)p[P_SUS] << 17;              /* Q24 */
     switch (v->stage) {
     case 1:
-        v->env += (int32_t)ENV_LIN[p[P_ATK] & 127];
+        if (ENGINES[t->engine % NENGINES] == &ENG_MINI) {   /* (2026-11-11) FMINI, after FMini-1: the Minimoog's capacitor charges
+                                                         * toward a level above full: a concave rise that ends in a corner */
+            int32_t d = (int32_t)(((int64_t)((5 << 22) - v->env) * (int32_t)(ENV_LIN[p[P_ATK] & 127] >> 1) * 824) >> 32);
+            v->env += d < 1 ? 1 : d;
+        } else
+            v->env += (int32_t)ENV_LIN[p[P_ATK] & 127];
         if (v->env >= (1 << 24)) {
             v->env = 1 << 24;
             v->stage = 2;
@@ -1187,7 +1192,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     int32_t tune = song.g[G_TUNE] >= 0 ? song.g[G_TUNE] * 16 / 100 : -((-song.g[G_TUNE] * 16 + 99) / 100);
     int32_t tune_fine = (song.g[G_TUNE] * 16 - tune * 100) * 2367 / 16000;   /* rest, in 1/4096 (1 ct = 2.367) */
     int32_t bend, bend16, bend_fine;
-    uint32_t ti = (uint32_t)(t - trk);
+    uint32_t ti = (uint32_t)(t - trk), gl_go = 1;
     if (ENGINES[eng_idx(t->eng_req)] == &ENG_DRUM) {
         midi_bend_q8[ti] = midi_bend_target[ti] = 0;
     } else {
@@ -1219,6 +1224,12 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     dx_xon = 0;                                         /* (0.6.48) a DRUM part's IMAGE and SENDs (eng_drum.c) */
     if (e == &ENG_DRUM)
         drum_side_begin(t, n);
+    {   /* (2026-11-11) FMINI: FMini-1's glide moves every 12th block (its build's GLIDE_SLOW: 12x slower than Felucca's, which the
+         * other engines keep); gl_slow counts the blocks */
+        static uint8_t gl_slow[NTRK];
+        gl_slow[ti % NTRK] = (uint8_t)(gl_slow[ti % NTRK] >= 11u ? 0u : gl_slow[ti % NTRK] + 1u);
+        gl_go = e != &ENG_MINI || gl_slow[ti % NTRK] == 0u;
+    }
     if (e->block)                                       /* the engine's per-part work (WHEEL: bars, rotor) */
         e->block(t);
     damt = e == &ENG_DRUM ? 0 : 127 - clamp(p[P_DRIFT], 0, 127);   /* (0.7.8) DRIFT, 127 stored = 0 % */
@@ -1277,7 +1288,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
             m.amp0 = v->env_out;
             v->env_out = m.amp1;
         }
-        if (v->pitch_cur != v->pitch16) {               /* glide */
+        if (v->pitch_cur != v->pitch16 && gl_go) {      /* glide (FMINI: every 12th block) */
             int32_t d = v->pitch16 - v->pitch_cur;
             int32_t st;
             if (v->gstep) {                             /* TIME: Q8, the fraction carried (0.6.82) */

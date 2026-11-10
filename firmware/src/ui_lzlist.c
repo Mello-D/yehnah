@@ -25,7 +25,7 @@ static void graph_plist(const track_t *t)
             d = track_desc(t, w->id[k]);
             if (!d)
                 continue;
-            param_format(d, t->p[w->id[k]], val, &unit);
+            param_format(d, (int16_t)plist_val(t, w->id[k]), val, &unit);
             str_cpy(b, w->s[k], 5);
             str_cpy(b + str_len(b), " ", 2);
             str_cpy(b + str_len(b), val, 8);

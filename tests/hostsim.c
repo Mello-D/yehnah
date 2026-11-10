@@ -116,6 +116,8 @@ static void host_preset_values(track_t *t, uint32_t e, uint32_t pi, const preset
             t->p[P_AMODE + i] = preset_arp(p)[i];
     t->p[P_TRIM] = ENGINES[e]->trim ? ENGINES[e]->trim[pi] : 0;
     preset_extras(t->p, p);                       /* (chord-harp fork: ui.c apply_preset_to) */
+    if (ENGINES[e]->pset)                         /* (2026-11-11) FMINI: the patch's values (ui.c preset_values) */
+        ENGINES[e]->pset(t->p, pi);
     if (ENGINES[e] == &ENG_DRUM)                  /* (chord-harp fork) its MACHINE (the kit itself stays the one loaded:
                                                    * DRUM-X's renders as before) */
         dx_mach_req = (uint8_t)(pi >= DX_NKIT ? pi - DX_NKIT + 1u : DXK_DRUMX), drum_mach_block(0);   /* (at once: a

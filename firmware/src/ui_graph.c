@@ -1160,7 +1160,7 @@ static uint32_t graph_signature(void)
         for (r = 0; r < PLIST_N; r++)
             for (k = 0; k < 3u; k++)
                 if (PLIST[r].id[k] != 0xFFu)
-                    h = (h ^ (uint32_t)(uint16_t)t->p[PLIST[r].id[k]]) * 16777619u;
+                    h = (h ^ (uint32_t)(uint16_t)plist_val(t, PLIST[r].id[k])) * 16777619u;
     }
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;

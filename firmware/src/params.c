@@ -308,7 +308,7 @@ static const param_desc_t RECQ_DESC = {"REC Q", F_PCT, 0, 127, 127, 0, 0};   /* 
 static const param_desc_t DRIFT_DESC = {"DRIFT", F_PCTINV, 0, 127, 127, 0, 0};   /* (0.7.8) P_DRIFT: 127 = 0 % */
 static const param_desc_t WROT_DESC[2] = {               /* (0.7.8) WHEEL's ROTOR: P_WRDEP (127 = 100 %, as before), P_WDUST */
     {"DEPTH", F_PCT, 0, 127, 127, 0, 0}, {"DUST", F_PCTINV, 0, 127, 127, 0, 0}};
-/* (2026-11-11) FMINI's patch values (core.h P_FR1 ..): the descriptors by FMX_ID's order, found by id */
+/* (2026-11-11) FMINI's patch values (core.h FX_*, VF): the descriptors by FMX_ID's order, found by id */
 static const char *const N_FRNG[] = {"LO", "32'", "16'", "8'", "4'", "2'"};
 static const char *const N_FCLR[] = {"WHITE", "PINK"}, *const N_FLFO[] = {"LFO", "SQUARE"}, *const N_FOUT[] = {"LOWPASS", "HIGHPASS"};
 static const char *const N_FWAV[] = {"TRI", "SHARK", "SAW", "SQR", "PLS W", "PLS N", "SIN"};
@@ -320,15 +320,12 @@ static const param_desc_t FMX_DESC[NFMX] = {
     {"TUNE", F_INT, -64, 63, 0, 0, 0}, PD("MIX", F_PCT, 0, 127, 0),
     PE("COLOR", N_FCLR, 0), PE("MOD>OSC", N_ONOFF, 0), PE("MOD>FLT", N_ONOFF, 0), PE("LFO", N_FLFO, 0), PE("OUTPUT", N_FOUT, 0),
 };
-static const uint8_t FMX_ID[NFMX] = {P_FR1, P_FR2, P_FR3, P_FW1, P_FW2, P_FW3, P_FL1, P_FL2, P_FL3, P_FLN, P_FD2, P_FD3, P_FTU, P_FMM, P_FPK, P_FMO, P_FMF, P_FSQ, P_FHP};
+static int16_t fmx_ui;           /* a patch setting on a page: its value (page_desc), written back by ui_input.c edit_param */
+static uint8_t fmx_ui_k;
 static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
-    if (t->eng_req == ENGI_MINI && ((id >= P_FM1_ATK && id <= P_FM4_LEVEL) || (id >= P_LN0 && id <= P_LN7))) {   /* (2026-11-11) FMINI's patch */
-        uint32_t k;
-        for (k = 0; k < NFMX; k++)
-            if (FMX_ID[k] == id)
-                return &FMX_DESC[k];
-    }
+    if (IS_VF(id))                                    /* (2026-11-11) FMINI's patch settings (core.h VF) */
+        return &FMX_DESC[id - 0xA0u];
     if (id == MOT_DJF)                                /* (0.9.1) a DJ FILTER record (motion.c): the global's */
         return &GP[G_DJF];
     if (id >= P_E0 && id <= P_E7) {                   /* the engine asked for (t->engine follows after a fade) */
@@ -837,19 +834,20 @@ static const page_t PAGES[] = {
  * settings; the page cur_page() hands out is a copy with the row's ids in slots 1..3. The picture (ui_lzlist.c) is the list */
 typedef struct { const char *name; uint8_t id[3]; const char *s[3]; } plist_row_t;
 static const plist_row_t PLIST[] = {
-    {"OSC 1", {P_FR1, P_FW1, P_FL1}, {"RNG", "WAV", "LVL"}},
-    {"OSC 2", {P_FR2, P_FW2, P_FL2}, {"RNG", "WAV", "LVL"}},
-    {"OSC 3", {P_FR3, P_FW3, P_FL3}, {"RNG", "WAV", "LVL"}},
-    {"TUNING", {P_FD2, P_FD3, P_FTU}, {"DT2", "DT3", "TUN"}},
-    {"NOISE", {P_FLN, P_FPK, 0xFF}, {"LVL", "CLR", ""}},
+    {"OSC 1", {VF(FX_R1), VF(FX_W1), VF(FX_L1)}, {"RNG", "WAV", "LVL"}},
+    {"OSC 2", {VF(FX_R2), VF(FX_W2), VF(FX_L2)}, {"RNG", "WAV", "LVL"}},
+    {"OSC 3", {VF(FX_R3), VF(FX_W3), VF(FX_L3)}, {"RNG", "WAV", "LVL"}},
+    {"TUNING", {VF(FX_D2), VF(FX_D3), VF(FX_TU)}, {"DT2", "DT3", "TUN"}},
+    {"NOISE", {VF(FX_LN), VF(FX_PK), 0xFF}, {"LVL", "CLR", ""}},
     {"FILTER", {P_E0, P_E1, P_E7}, {"CUT", "EMP", "KBD"}},
     {"CONTOUR", {P_E2, P_E3, P_E4}, {"AMT", "ATK", "DEC"}},
-    {"SUSTAIN", {P_E5, P_FHP, 0xFF}, {"SUS", "OUT", ""}},
-    {"MOD", {P_E6, P_FMM, P_FSQ}, {"AMT", "MIX", "LFO"}},
-    {"MOD TO", {P_FMO, P_FMF, 0xFF}, {"OSC", "FLT", ""}},
+    {"SUSTAIN", {P_E5, VF(FX_HP), 0xFF}, {"SUS", "OUT", ""}},
+    {"MOD", {P_E6, VF(FX_MM), VF(FX_SQ)}, {"AMT", "MIX", "LFO"}},
+    {"MOD TO", {VF(FX_MO), VF(FX_MF), 0xFF}, {"OSC", "FLT", ""}},
 };
 #define PLIST_N (sizeof(PLIST) / sizeof(PLIST[0]))
 static uint8_t plist_cur;
+static int32_t plist_val(const track_t *t, uint32_t id) { return IS_VF(id) ? fmx_get(t->p, id - 0xA0u) : t->p[id]; }
 static const page_t *plist_page(const page_t *p)
 {
     static page_t sh;
@@ -912,6 +910,12 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (id == 0xFFu || IS_MROW(id)) {                 /* (a MENU row: ui_draw.c, ui_input.c) */
         *valp = 0;
         return 0;
+    }
+    if (IS_VF(id)) {                                  /* (2026-11-11) FMINI's patch setting: a copy, written back on a turn */
+        fmx_ui_k = (uint8_t)(id - 0xA0u);
+        fmx_ui = (int16_t)fmx_get(TSEL->p, fmx_ui_k);
+        *valp = &fmx_ui;
+        return &FMX_DESC[fmx_ui_k];
     }
     if (id == ID_ALLTR) {                             /* (0.7.6) SCL's KNOB 4: the global ALL TR on the track page */
         *valp = &song.g[G_STRN];

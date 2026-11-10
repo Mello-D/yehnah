@@ -262,29 +262,30 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_OMNI 16u            /* (chord-harp fork) eng_omni.c, from FoMni */
 #define ENGI_KALIMBA 17u         /* (chord-harp fork) eng_kalimba.c, from FiMba-1 */
 #define ENGI_MINI 18u            /* (2026-11-11) eng_fmini.c: FMINI, FMini-1's Minimoog engine (GPL-3.0), in the slot LCD-4 left */
-/* FMINI's patch values live in DIGITAL's retired operator slots (inert: YEHNAH_FM4 0), so they are track parameters:
- * saved, locked, automated like any; the descriptors are params.c's FMX_DESC (track_desc, engine FMINI). Not the three
- * GUITAR keeps (P_FM1_REL P_FM2_ATK P_FM2_DEC: param_kept) */
-#define P_FR1 P_FM1_ATK          /* OSC 1..3 RANGE (LO 32' 16' 8' 4' 2') */
-#define P_FR2 P_FM1_DEC
-#define P_FR3 P_FM1_SUS
-#define P_FW1 P_FM1_LEVEL        /* OSC 1..3 WAVE (TRI SHARK SAW SQR PLS-W PLS-N SIN) */
-#define P_FW2 P_FM2_SUS
-#define P_FW3 P_FM2_REL
-#define P_FL1 P_FM2_LEVEL        /* mixer LEVEL of OSC 1..3 and the NOISE (0 = off) */
-#define P_FL2 P_FM3_ATK
-#define P_FL3 P_FM3_DEC
-#define P_FLN P_FM3_SUS
-#define P_FD2 P_FM3_REL          /* OSC 2, 3 DETUNE in cents (-700..700) */
-#define P_FD3 P_FM3_LEVEL
-#define P_FTU P_FM4_ATK          /* TUNE -64..63 (+-100 cents) */
-#define P_FMM P_FM4_DEC          /* MOD MIX: LFO .. noise */
-#define P_FPK P_LN0              /* NOISE colour: WHITE PINK (DRUM's lane levels, free on every other engine) */
-#define P_FMO P_LN1              /* MOD > OSC (pitch) OFF ON */
-#define P_FMF P_LN2              /* MOD > FILTER OFF ON */
-#define P_FSQ P_LN3              /* the LFO's shape for MOD: SINE-ish (the part's LFO) / SQUARE */
-#define P_FHP P_LN4              /* the output: LP HP */
-#define NFMX 19u
+/* FMINI's patch (2026-11-11): the settings E0..E7 do not hold live in the track's P_LN0..P_LN6, packed in bit fields (DRUM's lane levels:
+ * no other engine reads them; every other slot of the FM operator block is some feature's parameter under another name: P_CHRD, P_HVEL,
+ * P_KTRK, P_DRIFT ..). The list page (EDIT > PATCH) reaches them by the virtual ids VF(k) (params.c page_desc); the engine by fmx_get.
+ * k: OSC 1..3 RANGE (LO 32' 16' 8' 4' 2'), WAVE (TRI SHARK SAW SQR PLS-W PLS-N SIN), mixer LEVEL of OSC 1..3 and the NOISE (0 = off),
+ * OSC 2 / 3 DETUNE in cents (-700..700), TUNE (-64..63: +-100 cents), MOD MIX (LFO .. noise), NOISE colour (WHITE PINK), MOD>OSC,
+ * MOD>FILTER, the LFO's shape (the part's / SQUARE), the output (LP HP) */
+enum { FX_R1, FX_R2, FX_R3, FX_W1, FX_W2, FX_W3, FX_L1, FX_L2, FX_L3, FX_LN, FX_D2, FX_D3, FX_TU, FX_MM, FX_PK, FX_MO, FX_MF, FX_SQ,
+       FX_HP, NFMX };
+#define VF(k) (0xA0u + (k))              /* a patch setting's id on a page (real parameter ids are < P_COUNT, the menu rows 0xD0..) */
+#define IS_VF(id) ((id) >= 0xA0u && (id) < 0xA0u + NFMX)
+static const struct { uint8_t slot, shift, bits; int16_t bias; } FMX_BITS[NFMX] = {
+    {P_LN0, 0, 3, 0}, {P_LN0, 3, 3, 0}, {P_LN0, 6, 3, 0}, {P_LN0, 9, 3, 0}, {P_LN0, 12, 3, 0}, {P_LN1, 0, 3, 0},
+    {P_LN2, 0, 7, 0}, {P_LN2, 7, 7, 0}, {P_LN3, 0, 7, 0}, {P_LN3, 7, 7, 0}, {P_LN4, 0, 11, 700}, {P_LN5, 0, 11, 700},
+    {P_LN1, 8, 7, 64}, {P_LN6, 0, 7, 0}, {P_LN1, 3, 1, 0}, {P_LN1, 4, 1, 0}, {P_LN1, 5, 1, 0}, {P_LN1, 6, 1, 0}, {P_LN1, 7, 1, 0}};
+static inline int32_t fmx_get(const int16_t *p, uint32_t k)
+{
+    return (((int32_t)p[FMX_BITS[k].slot] >> FMX_BITS[k].shift) & ((1 << FMX_BITS[k].bits) - 1)) - FMX_BITS[k].bias;
+}
+static inline void fmx_set(int16_t *p, uint32_t k, int32_t v)
+{
+    int32_t m = (1 << FMX_BITS[k].bits) - 1, w = v + FMX_BITS[k].bias;
+    w = w < 0 ? 0 : w > m ? m : w;
+    p[FMX_BITS[k].slot] = (int16_t)(((int32_t)p[FMX_BITS[k].slot] & ~(m << FMX_BITS[k].shift)) | (w << FMX_BITS[k].shift));
+}
 #define ENGI_GUITAR 19u          /* (chord-harp fork) eng_guitar.c: a plucked string (Karplus-Strong), our own */
 #define ENGI_ACID 20u            /* (chord-harp fork) eng_acid.c, from Clipper: a TB-303 bass line */
 #define ENGI_DRIFT 21u           /* (chord-harp fork) eng_drift.c: wandering partials, ambient, our own */
