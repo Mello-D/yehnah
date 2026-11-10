@@ -1255,11 +1255,11 @@ static void setup(int s)
         go_home(); ui.layer = LAYER_REC; ui.lylv = 1; live.cur = 0; live.req = 2;
         lys.nqc = 4; lys.qc[0] = 0; lys.qc[1] = 1; lys.qc[2] = 1; lys.qc[3] = 2;
         break;
-    /* (2026-11-03) SEQ > TOOLS (was SEQ held): a melodic track, CLEAR picked; the DRUM grid's 14 rows, CLAP the lane,
-     * FILL LANE picked (the list scrolled); a song playing (every tool dimmed but REVERT: STOP TO EDIT) */
-    case S_SEQ_TOOLS: go_page(GR_SQTOOL); ui.act = 1; break;
-    case S_SEQ_TOOLS_DRUM: drum(0); go_page(GR_SQTOOL); ui.lane = 2; ui.act = 11; break;
-    case S_SEQ_TOOLS_SONG: drum(1); go_page(GR_SQTOOL); ui.lane = 5; chain.running = 1; ui.act = 14; break;
+    /* (2026-11-10) SEQ held (the tools' layer, was the SEQ > TOOLS page): a melodic track; the DRUM grid with the CLAP lane picked;
+     * a song playing (every tool dimmed: STOP TO EDIT) */
+    case S_SEQ_TOOLS: go_page(GR_ROLL); ui.layer = LAYER_SEQ; break;
+    case S_SEQ_TOOLS_DRUM: drum(0); go_page(GR_ROLL); ui.lane = 2; ui.layer = LAYER_SEQ; break;
+    case S_SEQ_TOOLS_SONG: drum(1); go_page(GR_ROLL); ui.lane = 5; chain.running = 1; ui.layer = LAYER_SEQ; break;
     /* (0.8.3) LENTE, SEQ's three levels: PATTERN (a LEN 64 line over four bars, the third edited, playing in the
      * second; a kit's 32; STRETCH), BAR (the roll over LEN 64; the grid), STEP (a chord, its second note in focus,
      * MICRO +3, an accent, an ARP, 60 %; COMP's and COMP 2's chips lit; a TIE holding it; a REST; a kit's hits) */

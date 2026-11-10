@@ -106,7 +106,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **GLO** | The GLO section: from elsewhere the page last shown; inside **MIX → GLOBAL → SYSTEM**, round. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → PROJECT → LIBRARY**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
-| **SEQ** | The SEQ section: from elsewhere the page last shown (at power-on STEP, the piano roll); inside the next group: **PATTERN → TRACK → BAR → STEP → AUTO**, round. | **SEQ TOOLS** layer (on every SEQ page); G5 CLR STEP. |
+| **SEQ** | The SEQ section: from elsewhere the page last shown (at power-on STEP, the piano roll); inside the next group: **PATTERN → TRACK → BAR → STEP → AUTO**, round. | **SEQ** layer (pattern tools, on every page). |
 | **PLAY** | Start / stop. | — |
 | **REC** | Arms recording on the selected track in the REC mode (ONE PASS by default); while REC is lit, turns recording off. | **REC** layer: CLEAR, CLICK, MODE, TAP; KNOB 3 BPM. |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0; on a DRUM track the kit stays on its keys: ratchets above, SHORT / GHOST / FLAM below, see [5](#5-drum-x)). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
@@ -123,13 +123,13 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **GLO** held + **PLAY** | Restart from the top without stopping (internal clock). |
 | **GLO** held + **SELECT** | Tempo, from any page. |
 | **GLO** held + **G4** | **UNDO** the last big change (again: redo). |
-| **SEQ** held + **REC** | **CLEAR ALL SEQUENCES?** — all six tracks' steps and automation, and the punch-in lane. |
+| **REC** held + **G5** | **CLEAR ALL SEQUENCES?** — all six tracks' steps and automation, and the punch-in lane. |
 | **REC** held + **FX / EDIT / ENV / LFO / SCL / ARP / GLO** | Clears that part's automation on the selected track (GLO: the level and pan automation of all tracks; FX: also the punch-in lane). No dialog. |
 | **SAVE** held + **OCT+** / **OCT−** | Store the music into the section playing / recall that section as stored. |
 | **HOME** held + **SELECT** | **GEN**, the song generator (HOME's last pages; see [8](#8-dice-and-undo)). |
 | **EDIT / SEQ / LFO / FX** held + **SELECT** | The dice: the sound / the sequence / the LFO / the effects (see [8](#8-dice-and-undo)). |
 | **ENV / SCL / ARP / SAVE** held + **SELECT** | Into that section and along its chain, as SELECT inside it. (0.9.2: a button held + **PRESETS** no longer walks pages.) |
-| **SEQ** held + **G5** | **CLR STEP**: clears the cursor step and its locks (NOTE with a note in focus: that note). |
+| **SEQ** held + **G5** | **CLR STP**: clears the cursor step and its locks, the cursor on. |
 | **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > USER, the section or project on SECTIONS / PROJECTS. |
 | A step held (SEQ > STEP) + **KNOB 1–4** | A parameter lock on that step. |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
@@ -513,16 +513,15 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 voice, OP1 alone at full level; on DRUM the factory DRUM-X kit too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
 steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
 
-**SEQ TOOLS** (on every SEQ page) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
-C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (the track's automation and locks; the steps stay). On a DRUM track the
-lane tools: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. **G5 CLR STEP** (0.9.2; was
-the EDIT tap): clears the cursor step and its locks, the cursor on to the next (on NOTE with a note in focus: that note
-alone). **REC** (while SEQ is held): CLEAR
-ALL. Knobs: LEN, DIV, SWING, GATE. These tools have no undo.
+**SEQ** (the SEQ held layer, on every page; until 2026-11-10 the SEQ > TOOLS page; the random tools RANDOM, COOK and RND LANE and the
+CLEAR and CLR AUTO rows are gone: REC held + F3 clears the track, SEQ > AUTOMATION > CLEAR the automation) — F3 **REVERSE**, G3 / A3
+**SHIFT** left / right, B3 **BEAT** (DRUM). On a DRUM track the lane tools: G4 **CLR LN**, A4 **REV LN**, B4 **FILL LN** on the
+lane picked with black keys 1–8. **G5 CLR STP**: clears the cursor step and its locks, the cursor on to the next. Each acts at once
+and says what it did; they have no undo. Knobs: none (the page's own LEN, DIV, SWING, GATE are on the page).
 
 **REC** — F3 **CLEAR** the selected track's steps and automation (no dialog; UNDO can bring it back), G3 **CLICK**
 (OFF / REC / ON), A3 **MODE** (ONE PASS / LOOP: what a REC tap records; lit on LOOP), B3 **TAP** (tap the tempo, as GLO's
-TAP). KNOB 1: CLICK, KNOB 2: MODE, KNOB 3: BPM.
+TAP), G5 **CLEAR ALL** (every track's steps and automation and the punch-in lane, asks first). KNOB 1: CLICK, KNOB 2: MODE, KNOB 3: BPM.
 
 **SAVE — song layer** (details in [7](#7-arrange-songs-sections-and-scenes))
 
@@ -938,8 +937,8 @@ and the PITCH card says the note in focus.
 
 - **SEQ from another page** comes back to the page you left; at power-on STEP, the piano roll.
 - **PRESETS** on a SEQ page loads a **sound**, as on every page (the steps, the page and the track stay).
-- **SEQ held** opens SEQ TOOLS on every page (**G5 CLR STEP**, new: clears the cursor step), **SEQ + SELECT** dices
-  the sequence, **SEQ + REC** clears everything, a held step + a knob is a parameter lock (on STEP), step recording
+- **SEQ held** opens the pattern tools layer on every page (**G5 CLR STP** clears the cursor step), **REC + G5** clears
+  everything, a held step + a knob is a parameter lock (on STEP), step recording
   works on STEP and NOTE.
 - CHANCE (a step's chance) is reached from code (the dice, the editor); it is drawn as the STEP group.
 
@@ -1144,11 +1143,11 @@ sounding after you let go; the next chord replaces them.
 
 | To clear | Do |
 | --- | --- |
-| The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
-| All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
+| The selected track's steps and automation | **REC held + F3**, or SAVE held + F3 (CLEAR PAT, asks first) |
+| All six tracks' steps, automation and the punch-in lane | **REC held + G5**, then OCT+ |
 | **Everything** (NEW PROJECT): every track its power-on sound (0.9.9: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > NEW PROJECT**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
-| The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
+| The track's automation, keeping the steps | SEQ > AUTOMATION > CLEAR |
 
 A track clear says **T3 CLEARED** with **SEQ+REC: ALL TRACKS** under it as a reminder of the all-tracks combo.
 
@@ -1395,14 +1394,14 @@ G3 clears them. See [10](#10-modulation-and-macros).
 One step back over the **last big change**. Pressing it again goes forward (redo). The transport keeps playing.
 G4 breathes on the GLO map when there is something to undo; with nothing, it says **NOTHING TO UNDO**.
 
-**UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3, TOOLS CLEAR SEQ), CLEAR ALL SEQUENCES (SEQ + REC),
+**UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3), CLEAR ALL SEQUENCES (REC + G5),
 NEW PROJECT, INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ > AUTOMATION),
 and a section loaded with **SAVE > SECTIONS > LOAD**. It restores the music as it was: sounds, steps, automation, the
 kit, the punch-in lane, the macros, the tempo and global effects.
 
 **UNDO does not cover**: section jumps, quick chains and RECALL from the SAVE layer, switching project with the SAVE
 layer's KNOB 1, CLEAR SONG, deleting a row, SONG REC, anything saved (sections, user presets), user preset loads,
-sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not available while a song plays
+sounds picked with PRESETS, the SEQ layer's tools, or ordinary knob turns. It is not available while a song plays
 (**STOP TO EDIT**). It keeps only one step, in RAM: it's gone after power-off.
 
 ---

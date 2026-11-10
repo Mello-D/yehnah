@@ -72,7 +72,6 @@ static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR)
                               NV("AUTOMATION", "AUTO", 4, LV_BAR),
                               NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, LV_PAT),
                               NV("TRACK", 0, 1, LV_PAT),
-                              NV("SQ TOOLS", "TOOLS", 5, LV_PAT),   /* (2026-11-03: SEQ held's tools; BAR stays left of STEP) */
                               NV("BAR", 0, 2, LV_PAT)};
 enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
 static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, FXL_TRACK), NV("AUTO PAN", 0, 0, FXL_TRACK),

@@ -51,6 +51,7 @@ static const layer_t LAYERS[LAYER_N] = {
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
     {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
     {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SET", {{KC_KEYS, "CLEAR ERASE NEW"}, {0, 0}, {0, 0}}},   /* (2026-11-06) the generic save tools */
+    {B_SEQ, LK_SET, FAM_HOME, "[SEQ] SET", {{KC_KEYS, "PATTERN TOOLS"}, {0, 0}, {0, 0}}},   /* (2026-11-10) the pattern tools */
 };
 #define LY_OPEN 2u                     /* ui.ly_t0: the map opened (no tap any more) */
 #define LY_COMBO 4u                    /* .. by a combo */
@@ -308,7 +309,7 @@ static void rec_clear(void)
         char cb[16] = "T1 CLEARED";
         cb[1] = (char)('1' + (t - trk));
         ui_say(cb, "");
-        str_cpy(ui.msg2, "SEQ>TOOLS: CLEAR ALL", sizeof ui.msg2);
+        str_cpy(ui.msg2, "REC+G5: CLEAR ALL", sizeof ui.msg2);
     }
     ui.force = 1;
 }
@@ -326,6 +327,7 @@ static void rec_clear(void)
 #define RK_PLAY 8u                                     /* G4 A4 B4 C5: PLAY A..D */
 #define RK_LOOP 12u                                    /* D5: LOOP / SONG (what PLAY plays) */
 #define RK_SREC 13u                                    /* E5: SONG REC */
+#define RK_ALL 15u                                     /* G5: CLEAR ALL (every track, the lane: it asks first) */
 #define RK_NAME 14u                                    /* F5: NAME (USER's slot, PROJECT's project or section) */
 static const char *const REC_MODE_N[2] = {"1 PASS", "LOOP"};
 #define RL_N 2u                                        /* the menu's settings here: row 0 CLICK (KNOB 1), 1 COUNT-IN (KNOB 4) */
@@ -431,8 +433,93 @@ static void sv_key(uint32_t p)
     default: confirm_open(CF_ERASE_USER, user_of(TSEL)); break;
     }
 }
+/* SEQ held (2026-11-10): the pattern tools (ui_tools.c) on the selected track, white keys: F3 REVERSE, G3 SHIFT <, A3 SHIFT >,
+ * B3 BEAT (DRUM), G4 CLR LANE, A4 REV LANE, B4 FILL LANE (the lane: the DRUM black keys 1..8), G5 CLR STEP (the cursor step and its
+ * locks, the cursor on to the next). Each at once, a message; none has an undo */
+enum { LS_OFF, LS_SEL, LS_HELD, LS_WAIT, LS_DIM, LS_MUTE };
+#define SQ_STEP 15u
+static int sq_tool(uint32_t p)                          /* white key p -> TL_*, or 0xFF */
+{
+    return p == 0u ? TL_REV : p == 1u ? TL_LEFT : p == 2u ? TL_RIGHT : p == 3u ? TL_BEAT :
+           p == 8u ? TL_LCLR : p == 9u ? TL_LREV : p == 10u ? TL_LFILL : 0xFF;
+}
+static int sq_ok(uint32_t k)
+{
+    uint32_t p = key_place(k);
+    int tool;
+    if (key_black(k))
+        return drum_track(TSEL) && p < NLANE;
+    tool = sq_tool(p);
+    if (p == SQ_STEP)
+        return !chain_busy();
+    return tool != 0xFF && !chain_busy() && (tool < TL_BEAT || drum_track(TSEL));
+}
+static uint32_t sq_keyname(int blk, uint32_t p, char *nm)
+{
+    static const char *const N[16] = {"REVERSE", "SHIFT <", "SHIFT >", "BEAT", "", "", "", "", "CLR LN", "REV LN", "FILL LN",
+                                      "", "", "", "", "CLR STP"};
+    uint32_t busy = chain_busy() ? LS_DIM : LS_OFF;
+    if (blk) {
+        if (!drum_track(TSEL) || p >= NLANE)
+            return LS_OFF;
+        str_cpy(nm, drum_lane_abbr(TSEL, p), 12);
+        return ui.lane % NLANE == p ? LS_SEL : LS_OFF;
+    }
+    if (p >= 16u || !N[p][0])
+        return LS_OFF;
+    str_cpy(nm, N[p], 12);
+    if (p == SQ_STEP)
+        return busy;
+    return chain_busy() || (sq_tool(p) >= TL_BEAT && !drum_track(TSEL)) ? LS_DIM : LS_OFF;
+}
+static void sq_key(uint32_t k)
+{
+    uint32_t p = key_place(k);
+    int tool;
+    const char *m;
+    if (key_black(k)) {                                 /* the DRUM lane the lane tools act on */
+        if (drum_track(TSEL) && p < NLANE) {
+            ui.lane = (uint8_t)p;
+            ui_say("LANE ", drum_lane_abbr(TSEL, p));
+            ui.force = 1;
+        }
+        return;
+    }
+    tool = sq_tool(p);
+    if (p != SQ_STEP && tool == 0xFF)
+        return;
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return;
+    }
+    if (p == SQ_STEP) {
+        track_t *t = TSEL;
+        uint32_t len = tl_len(t);
+        if (ui.cursor >= len)
+            return;
+        step_clear(&t->step[ui.cursor]);
+        (void)motion_clear_locks(t, ui.cursor);
+        ui.cursor = (uint8_t)((ui.cursor + 1u) % len);
+        ui.bank = (uint8_t)(ui.cursor / 16u);
+        ui_message("STEP CLEARED");
+        ui.force = 1;
+        return;
+    }
+    if (tool >= TL_BEAT && !drum_track(TSEL)) {
+        ui_message("DRUM TRACKS ONLY");
+        return;
+    }
+    if ((m = tl_do(TSEL, (uint32_t)tool, ui.lane)) != 0)
+        ui_message(m);
+    ui.force = 1;
+}
 static void rec_key(uint32_t p)
 {
+    if (p == RK_ALL) {                                  /* (2026-11-10, was SEQ > TOOLS' CLEAR ALL) */
+        if (chain_busy()) ui_message("STOP TO EDIT");
+        else confirm_open(CF_CLEAR_ALL, song.sel);
+        return;
+    }
     if (p >= RK_PLAY) {
         song_key(p);
         return;
@@ -538,11 +625,13 @@ static void layer_key(uint32_t l, uint32_t k)
 {
     uint32_t p = key_place(k);
     if (l == LAYER_REC) {
-        if (!key_black(k) && p <= RK_NAME)
+        if (!key_black(k) && p <= RK_ALL)
             rec_key(p);
     } else if (l == LAYER_SAVE) {
         if (!key_black(k))
             sv_key(p);
+    } else if (l == LAYER_SEQ) {
+        sq_key(k);
     }
 }
 /* each pass: the keys the layer got now; the solo: HOME > MIXER's (perform.c) */
@@ -617,6 +706,11 @@ static uint32_t layer_leds(uint32_t *br)
             on = can && ((held >> e) & 1u);
         } else if (l == LAYER_SAVE && !b && p < 10u && SK_NAME[p][0]) {   /* the tools that would do something breathe */
             can = (uint32_t)sv_ok(p);
+        } else if (l == LAYER_SEQ) {                    /* the tools that would do something breathe; the lane picked lit */
+            can = sq_ok(k);
+            on = b && drum_track(TSEL) && p < NLANE && ui.lane % NLANE == p;
+        } else if (l == LAYER_REC && !b && p == RK_ALL) {
+            can = !chain_busy();
         } else if (l == LAYER_REC && !b && p >= RK_PLAY && p <= RK_NAME) {   /* the section playing lit, the saved
                                                          * ones and the actions breathe */
             on = (p - RK_PLAY < 4u && live.cur == (int8_t)(p - RK_PLAY)) || (p == RK_SREC && live.srec) ||
@@ -647,7 +741,6 @@ static const char *const PF_NAME[PF_M1] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "L
     "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+", "STUT 1/8", "STUT 1/16", "ATK+", "ARP", "RANDOM"};   /* the MIDI ones (pfx.c) */
 static const char W_NOTE[16] = {'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G'};
 static const uint8_t PK_BLK[11] = {1, 2, 3, 5, 6, 8, 9, 10, 12, 13, 15};   /* a black key: left of white key n */
-enum { LS_OFF, LS_SEL, LS_HELD, LS_WAIT, LS_DIM, LS_MUTE };
 #define LMC_TW 140                                       /* MACRO's routes: their width (x 92 .. 232) */
 /* key p (white, or black: blk) of layer l: its name into nm (12; "" none), its state */
 static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
@@ -678,9 +771,15 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         str_cpy(nm, SK_NAME[p], 12);
         return sv_ok(p) ? LS_OFF : LS_DIM;
     }
+    if (l == LAYER_SEQ)
+        return sq_keyname(blk, p, nm);
     if (l == LAYER_REC) {
-        if (blk || p > RK_NAME)
+        if (blk || p > RK_ALL)
             return LS_OFF;
+        if (p == RK_ALL) {
+            str_cpy(nm, "CLEAR ALL", 12);
+            return chain_busy() ? LS_DIM : LS_OFF;
+        }
         if (p - RK_PLAY < 4u) {                         /* the song keys */
             p -= RK_PLAY;
             str_cpy(nm, "PLAY A", 12);
@@ -796,7 +895,7 @@ static void ly_own_cards(void)                          /* FX REC: their own fou
                     perf_k[2] * 10, ICON_DELAY);
         fmt_int(val, 100 - perf_k[3]);
         draw_column(3, "DEPTH", val, "%", VAL(3u), (100 - perf_k[3]) * 10, ICON_MIX);
-    } else if (l == LAYER_SAVE) {                       /* (no knobs: four empty cells) */
+    } else if (l == LAYER_SAVE || l == LAYER_SEQ) {     /* (no knobs: four empty cells) */
         for (c = 0; c < 4u; c++)
             draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
     } else if (l == LAYER_REC) {                        /* MODE (the others are GLO > MAIN's) */
@@ -844,7 +943,7 @@ static void lst_chip(const char *a, const char *v, int on)
 }
 static void layer_state(uint32_t l)
 {
-    static const char *const LN[LAYER_N] = {"", "FX", "REC", "SAVE"};
+    static const char *const LN[LAYER_N] = {"", "FX", "REC", "SAVE", "SEQ"};
     const khint_t *ft = layer_foot(l);
     uint32_t k, e;
     char b[48], v[8];
@@ -891,6 +990,15 @@ static void layer_state(uint32_t l)
             fmt_int(v, chain.remaining);
             lst_chip("BARS LEFT", v, 1);
         }
+    } else if (l == LAYER_SEQ) {                        /* what the keys would act on */
+        b[0] = 'T'; b[1] = (char)('1' + song.sel); b[2] = 0;
+        lst_chip(b, seq_is_empty(TSEL) ? "EMPTY" : "SEQUENCE", !seq_is_empty(TSEL));
+        fmt_int(v, (int32_t)tl_len(TSEL));
+        lst_chip("LEN", v, 1);
+        fmt_int(v, (int32_t)ui.cursor + 1);
+        lst_chip("STEP", v, 1);
+        if (drum_track(TSEL))
+            lst_chip("LANE", drum_lane_abbr(TSEL, ui.lane % NLANE), 1);
     } else if (l == LAYER_SAVE) {                       /* what the keys would act on */
         v[0] = (char)('A' + (song.g[G_SLOT] - 1) % 4); v[1] = 0;
         lst_chip("SECTION", v, project_used((uint32_t)song.g[G_SLOT] - 1u));
@@ -925,6 +1033,9 @@ static void draw_layer(void)
                (uint32_t)(live.cur + 1) * 23u + (uint32_t)(live.req + 1) * 131u + live.srec * 7u + live.mode * 11u +
                lys.nqc * 4099u + (chain.running ? chain.row * 13u + chain.remaining * 17u : 0u) + (uint32_t)name_here() * 29u +
                up_gen * 37u;
+    else if (l == LAYER_SEQ)
+        sig += (uint32_t)chain_busy() * 3u + (uint32_t)drum_track(TSEL) * 5u + ui.lane * 7u + ui.cursor * 11u + tl_len(TSEL) * 13u +
+               (uint32_t)seq_is_empty(TSEL) * 17u + song.sel * 977u;
     else if (l == LAYER_SAVE)
         sig += (uint32_t)chain_busy() * 3u + song.playing * 5u + chain_config.count * 7u + ui.song_row * 11u + (uint32_t)rec_clearable() * 13u +
                (uint32_t)song.g[G_SLOT] * 17u + (user_of(TSEL) < UP_SLOTS) * 19u + up_gen * 37u + (uint32_t)project_used((uint32_t)song.g[G_SLOT] - 1u) * 23u;

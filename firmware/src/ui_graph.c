@@ -1034,7 +1034,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP &&   /* (0.8.3: LENTE's step, the heads) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS &&
-           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_SQTOOL;
+           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE;
 }
 static void graph_drift(void)
 {
@@ -1189,9 +1189,6 @@ static uint32_t graph_signature(void)
         h ^= (sl_ui_step + 1u) * 40503u;
     if (pg->graph == GR_TOOLS)                       /* (0.6.12) the action picked, the song's row */
         h ^= ui.act * 7919u + ui.song_row * 104729u;
-    if (pg->graph == GR_SQTOOL)                      /* (2026-11-03) the tool picked, the lane, what can be done */
-        h ^= ui.act * 7919u + ui.lane * 31u + (uint32_t)drum_track(TSEL) * 3u + (uint32_t)chain_busy() * 5u +
-             motion_count(TSEL) * 131u;
     if (pg->graph == GR_SLOTS || pg->graph == GR_ERASE) {   /* (a checksum over each slot; the project, the music's section, the song) */
         for (i = 0; i < 4u; i++)
             h ^= (uint32_t)graph_project_used(i) << (20u + i);
@@ -1627,10 +1624,6 @@ static void draw_graph(void)
         switch (pg->graph) {
         case GR_ADSR:
             graph_adsr(t, c);
-            break;
-        case GR_SQTOOL:                              /* (2026-11-03) SEQ > TOOLS (ui_tools.c) */
-            cv_oy = 0;
-            graph_sqtools();
             break;
         case GR_BLEND:
             graph_blend();

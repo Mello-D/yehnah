@@ -428,7 +428,7 @@ static int sets_full(void);
 static uint32_t graph_h(void) { return sets_full() || ui.hm ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
-enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
+enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_SEQ, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
                                                          * NAV-LAYOUT.md; 2026-11-03: SEQ's TOOLS and SAVE's song too: held,
                                                          * the other buttons do nothing) */
 static void draw_layer(void);
@@ -1669,13 +1669,6 @@ static void track_select(uint32_t i)
     ui.force = 1;
 }
 
-/* (2026-11-03) SEQ > TOOLS (ui_tools.c) */
-static const char *sqt_name(void);
-static int sqt_ready(void);
-static void sqt_knob(uint32_t slot, int32_t steps);
-static void sqt_do(void);
-static void sqt_cols(void);
-static void graph_sqtools(void);
 /* EDIT > SOUND / SOUND 2 (ui_dx.c, included by ui_input.c): the DRUM-X sound edited and its patch (0 A, 1 B) */
 static uint8_t dx_ui_lane, dx_ui_side;
 static uint32_t dx_pagen(const page_t *pg)            /* SOUND 1..3; (0.5.1) X-MOD 4; (0.6.54) SOUND 4: 8 */
@@ -1705,7 +1698,6 @@ static uint32_t act_cols(void)                   /* the columns that are actions
         return 0;
     if (pg->graph == GR_MOTION || pg->graph == GR_PUNCH) return 8u;   /* (0.6.99) PUNCH: KNOB 4 CLEAR */
     if (pg->graph == GR_TOOLS) return 15u;
-    if (pg->graph == GR_SQTOOL) return 1u;      /* (2026-11-03) KNOB 1 the tool (KNOB 2: the lane, not an action) */
     if (pg->graph == GR_PROG) return ui.act ? 8u : 0u;   /* (chord-harp fork) SCL > PROG: F#4 WRITE, OCT+ does it
                                                          * (ui_input.c prog_write); KNOB 4 its PLATE, not the action */
     if (pg->graph == GR_SONG)
@@ -1745,7 +1737,6 @@ static int act_ready(void)
         return 0;
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
     if (cur_page()->graph == GR_PROG) return !chain_busy();
-    if (cur_page()->graph == GR_SQTOOL) return sqt_ready();
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, DELETE ROW, CLEAR SONG, NEW PROJECT */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 3u ? 1 :
                                  c == 1u ? ui.song_row < chain_config.count : chain_config.count != 0u);

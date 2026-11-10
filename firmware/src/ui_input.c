@@ -1382,10 +1382,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         }
         return;
     }
-    if (pg->graph == GR_SQTOOL) {                         /* (2026-11-03) SEQ > TOOLS: KNOB 1 the tool, 2 the lane */
-        sqt_knob(slot, steps);
-        return;
-    }
     if (pg->graph == GR_SLOTS && save_on() && save_level() == SV_PROJ) {   /* (0.8.5) SAVE > PROJECT's SECTIONS: KNOB 1
                                                          * the section, KNOB 2 its name (shown; EDIT renames it) */
         if (slot == 1u)
@@ -1513,10 +1509,6 @@ static void act_do(void)
     if (cur_page()->graph == GR_PUNCH) {                /* (0.6.99) the punch-in lane cleared (a dialog) */
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         confirm_open(CF_CLEAR_PFX, song.sel);
-        return;
-    }
-    if (cur_page()->graph == GR_SQTOOL) {
-        sqt_do();
         return;
     }
     if (cur_page()->graph == GR_TOOLS) {
@@ -2189,7 +2181,7 @@ static void ui_input_frame(void)
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
     home = btn_hold(&ui.home_t0, B_HOME, now, 1);       /* (2026-11-03: held, nothing; the MENU is GLO's pages) */
     rec = btn_hold(&ui.rec_t0, B_REC, now, 0);          /* (a tap; held, the REC layer: ui_layer.c) */
-    seq = btn_hold(&ui.seq_t0, B_SEQ, now, 1);          /* (2026-11-03: its TOOLS a page; held, nothing) */
+    seq = BT_NONE;                                      /* (2026-11-10: SEQ is a layer's button, ui_layer.c: its tap is layer_tap's) */
     layer_arm(pressed, now);
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
         ui.rec_t0 |= 2u;                                /* (REC is its layer's button now: its tap is layer_tap's) */
@@ -2404,7 +2396,7 @@ static void ui_input_frame(void)
                         char cb[16] = "T1 CLEARED";
                         cb[1] = (char)('1' + ui.confirm_trk % NTRK);
                         ui_say(cb, "");
-                        str_cpy(ui.msg2, "SEQ>TOOLS: CLEAR ALL", sizeof ui.msg2);
+                        str_cpy(ui.msg2, "REC+G5: CLEAR ALL", sizeof ui.msg2);
                     }
                 }
             }

@@ -1166,10 +1166,6 @@ static void draw_cards(void)
         draw_act_column(3, "CLEAR", T_MID, ICON_X_MOTION_DEL);
         return;
     }
-    if (cur_page()->graph == GR_SQTOOL) {               /* (2026-11-03) SEQ > TOOLS (ui_tools.c) */
-        sqt_cols();
-        return;
-    }
     if (cur_page()->graph == GR_TOOLS) {
         static const char *const labels[] = {"PAT", "ROW", "SONG", "NEW"};
         static const uint8_t icons[] = {ICON_AUTO, ICON_X_SONG, ICON_X_SONG, ICON_AUTO};   /* ROW, SONG: the song's */

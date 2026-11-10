@@ -576,7 +576,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_FOCUS, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SQTOOL, GR_SETS };   /* (GR_FOCUS / GR_STAGE: LENTE's EDIT > FOCUS, ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_PROG, GR_BLEND, GR_SETS };   /* (GR_FOCUS / GR_STAGE: LENTE's EDIT > FOCUS, ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -777,8 +777,6 @@ static const page_t PAGES[] = {
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
                                                          * (2026-10-27, ui_input.c prog_write) */
-    {"SQ TOOLS", FAM_SEQ, SC_TRACK, GR_SQTOOL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-03) SEQ > TOOLS (was SEQ held:
-                                                         * ui_tools.c sqt_*); KNOB 1 the tool, 2 the lane (DRUM) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu)   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
