@@ -947,15 +947,29 @@ static void note_edit(uint32_t slot, int32_t steps)
         return;
     }
     {
-        uint32_t a, b;
+        uint32_t a, b, cur, other, f;
         nf_pair(&a, &b);
-        nf_set(st, slot - 1u, (uint32_t)clamp((int32_t)(slot == 1u ? a : b) + dir, 0, NF_N - 1));
+        cur = slot == 1u ? a : b; other = slot == 1u ? b : a;
+        f = cur;
+        for (;;) {                                      /* (2026-11-10) on to the next flag the other list does not hold */
+            int32_t g = (int32_t)f + dir;
+            if (g < 0 || g >= (int32_t)NF_N) { f = cur; break; }   /* (none left that way: stay) */
+            f = (uint32_t)g;
+            if (!nf_clash(f, other)) break;
+        }
+        nf_set(st, slot - 1u, f);
     }
 }
+static void comp_knob(uint32_t slot, int32_t steps);
 static void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
+    if (cur_page()->id[0] == 7u) {                      /* (2026-11-10) SEQ > SPICE */
+        if (drum_track(TSEL) && slot == 0u) note_select(steps > 0 ? 1 : -1);
+        else comp_knob(slot, steps);
+        return;
+    }
     if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (2026-11-10) FLAG 1, FLAG 2, VELOCITY */
         if (drum_track(TSEL) && slot == 0u) note_select(steps > 0 ? 1 : -1);
         else if (drum_track(TSEL) && slot != 3u) ui_message("A KIT: NOTE + VELOCITY");
@@ -995,6 +1009,8 @@ static void step_edit(uint32_t slot, int32_t steps)
     case 2:                                               /* LENGTH (2026-11-10): the note longer or shorter, a step a
                                                            * detent (TIEs over empty steps; no REST or TIE to pick) */
         if (st->time != ST_NOTE || !st->n) ui_message("NO NOTE HERE");
+        else if (steps < 0 && !hold_arg(st) && note_len(TSEL, ui.cursor, (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)) <= 1u)
+            step_none();                                  /* (2026-11-10) LENGTH 0: the note goes (a step of one, turned down) */
         else length_turn(TSEL, ui.cursor, steps);
         break;
     default:                                              /* MOVE (2026-11-10, was NOTE's KNOB 3): the step and its TIEs
@@ -1004,68 +1020,54 @@ static void step_edit(uint32_t slot, int32_t steps)
     }
 }
 
-/* (0.6.39) SEQ > COMP: KNOB 1 the step, KNOB 2 its TYPE (OFF, the step's CHANCE and RATCH, the components), KNOB 3 / 4
- * the TYPE's values (CHANCE %, RATCH x1..x4; ARP: ORDER, RATE x RANGE; TRIG: the condition). CHANCE and RATCH are the
- * step's own fields; a component is one at a time: turning to OFF, CHANCE or RATCH takes it away. (0.6.82) COMP 2: the
- * step's second component the same way (no CHANCE or RATCH there); RATCH and ECHO: KNOB 4 their DIV. WHEN: KNOB 2 / 3
- * the loops each component plays on (ALWAYS, 1:2, 2:2, SKIP), KNOB 4 the step's LEN */
+/* (2026-11-10) SEQ > SPICE (was COMP and COMP 2; 0.6.39): on NOTE's roll, KNOB 1 the note (as NOTE's), KNOB 2 its TYPE, KNOB 3
+ * the TYPE's value (ARP: ORDER x RANGE; TRIG: the condition; ..), KNOB 4 which of the step's two components (1 or 2) is shown and
+ * edited. CHANCE, RATCH and ECHO are NOTE's flags now (not offered; a step that holds an ECHO still shows it). EVERY, the ARP's
+ * RATE is on KNOB 3 with the ORDER (the RANGE is a TYPE entry); WALK / CLIMB's rate has no knob: a step keeps what it has, a WALK / CLIMB a move a loop */
 static void comp_knob(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t v = comp_view(), k = comp_slot();
-    int32_t d = clamp(steps, -4, 4), e = steps > 0 ? 1 : -1;
+    int32_t d = clamp(steps, -4, 4);
     uint8_t *cp = k == 1u ? &st->comp2 : &st->comp, *ap = k == 1u ? &st->carg2 : &st->carg;
-    if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
+    if (slot == 0u) { note_select(steps > 0 ? 1 : -1); return; }
+    if (slot == 3u) { ui.cp_slot = (uint8_t)(steps > 0 ? 1 : 0); return; }
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-    if (slot == 3u && !((v >= COMP_ARPN && v <= COMP_ARPS && k == 0u) || ((v == COMP_RATCH || v == COMP_ECHO) && k == 0u) ||
-                        v == COMP_WALK || v == COMP_CLIMB)) {   /* (0.6.98: WALK / CLIMB's KNOB 4 is their RATE on both pages) */
-        uint32_t i;                                     /* (0.6.92) EVERY: the step's components' loops, in the knob's order */
-        for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
-        i = (uint32_t)wrap_add((int32_t)i, e, EV_N);
-        ST_EVERY_SET(st, EV_ORD[i]);
-        return;
-    }
     if (slot == 1u) {
-        v = (uint32_t)wrap_add((int32_t)v, d, COMP_N);
-        if (k && v > COMP_OFF && v < COMP_ARPN)         /* (COMP 2: no CHANCE or RATCH) */
-            v = d > 0 ? COMP_ARPN : COMP_OFF;
-        if (!k) ui.comp_sel = (uint8_t)v;
+        uint32_t rng = 0, i = comp_ent_of(v, 0u);
+        i = (uint32_t)wrap_add((int32_t)i, d, (int32_t)comp_ents());   /* (d entries on, round the list; an ARP's four RANGEs are four) */
+        comp_ent_at(i, &v, &rng);
         if (v >= COMP_ARPN) {
             uint32_t c = CP_ARPN + v - COMP_ARPN;
             if (*cp != c) {
-                int keep = cp_isarp(*cp) && cp_isarp(c);   /* (ARP to ARP: ORDER, RATE, RANGE kept) */
+                int keep = cp_isarp(*cp) && cp_isarp(c);   /* (ARP to ARP: ORDER, RATE kept) */
                 *cp = (uint8_t)c;
-                if (!keep) *ap = c <= CP_ARPS ? CP_ARG(0u, 2u, 0u) : CP_ADEF[c];   /* (UP x4 1 OCT; the others' own) */
+                if (!keep) *ap = c <= CP_ARPS ? CP_ARG(0u, 7u, 0u) : CP_ADEF[c];   /* (UP at 1/4, the list's start; the others' own) */
             }
         } else
             *cp = *ap = 0;
         return;
     }
-    if ((v == COMP_RATCH || v == COMP_ECHO) && slot == 3u)   /* (0.6.82) DIV */
-        st->ctime = (uint8_t)((st->ctime & ~7u) | (uint32_t)clamp((int32_t)CT_DIV(st) + e, 0, CT_NDIV - 1));
-    else if (v == COMP_CHANCE && slot == 2u)
-        step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
-    else if (v == COMP_RATCH && slot == 2u)
-        step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
-    else if (*cp == CP_JUMP && slot == 2u)            /* (0.6.62) TO STEP (0.6.92: TIMES is EVERY, KNOB 4) */
+    if (*cp == CP_JUMP)                                 /* (0.6.62) TO STEP (0.6.92: TIMES is EVERY) */
         *ap = (uint8_t)((*ap & 0xC0u) | (uint32_t)clamp((int32_t)CP_JTO(*ap) + steps, 0, 63));
-    else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value (0.8.5: ECHO's
-                                                                              * EVEN kept) */
+    else if (v >= COMP_TRIG && *cp > CP_ARPS && CP_AMAX[*cp] && v != COMP_WALK && v != COMP_CLIMB)   /* TRIG .. PULSE: their value (0.8.5: ECHO's
+                                                         * EVEN kept) */
         *ap = (uint8_t)((*cp == CP_ECHO ? *ap & CP_ECHO_EVEN : 0u) |
                         (uint32_t)clamp((int32_t)(*cp == CP_ECHO ? *ap & ~CP_ECHO_EVEN : *ap) + d, CP_AMIN[*cp], CP_AMAX[*cp]));
-    else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 2u) {   /* (0.6.98) MODE x RANGE: one list, a range after another */
+    else if (v == COMP_WALK || v == COMP_CLIMB) {       /* (0.6.98) MODE x RANGE: one list, a range after another */
         int32_t i = clamp((int32_t)(CP_WMODE(*ap) * 4u + CP_WRNG(*ap)) + d, 0, 15);
         *ap = CP_WARG(CP_WRATE(*ap), (uint32_t)i / 4u, (uint32_t)i % 4u);
-    } else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 3u) {   /* .. RATE: the loops a move, 1 .. 16 */
-        *ap = CP_WARG((uint32_t)clamp((int32_t)CP_WRATE(*ap) + e, 0, (int32_t)CP_NWRATE - 1), CP_WMODE(*ap), CP_WRNG(*ap));
-    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
-        int32_t i = wrap_add((int32_t)(CP_ORD(*ap) * 4u + CP_RNG(*ap)), d, 16);
-        *ap = CP_ARG((uint32_t)i / 4u, CP_RATE(*ap), (uint32_t)i % 4u);
-    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8 (in the track's time) */
-        uint32_t i;
-        for (i = 0; i < CP_NRATE && CP_RATE_ORD[i] != CP_RATE(*ap) % CP_NRATE; i++) {}
-        i = (uint32_t)clamp((int32_t)i + e, 0, CP_NRATE - 1);
-        *ap = CP_ARG(CP_ORD(*ap), CP_RATE_ORD[i], CP_RNG(*ap));
+    } else if (v >= COMP_ARPN && v <= COMP_ARPS) {      /* (2026-11-10) RATE x ORDER: one list, the rates slowest first, each with UP DOWN UP-DN RND (a single note: the rates only) (the RANGE is TYPE's) */
+        uint32_t r, one = arp_notes(st) < 2u;           /* (one note: a repeat, the ORDER does nothing: the rates only) */
+        int32_t i;
+        for (r = 0; r < CP_NRATE && CP_RATE_ORD[r] != CP_RATE(*ap) % CP_NRATE; r++) {}
+        if (one) {
+            i = wrap_add((int32_t)r, d, (int32_t)CP_NRATE);
+            *ap = CP_ARG(CP_ORD(*ap), CP_RATE_ORD[i], CP_RNG(*ap));
+        } else {
+            i = wrap_add((int32_t)(r * 4u + CP_ORD(*ap)), d, (int32_t)(4u * CP_NRATE));
+            *ap = CP_ARG((uint32_t)i % 4u, CP_RATE_ORD[(uint32_t)i / 4u], CP_RNG(*ap));
+        }
     }
 }
 /* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x1, x2 .. x8; KNOB 2 REPEAT OFF, x2 .. x8, TO 64; (0.6.92) done as the
@@ -1241,10 +1243,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         }
         while (n < HARP_NALL && harp_genre(n) == g) n++;
         TSEL->p[P_CVOI] = (int16_t)clamp((int32_t)s + steps, (int32_t)f, (int32_t)n - 1);
-        return;
-    }
-    if (pg->graph == GR_COMP) {
-        comp_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_SHAPE) {                        /* (0.6.85) STRETCH, REPEAT (picked, OCT+ does it), NUDGE (now) */

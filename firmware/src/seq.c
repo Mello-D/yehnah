@@ -2465,6 +2465,17 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         }
     }
     if (s->time == ST_TIE && arp) {
+        uint8_t sa = 0;
+        uint32_t sl;
+        cp_get(t, arp, CP_ARPN, CP_ARPS, &sa);
+        sl = CP_SLOW[CP_RATE(sa) % CP_NRATE];
+        if (sl && !(skip & SEQ_REP) && ++t->arp_c % sl) {   /* (2026-11-10) slower than a step: this step holds the note */
+            if (t->seq_n) {
+                t->seq_off = gate + period / 2u;
+                t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie || chord_auto(t, len);
+            }
+            return;
+        }
         s = arp;                                    /* (0.6.39) the arpeggio goes on over the TIE */
         cont = 1;
         vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
@@ -2509,6 +2520,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
                 t->arp_from = CV_IDX;
             }
             t->arp_k = 0;
+            t->arp_c = 0;
         }
     }
     if (s->time == ST_REST || (!s->n && !s->hit)) {

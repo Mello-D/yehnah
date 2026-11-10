@@ -325,6 +325,19 @@ static void my_steps(track_t *t)                  /* "recorded" steps */
 
 static void sv_tap(uint32_t p);
 static void user_fill(uint32_t n);
+static void go_page(uint32_t graph);
+static void go_flav(void)                         /* (2026-11-10) SEQ > SPICE (the page of the step's components) */
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES; i++)
+        if (PAGES[i].scope == SC_STEP && PAGES[i].id[0] == 7u)
+            break;
+    if (i == NPAGES) { fprintf(stderr, "go_flav: no SPICE page\n"); exit(2); }
+    ui.home = 0;
+    ui.page = (uint8_t)i;
+    ui.cp_slot = 0;
+    page_entered();
+}
 static void go_page(uint32_t graph)               /* the page that draws graph */
 {
     uint32_t i;
@@ -5842,31 +5855,31 @@ static int test_save_lens(void)
     ui_power_on();
     return bad;
 }
-/* (0.9.2) SEQ: PATTERN (PATTERN STRETCH) . TRACK (TRACK) . BAR (BAR STEP NOTE) . STEP (COMP COMP 2) . AUTO
+/* (0.9.2) SEQ: PATTERN (PATTERN STRETCH) . TRACK (TRACK) . BAR (BAR STEP NOTE) . STEP (SPICE) . AUTO
  * (AUTOMATION) one chain, entered at STEP; SELECT a page a detent, a SEQ tap the next group; the pages drawn as
  * 0.8.5's lens levels drew them (PATTERN's bars, the roll, the step large); the new BAR page: KNOB 1 the bar, KNOB 2 LEN;
  * STEP's KNOB 1 all the steps (into the next bar); one memory (was per track); the tools
  * layer and the dice on every page. (Was 0.8.3's LENTE: SELECT PATTERN <-> BAR <-> STEP, PRESETS the bar / step) */
 static int test_lente(void)
 {
-    static const char *const CH[10] = {"STEP", "NOTE", "COMP", "COMP 2", "AUTO", "PATTERN", "STRETCH",
-                                       "TRACK", "TOOLS", "BAR"};
+    static const char *const CH[9] = {"STEP", "NOTE", "SPICE", "AUTO", "PATTERN", "STRETCH",
+                                      "TRACK", "TOOLS", "BAR"};
     int bad = 0, ok;
     uint32_t q, sig;
     ui_power_on();
     TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
     ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && lz_tabs() == 7u &&
-         lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 STEP") && lz_count_is("1/10");   /* (7 runs: BAR's group split by the wrap, TOOLS) */
+         lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 STEP") && lz_count_is("1/9");   /* (7 runs: BAR's group split by the wrap, TOOLS) */
     turn(EN_SELECT, -1); frames(32);
-    ok &= str_eq(cur_page()->title, "BAR") && bars_view(cur_page()) && lz_tab_lit(2) && lz_count_is("10/10");
+    ok &= str_eq(cur_page()->title, "BAR") && bars_view(cur_page()) && lz_tab_lit(2) && lz_count_is("9/9");
     turn(EN_SELECT, 2); frames(32);
     ok &= str_eq(cur_page()->title, "NOTE") && roll_view(cur_page()) && !bigstep_view(cur_page());   /* (NOTE: the roll) */
     turn(EN_SELECT, 1); frames(32);
-    ok &= str_eq(cur_page()->title, "COMP") && bigstep_view(cur_page()) && lz_tab_lit(3);
+    ok &= str_eq(cur_page()->title, "SPICE") && roll_view(cur_page()) && !bigstep_view(cur_page());
     bad += check("SEQ: enters at STEP (1/10, 2026-11-03); BAR 10/10; BAR's bars, NOTE the roll, COMP the step large", ok);
     bad += check("0.9.2 SEQ: one chain of 10 by SELECT (round, 2026-11-03: TOOLS); a SEQ tap each group's first, round",
-                 chain_walk(B_SEQ, CH, 10));
+                 chain_walk(B_SEQ, CH, 9));
     /* the memory: the section's (not the track's) */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     go_step(); frame();
@@ -5915,15 +5928,15 @@ static int test_lente(void)
     bad += check("0.9.2 SEQ > BAR: KNOB 1 the bar (wrapping), KNOB 2 LEN; STEP's KNOB 1 into the next bar", ok);
     {
         char ti[20];
-        go_title("COMP 2"); frame();
+        go_title("STRETCH"); frame();
         page_title(ti);
-        ok = str_eq(ti, "COMP 2");                       /* (2026-11-02: no groups, no "2/2") */
+        ok = str_eq(ti, "STRETCH");                       /* (2026-11-02: no groups, no "2/2") */
         go_title("TRACK"); frame();
         page_title(ti);
         ok &= str_eq(ti, "TRACK");
         ok &= card_y() == TF_KN_Y && graph_y() == TF_SC_Y && pg_row() && card_h() == TF_KN_H;
     }
-    bad += check("0.9.2 SEQ: the page's title (\"COMP 2\"); the page row at the foot, the page over it", ok);
+    bad += check("0.9.2 SEQ: the page's title (\"STRETCH\"; a roll page's is the scale); the page row at the foot, the page over it", ok);
     /* (2026-11-03) held past HOLD, a button does nothing when let go (but FX SCL REC: their layers) */
     ok = 1;
     for (q = 0; q < 3u; q++) {
@@ -5953,14 +5966,14 @@ static int test_lente(void)
     turn(EN_K1, 1);
     ok &= ui.bank == 1u;
     turn(EN_SELECT, 3); frames(32);
-    ok &= bigstep_view(cur_page()) && lens_level() == LV_STEP;
-    bad += check("  DRUM: STEP is the grid (its keys); BAR its bars, KNOB 1 the bar; COMP the step large", ok);
+    ok &= str_eq(cur_page()->title, "SPICE") && grid_on() && lens_level() == LV_BAR;
+    bad += check("  DRUM: STEP is the grid (its keys); BAR its bars, KNOB 1 the bar; SPICE the grid too", ok);
     return bad;
 }
 
 static int test_seq_tools(void)
 {
-    static const uint8_t PG[8] = {GR_ROLL, GR_STEPS, GR_CHANCE, GR_MOTION, GR_SHAPE, GR_STEPS, GR_ROLL, GR_COMP};
+    static const uint8_t PG[8] = {GR_ROLL, GR_STEPS, GR_CHANCE, GR_MOTION, GR_SHAPE, GR_STEPS, GR_ROLL, GR_ROLL};
     static const uint8_t NOT[4] = {GR_ROLL, GR_SONG, GR_TRK, 0};
     int bad = 0, ok, okc, flash;
     uint32_t i, k, a, b2, pg, seed;
@@ -7916,14 +7929,25 @@ static int test_note_page(void)
     ok &= !(t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE);
     turn(EN_K3, 1);                                     /* FLAG 2: ACC, on top of FLAG 1's SLD */
     ok &= (t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE);
-    turn(EN_K3, 1);                                     /* .. SLD again: the same flag in both lists, one flag */
-    ok &= !(t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE);
-    turn(EN_K2, 1);                                     /* FLAG 1: RATCH 2; SLD stays (FLAG 2 holds it) */
-    ok &= step_ratchet(&t->step[0]) == 2u && (t->step[0].flags & SF_SLIDE);
-    turn(EN_K3, 1);                                     /* FLAG 2: RATCH 2 as well: nothing more */
-    ok &= step_ratchet(&t->step[0]) == 2u && !(t->step[0].flags & SF_SLIDE);
+    turn(EN_K3, 1);                                     /* .. SLD is FLAG 1's: skipped, on to RATCH 2 (2026-11-10) */
+    ok &= !(t->step[0].flags & SF_ACCENT) && (t->step[0].flags & SF_SLIDE) && step_ratchet(&t->step[0]) == 2u;
+    turn(EN_K2, 1);                                     /* FLAG 1: RATCH 2 is FLAG 2's, and the other RATCHes: on to ECHO; SLD goes */
+    ok &= step_ratchet(&t->step[0]) == 2u && !(t->step[0].flags & SF_SLIDE) && t->step[0].comp == CP_ECHO;
     bad += check("SEQ > NOTE: KNOB 1 selects the notes in order; FLAG 1 and FLAG 2 are lists of the flags, any from each", ok);
     t->step[0].flags = 0; t->step[0].probability = 0; t->step[0].comp = t->step[0].carg = 0;   /* a bare step */
+    step_set_ratchet(&t->step[0], 1);
+    {   /* (2026-11-10) FLAG 1 on RATCH 2: FLAG 2 passes ACC, SLD, then ECHO (no second RATCH, no RATCH 3 changing FLAG 1) */
+        turn(EN_K2, 1); turn(EN_K2, 1); turn(EN_K2, 1);       /* FLAG 1: ACC SLD RATCH 2 */
+        ok = step_ratchet(&t->step[0]) == 2u;
+        turn(EN_K3, 1); turn(EN_K3, 1); turn(EN_K3, 1);       /* FLAG 2: ACC SLD ECHO */
+        ok &= step_ratchet(&t->step[0]) == 2u && t->step[0].comp == CP_ECHO && !(t->step[0].flags & SF_SLIDE) &&
+              !strncmp(ui.col[1], "FLAG 1|RATCH 2", 14) && !strncmp(ui.col[2], "FLAG 2|ECHO", 11);
+        turn(EN_K3, -1);                                      /* .. back to SLD */
+        ok &= step_ratchet(&t->step[0]) == 2u && (t->step[0].flags & SF_SLIDE) && !t->step[0].comp;
+        bad += check("SEQ > NOTE: FLAG 2 skips what FLAG 1 holds (a second RATCH, the same flag); FLAG 1 stays RATCH 2", ok);
+    }
+    t->step[0].flags = 0; t->step[0].probability = 0; t->step[0].comp = t->step[0].carg = 0; step_set_ratchet(&t->step[0], 1);
+    turn(EN_K2, -1); turn(EN_K2, -1); turn(EN_K2, -1);
     { uint32_t i; for (i = 0; i < 11u; i++) turn(EN_K3, 1); }                /* FLAG 2: ACC SLD RATCH 2 .. 8 ECHO CHANCE */
     ok = step_chance(&t->step[0]) == 50u && !t->step[0].comp && step_ratchet(&t->step[0]) == 1u && !t->step[0].flags;
     turn(EN_K3, -1);                                    /* .. ECHO */
@@ -7992,12 +8016,13 @@ static int test_step_len(void)
     turn(EN_K3, -8);                                    /* a fast turn: down to x1, not past it */
     ok &= note_len(t, 2, 16) == 1u && t->step[3].time == ST_REST && t->step[4].time == ST_REST && t->step[2].time == ST_NOTE &&
           t->step[2].comp2 == CP_NONE;                  /* (a HOLD back to one step: no HOLD) */
-    turn(EN_K3, -1); turn(EN_K3, -1);                   /* (2026-11-10: LENGTH only; never a TIE or a REST in place of the note) */
-    ok &= t->step[2].time == ST_NOTE && t->step[2].n == 3u && note_len(t, 2, 16) == 1u;
+    turn(EN_K3, -1);                                    /* (2026-11-10: LENGTH 0: a step of one, turned down: the note goes) */
+    ok &= t->step[2].time == ST_REST && !t->step[2].n;
+    t->step[2] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
     turn(EN_K3, 1);
     ok &= t->step[2].time == ST_NOTE && note_len(t, 2, 16) == 2u;
     turn(EN_K3, -1);
-    bad += check("STEP KNOB 3 (2026-11-10): left shortens (TIEs to RESTs), a fast turn stops at x1, the note stays a NOTE", ok);
+    bad += check("STEP KNOB 3 (2026-11-10): left shortens (TIEs to RESTs), a fast turn stops at x1, one more takes the note away (LENGTH 0)", ok);
     t->step[2] = (step_t){.note = {60, 64, 67}, .n = 3, .time = ST_NOTE, .vel = 100};   /* (the chord back, for below) */
     t->step[14] = (step_t){.note = {57, 60}, .n = 2, .time = ST_NOTE, .vel = 80};
     t->step[0].time = ST_NOTE;                          /* (an empty NOTE: lengthened over) */
@@ -9052,7 +9077,7 @@ static int test_skin(void)
         ui_power_on(); frame();
         press(B_EDIT);
         ok = !frames_layer_hint(HINT_DWELL_MS + 64u) && !ui.hint_pg;
-        go_title("COMP 2"); frames(160); turn(EN_SELECT, 1); frames(HINT_DWELL_MS + 64u);
+        go_title("SPICE"); frames(160); turn(EN_SELECT, 1); frames(HINT_DWELL_MS + 64u);
         ok &= str_eq(cur_page()->title, "AUTOMATION") && ui.msg_t && ui.hint_pg && msg_is("REC + PLAY, TURN A KNOB");
         go_title("ENV"); frame();
         ok &= !ui.msg_t && !ui.hint_pg;
@@ -9942,14 +9967,14 @@ static int test_toasts(void)
     press(B_OCTDN); frames(160);
     ok &= !ui.confirm && memcmp(toast_snap + H_HEAD * 240u, host_screen + H_HEAD * 240u, (240u - H_HEAD) * 480u) == 0;
     bad += check("  NOTICE: the page gone under it, back whole after OCT-", ok);
-    /* hints: walking SEQ's chain with SELECT (COMP 2 > AUTOMATION > PATTERN) says nothing; dwelt on, AUTOMATION's; at most HINT_MAX */
-    ui_power_on(); go_title("COMP 2"); frames(400);
+    /* hints: walking SEQ's chain with SELECT (SPICE > AUTOMATION > PATTERN) says nothing; dwelt on, AUTOMATION's; at most HINT_MAX */
+    ui_power_on(); go_title("SPICE"); frames(400);
     for (seen = passed = 0, k = 0; k < 2u; k++) {
         turn(EN_SELECT, 1); passed |= str_eq(cur_page()->title, "AUTOMATION");
         for (n = 0; n < 12u; n++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
     }
     for (n = 0; n < 200u; n++) { frame(); seen |= ui.msg_t && ui.msg[0]; }
-    bad += check("0.9.5 a page's hint: none while SELECT walks past it (COMP 2 > AUTOMATION > PATTERN), nor carried onto the next",
+    bad += check("0.9.5 a page's hint: none while SELECT walks past it (SPICE > AUTOMATION > PATTERN), nor carried onto the next",
                  passed && str_eq(cur_page()->title, "PATTERN") && !seen);
     turn(EN_SELECT, -1);                                /* back to AUTOMATION: stay */
     ok = str_eq(cur_page()->title, "AUTOMATION");
@@ -9983,7 +10008,7 @@ static int test_toasts(void)
         settings_export(&p);
         ui_power_on();                                  /* (a fresh power-on: favorites cleared, then the settings loaded) */
         ok = hint_given(HK_MOTION) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MOTION) == HINT_MAX;
-        go_title("COMP 2"); frames(160); turn(EN_SELECT, 1);
+        go_title("SPICE"); frames(160); turn(EN_SELECT, 1);
         for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
         go_home(); frames(160); ui.msg_t = 0;
         press(B_SAVE);
@@ -10010,7 +10035,7 @@ static int test_toasts(void)
     confirm_open(CF_INIT_SYS, 0); ui.force = 1; frame();
     press(B_OCTUP); frames(160);
     ok = !ui.confirm && hint_given(HK_MOTION) == 0u;
-    go_title("COMP 2"); frames(160); turn(EN_SELECT, 1); ui.msg_t = 0;
+    go_title("SPICE"); frames(160); turn(EN_SELECT, 1); ui.msg_t = 0;
     for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
     bad += check("  INIT SYSTEM: the counts start over (AUTOMATION's hint again)", ok && seen);
     return bad;
@@ -10267,8 +10292,7 @@ static const old_lv_t OLD_LV[] = {
     {FAM_SAVE, SV_LIB, 9, {"PROJECT"}}, {FAM_SAVE, SV_PROJ, 9, {"ARRANGE", "SONG EDIT"}},
     {FAM_SAVE, SV_SOUND, 9, {"PRESETS", "MORPH"}},
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "STRETCH", "TRACK"}},
-    {FAM_SEQ, LV_BAR, 9, {"STEP", "NOTE", "AUTOMATION"}},
-    {FAM_SEQ, LV_STEP, 9, {"COMP", "COMP 2"}},   /* (NOTE's STEP view: merged into BAR's, the mock-up's "páginas repetidas") */
+    {FAM_SEQ, LV_BAR, 9, {"STEP", "NOTE", "SPICE", "AUTOMATION"}},   /* (NOTE's STEP view: merged into BAR's, the mock-up's "páginas repetidas") */
     {FAM_FX, FXL_TRACK, 9, {"FX", "DIST", "AUTO PAN"}}, {FAM_FX, FXL_BUSES, 9, {"BUSES"}},
     {FAM_FX, FXL_EFFECT, 9, {"DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2", "CHORUS", "SLICER", "SL BUS", "SL BUS 2",
                              "SL PITCH", "MASTER", "PUNCH"}},
@@ -10389,7 +10413,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 6, 3, 3, 2, 6, 1, 4, 10, 12, 4};   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 6, 3, 3, 2, 6, 1, 4, 10, 4, 4};   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10456,9 +10480,9 @@ static int test_nav_tasks(void)
               tk_val(EN_K2, -6);
               ok = song.sel == 3u && str_eq(cur_page()->title, "SOUND 2") && c == 1u && dv[DXP_DECAY] != d0; }
             break;
-        case 12:                                        /* COMP 2 of step 9 */
-            tk_start(1); tk_go(EN_SELECT, 3); tk_go(EN_K1, 8); tk_val(EN_K2, 1);
-            ok = str_eq(cur_page()->title, "COMP 2") && ui.cursor == 8u && TSEL->step[8].comp2 != 0u;
+        case 12:                                        /* SPICE: the second component of the cursor step */
+            tk_start(1); tk_go(EN_SELECT, 2); tk_go(EN_K4, 1); tk_val(EN_K2, 1);
+            ok = str_eq(cur_page()->title, "SPICE") && TSEL->step[ui.cursor].comp2 != 0u;
             break;
         default:                                        /* GLO: six tracks (SYSTEM > TRACKS) */
             tk_start(0); trks_put(4); frame(); sets_cur[0] = 0; tk_btn(B_GLO);   /* (topic C: MAIN's list: KNOB 1 to TRACKS, KNOB 2 to six) */
@@ -10475,7 +10499,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 76u + XS);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 68u + XS);
     ui_power_on();
     return bad;
 }
@@ -10506,11 +10530,11 @@ static int test_nav_rules(void)
     cursor_set(3);
     go_title("STEP"); frame();
     TSEL->step[3].time = ST_NOTE; TSEL->step[3].n = 1; TSEL->step[3].note[0] = 62;
-    turn(EN_K3, -1); turn(EN_K3, -1);                    /* LENGTH: a one-step note stays a NOTE (no TIE, no REST) */
-    ok &= TSEL->step[3].time == ST_NOTE && TSEL->step[3].n == 1u;
+    turn(EN_K3, -1);                                     /* LENGTH 1, turned down: 0, the note goes (2026-11-10) */
+    ok &= TSEL->step[3].time == ST_REST && !TSEL->step[3].n && msg_is("NOTE: NONE");
     press(B_EDIT); frame();
     ok &= str_eq(cur_page()->title, "EDIT 1");           /* (EDIT: EDIT) */
-    bad += check("2026-11-03 STEP / NOTE under the lowest: NONE (the step); LENGTH never makes a REST; EDIT opens EDIT", ok);
+    bad += check("2026-11-03 STEP / NOTE under the lowest: NONE (the step); LENGTH 0 takes the note away; EDIT opens EDIT", ok);
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame(); frame();
     btn_down(B_REC); frames(800);
     (void)ly_keyname(LAYER_REC, 0, 14u, kn);

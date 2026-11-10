@@ -575,10 +575,12 @@ static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 
 #define CP_RATE(a) (((uint32_t)(a) >> 2) & 7u)    /* 0..4: x2 x3 x4 x6 x8 */
 #define CP_RNG(a) (((uint32_t)(a) >> 5) & 3u)     /* 0..3: 1..4 octaves (SCALE: 3 5 8 15 degrees) */
 #define CP_ARG(o, r, g) ((uint8_t)(((o) & 3u) | ((r) & 7u) << 2 | ((g) & 3u) << 5))
-#define CP_NRATE 6u                                 /* (0.6.92: x1, a note a step over the TIEs, as index 5) */
+#define CP_NRATE 8u                                 /* (0.6.92: x1, a note a step over the TIEs, as index 5; 2026-11-10: 6 and 7 slower than
+                                                     * a step: a note every 2 / 4 steps over the TIEs (seq.c: arp_c), 1/8 and 1/4 at DIV 1/16) */
 #define CP_NTRIG 12u
-static const uint8_t CP_RATES[CP_NRATE] = {2, 3, 4, 6, 8, 1};
-static const uint8_t CP_RATE_ORD[CP_NRATE] = {5, 0, 1, 2, 3, 4};   /* the knob's order: x1 x2 x3 x4 x6 x8 */
+static const uint8_t CP_RATES[CP_NRATE] = {2, 3, 4, 6, 8, 1, 1, 1};   /* the parts a step plays */
+static const uint8_t CP_SLOW[CP_NRATE] = {0, 0, 0, 0, 0, 0, 2, 4};    /* the steps a note lasts, when slower than a step */
+static const uint8_t CP_RATE_ORD[CP_NRATE] = {7, 6, 5, 0, 1, 2, 3, 4};   /* the knob's order: 1/4 1/8 x1 x2 x3 x4 x6 x8 */
 static const uint8_t CP_DEGS[4] = {3, 5, 8, 15};
 static const uint8_t CP_TRIGS[CP_NTRIG][2] = {{1, 2}, {2, 2}, {1, 3}, {2, 3}, {3, 3}, {1, 4}, {2, 4}, {3, 4}, {4, 4},
                                               {1, 8}, {0, 1}, {0, 2}};   /* (a of b; {0, 1} FIRST, {0, 2} NOT FIRST) */
@@ -675,7 +677,8 @@ typedef struct track {
     uint8_t slide_glide;         /* next legato note glides (slide) */
     uint8_t rat_left;            /* RATCH: repeats of the playing step still to come (seq.c seq_ratchet) */
     uint8_t arp_from;            /* (0.6.39) an ARP component playing: its step + 1 (0: none), over the TIEs after it */
-    uint8_t arp_k;               /* .. the arpeggio's next note (its position in the ORDER) */
+    uint8_t arp_k;                      /* .. the arpeggio's next note (its position in the ORDER) */
+    uint8_t arp_c;                      /* (2026-11-10) the steps since it began (a rate slower than a step) */
     uint16_t loops;              /* (0.6.39) the pattern's loops since PLAY (TRIG components) */
     int8_t tonal;                /* (0.6.42) TONAL: the rest of the loop this many degrees up / down */
     uint8_t pulse_from, pulse_k; /* .. PULSE: its step + 1 (0: none), the empty steps since */

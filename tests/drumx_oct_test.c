@@ -705,7 +705,7 @@ static int ui_part(void)
     dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK};
     dt->step[2].comp = CP_TOUCH;
     dt->step[2].carg = 2;
-    go_page(GR_COMP);
+    go_flav();
     cursor_set(2);
     frame();
     ok = comp_view() == COMP_TOUCH;

@@ -1068,21 +1068,23 @@ static void draw_cards(void)
         draw_column(3, "ROTATE", val, "ST", ofs ? VAL(3u) : T_DIM, (ofs + 32) * 1000 / 64, ICON_ORDER);
         return;
     }
-    if (cur_page()->graph == GR_COMP) {                /* (0.6.39) STEP TYPE and the TYPE's two values */
+    if (cur_page()->id[0] == 7u && cur_page()->scope == SC_STEP) {   /* (2026-11-10) SEQ > SPICE: NOTE, TYPE, its value, which component */
         const step_t *cs = &TSEL->step[ui.cursor];
         uint32_t v = comp_view(), ca = comp_arg(cs), ct = comp_type(cs);
         static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
-        fmt_int(val, (int32_t)ui.cursor + 1);
-        draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
-        draw_column(1, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, pick_of(COMP_N, v),
-                    v == COMP_CHANCE ? ICON_PROB : v == COMP_RATCH ? ICON_X_REPEAT : ICON_ARP);
-        if (v == COMP_CHANCE) {
-            fmt_int(val, (int32_t)step_chance(cs));
-            draw_column(2, "CHANCE", val, "%", VAL(2u), -1, ICON_PROB);
-        } else if (v == COMP_RATCH) {
-            val[0] = 'x'; val[1] = (char)('0' + step_ratchet(cs)); val[2] = 0;
-            draw_column(2, "RATCH", val, "", VAL(2u), -1, ICON_X_REPEAT);
-        } else if (v == COMP_TRIG) {
+        {
+            char nn[8], nt[8];
+            uint32_t at = 0, tot = note_count(TSEL, &at);
+            fmt_int(nn, (int32_t)at); fmt_int(nt + 1, (int32_t)tot); nt[0] = '/';
+            draw_column(0, "NOTE", at ? nn : "--", nt, VAL(0u), -1, ICON_AUTO);
+        }
+        {
+            char ru[8];                                /* an ARP's RANGE (TYPE has one entry for each) */
+            ru[0] = 0;
+
+            draw_column(1, ru[0] ? ru : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, pick_of(comp_ents(), comp_ent_of(v, cp_isarp(ct) ? CP_RNG(ca) : 0u)), ICON_ARP);
+        }
+        if (v == COMP_TRIG) {
             const uint8_t *c = CP_TRIGS[ca % CP_NTRIG];
             if (!c[0]) str_cpy(val, c[1] == 1u ? "FIRST" : "!1ST", sizeof val);
             else { val[0] = (char)('0' + c[0]); val[1] = ':'; val[2] = (char)('0' + c[1]); val[3] = 0; }
@@ -1118,29 +1120,13 @@ static void draw_cards(void)
             }
             if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
             else if (v != COMP_WALK && v != COMP_CLIMB) draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        } else if (v != COMP_OFF) {                    /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
-            char lb[10];
-            fmt_int(lb, v == COMP_ARPS ? CP_DEGS[CP_RNG(ca)] : (int32_t)CP_RNG(ca) + 1);
-            str_cpy(lb + str_len(lb), v == COMP_ARPS ? " DEG" : " OCT", 5);
-            draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), pick_of(4u, CP_ORD(ca)), ICON_ORDER);
+        } else if (v != COMP_OFF) {                    /* (2026-11-10) an ARP: ORDER and RATE in one (the range is TYPE's) */
+            char ru[10];
+            arp_rate_name(TSEL, CP_RATE(ca), ru);
+            draw_column(2, ru, arp_notes(cs) < 2u ? "REPEAT" : ORD[CP_ORD(ca)], "", VAL(2u), arp_notes(cs) < 2u ? -1 : pick_of(4u, CP_ORD(ca)), ICON_ORDER);
         } else
             draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        if (v == COMP_WALK || v == COMP_CLIMB) {       /* (0.6.98) RATE: a move every so many loops */
-            uint32_t r = CP_WRATES[CP_WRATE(ca) % CP_NWRATE];
-            fmt_int(val, (int32_t)r);
-            draw_column(3, "EVERY", val, r == 1u ? "LOOP" : "LOOPS", VAL(3u), -1, ICON_RATE);
-        } else if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.6.92) RATE as a note value of the track's DIV */
-            rate_name(TSEL, CP_RATES[CP_RATE(ca) % CP_NRATE], val);
-            draw_column(3, "RATE", val, "", VAL(3u), -1, ICON_RATE);
-        } else if ((v == COMP_RATCH || v == COMP_ECHO) && comp_slot() == 0u) {   /* (0.6.82) the parts' spacing */
-            if (CT_DIV(cs)) rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
-            draw_column(3, "RATE", val, "", CT_DIV(cs) ? VAL(3u) : T_DIM, -1, ICON_RATE);
-        } else {                                       /* (0.6.92) EVERY: the loops the step's components play on */
-            uint32_t ev = ST_EVERY(cs) % EV_N, o;
-            for (o = 0; o < EV_N - 1u && EV_ORD[o] != ev; o++)
-                ;
-            draw_column(3, "EVERY", EV_NAMES[ev], "", ev ? VAL(3u) : T_DIM, pick_of(EV_N, o), ICON_PROB);
-        }
+        draw_column(3, "COMP", comp_slot() ? "2" : "1", "OF 2", (cs->comp && cs->comp2) ? VAL(3u) : T_MID, pick_of(2u, comp_slot()), ICON_RATE);
         (void)ct;
         return;
     }
@@ -1390,7 +1376,7 @@ static void draw_cards(void)
             fmt_int(sn, (int32_t)ui.cursor + 1);
             str_cpy(sl, "/", 8);
             fmt_int(sl + 1, TSEL->p[P_SLEN]);
-            fmt_int(tv, (int32_t)nl);                      /* (2026-11-10) the note's length in steps */
+            fmt_int(tv, step_on(st) ? (int32_t)nl : 0);   /* (2026-11-10) the note's length in steps; 0: none */
             draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
             draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
             draw_column(2, "LENGTH", tv, hl ? (voice_poly((int)trk_vmode(TSEL)) ? "HOLD" : "MONO") : "ST", step_on(st) ? VAL(2u) : T_DIM, -1, ICON_AUTO);

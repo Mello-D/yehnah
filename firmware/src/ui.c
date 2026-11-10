@@ -211,6 +211,7 @@ static struct {
     uint8_t ent_notes[8];
     uint8_t fl_a, fl_b;          /* (2026-11-10) SEQ > NOTE: FLAG 1 / FLAG 2 shown (NF_*); fl_at: the step + 1 (+ the track x 64) */
     uint16_t fl_at;
+    uint8_t cp_slot;             /* (2026-11-10) SEQ > SPICE: the component shown, 0 (first) or 1 (second) */
     uint8_t comp_sel;            /* (0.6.39) SEQ > COMP: the TYPE shown (COMP_*); comp_at: the step + 1 (+ the track x 64) */
     uint16_t comp_at;
     uint8_t lane;                /* SEQ > STEP on a DRUM track (the grid): the lane the keys and KNOB 3 / 4 edit */
@@ -722,9 +723,10 @@ static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3"
                                            "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
  * a triplet or a bar's DIV, or an odd count: "xn") */
+static const uint8_t RATE_BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};   /* N_DIV: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR */
 static void rate_name(const track_t *t, uint32_t n, char *b)
 {
-    static const uint8_t BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};   /* N_DIV: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR */
+    const uint8_t *BASE = RATE_BASE;
     uint32_t d = (uint32_t)clamp(t->p[P_SDIV], 0, 9), base = BASE[d], v = 0;
     const char *tr = "";
     if (n == 1u && base) { str_cpy(b, N_DIV[d], 8); return; }
@@ -733,40 +735,66 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
     if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
+/* an ARP's RATE (its field in carg): the note value of the track's DIV times the notes a step; a slow one (CP_SLOW) the DIV over
+ * the steps a note lasts (1/8, 1/4 at 1/16), else "/2" "/4" */
+static void arp_rate_name(const track_t *t, uint32_t r, char *b)
+{
+    uint32_t sl = CP_SLOW[r % CP_NRATE], base = RATE_BASE[(uint32_t)clamp(t->p[P_SDIV], 0, 9)];
+    if (!sl) { rate_name(t, CP_RATES[r % CP_NRATE], b); return; }
+    if (base >= sl) { b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)(base / sl)); return; }
+    b[0] = '/'; fmt_int(b + 1, (int32_t)sl);
+}
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
                                                "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB",
                                                "TOUCH", "CHORD", "HOLD"};
-/* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
- * the step's LEN): which this is (0..2) */
-static uint32_t comp_slot(void)
-{
-    uint32_t i = ui.page, k = 0;
-    while (i > 0u && k < 2u && PAGES[i - 1u].graph == GR_COMP)
-        i--, k++;
-    return k;
-}
-static uint32_t comp_type(const step_t *s) { return comp_slot() == 1u ? s->comp2 : s->comp; }   /* (the page's) */
+/* (2026-11-10) SEQ > SPICE (was COMP and COMP 2): the step's two components on one page, K4 picks which (ui.cp_slot) */
+static uint32_t comp_slot(void) { return ui.cp_slot & 1u; }
+static uint32_t comp_type(const step_t *s) { return comp_slot() == 1u ? s->comp2 : s->comp; }   /* (the one shown) */
 static uint32_t comp_arg(const step_t *s) { return comp_slot() == 1u ? s->carg2 : s->carg; }
-static uint32_t comp_view1(void);
-static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step: COMP 2's its second */
+static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step */
 {
-    const step_t *s = &TSEL->step[ui.cursor];
-    if (comp_slot() == 1u)
-        return s->comp2 ? COMP_ARPN + s->comp2 - CP_ARPN : COMP_OFF;
-    return comp_view1();
+    uint32_t c = comp_type(&TSEL->step[ui.cursor]);
+    return c ? COMP_ARPN + c - CP_ARPN : COMP_OFF;
 }
-static uint32_t comp_view1(void)                        /* the first's, CHANCE and RATCH (read once a step) */
+/* (2026-11-10) the notes an ARP has to run through on a step (its notes, a kit's hits): one is a note repeat, its ORDER does nothing */
+static uint32_t arp_notes(const step_t *s)
 {
-    const step_t *s = &TSEL->step[ui.cursor];
-    uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u;
-    if (ui.comp_at != at || ui.comp_sel >= COMP_N) {
-        ui.comp_at = (uint16_t)at;
-        ui.comp_sel = (uint8_t)(s->comp ? COMP_ARPN + s->comp - CP_ARPN : step_chance(s) < 100u ? COMP_CHANCE :
-                                step_ratchet(s) > 1u ? COMP_RATCH : COMP_OFF);
+    uint32_t n = s->n, h = s->hit;
+    while (h) { n += h & 1u; h >>= 1; }
+    return n;
+}
+/* the types SPICE's TYPE knob offers: CHANCE, RATCH and ECHO are NOTE's flags now (a step that holds an ECHO is shown it) */
+static int comp_offered(uint32_t v)                       /* (2026-11-10: the rest are kept in old projects, shown, played, not set) */
+{
+    return v == COMP_OFF || v == COMP_ARPN || v == COMP_TRIG || v == COMP_OCT || v == COMP_BEND || v == COMP_REV || v == COMP_KILL;
+}
+/* TYPE's list: OFF, the offered types (ARP NOTES one entry: its RANGE, an old project's octaves, is kept but not set); an
+ * entry's number, and the entry's type and range (always 0) */
+static uint32_t comp_ents(void)
+{
+    uint32_t v, n = 0;
+    for (v = 0; v < COMP_N; v++)
+        if (comp_offered(v)) n++;
+    return n;
+}
+static uint32_t comp_ent_of(uint32_t t, uint32_t rng)
+{
+    uint32_t v, n = 0;
+    (void)rng;
+    for (v = 0; v < COMP_N && v != t; v++)
+        if (comp_offered(v)) n++;
+    return n;
+}
+static void comp_ent_at(uint32_t i, uint32_t *t, uint32_t *rng)
+{
+    uint32_t v;
+    for (v = 0; v < COMP_N; v++) {
+        uint32_t w;
+        if (!comp_offered(v)) continue;
+        if (!i) { *t = v; *rng = 0; return; }
+        i--;
     }
-    if (s->comp && ui.comp_sel != COMP_ARPN + s->comp - CP_ARPN)   /* (changed elsewhere: the editor, a dice) */
-        ui.comp_sel = (uint8_t)(COMP_ARPN + s->comp - CP_ARPN);
-    return ui.comp_sel;
+    *t = COMP_OFF; *rng = 0;
 }
 /* (2026-11-10) SEQ > NOTE's FLAG 1 and FLAG 2: two lists of the same eight (OFF, ACC, SLD, RATCH 2 .. 4, ECHO, CHANCE), any
  * from each; the step holds them as its accent / slide bits, its ratchet, a component ECHO and its chance. The pair shown is
@@ -796,6 +824,16 @@ static uint32_t step_hits(const step_t *s)
     if (s->comp == CP_ECHO && (s->carg & CP_ECHO_EVEN))
         return 2u + (uint32_t)(s->carg & ~CP_ECHO_EVEN) % 7u;
     return step_ratchet(s);
+}
+/* (2026-11-10) f cannot go in a list while the other holds o: the same flag, any two RATCHes (a step has one ratchet), or an ECHO
+ * with a RATCH 5 .. 8 (that is an ECHO); the list's own turn skips them (ui_input.c note_edit) */
+static int nf_clash(uint32_t f, uint32_t o)
+{
+    if (!f || !o) return 0;
+    if (f == o) return 1;
+    if (f >= NF_R2 && f <= NF_R8 && o >= NF_R2 && o <= NF_R8) return 1;
+    if ((f == NF_ECHO && o >= NF_R5 && o <= NF_R8) || (o == NF_ECHO && f >= NF_R5 && f <= NF_R8)) return 1;
+    return 0;
 }
 static void nf_pair(uint32_t *a, uint32_t *b)           /* the cursor step's FLAG 1 and FLAG 2 */
 {

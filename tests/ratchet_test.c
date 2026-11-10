@@ -370,6 +370,7 @@ static uint32_t run_notes(track_t *t, uint32_t blocks, uint8_t *nt, uint32_t max
 static int components(void)
 {
     int bad = 0, ok;
+    uint32_t i;
     uint8_t nt[32];
     uint32_t n;
     track_t *t;
@@ -452,21 +453,43 @@ static int components(void)
     ui_power_on();
     t = TSEL;
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    go_page(GR_COMP); frame();
-    ok = str_eq(cur_page()->title, "COMP") && comp_view() == COMP_OFF;
-    turn(EN_K2, 3);                                       /* OFF CHANCE RATCH NOTES */
-    ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 2u, 0u);
-    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; KNOB 4 RATE x6 */
-    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 3u && CP_RNG(t->step[0].carg) == 1u;
-    turn(EN_K2, 2);                                       /* SCALE: the values kept */
-    ok &= t->step[0].comp == CP_ARPS && CP_ORD(t->step[0].carg) == 1u;
-    turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);      /* TRIG 1:2 .. 2:4 (4 detents a pass at most) */
+    go_flav(); frame();
+    ok = ui.page == ui.page && comp_view() == COMP_OFF;
+    turn(EN_K2, 1);                                       /* OFF NOTES */
+    ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 7u, 0u);   /* (a new ARP: UP at 1/4, the list's start) */
+    turn(EN_K3, 1);                                       /* (2026-11-10) KNOB 3 RATE x ORDER: UP -> DOWN at the same rate */
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 7u;
+    turn(EN_K3, 4);                                       /* four on: the next rate (1/8), DOWN still */
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 6u;
+    turn(EN_K3, -4); turn(EN_K3, -1);                     /* back: 1/4 UP */
+    ok &= CP_RATE(t->step[0].carg) == 7u && CP_ORD(t->step[0].carg) == 0u;
+    t->step[0].n = 1; t->step[0].note[1] = t->step[0].note[2] = 0;   /* (2026-11-10) one note: a repeat, K3 the rates only */
+    t->step[0].carg = CP_ARG(2u, 7u, 0u); frame();
+    ok &= !strncmp(ui.col[2], "1/4|REPEAT", 10);
+    turn(EN_K3, 1); frame();
+    ok &= CP_RATE(t->step[0].carg) == 6u && CP_ORD(t->step[0].carg) == 2u && !strncmp(ui.col[2], "1/8|REPEAT", 10);
+    t->step[0].n = 3; t->step[0].note[1] = 64; t->step[0].note[2] = 67;
+    t->step[0].carg = CP_ARG(1u, CP_RATE_ORD[1], 0u);     /* DOWN at 1/8 (rate 6) */
+    {   /* the rates in the list's order, from its start: 1/4 1/8 1/16 1/32 1/32T 1/64 1/64T 1/128 (DIV 1/16) */
+        static const char *const RN[8] = {"1/4|UP", "1/8|UP", "1/16|UP", "1/32|UP", "1/32T|UP", "1/64|UP", "1/64T|UP", "1/128|UP"};
+        uint32_t q;
+        t->step[0].carg = CP_ARG(0u, 7u, 0u); frame();
+        for (q = 0; q < 8u; q++) {
+            ok &= !strncmp(ui.col[2], RN[q], strlen(RN[q]));
+            turn(EN_K3, 4); frame();
+        }
+    }
+    turn(EN_K2, 1);                                       /* KNOB 2: NOTES -> TRIG (no octave entries: ORDER, RATE not kept by TRIG) */
+    ok &= t->step[0].comp == CP_TRIG;
+    turn(EN_K3, 4); turn(EN_K3, 1);                      /* TRIG 1:2 .. 2:4 */
     ok &= t->step[0].comp == CP_TRIG && t->step[0].carg == 5u;
-    turn(EN_K2, -4); turn(EN_K2, -1); turn(EN_K3, -40);  /* CHANCE 60 %: the TRIG gone */
-    ok &= !t->step[0].comp && step_chance(&t->step[0]) == 60u && comp_view() == COMP_CHANCE;
-    turn(EN_K1, 1); frame();
-    ok &= ui.cursor == 1u && comp_view() == COMP_OFF;
-    bad += check("SEQ > COMP: TYPE, ORDER x RANGE, RATE, TRIG's condition, CHANCE takes the component away", ok);
+    turn(EN_K2, -2);                                      /* OFF: the TRIG gone */
+    ok &= !t->step[0].comp && comp_view() == COMP_OFF;
+    turn(EN_K2, -1);                                      /* (round the list: KILL is the last; CHANCE / RATCH / ECHO and the cut types are not on it) */
+    ok &= t->step[0].comp == CP_KILL;
+    turn(EN_K2, 1);
+    ok &= !t->step[0].comp;
+    bad += check("SEQ > SPICE: TYPE, RATE x ORDER, TRIG's condition, OFF takes the component away; CHANCE / RATCH / ECHO not on the list", ok);
     return bad;
 }
 
@@ -511,6 +534,19 @@ static int components2(void)
         n = run_steps(t, 4, nt, sizeof nt);
         ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
         bad += check("OCT: +1 every time; +1/2 every other loop", ok);
+    }
+    {   /* (2026-11-10) an ARP slower than a step: RATE 1/8 (a note every 2 steps) and 1/4 (every 4), over the TIEs */
+        static const uint8_t P4[4] = {60, 0, 0, 0};
+        uint32_t rt;
+        for (rt = 6; rt <= 7u; rt++) {
+            t = pat(4, P4);
+            t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+            for (i = 1; i < 4u; i++) t->step[i] = (step_t){{0}, 0, ST_TIE, 0, 0};
+            t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, rt, 0u);
+            n = run_steps(t, 4, nt, sizeof nt);
+            ok = rt == 6u ? n == 2u && nt[0] == 60u && nt[1] == 64u : n == 1u && nt[0] == 60u;
+            bad += check(rt == 6u ? "ARP RATE 1/8: a note every 2 steps over the TIEs (60 64 in 4 steps)" : "ARP RATE 1/4: a note every 4 steps over the TIEs (60 in 4 steps)", ok);
+        }
     }
     {   /* (0.6.98) WALK UP 3 degrees every loop: 60 62 64 65 60 .. (C major); DOWN; UP-DN 3 every 2 loops: 60 60 62 62
          * 64 64 65 65 64 64 62 62 60 ..; CLIMB UP 1 octave every loop: 60 72 60 72; RND: inside the range, the same
@@ -658,19 +694,14 @@ static int components2(void)
         ui_power_on();
         t = TSEL;
         t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-        go_page(GR_COMP); frame();
-        turn(EN_K2, 4); turn(EN_K2, 3);                   /* .. RAND */
-        ok = t->step[0].comp == CP_RAND && t->step[0].carg == 2u;
-        turn(EN_K2, 4); turn(EN_K2, 2);                   /* .. JUMP */
-        turn(EN_K3, 9);
-        ok &= t->step[0].comp == CP_JUMP && t->step[0].carg == 9u;
-        turn(EN_K4, 1); frame();                          /* (0.6.92) EVERY 1:2, the step kept */
-        ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 9u && strstr(ui.col[3], "1:2") != 0;
-        turn(EN_K3, -2);
-        ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 7u;
-        turn(EN_K2, 3);                                   /* KILL */
+        go_flav(); frame();
+        turn(EN_K2, 3);                                   /* .. OCT */
+        ok = t->step[0].comp == CP_OCT;
+        turn(EN_K3, 2);
+        ok &= t->step[0].carg == CP_ADEF[CP_OCT] + 2u;
+        turn(EN_K2, 3);                                   /* OCT BEND REV KILL */
         ok &= t->step[0].comp == CP_KILL && comp_view() == COMP_KILL;
-        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3, EVERY on KNOB 4", ok);
+        bad += check("SEQ > SPICE: OCT .. KILL on KNOB 2, OCT's mode on KNOB 3", ok);
     }
     return bad;
 }
@@ -779,26 +810,23 @@ static int components3(void)
         ok &= n == 4u && nt[0] == kick && nt[1] == snr && nt[2] == kick && nt[3] == snr;
         bad += check("on a drum kit: OCT tunes the hit, BEND bends it, ARP NOTES plays its sounds in turn", ok);
     }
-    /* SEQ > COMP 2: its knobs; (0.6.92) KNOB 4 EVERY there, RATE (DIV) on COMP for an ECHO */
+    /* SEQ > SPICE: KNOB 4 picks the step's first or second component, KNOB 2 / 3 edit the one shown */
     ui_power_on();
     t = TSEL;
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    go_page(GR_COMP); frame();
-    ui.page++; page_entered(); frame();
-    ok = str_eq(cur_page()->title, "COMP 2") && comp_slot() == 1u && comp_view() == COMP_OFF;
-    turn(EN_K2, 1);                                       /* OFF -> NOTES (no CHANCE, RATCH here) */
+    go_flav(); frame();
+    ok = comp_slot() == 0u && comp_view() == COMP_OFF;
+    turn(EN_K4, 1); frame();                              /* the second */
+    ok &= comp_slot() == 1u && comp_view() == COMP_OFF && strstr(ui.col[3], "2") != 0;
+    turn(EN_K2, 1);                                       /* OFF -> NOTES */
     ok &= t->step[0].comp2 == CP_ARPN && !t->step[0].comp;
-    turn(EN_K2, 4); turn(EN_K2, 4);                       /* .. ECHO */
-    ok &= t->step[0].comp2 == CP_ECHO;
-    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* EVERY: 1:2 2:2 1:3 */
-    ok &= ST_EVERY(&t->step[0]) == EV_1_3 && strstr(ui.col[3], "1:3") != 0;
-    ui.page--; page_entered(); frame();
-    ok &= str_eq(cur_page()->title, "COMP") && comp_slot() == 0u;
-    turn(EN_K2, 4); turn(EN_K2, 4); turn(EN_K2, 3);       /* OFF .. ECHO on the first */
-    ok &= t->step[0].comp == CP_ECHO;
-    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* RATE: a step/4 (DIV) */
-    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/64") != 0;
-    bad += check("SEQ > COMP 2: a second component (ECHO), EVERY 1:3 on KNOB 4; COMP: an ECHO's RATE 1/64 (a step/4 at 1/16)", ok);
+    turn(EN_K4, -1); frame();                             /* the first */
+    ok &= comp_slot() == 0u && comp_view() == COMP_OFF;
+    turn(EN_K2, 3);                                       /* .. OCT */
+    ok &= t->step[0].comp == CP_OCT && t->step[0].comp2 == CP_ARPN;
+    turn(EN_K4, 1); frame();
+    ok &= comp_view() == COMP_ARPN;
+    bad += check("SEQ > SPICE: a second component, KNOB 4 picks which of the two KNOB 2 / 3 edit", ok);
     return bad;
 }
 

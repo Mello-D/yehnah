@@ -400,7 +400,7 @@ static void graph_roll(const track_t *t, uint16_t c)
 {
     uint32_t i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u, ncol, mask = scale_mask(t), held = pr_held();
     uint64_t locks = motion_lock_steps(trk_index(t));
-    int32_t r, ybot, trw = 0, note_pg = cur_page()->id[0] == 4u, outl;
+    int32_t r, ybot, trw = 0, note_pg = cur_page()->id[0] == 4u || cur_page()->id[0] == 7u, outl;
     char tb[16];
     (void)c;
     pr_geom();
@@ -846,7 +846,7 @@ static int bars_view(const page_t *pg)                  /* (0.8.3) LENTE's PATTE
 }
 static int bigstep_view(const page_t *pg)               /* .. its STEP level: the step large */
 {
-    return pg == &PAGES[ui.page] && lens_on() && lens_level() == LV_STEP && (pg->graph == GR_ROLL || pg->graph == GR_COMP);
+    return pg == &PAGES[ui.page] && lens_on() && lens_level() == LV_STEP && pg->graph == GR_ROLL;
 }
 /* (0.8.3) LENTE's PATTERN; (0.8.5) as the mock-up: the pattern's bars side by side (up to four, LEN 64) as big cells
  * (2 .. 62); under them the whole pattern as one small roll (80 .. 140, a BG area: the scale's
@@ -1213,19 +1213,6 @@ static uint32_t graph_signature(void)
             h = (h ^ (trk[k].preset | (uint32_t)trk[k].user << 8 | (uint32_t)trk[k].eng_req << 9)) * 16777619u;
         h = (h ^ ((uint32_t)bl_now << 16 | (uint32_t)song.g[G_BLEND] << 8)) * 16777619u;
     }
-    if (pg->graph == GR_COMP) {                      /* (0.6.39) the steps, their components, the arpeggio and the loop */
-        const step_t *cs = &t->step[ui.cursor];
-        uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
-        h = (h ^ (steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.bank * 613u)) * 16777619u;
-        h = (h ^ ((uint32_t)t->p[P_CLEN] << 8 | (song.playing ? t->cpos : 0xFFu))) * 16777619u;   /* (0.6.47) C.LEN */
-        for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
-            h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
-                      (uint32_t)t->step[i].flags << 24 | (uint32_t)t->step[i].comp2 << 4)) * 16777619u;
-        h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->arp_k * 131u + t->loops * 7u + t->arp_from : 0u))) *
-            16777619u;
-        h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
-            16777619u;                                  /* (0.6.82) COMP 2, WHEN */
-    }
     if (pg->scope == SC_ENGINE && (trk_engp(t) == &ENG_WHEEL || trk_eng(t) == ENGI_FM6 ||
                                    (YEHNAH_FM4 && trk_eng(t) == ENGI_DIGITAL)))
         h ^= (ui.hot_t ? ui.hot_col + 1u : 0u) * 65537u;
@@ -1310,7 +1297,7 @@ static uint32_t graph_signature(void)
             pr_follow(t);
             h = (h ^ (proll.lo + 1u)) * 16777619u;
             h = (h ^ pr_held()) * 16777619u;
-            h = (h ^ (ui.pr_focus | (uint32_t)pg->id[0] << 4 | (ui.entry_open ? (uint32_t)ui.ent_len << 8 : 0u) |
+            h = (h ^ (ui.pr_focus | (uint32_t)pg->id[0] << 4 | (uint32_t)(ui.cp_slot & 1u) << 28 | (ui.entry_open ? (uint32_t)ui.ent_len << 8 : 0u) |
                       (uint32_t)ui.ent_nn << 16)) * 16777619u;   /* (0.6.81: NOTE's focus, the length being held) */
         }
     }

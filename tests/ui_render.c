@@ -942,7 +942,7 @@ static void setup(int s)
         TSEL->step[0].carg = s == S_COMP ? CP_ARG(2u, 3u, 1u) : s == S_COMP_ECHO ? 2u : 7u;
         if (s == S_COMP_ECHO) { TSEL->step[10].comp = CP_JUMP; TSEL->step[10].carg = 2; TSEL->step[12].comp = CP_PULSE; }
         TSEL->step[4].comp = CP_TRIG; step_set_chance(&TSEL->step[6], 50); step_set_ratchet(&TSEL->step[8], 3);
-        go_page(GR_COMP);
+        go_flav();
         break;
     case S_MOTION: go_page(GR_MOTION); break;
     /* 1.1.5, the REC layer (REC held): over HOME, the settings as they come (CLICK OFF, COUNT-IN OFF, LEVEL MID);
@@ -1298,10 +1298,11 @@ static void setup(int s)
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
         nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
-                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "COMP");   /* (0.9.2: NOTE the roll; the
+                  "STEP" : s == S_LENTE_STEP_COMP2 ? "SPICE" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "SPICE");   /* (0.9.2: NOTE the roll; the
                                                          * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
+        ui.cp_slot = s == S_LENTE_STEP_COMP2 ? 1u : 0u;
         break;
     }
     case S_LENTE_PAT_DRUM:
@@ -1311,7 +1312,7 @@ static void setup(int s)
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "COMP");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "SPICE");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
@@ -1509,7 +1510,7 @@ static void setup(int s)
         drum(0);
         trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;
         trk[3].step[0].carg = s == S_COMP_TOUCH ? 1u : (uint8_t)(2u | CP_ECHO_EVEN);
-        go_page(GR_COMP); ui.cursor = 0;
+        go_flav(); ui.cursor = 0;
         break;
     case S_COMP_CHORD:                                  /* (chord-harp) a recorded HARP chord: MAJ8's C#Maj7add13, the widest
                                                          * name, 3 steps long */
@@ -1517,7 +1518,7 @@ static void setup(int s)
         TSEL->step[0].comp = CP_CHORD;
         TSEL->step[0].carg = 7u * HARP_NCH + 6u;
         TSEL->step[1].time = TSEL->step[2].time = ST_TIE;
-        go_page(GR_COMP); ui.cursor = 0;
+        go_flav(); ui.cursor = 0;
         break;
     case S_ROLL_CHORD: {                                /* (chord-harp) a HARP chord held over 8 steps, a plate note over it in
                                                          * step 3 (as recorded: steps 1 .. 3 sliding on, 3 the chord and the
