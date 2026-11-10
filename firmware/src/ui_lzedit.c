@@ -2,9 +2,9 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* (0.8.5) EDIT's lens panels (ui_lens.c), as the approved mock-up's; included by ui_graph.c. The canvas is the
  * lens's panel (240 x 140, x 4..236).
- *   SOUND   (EDIT 1 / EDIT 2 of a synth) the engine's picture on the left (chord-harp fork: pixel art, alive with the sound), the
- *           engine's page name over it and the sound's name under it; on the right the scope in a well and the eight
- *           E parameters as chips, the page's four lit. DRUM's KIT keeps its colony (graph_colony)
+ *   SOUND   (EDIT 1 / EDIT 2 of a synth) the engine's picture (chord-harp fork: pixel art, alive with the sound) on the
+ *           whole panel, the engine's page name small top left and the sound's name bottom left (no scope, no chips: the
+ *           knob cells name the page's four). DRUM's KIT keeps its colony (graph_colony)
  *   FILTER  the response of TYPE at CUT with RES (LP HP BP COMB), CUT a line, DRIVE a row of cells
  *   VOICE   the track's voices one a row, each as full as its envelope now; VOICE and PRIO (VOICE 2: ALLOC); GLIDE's
  *           curve
