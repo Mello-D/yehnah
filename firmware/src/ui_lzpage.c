@@ -534,36 +534,48 @@ static void graph_key(const track_t *t, const page_t *pg)
         cv_text_r(230, HK_TOP + HK_H + 26 - AF_X_CAP_Y, &AF_X, b, T_DIM, T_SURF);
     }
 }
+/* (2026-11-10, Yehnah's look) ARP as chunky blocks, as FX's pictures (4 px blocks, 58 x 35): the sixteen steps of the
+ * pattern over a triad, OCT octaves, each note as wide as GATE (1 .. 3 blocks) and in the heat ramp by its height, a
+ * step the PROB drops dithered, SWING pushing the odd steps late; a key held: the step playing a column of dots, its
+ * note white. ARP OFF: the keys' notes as long straight bars. No words (MODE, RATE, OCT, GATE and ORDER are the cards') */
 static void graph_arp(const track_t *t)
 {
     static const uint8_t TRI[3] = {0, 4, 7};
-    const char *u = "";
-    char b[40], v[12];
     uint32_t i, md = (uint32_t)t->p[P_AMODE], oc = (uint32_t)clamp(t->p[P_AOCT], 1, 4), n = 3u * oc;
-    param_format(&TP[P_AMODE], t->p[P_AMODE], b, &u);
-    str_cpy(b + str_len(b), " \xB7 ", 40 - str_len(b));
-    param_format(&TP[P_ARATE], t->p[P_ARATE], v, &u);
-    str_cpy(b + str_len(b), v, 40 - str_len(b));
-    str_cpy(b + str_len(b), " \xB7 OCT ", 40 - str_len(b));
-    fmt_int(b + str_len(b), (int32_t)oc);
-    ed_cap(10, 6, b, T_TEXT);
-    param_format(&TP[P_AORDER], t->p[P_AORDER], b, &u);
-    cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, b, T_DIM, T_SURF);
-    if (!md) {
-        cv_text_in(4, 56 - AF_M_CAP_Y, 232, &AF_M, "ARP OFF", T_MID, T_SURF);
-        cv_text_in(4, 76 - AF_X_CAP_Y, 232, &AF_X, "KEYS PLAY STRAIGHT", T_DIM, T_SURF);
+    int32_t mx = 12 * (int32_t)(oc - 1u) + 7, gw = 1 + t->p[P_AGATE] * 2 / 127, ph = t->arp_phys ? (int32_t)(t->arp_idx % 16u) : -1;
+    FP = 4;
+    if (!md) {                                          /* straight: three long bars, as a chord held */
+        for (i = 0; i < 3u; i++) {
+            int32_t row = 11 + (int32_t)i * 6, c;
+            for (c = 4; c < 54; c++)
+                if (c < 50 || !(c & 1))
+                    fxb(4, 0, c, row, 1, 2, FXP_H(90 + (int32_t)i * 70));
+        }
         return;
     }
+    for (i = 0; i < 16u; i++)
+        fxb(4, 0, 4 + (int32_t)i * 3, 33, 1, 1, i % 4u ? T_RAISE : T_MID);   /* (the beats under the steps) */
     for (i = 0; i < 16u; i++) {                         /* the pattern over a triad, OCT octaves */
         uint32_t pp = n > 1u ? 2u * n - 2u : 1u, j = i % pp;
         uint32_t k = md == 2u ? n - 1u - i % n : md == 3u ? (j < n ? j : pp - j) : md == 4u ? (i * 2654435761u >> 16) % n :
                      md == 6u ? i / 2u % n : i % n;
-        int32_t semi = TRI[k % 3u] + 12 * (int32_t)(k / 3u), x = 10 + (int32_t)i * 14 + (i & 1u ? t->p[P_ASWING] * 6 / 127 : 0);
-        int32_t w = 2 + t->p[P_AGATE] * 10 / 127, y = 118 - semi * 2;
+        int32_t semi = TRI[k % 3u] + 12 * (int32_t)(k / 3u), bx = 4 + (int32_t)i * 3 + (i & 1u ? t->p[P_ASWING] / 64 : 0);
+        int32_t row = 28 - semi * 25 / mx, c, r;
         uint32_t on = (i * 40503u >> 8) % 100u < (uint32_t)t->p[P_APROB] * 100u / 127u;
-        cv_rect(x, y, w, 4, on ? T_THEME : T_RAISE);
+        for (c = 0; c < gw; c++)
+            for (r = 0; r < 3; r++) {
+                if (!on)
+                    fxb(4, 0, bx + c, row + r, 1, 1, (c + r) & 1 ? ux_mix(T_SURF, T_RAISE, 80) : T_SURF);
+                else
+                    fxb(4, 0, bx + c, row + r, 1, 1, (int32_t)i == ph ? T_TEXT : FXP_H(70 + semi * 185 / mx));
+            }
+        if ((int32_t)i == ph) {
+            int32_t d;
+            for (d = 1; d < 33; d += 2)
+                if (d < row || d > row + 2)
+                    fxb(4, 0, 4 + (int32_t)i * 3, d, 1, 1, T_ACCENT);
+        }
     }
-    cv_rect(10, 124, 220, 1, T_RAISE);
 }
 /* the lens's panel for SCL . ARP's page pg (1), else 0 */
 static int graph_key_lz(const track_t *t, const page_t *pg)

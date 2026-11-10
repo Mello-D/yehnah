@@ -1018,7 +1018,7 @@ static void setup(int s)
         break;
     }
     case S_ED_FILTER: go_title("FILTER"); TSEL->p[P_E5] = 90; break;   /* (0.8.5) EDIT's lens: TONE, FILTER (ANALOG) */
-    case S_ED_FILTER_BP: eng(7); go_title("FILTER"); TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
+    case S_ED_FILTER_BP: eng(7); { uint32_t pi; for (pi = 0; pi < NPAGES && PAGES[pi].id[0] != P_FTYPE; pi++) ; ui.home = 0; ui.page = (uint8_t)pi; page_entered(); }   /* (the generic FILTER page: go_title finds ANALOG's first) */ TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_ED_VOICE2: go_title("VOICE 2"); TSEL->p[P_VOICE] = 3; trk[0].v[0].stage = 2; trk[0].v[0].env = 9u << 20; break;
     case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
         song.sel = 1; nav_scene(SEC_ENV, s == S_ENV_TRACKS ? "ALL ENV" : "ALL DEST");
