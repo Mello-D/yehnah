@@ -84,7 +84,7 @@ static const char *const N_MDST[] = {"OFF", "PITCH", "CUT", "SHP", "AMP", "PAN",
                                                          * globals (DELAY TIME FDBK TONE MIX, REVERB SIZE DAMP, CHORUS RATE
                                                          * DEPTH): mod.c macro_master, fx.c GFX() */
 static const char *const N_ENGNAME[] = {"ANALOG", "DIGITAL", "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-",
-                                             "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "-",
+                                             "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "MINI",
                                              "GUITAR", "ACID", "DRIFT", "PLAITS", "STRINGS", "VPS",
                                              "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"};   /* (Yehnah:
                                              * SAMPLE 4, GRAIN 8, SLICE 13 retired; 0.8.3 ANIMAL; chord-harp fork 15 JUNO,

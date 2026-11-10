@@ -17,10 +17,10 @@ int main(void)
         ok &= eng_ok(eng_vis(i));
     for (i = 0, n = 0; i < NENGINES; i++)
         n += (uint32_t)eng_ok(i);
-    ok &= n == NENG_SHOWN && NENG_SHOWN == 24u;         /* (ANALOG DIGITAL PHASE LOFI VOICE WHEEL DRUM FM6 ANIMAL JUNO OMNI
+    ok &= n == NENG_SHOWN && NENG_SHOWN == 25u;         /* (MINI ANALOG DIGITAL PHASE LOFI VOICE WHEEL DRUM FM6 ANIMAL JUNO OMNI
                                                          * KALIMBA GUITAR ACID DRIFT PLAITS STRINGS VPS MODAL WSEQ TERRAIN
                                                          * VECTOR HYBRID NOISE) */
-    bad += check("ANIMAL, NOISE and DIGITAL built: the twenty-four engines offered (LCD-4 retired), their sounds play as themselves", ok);
+    bad += check("ANIMAL, NOISE and DIGITAL built: the twenty-five engines offered (MINI took LCD-4's slot), their sounds play as themselves", ok);
 
     ui_power_on();
     power_on_parts();                                   /* (main.c's power-on parts; ui_power_on keeps the old ones) */

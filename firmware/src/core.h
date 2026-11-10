@@ -43,7 +43,7 @@
                                   * editor's FAV_GET / FAV_SET name NENGINES (was 15); favorites.c favorite_byte: engines
                                   * 16..30 in rows 0..14's upper half) */
 #define ENGI_DIGITAL 1u          /* (chord-harp fork, 2026-10-30: Clipper's DIGITAL, a plain engine again) */
-#define NENG_SHOWN (NENGINES - 6 - !YEHNAH_ANIMAL - !YEHNAH_NOISE)   /* the engines one can pick: PRESETS,
+#define NENG_SHOWN (NENGINES - 5 - !YEHNAH_ANIMAL - !YEHNAH_NOISE)   /* the engines one can pick: PRESETS,
                                                 * the EDIT layer, the editor,
                                                 * in the display order of engines.c ENGINE_ORDER (PHYS 9, and in
                                                 * Yehnah SAMPLE 4, GRAIN 8, SLICE 13, the fork's
@@ -261,8 +261,7 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_JUNO 15u            /* (chord-harp fork) eng_juno.c, from Clipper */
 #define ENGI_OMNI 16u            /* (chord-harp fork) eng_omni.c, from FoMni */
 #define ENGI_KALIMBA 17u         /* (chord-harp fork) eng_kalimba.c, from FiMba-1 */
-#define ENGI_LCD4 18u            /* (chord-harp fork) LCD-4: retired 2026-10-27 (eng_gone; its sounds now ANALOG ACID JUNO
-                                  * STRINGS LOFI presets, its drum kits DRUM-X's MACHINE) */
+#define ENGI_MINI 18u            /* (2026-11-10) eng_mini.c: a Minimoog-style monosynth, our own (in the slot LCD-4 left) */
 #define ENGI_GUITAR 19u          /* (chord-harp fork) eng_guitar.c: a plucked string (Karplus-Strong), our own */
 #define ENGI_ACID 20u            /* (chord-harp fork) eng_acid.c, from Clipper: a TB-303 bass line */
 #define ENGI_DRIFT 21u           /* (chord-harp fork) eng_drift.c: wandering partials, ambient, our own */
@@ -283,7 +282,7 @@ static inline int eng_gone(uint32_t e)
 {
     return e == ENGI_PHYS || e == ENGI_SAMPLE || e == ENGI_GRAIN || e == ENGI_SLICE || e == ENGI_TRIO ||
            (!YEHNAH_ANIMAL && e == ENGI_ANIMAL) || (!YEHNAH_NOISE && e == ENGI_NOISE) ||   /* (chord-harp fork: not built) */
-           e == ENGI_LCD4;
+           0;
 }
 /* (0.4) a sound stored before 0.4 -> today's E values, in place: LOFI (3) {.., SWP, VIB, ARP, TONE} -> {.., CUT
  * (its TONE), VIB, BEND 0, MASK 0}; ANALOG (0) KTR -> INT 0 (the key tracking fixed at its old default). Projects

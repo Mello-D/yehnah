@@ -224,7 +224,7 @@ static const uint8_t MIDI_CC_ENG[NENGINES] = {
     0x67,                                             /* JUNO CUT RES */
     0x74,                                             /* OMNI BRIT SUS */
     0x43,                                             /* KALIMBA TONE DECY */
-    0x12,                                             /* LCD-4 (retired: ANALOG's played) */
+    0x56,                                             /* MINI CUT EMPH (2026-11-10; LCD-4's retired slot) */
     0x54,                                             /* GUITAR TONE DECY */
     0x23,                                             /* ACID CUT RES */
     0x23,                                             /* DRIFT TILT (CC74) DRIFT (CC71) */

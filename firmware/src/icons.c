@@ -243,6 +243,7 @@ static uint32_t engine_icon(const char *name)
         {"TERRAIN", ICON_WAVE},               /* (chord-harp fork: wave terrain, from Clipper) */
         {"VECTOR", ICON_WAVE},                /* (chord-harp fork: vector synthesis, from Clipper) */
         {"HYBRID", ICON_WAVE},                /* (chord-harp fork: Clipper's HYBRID voice) */
+        {"MINI", ICON_WAVE},                  /* (2026-11-10: a Minimoog-style monosynth) */
     };
     uint32_t i;
     for (i = 0; i < sizeof M / sizeof M[0]; i++)

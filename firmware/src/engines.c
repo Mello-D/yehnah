@@ -54,6 +54,7 @@ static uint32_t hy_inc(int32_t pitch16, int32_t fine, int32_t off)
 #include "eng_kalimba.c"        /* (chord-harp fork) KALIMBA: FiMba-1's tine (GPL-3.0) */
 #include "eng_guitar.c"         /* (chord-harp fork) GUITAR: a plucked string, nylon, steel, electric */
 #include "eng_acid.c"           /* (chord-harp fork) ACID: Clipper's TB-303 (GPL-3.0) */
+#include "eng_mini.c"           /* (2026-11-10) MINI: a Minimoog-style monosynth (after FMini-1, GPL-3.0) */
 #include "eng_drift.c"          /* (chord-harp fork) DRIFT: wandering partials, ambient */
 #include "eng_plaits.c"         /* (chord-harp fork) PLAITS: four of Mutable Instruments Plaits' models (MIT, via Optimist) */
 #include "eng_strings.c"        /* (chord-harp fork) STRINGS: Clipper's string machine (GPL-3.0, via Optimist) */
@@ -118,7 +119,7 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_JUNO,                   /* 15 (ENGI_JUNO, chord-harp fork) */
     &ENG_OMNI,                   /* 16 (ENGI_OMNI, chord-harp fork) */
     &ENG_KALIMBA,                /* 17 (ENGI_KALIMBA, chord-harp fork) */
-    &ENG_GONE,                   /* 18: reserved (LCD-4, retired in the chord-harp fork: its sounds ported, core.h) */
+    &ENG_MINI,                   /* 18 (ENGI_MINI, 2026-11-10: the slot LCD-4 left) */
     &ENG_GUITAR,                 /* 19 (ENGI_GUITAR, chord-harp fork) */
     &ENG_ACID,                   /* 20 (ENGI_ACID, chord-harp fork) */
     &ENG_DRIFT,                  /* 21 (ENGI_DRIFT, chord-harp fork) */
@@ -172,7 +173,7 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_ANIMAL,
 #endif
     ENGI_DIGITAL,
-    ENGI_DRIFT, ENGI_DRUM, ENGI_FM6, ENGI_GUITAR, ENGI_HYBRID, ENGI_JUNO, ENGI_KALIMBA, ENGI_LOFI, ENGI_MODAL,
+    ENGI_DRIFT, ENGI_DRUM, ENGI_FM6, ENGI_GUITAR, ENGI_HYBRID, ENGI_JUNO, ENGI_KALIMBA, ENGI_LOFI, ENGI_MINI, ENGI_MODAL,
 #if YEHNAH_NOISE
     ENGI_NOISE,
 #endif
@@ -192,7 +193,7 @@ static const uint8_t ENGINE_PC_ORDER[NENG_SHOWN] = {
     ENGI_ANIMAL,
 #endif
     ENGI_JUNO, ENGI_OMNI, ENGI_KALIMBA, ENGI_GUITAR, ENGI_ACID, ENGI_DRIFT,   /* (chord-harp fork: after the rest) */
-    ENGI_PLAITS, ENGI_STRINGS, ENGI_VPS, ENGI_MODAL, ENGI_WSEQ, ENGI_TERRAIN, ENGI_VECTOR, ENGI_HYBRID,
+    ENGI_PLAITS, ENGI_STRINGS, ENGI_VPS, ENGI_MODAL, ENGI_WSEQ, ENGI_TERRAIN, ENGI_VECTOR, ENGI_HYBRID, ENGI_MINI,
 };
 
 /* the engines one can pick, in ENGINE_ORDER: eng_ok(e), the n-th of them

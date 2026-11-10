@@ -10511,12 +10511,12 @@ static int test_engine_order_099(void)
 {
     static const char *const IDX[NENGINES] = {"ANALOG", 0, "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-", "DRUM",
                                               "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI",
-                                              "KALIMBA", "-", "GUITAR", "ACID", "DRIFT", "PLAITS",
+                                              "KALIMBA", "MINI", "GUITAR", "ACID", "DRIFT", "PLAITS",
                                               "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"};
     static const char *const PC[] = {"ANALOG", "FM6", "DIGITAL",
                                      "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL",
                                      "JUNO", "OMNI", "KALIMBA", "GUITAR", "ACID", "DRIFT", "PLAITS",
-                                     "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"}; /* (chord-harp fork:
+                                     "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID", "MINI"}; /* (chord-harp fork:
                                                                                                 * after the rest) */
     int bad = 0, ok = 1;
     uint32_t i, e, k, n, all, seen = 0;

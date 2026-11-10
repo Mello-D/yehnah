@@ -538,7 +538,7 @@ keep controlling the macros on every page) until you press LFO again. F3 rolls n
 
 ## 4. Engines
 
-24 engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
+25 engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
 every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME knobs are listed too.
 
 **The order** (0.9.9): PRESETS, KNOB 2 (ENG) and the web editor's lists show the engines as **DRUM-X, VOICE, ANIMAL,
@@ -723,6 +723,15 @@ Japanese read best (their spelling is regular); English depends on the dictionar
 **Cost.** No state per voice (the articulation is the track's); ~1 KB of RAM for the six lyrics and singers; ~42 KB
 of flash (the English dictionary is most of it); about +9 % CPU over VOICE's vowels, so four voices singing still cost
 well under ANALOG's eight.
+
+### MINI (a Minimoog-style monosynth)
+
+MINI is a three-oscillator Moog-style voice (after the design of FMini-1 by Ruppert): OSC 1 at the note, OSC 2 slightly detuned,
+OSC 3 an octave below, one **WAVE** for all (SAW, TRI, SQR, PULSE), a **NOIS**e source, a hot mixer into the 24 dB ladder filter.
+EDIT 1 (OSC): **WAVE**, **DET** (OSC 2's detune, up to about 27 cents), **SUB** (OSC 3's level), **NOIS**. EDIT 2 (VCF): **CUT**,
+**EMPH** (the resonance; high, it sings), **CNTR** (how far the filter contour opens the cutoff) and **FDEC** (the contour's decay;
+it falls to a sustain while the key is held, and the same time after). The cutoff follows the keyboard by two thirds; loudness is
+the part's ADSR. 15 presets (basses, leads, a pad, a wind). It plays mono or poly (up to four voices).
 
 ### Three engines draw their own creature (0.9.4)
 
