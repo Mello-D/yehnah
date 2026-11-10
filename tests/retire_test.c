@@ -2,8 +2,8 @@
  * Copyright (C) 2026 Mello-D */
 /* (chord-harp fork) the engines as this fork's firmware builds them: ANIMAL and NOISE again (core.h YEHNAH_ANIMAL,
  * YEHNAH_NOISE 1, 2026-10-25), DIGITAL again (2026-10-30: Clipper's, a plain engine; its sounds play as themselves);
- * T3 at power-on is PHASE's CZ PLUCK (was ANIMAL's CMOS BIRD, then PHASE's HARP); GEN never puts a part on an engine
- * not built, in any genre or EXPLORE. Built without ENGS, as the firmware */
+ * T3 at power-on is PHASE's CZ PLUCK (was ANIMAL's CMOS BIRD, then PHASE's HARP); IDEAS never puts a part on an engine
+ * not built. Built without ENGS, as the firmware */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
 
@@ -44,23 +44,16 @@ int main(void)
     bad += check("DIGITAL (Clipper's) again: its sound plays as itself, no conversion to FM6", ok);
 
     ok = 1;
-    for (g = 0; g <= NGENRE; g++)                       /* (every genre, EXPLORE: GEN_EXPLORE is NGENRE + 1) */
-        for (s = 0; s < 12u; s++) {
-            ui_power_on();
-            gp.genre = (uint8_t)(g < NGENRE ? g + 1u : GEN_EXPLORE);
-            gp.seed = (uint16_t)(500u + 37u * s + g);
-            gp.energy = (uint8_t)(15u + (s * 23u) % 80u);
-            gp.form = 0;
-            for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
-            gp.complex = (uint8_t)(10u + (s * 31u) % 85u); gp.swing = GA_AUTO; gp.human = 30;
-            gen_go();
-            for (k = 0; k < NTRK; k++)
-                if (!eng_ok(trk[k].eng_req)) {
-                    if (ok) printf("  genre %u seed %u: T%u on engine %u\n", g + 1u, s, k + 1u, trk[k].eng_req);
-                    ok = 0;
-                }
-        }
-    bad += check("GEN: every genre and EXPLORE, 12 seeds each: every track on an engine that is built", ok);
+    for (s = 0; s < 60u; s++) {                         /* (IDEAS' throws, any engine: a sound on every track) */
+        ui_power_on();
+        idea_song(500u + 37u * s);
+        for (k = 0; k < NTRK; k++)
+            if (!eng_ok(trk[k].eng_req)) {
+                if (ok) printf("  seed %u: T%u on engine %u\n", s, k + 1u, trk[k].eng_req);
+                ok = 0;
+            }
+    }
+    bad += check("IDEAS (SOUND > ENGINE ANY): 60 seeds: every track on an engine that is built", ok);
     if (bad) {
         printf("retire: %d FAILED\n", bad);
         return 1;

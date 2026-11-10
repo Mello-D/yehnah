@@ -559,8 +559,8 @@ static uint32_t lz_fam(void)                            /* which lens */
 }
 /* (chord-harp fork) HOME has no footer: its four pages are its tabs (TRACKS MACRO ENGINE ROUTES); the panel takes the
  * footer's rows */
-static int home_nofoot(void) { return lz_on() && lz_fam() == LZ_HOME && !gen_on(); }   /* (GEN, a
-                                                         * YEHNAH_GEN build's: its footer as it was) */
+static int home_nofoot(void) { return lz_on() && lz_fam() == LZ_HOME && !gen_on(); }   /* (IDEAS, HOME's
+                                                         * last group: its footer as it was) */
 /* (chord-harp fork, 2026-11-02) HOME . TRACKS in the redesign's layout (TF_*): not a layer, GEN, MACRO */
 static int trk_face(void) { return home_nofoot() && !ui.layer && !ui.menu && home_level() == 0u && !home_set(); }
 /* (2026-11-02, the redesign, step 2) a button's page: the page row at the foot (PR_*), no tabs; one layout whatever the

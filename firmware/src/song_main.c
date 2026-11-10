@@ -208,13 +208,12 @@ static int section_jump(uint32_t s)
     ui_say(b, " NEXT BAR");
     return 0;
 }
-#if YEHNAH_GEN                                         /* (2026-11-03) GEN's only (STORE A-D went with SAVE's layer) */
-/* the music now into section s: RAM at once (playing too), flash once stopped (song_poll) */
-static void section_store(uint32_t s)
+/* the music now into section s: RAM at once (playing too), flash once stopped (song_poll). Only the host tests and the
+ * emulator's benches call it (STORE A-D went with SAVE's layer, 2026-11-03) */
+__attribute__((unused)) static void section_store(uint32_t s)
 {
     char b[8] = "A";
     s &= 3u;
-    dice_secs &= (uint8_t)~(1u << s);                 /* (0.6.81) a STORE: the section yours (DICE ALL marks its own after) */
     b[0] = (char)('A' + s);
     project_capture(&proj_scratch);
     if (!proj_pack(&proj_wire, &proj_scratch)) {        /* (0.6: packed aside first, the section kept if it does not fit) */
@@ -227,7 +226,6 @@ static void section_store(uint32_t s)
     live.dirty |= (uint8_t)(1u << s);
     ui_say("STORED ", b);
 }
-#endif
 /* a quick chain of n sections (n >= 2), each its longest pattern's bars, round and round */
 static void quick_chain(const uint8_t *s, uint32_t n)
 {
@@ -338,7 +336,6 @@ static int song_switch(uint32_t n, int load_a)
     }
     song_idx.rows[song_cur] = chain_config;           /* (the rows of the song left) */
     song_cur = (uint8_t)n;
-    dice_secs = 0;                                    /* (0.6.81) another project's sections: none DICE ALL's */
     chain_config = song_idx.rows[n];
     if (song_index_save()) {                          /* (failed: written again by song_poll) */
         song_idx_dirty = 1;

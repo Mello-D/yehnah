@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // (0.7.1) Stems from the browser build (web/emu/stems.js) in Node:
 //   node web/emu/stems_test.mjs build/emu/yehnah.wasm
-// A device makes a piece (web_gen, FORM CLUB: a song with rows), its objects come out as a backup file would hold
+// A device makes a piece (web_idea_song: two sections and two rows), its objects come out as a backup file would hold
 // them (web_bk_len into web_bk_buf), a fresh device takes them (web_bk_put) and renders: the live section as a loop of
 // two bars, each part alone and the whole; then the song by its rows to its end. Checks: the files, their lengths
 // equal, every stem inside the mix's length, a part alone is not the mix, the parts left out are silent, the ZIP's
@@ -27,13 +27,13 @@ check("CRC-32 of \"123456789\" is 0xCBF43926 (zlib's)", crc32(new TextEncoder().
         zv.getUint16(end + 8, true) === 2 && zv.getUint32(0, true) === 0x04034B50 && zv.getUint32(zv.getUint32(end + 16, true), true) === 0x02014B50);
 }
 
-/* the piece: a device of its own, the generator's CLUB form (sections and rows) */
+/* the piece: a device of its own, IDEAS' throws (sections and rows) */
 async function pieceBackup() {
   const { instance } = await WebAssembly.instantiate(bytes, {});
   const ex = instance.exports, mem = ex.memory;
   ex._initialize(); ex.web_nor_erase(); ex.web_master(1023); ex.web_seed(77); ex.web_boot();
   ex.web_render(4096);
-  ex.web_gen(6, 11, 60, 2);                            // TECHNO, seed 11, ENERGY 60, FORM CLUB
+  ex.web_idea_song(11);                                // seed 11, sections A B, two rows
   for (let k = 0; k < 20; k++) ex.web_render(1024);    // (the main loop writes the sections)
   const objects = [];
   for (const id of [10, 40, 41, 42, 43, 0]) {

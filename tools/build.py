@@ -109,8 +109,7 @@ def generate():
             [tools / "gen_ui_shapes.py", GEN / "ui_shapes.h"],
             [tools / "gen_tables.py", GEN / "yehnah_tables.h"],
             [tools / "gen_fm6_patches.py", GEN / "yehnah_fm6.h"],
-            [tools / "gen_drum_maps.py", FW / "src" / "gen_tables.c", FW / "src" / "song_dice.c", GEN / "gen_drum_maps.h",
-             GEN / "dice_bars.h", GEN / "gen_bass.h"]]   # (0.9.7)
+            [tools / "gen_drum_maps.py", FW / "src" / "song_dice.c", GEN / "dice_bars.h"]]   # (0.9.7)
     procs = [subprocess.Popen([sys.executable, *map(str, c)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True) for c in cmds]
     failed = []
@@ -208,13 +207,11 @@ def hot_sections(ir):
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("YEHNAH_FLASH", "YEHNAH_OTA", "YEHNAH_OTA_DRYRUN", "YEHNAH_OTA_RAMONLY", "YEHNAH_CDC",
-                 "YEHNAH_UART", "YEHNAH_UAC", "YEHNAH_UAC_TONE", "YEHNAH_UAC_48K", "YEHNAH_ICONS", "YEHNAH_SLICE", "YEHNAH_FM4", "YEHNAH_ANIMAL", "YEHNAH_NOISE", "YEHNAH_GEN", "YEHNAH_FX_EARLY",
+                 "YEHNAH_UART", "YEHNAH_UAC", "YEHNAH_UAC_TONE", "YEHNAH_UAC_48K", "YEHNAH_ICONS", "YEHNAH_SLICE", "YEHNAH_FM4", "YEHNAH_ANIMAL", "YEHNAH_NOISE", "YEHNAH_FX_EARLY",
                  "YEHNAH_CDC_DEFAULT"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/yehnah.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
-    if os.environ.get("YEHNAH_GEN") not in ("0", "1"):   # (chord-harp fork) GEN, the song generator: off unless =1
-        flags.append("-DYEHNAH_GEN=0")
     v = os.environ.get("YEHNAH_USB_LAYOUT")   # firmware/src/usb.c: how the USB composite presents itself (#67), 0..3
     if v in ("0", "1", "2", "3"):
         flags.append(f"-DYEHNAH_USB_LAYOUT={v}")

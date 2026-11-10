@@ -459,21 +459,29 @@ EXPORT uint8_t *web_anim_levels(void)
     return lv;
 }
 
-/* (0.6.91) the song generator from the page or a bench (web/emu/gen_bench.mjs): a genre (0 RANDOM, 1 + the genre's
- * index, 0.8.6: web_gen_count() + 1 EXPLORE), a seed 0..9999, an energy 0..100, a form (0 LOOP, 1 PARTS, 2 SONG); the
- * piece's name after */
-EXPORT void web_gen(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t form)
+/* a song from a seed for the benches (web/emu/stems_test.mjs): IDEAS' throws on every track, a sound of any engine and a
+ * part for its role (tests/ui_test.c idea_song, the same), stored as sections A and B, the song's rows A 2 bars, B 2 */
+static void web_idea_tracks(uint32_t seed)
 {
-    gp.genre = (uint8_t)(genre % (NGENRE + 2u));
-    gp.seed = (uint16_t)(seed % 10000u);
-    gp.energy = (uint8_t)(energy > 100u ? 100u : energy);
-    gp.form = (uint8_t)(form % 3u);
-    gen_go();
-    gp.sig = gen_sig();
+    uint32_t k;
+    rng_state = seed * 2654435761u | 1u;
+    ix.genre = 0; ix.rhythm = 0; ix.role = 0; ix.seng = 1;
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        if (!drum_track(t)) (void)ix_any_preset(t);
+        t->p[P_MUTE] = 0;
+        (void)ix_track(t);
+    }
 }
-EXPORT const char *web_gen_last(void) { return gp.last; }
-EXPORT uint32_t web_gen_count(void) { return NGENRE; }
-EXPORT const char *web_gen_name(uint32_t i) { return GENRE[i % NGENRE].name; }
+EXPORT void web_idea_song(uint32_t seed)
+{
+    web_idea_tracks(seed); section_store(0);
+    web_idea_tracks(seed + 1u); section_store(1);
+    chain_defaults(&chain_config);
+    chain_config.count = 2;
+    chain_config.row[0].slot = 0; chain_config.row[0].bars = 2;
+    chain_config.row[1].slot = 1; chain_config.row[1].bars = 2;
+}
 
 /* for the test and the bench (web/emu/emu_test.mjs), a heavy song straight into the tracks (as hostsim's
  * renders set them): T1 FM6 PAD, T2 TRIO (its first preset; PHYS, retired in TONIC, was here), T3 VOICE CHOIR AAH (GRAIN, retired in Yehnah, was here), 4-note chords on all 16

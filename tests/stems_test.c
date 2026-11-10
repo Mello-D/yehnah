@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* (0.9.8) MENU > USB STEMS, the render side (fx.c stem_buf / stem_fx, what usb.c uac_tap8 sends), on the host build of
- * the UI tests: dense DICE (EXPLORE) songs of six tracks played for seconds, the stems tapped each block as the audio
+ * the UI tests: dense IDEAS songs (idea_song) of six tracks played for seconds, the stems tapped each block as the audio
  * ISR does, against each track rendered alone in the same take (the others played but left out of the mix: mix_skip, as
  * the emulator's offline stems), from the same state (fork):
  *   null       every stem bit for bit its track's solo render, in LOAD FULL, LITE and ECO, one core and CORES 2 (no bleed,
@@ -31,15 +31,11 @@ static int st_check(const char *what, int ok)
 
 static void song_from(uint32_t seed, uint32_t load)
 {
-    uint32_t k;
     ui_power_on();
     ui_rec_prefs |= PREF_SIX >> 8;
     ui_load = (uint8_t)load;
     rp_apply();                                          /* TRACKS 6, LOAD */
-    gp.genre = GEN_EXPLORE; gp.seed = (uint16_t)seed; gp.energy = 95; gp.form = 0;
-    for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
-    gp.complex = 70; gp.swing = GA_AUTO; gp.human = 30;
-    gen_go();
+    idea_song(seed);
     song.g[G_DJF] = 0;                                   /* (the sum is checked before the master: these off) */
     song.g[G_CLIP] = 0;
 }
@@ -149,7 +145,7 @@ int main(void)
                     continue;                            /* (CORES 2 on FULL and ECO, two songs: enough) */
                 song_from(SEEDS[si], l);
                 bad = take(nb, c, 0, &snd, &gave, &sums);
-                snprintf(s, sizeof s, "DICE %u, %s, %s: %u tracks sounding, %u voices given up: 6 stems = solo renders, sum = mix",
+                snprintf(s, sizeof s, "IDEAS %u, %s, %s: %u tracks sounding, %u voices given up: 6 stems = solo renders, sum = mix",
                          SEEDS[si], LOADS[l], c ? "CORES 2" : "one core", snd, gave);
                 st_check(s, !bad && sums && snd >= 4u);
             }

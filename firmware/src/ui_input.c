@@ -1977,9 +1977,6 @@ static void fx_dice(track_t *t, uint32_t k)
 static void macro_dice(uint32_t mode);
 static int16_t sl_root = -1, sl_scale, sl_quant;      /* (scale_link: the song's scale) */
 #include "song_dice.c"                             /* (0.6.26) the genres, the roles' figures (IDEAS > TRACK) */
-#if YEHNAH_GEN
-#include "gen.c"                                   /* (0.6.91) GEN: the song generator (the host's tests and tools) */
-#endif
 #include "ideas.c"                                 /* (chord-harp fork) HOME > IDEAS */
 
 /* HOME / REC / SEQ / SAVE: a tap on release. t0 = press time | 1, bit 1 = swallowed (no tap when let go). (2026-11-03,
@@ -2363,9 +2360,6 @@ static void ui_input_frame(void)
                     if (song.playing) transport_req = 2;
                     system_init();
                     hints_reset();                      /* (0.9.5) the teaching hints start over */
-#if YEHNAH_GEN
-                    gp.genre = GEN_EXPLORE;             /* (0.8.6) GEN's GENRE as at power-on: EXPLORE */
-#endif
                     ui_message("NEW PROJECT");
                 }
             } else if (kind == CF_CLEAR_ALL) {          /* SEQ > TOOLS CLEAR ALL: every track's steps and automation, the lane */

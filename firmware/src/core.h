@@ -15,11 +15,6 @@
 #define HALF_FRAMES 128          /* I2S half buffer: 2.9 ms at 44.1 kHz (a key waits 0..1 half, then plays 1 half later) */
 #define YEHNAH_FM4 0            /* (chord-harp fork, 2026-10-30) 0: the old DIGITAL's operator pages (P_FM1_ATK ..) gone;
                                   * DIGITAL (engine 1) is Clipper's again, a plain engine (its EDIT pages only) */
-#ifndef YEHNAH_GEN
-#define YEHNAH_GEN 1            /* (chord-harp fork) Yehnah's GEN, the song generator (gen.c, gen_tables.c: ~30 KB): the host's
-                                  * tests and tools (dice_all); 0 (tools/build.py's default): not built. Its screen is gone:
-                                  * HOME's last group is IDEAS (ideas.c) either way */
-#endif
 #ifndef FELUCCA_FXSCENE
 #define FELUCCA_FXSCENE 0       /* (2026-11-06) 1: FX > SCENE and SAVE > USER FX (the FX scenes, params.c) are in the build; 0: both pages are
                                  * gone, a user preset stores no scene (its byte stays 0) and loads none */

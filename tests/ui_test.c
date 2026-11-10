@@ -133,6 +133,21 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
 
+/* a dense song from a seed, made of IDEAS' throws (ideas.c; was Yehnah's GEN): on every track a sound of any engine
+ * (SOUND > ENGINE ANY) and a part for its role (TRACK, any genre); the same seed, the same song */
+static void idea_song(uint32_t seed)
+{
+    uint32_t k;
+    rng_state = seed * 2654435761u | 1u;
+    ix.genre = 0; ix.rhythm = 0; ix.role = 0; ix.seng = 1;
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        if (!drum_track(t)) (void)ix_any_preset(t);
+        t->p[P_MUTE] = 0;
+        (void)ix_track(t);
+    }
+}
+
 static int check(const char *what, int ok)
 {
     printf("ui: %-74s %s\n", what, ok ? "ok" : "FAIL");
@@ -153,10 +168,7 @@ static void ui_power_on(void)
     rec_loop = 1;                                 /* (chord-harp fork) REC's mode LOOP, Yehnah's, for the older tests (the
                                                    * device's power-on: ONE PASS, test_rec_mode) */
     chain_defaults(&chain_config);
-    live.mode = 0;                                /* (0.6.81: PLAY the loop, as at power-on; a DICE ALL leaves SONG) */
-    for (i = 0; i < 4u; i++)                      /* (and the sections a DICE ALL wrote emptied: power-on has none) */
-        if ((dice_secs >> i) & 1u) memset(proj_slot[i].raw, 0, 4);
-    dice_secs = 0;
+    live.mode = 0;                                /* (0.6.81: PLAY the loop, as at power-on; a song leaves SONG) */
     memset(&ui, 0, sizeof ui);
     cin_left = cin_total = 0;                     /* (no count-in) */
     memset(&nm, 0, sizeof nm);                    /* NAME closed, no project name */
@@ -2063,7 +2075,6 @@ static int test_soak_cards(void)
         else if (r == 32u) { host_enc[panel.enc[EN_ALGO]] += SOAK_RND(2u) ? 1 : -1; quiet = 0; }
         else if (r == 33u) trk[SOAK_RND(NTRK)].p[P_LRATE] = (int16_t)SOAK_RND(128u);
         if (ui.confirm && SOAK_RND(6u) == 0u) {         /* (0.6.21: HOME + SELECT's dialog: now and then OK) */
-            if (ui.confirm == CF_DICE_ALL && SOAK_RND(3u) == 0u) dice_all();
             ui.confirm = 0; ui.force = 1;
         }
         fm1_ms += SOAK_RND(50u) ? 16u : 1u + SOAK_RND(200u);
@@ -6618,26 +6629,12 @@ static int test_dice_all(void)
     }
     press(B_OCTDN); frames(4);                          /* (nothing thrown: back to TRACKS) */
     ok = !ui.confirm;
-    undo_mark();                                        /* (Yehnah's GEN, the host's: the piece the tools render) */
-    dice_all();
+    undo_mark();                                        /* (a song made of IDEAS' throws: every track) */
+    idea_song(7u);
     ok &= undo_ok;
-    {   /* (0.6.34) the orchestration leaves some roles silent, the drums too: at least two melodic voices play */
-        uint32_t mel = 0;
-        for (k = 0; k < NTRK; k++) {
-            for (i = 0, on = 0; i < (uint32_t)trk[k].p[P_SLEN]; i++) on += step_on(&trk[k].step[i]);
-            mel += on > 0u && !drum_track(&trk[k]);
-        }
-        ok &= mel >= 2u;
-    }
-    for (k = 0; k < NTRK; k++) {
-        const track_t *t = &trk[k];
-        if (!drum_track(t))
-            ok &= t->p[P_ROOT] == trk[0].p[P_ROOT] && t->p[P_SCALE] == trk[0].p[P_SCALE] && t->p[P_SCALE] != 0 &&
-                  t->p[P_SCALE] != 13 && t->p[P_SCALE] < 14;
-        sig1[k] = steps_sig(t);
-    }
+    for (k = 0; k < NTRK; k++) sig1[k] = steps_sig(&trk[k]);
     for (i = 0; i < 64u; i++) events_block(CTL);       /* (it plays: no crash) */
-    bad += check("DICE ALL: OK dices every track (two melodic voices at least, one musical scale for the melodic ones)", ok);
+    bad += check("IDEAS thrown on every track (idea_song): a song that plays, UNDO marked", ok);
     btn_down(B_REC); frames(40);
     key_down(white(5)); frame(); key_up(white(5)); frame();
     btn_up(B_REC); frames(8);
@@ -6648,56 +6645,6 @@ static int test_dice_all(void)
     btn_up(B_REC); frames(8);
     for (k = 0, ok = 1; k < NTRK; k++) ok &= steps_sig(&trk[k]) == sig1[k];
     bad += check("  UNDO again: forward (REDO)", ok);
-    {   /* (0.6.26) a style, the engines really changed, FM6 on two tracks at most, the drums on one */
-        uint32_t moved = 0, fm = 0, drums = 0, r;
-        for (k = 0; k < NTRK; k++) eng0[k] = trk[k].eng_req;
-        dice_all();
-        for (k = 0; k < NTRK; k++) {
-            moved += trk[k].eng_req != eng0[k];
-            fm += trk[k].eng_req == ENGI_FM6;
-            drums += drum_track(&trk[k]);
-        }
-        ok = !strncmp(ui.msg, "GEN: ", 5);
-        ok &= moved >= 1u && fm <= 2u && drums == 1u;
-        for (r = 0; r < 30u && ok; r++) {               /* thirty more throws: the same holds, every style seen */
-            dice_all();
-            for (k = 0, fm = 0, drums = 0; k < NTRK; k++) { fm += trk[k].eng_req == ENGI_FM6; drums += drum_track(&trk[k]); }
-            ok &= fm <= 2u && drums == 1u;
-            for (k = 0; k < NTRK; k++) {                /* (0.6.34) the guard rails: chords of three or four, the lead under G5 */
-                uint32_t i2;
-                for (i2 = 0; i2 < (uint32_t)trk[k].p[P_SLEN]; i2++) {
-                    const step_t *s2 = &trk[k].step[i2];
-                    if (drum_track(&trk[k]) || s2->time != ST_NOTE) continue;
-                    ok &= s2->n >= 1u && s2->n <= 4u;   /* (0.6.80: power chords, triads: three) */
-                    ok &= s2->note[0] <= 84u;
-                }
-            }
-            project_capture(&proj_scratch);              /* (0.6.81) every piece storable (a send past 127 was not) */
-            ok &= proj_pack(&proj_wire, &proj_scratch) != 0;
-            for (k = 0; k < 8u; k++) events_block(CTL);
-        }
-        bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track, every piece storable; 30 throws", ok);
-        {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
-            uint32_t h[40], n2, m, same = 0, bpm_same = 0;
-            int16_t b0;
-            gp.genre = 0; gp.energy = 50; gp.form = 1; gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;   /* (0.8.5: the
-                                                         * settings as at power-on, whatever the GEN tests left: the 40
-                                                         * throws the same whatever ran before, as 0.6.92 meant) */
-            for (n2 = 0; n2 < GP_N; n2++) gp.amt[n2] = GA_AUTO;
-            host_ticks = 5000000u;                      /* (0.6.92) the same 40 seeds whatever ran before (the seed mixes the ticks in) */
-            for (n2 = 0; n2 < 40u; n2++) {
-                b0 = song.g[G_BPM];
-                if (n2 % 10u == 0u) rng_state = 0x1234567u;   /* (the same state again: the press time still differs) */
-                host_ticks += 13777u;
-                dice_all();
-                bpm_same += song.g[G_BPM] == b0;
-                h[n2] = dice_print();
-                for (m = 0; m < n2; m++) same += h[m] == h[n2];
-            }
-            if (same || bpm_same > 14u) printf("  dice: same %u, tempo kept %u of 40\n", same, bpm_same);
-            bad += check("DICE ALL (0.6.27): 40 throws, none the same piece, the tempo moved most of the time (0.6.91: from the seed)", !same && bpm_same <= 14u);
-        }
-    }
     ui_power_on();
     return bad;
 }
@@ -8237,13 +8184,7 @@ static int test_click_menu(void)
         int fds[2][2];
         uint8_t ld0 = ui_load;
         load_put(2u);                                   /* FULL */
-        {   /* (0.6.92) the same generated song whatever ran before (dice_all's seed mixes the ticks in): the
-             * generator's settings set here, seed 1, any genre (a drum in it) */
-            uint32_t q;
-            gp.genre = 0; gp.seed = 1; gp.energy = 50; gp.form = 0; gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
-            for (q = 0; q < GP_N; q++) gp.amt[q] = GA_AUTO;
-            gen_go();
-        }
+        idea_song(1u);                                  /* (the same song whatever ran before) */
         set_engine_of(&trk[1], ENGI_FM6);
         set_engine_of(&trk[2], 0);
         {   /* (0.6.92) T2 the dearest part whatever the generator wrote (four-note FM6 chords on every step): it takes
@@ -8311,8 +8252,7 @@ static int test_click_menu(void)
         for (lv = 0; lv < 4u; lv++) {
             menu_put(MI_MIDIOUT, lv); frame();
             ok = mo_lvl == lv;
-            rng_state = 0x1234567u + lv;                /* (0.6.85) the same diced songs whatever ran before */
-            dice_all();
+            idea_song(0x1234567u + lv);                 /* (the same songs whatever ran before) */
             if (lv == 2u)
                 n0 = 2800u * CTL / (beat_samples() / 24u);   /* clocks in the 2800 blocks (also stopped) */
             if (song.playing) { transport_req = 2; mix_block(o, CTL); }

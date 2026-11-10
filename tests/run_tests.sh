@@ -75,7 +75,7 @@
 #                   babble: cut, the endpoint halted 1..3 ms): every packet fits, every rendered frame reaches the app's lanes
 #                   once, in order, in its own channel (2 min each, +-500 ppm); 0.9.7's 720-byte endpoint shown dropping
 #                   blocks as a field take did; starvation's repeats made up with the frame spread over a packet.
-# STEMS (tests/stems_test.c, 0.9.8): fx.c's stems on dense DICE songs: each bit for bit its track's solo render (LOAD FULL,
+# STEMS (tests/stems_test.c, 0.9.8): fx.c's stems on dense IDEAS songs (idea_song): each bit for bit its track's solo render (LOAD FULL,
 #                   LITE, ECO with its tail trimming; one core and CORES 2), the six and the FX return summing to the mix,
 #                   an empty track exact zeros, a track through the SLICER its own sound as it got through.
 # Yehnah Stems app (android/stems, while it is in this repo): usbstream.c against a pretend usbfs (JDK headers), the :core
@@ -136,7 +136,7 @@ OUT=build/host
 mkdir -p "$OUT"
 # (chord-harp fork) ANIMAL and NOISE are not built in this fork's firmware (core.h YEHNAH_ANIMAL / YEHNAH_NOISE); the
 # host tests build them, as Yehnah's own tests do, and tests/retire_test.c checks the firmware as built (their numbers
-# reserved, their sounds as ANALOG, T3 PHASE's HARP at power-on, GEN never on them)
+# reserved, their sounds as ANALOG, T3 PHASE's HARP at power-on, IDEAS never on them)
 ENGS="-DYEHNAH_ANIMAL=1 -DYEHNAH_NOISE=1"
 CC="${CC:-cc} -O1 -Wall -Wno-unused-function $ENGS"
 fail=0
@@ -210,9 +210,9 @@ if [ -f build/gen/yehnah_tables.h ]; then
     ${CC%% *} -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/harp_bench" tests/harp_bench.c -lm   # (as the firmware: no ENGS)
     run "chord-harp: voices and cost of a 6-note chord + 3 plate keys on each engine, LOAD FULL / LITE / ECO (build/harp_report.md)" \
         env HARP_REPORT=build/harp_report.md "$OUT/harp_bench"
-    ${CC%% *} -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/retire_test" tests/retire_test.c -lm   # (as the
+    ${CC%% *} -O1 -w -Ibuild/gen -Ifirmware/src -DYEHNAH_RES_SIM=1 -o "$OUT/retire_test" tests/retire_test.c -lm   # (as the
                                                         # firmware: no ENGS)
-    run "chord-harp fork: ANIMAL, NOISE and DIGITAL built, T3 PHASE CZ PLUCK, GEN on built engines" "$OUT/retire_test"
+    run "chord-harp fork: ANIMAL, NOISE and DIGITAL built, T3 PHASE CZ PLUCK, IDEAS on built engines" "$OUT/retire_test"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/speaker_test" tests/speaker_test.c -lm
     run "SPEAKER EQ: FLAT / LOWCUT / BASS+ responses, BASS+ harmonics of the bass, the sub cut, no offset after" "$OUT/speaker_test"
     run "DSP render (ANALOG preset 0)" "$OUT/hostsim" 0 0 1 "$OUT/render.wav"
@@ -226,10 +226,8 @@ if [ -f build/gen/yehnah_tables.h ]; then
     run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/micro_test" tests/micro_test.c -lm
     run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
-    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
-    run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen" "$OUT/gen_test"
-    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm
-    run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -DYEHNAH_RES_SIM=1 -o "$OUT/stems_test" tests/stems_test.c -lm
+    run "STEMS (0.9.8): IDEAS songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
     run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/hold_test" tests/hold_test.c -lm

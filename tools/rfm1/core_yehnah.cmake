@@ -8,7 +8,7 @@ fm1_add_core(yehnah ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/Y
              CREDITS "VOICE's English words: a subset of The CMU Pronouncing Dictionary (cmudict 0.7b, Carnegie Mellon University), BSD-2-Clause:"
              CREDITS_FILES LICENSES/BSD-2-Clause-CMUdict.txt
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h ui_shapes.h yehnah_tables.h
-                 yehnah_fm6.h ui_font_x.h gen_drum_maps.h dice_bars.h gen_bass.h
+                 yehnah_fm6.h ui_font_x.h dice_bars.h
              VERSION_FILE firmware/src/yehnah.c VERSION_REGEX "^#define YEHNAH_VERSION \"v?([^\"]*)\"")
 fw_golden(yehnah ${CMAKE_SOURCE_DIR}/cores/YehNah web/emu/yehnah_web.c)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)

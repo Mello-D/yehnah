@@ -19,7 +19,6 @@
  * This file: the state and the rows; song_play.c (included at the end of seq.c): the ISR's part; song_main.c
  * (included by project.c): the main loop's. */
 static chain_config_t chain_config;           /* the current song's rows */
-static uint8_t dice_secs;                     /* (0.6.81) the sections DICE ALL wrote (bit s; song_dice.c) */
 #define NSONG 6u                              /* songs: four sections each (storage.c: where they are kept) */
 #define SONG_MAGIC 0x474E4F53u                /* "SONG" */
 /* (Yehnah) a row's scene: when the row goes in (a song, not a quick chain) the tracks' mutes, DRUM's group mutes, the
