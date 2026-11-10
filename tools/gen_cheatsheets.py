@@ -128,7 +128,7 @@ def controls():
         ('1', 'SELECT WALKS THE PAGES', 'Every page of the section in one chain, a page a detent, stopping at both ends. '
          'No levels, no zoom.', 'FX: SENDS → DIST → AUTO PAN → PHASER → BUSES → DLY → DLY 2 → … → PUNCH'),
         ('2', 'THE BUTTON: IN, OR ON', 'From another section: the page you were last on there. Already inside: the '
-         'first page of the next group (round).', 'FX › DLY 2: FX → REVERB · EDIT › FILTER: EDIT → FOCUS'),
+         'first page of the next group (round).', 'FX › DLY 2: FX → REVERB'),
         ('3', 'PRESETS LOADS PRESETS', 'Always: the track\'s sounds; GEN the '
          'genre. Never a page, a track or a module.', 'FX › DLY: PRESETS ▶ the next sound'),
         ('4', 'KNOB 1 PICKS', 'The step, the bar, the slot, the stage, the operator, the kit\'s sound, the row. The track: '
@@ -159,7 +159,7 @@ def controls():
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
         ('HOME', 'ECO: ECO · MACROS  |  BEING: BEING · ROUTES  |  GEN: GEN 1 · GEN 2 · GEN 3', 'MENU'),
-        ('EDIT', 'SOUND: EDIT 1 · EDIT 2  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS  |  FOCUS (FM6: … OPERATOR: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT: KIT · KIT 2 · KIT 3  |  SOUND: SOUND 1–4  |  LEVELS 1–2  |  TONE: X-MOD · FILTER · STEREO · VOICE)', 'INIT · RECALL · sound mutes'),
+        ('EDIT', 'SOUND: EDIT 1 · EDIT 2  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS  (FM6: … OPERATOR: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT: KIT · KIT 2 · KIT 3  |  SOUND: SOUND 1–4  |  LEVELS 1–2  |  TONE: X-MOD · FILTER)', 'INIT · RECALL · sound mutes'),
         ('SEQ', 'PATTERN: PATTERN · STRETCH  |  TRACK: TRACK  |  BAR: BAR · STEP · NOTE  |  STEP: COMP · COMP 2  |  AUTO: AUTOMATION', 'SEQ TOOLS'),
         ('FX', 'TRACK: SENDS · DIST · AUTO PAN · PHASER  |  BUSES  |  DELAY: DLY 1–3  |  REVERB 1–2  |  CHORUS  |  SLICER: SLICER · SL BUS 1–2 · SL PITCH  |  MASTER  |  PUNCH',
          'PUNCH-IN FX'),
@@ -255,11 +255,11 @@ def controls():
                          ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL'), ('PUNCH', 'LEN RES REC CLEAR')]),
         ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('WORDS', 'LANG LYRIC POS (OCT+ TYPE)'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
-                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('VOICE 2', 'ALLOC DETUNE - -'), ('FOCUS', 'PARAM VALUE SRC AMT'), ('KIT 3', 'BP FEEDBK HANDS -'),
+                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('VOICE 2', 'ALLOC DETUNE - -'), ('KIT 3', 'BP FEEDBK HANDS IMAGE'),
                            ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('LEVELS', 'KICK SNARE CLAP HATCL'),
                            ('LEVELS 2', 'HATOP TOM RIM BELL'), ('SOUND', 'SOUND SIDE PITCH PMOD'),
                            ('SOUND 2', 'SOUND DECAY NOISE COLOR'), ('SOUND 3', 'SOUND MODE PM.TYPE DRIVE'),
-                           ('SOUND 4', 'SOUND LAYER FEEDBK SEND'), ('STEREO', 'IMAGE - - -')]),
+                           ('SOUND 4', 'SOUND LAYER FEEDBK SEND')]),
         ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT ALL TR'), ('CHORD', 'CHORD VOICING STRUM -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('PATTERN', 'LEN DIV SWING GATE'), ('STRETCH', 'x/÷ REPEAT NUDGE ROTATE'),
@@ -320,9 +320,9 @@ def sound():
         ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free. '
          '<b>Its picture</b> (0.9.6): a swarm walking by COLOR, swirling by FREQ.'),
         ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM ENV FOLD DRIVE',
-         '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK, <b>X-MOD</b> RATE DEPTH SHAPE '
+         '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK HANDS IMAGE, <b>X-MOD</b> RATE DEPTH SHAPE '
          'RAND. Then a sound (KNOB 1 the sound): SIDE PITCH PMOD · DECAY NOISE COLOR · MODE PM.TYPE DRIVE · <b>LAYER</b> (no note) FEEDBK '
-         '<b>SEND</b> (CHO / DLY / REV). Last LEVELS and <b>STEREO</b> IMAGE (a knob through the kit\'s stereo placings). '
+         '<b>SEND</b> (CHO / DLY / REV). Last LEVELS. '
          'KIT, SOUND 1–4 and HOME › BEING draw the kit as little beings that squash and shout on each hit (0.9.4).'),
         ('ANIMAL', '#4ade80', 'MODE PRESS CHAOS SIZE', 'SWEEP RATE GROUP TEMP',
          'Animal calls (0.8.3), MODE the source: <b>CMOS</b> the 40106 / 4093 bird circuit (TOUCH COUPLE CAP · HYST RATE '

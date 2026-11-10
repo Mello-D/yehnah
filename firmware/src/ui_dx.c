@@ -94,13 +94,21 @@ static void dx_knob(const page_t *pg, uint32_t k, int32_t s)
     else
         v[k == 2u ? DXP_PITCH : DXP_PMOD] = (uint8_t)clamp(v[k == 2u ? DXP_PITCH : DXP_PMOD] + accel(EN_K1 + k, s, 127), 0, 127);
 }
-/* KIT 3 (the whole kit): KNOB 1 BP, 2 FEEDBK (TONE's, dx_tone), (0.7.9) 3 HANDS (the CLAP's, dx_hands) */
+/* KIT 3 (the whole kit): KNOB 1 BP, 2 FEEDBK (TONE's, dx_tone), (0.7.9) 3 HANDS (the CLAP's, dx_hands), (2026-11-10) 4 IMAGE (was STEREO) */
 static void dx_kit3_knob(uint32_t k, int32_t s)
 {
+    if (dx_mach_req && k < 3u)                          /* (an LCD-4 MACHINE has no DRUM-X patch: only IMAGE) */
+        return;
     uint32_t bp = DX_TONE_BP(dx_tone), fb = DX_TONE_FB(dx_tone);
     if (k == 0u) bp = (uint32_t)clamp((int32_t)bp + (s > 0 ? 1 : -1), 0, 15);
     else if (k == 1u) fb = (uint32_t)clamp((int32_t)fb + (s > 0 ? 1 : -1), 0, 15);
     else if (k == 2u) dx_hands = (uint8_t)clamp((int32_t)dx_hands + (s > 0 ? 1 : -1), 0, 15);
+    if (k == 3u) {                                      /* (2026-11-10, was STEREO) IMAGE, a track's */
+        const param_desc_t *d = track_desc(TSEL, P_DXIMG);
+        TSEL->p[P_DXIMG] = (int16_t)param_turn(d, TSEL->p[P_DXIMG], accel(EN_K1 + 3u, s, d->max - d->min));
+        motion_capture(TSEL, P_DXIMG, TSEL->p[P_DXIMG]);
+        return;
+    }
     dx_tone = (uint8_t)(bp | fb << 4);
 }
 static void dx_kit3_cards(void)
@@ -119,7 +127,13 @@ static void dx_kit3_cards(void)
     draw_column(1, "FEEDBK", fb ? val : "OFF", "", fb ? VAL(1u) : T_DIM, (int32_t)fb * 1000 / 15, ICON_DRIVE);
     fmt_int(val, (int32_t)dx_hands);                    /* (0.7.9) the CLAP's HANDS */
     draw_column(2, "HANDS", dx_hands ? val : "OFF", "", dx_hands ? VAL(2u) : T_DIM, (int32_t)dx_hands * 1000 / 15, ICON_AUTO);
-    draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+    {
+        const param_desc_t *d = track_desc(TSEL, P_DXIMG);
+        const char *un = "";
+        param_format(d, TSEL->p[P_DXIMG], val, &un);
+        card_mot_of(&TSEL->p[P_DXIMG]);
+        draw_column(3, "IMAGE", val, un, TSEL->p[P_DXIMG] ? VAL(3u) : T_DIM, gauge(d, TSEL->p[P_DXIMG]), ICON_NONE);
+    }
 }
 
 /* the four cards of a SOUND page or X-MOD */

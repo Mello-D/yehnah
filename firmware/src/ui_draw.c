@@ -956,28 +956,6 @@ static void draw_cards(void)
         }
         return;
     }
-    if (cur_page()->graph == GR_FOCUS) {               /* (0.8.5) EDIT > FOCUS: PARAM, its value, SRC, AMT */
-        uint32_t k = focus_k();
-        int32_t j = focus_slot(k);
-        int16_t *vp = &TSEL->p[P_E0 + k];
-        const param_desc_t *d = track_desc(TSEL, P_E0 + k);
-        param_format(d, *vp, val, &unit);
-        draw_column(0, "PARAM", d->label, "", VAL(0u), pick_of(8u, k), ICON_NONE);
-        card_mot_of(vp);
-        draw_column(1, d->label, val, unit, VAL(1u), gauge(d, *vp), ICON_NONE);
-        draw_column(2, "SRC", j < 0 ? "OFF" : N_MSRC[clamp(TSEL->p[P_M1SRC + 3u * (uint32_t)j], 0, MS_N - 1)], "",
-                    j < 0 ? T_DIM : VAL(2u), j < 0 ? -1 : pick_of(MS_N, (uint32_t)clamp(TSEL->p[P_M1SRC + 3u * (uint32_t)j], 0, MS_N - 1)),
-                    ICON_NONE);
-        if (j < 0)
-            draw_column(3, "AMT", "--", "", T_DIM, -1, ICON_NONE);
-        else {
-            const param_desc_t *da = track_desc(TSEL, P_M1AMT + 3u * (uint32_t)j);
-            int16_t a = TSEL->p[P_M1AMT + 3u * (uint32_t)j];
-            param_format(da, a, val, &unit);
-            draw_column(3, "AMT", val, unit, a ? VAL(3u) : T_DIM, RATIO(da, a), ICON_NONE);
-        }
-        return;
-    }
     if (cur_page()->graph == GR_STAGE) {               /* (0.8.5) ENV > STAGE: the stage, its value, LOOP */
         uint32_t id = P_ATK + (ui.stage & 3u);
         int16_t *vp = &TSEL->p[id];

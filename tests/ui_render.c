@@ -568,7 +568,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS, S_SAVE_MORPH, S_SAVE_MORPH_OFF,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
-       S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
+       S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR,
        S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_HARP, S_KEY_HARP2, S_KEY_HARP3, S_KEY_OMNI, S_KEY_PROG, S_EDIT_GUITAR, S_EDIT_ELEC, S_EDIT_ACID, S_EDIT_NOISE, S_EDIT_DRIFT, S_SCL_PLAY, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_LY_FX_MAP, S_LY_FX_STATE, S_LY_REC_STATE, S_LY_SAVE_MAP, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_REC_LAYER_LOOP,
        S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_CHORD, S_ROLL_CHORD, S_GEN_EXPLORE,
        S_VX_HEAD_VOWEL,
@@ -604,7 +604,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay", "fx_effect_delay2", "fx_effect_reverb",
     "fx_effect_slicer", "fx_effect_master",
     "home_macros", "home_being", "home_routes", "gen_lead",
-    "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
+    "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator",
     "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_harp", "key_harp2", "key_harp3", "key_omni", "key_prog", "edit_guitar", "edit_elec", "edit_acid", "edit_noise", "edit_drift", "scl_play", "key_arp", "key_arp2", "glo_sends", "ly_fx_map", "ly_fx_state", "ly_rec_state", "ly_save_map", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "rec_layer_loop",
     "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_chord", "roll_chord", "gen_explore",
     "vx_head_vowel",
@@ -925,7 +925,7 @@ static void setup(int s)
     case S_STEP: song.rec = 1; go_page(GR_ROLL); ui.cursor = 6; break;
     case S_PATTERN: go_title("PATTERN"); ui.cursor = 3; break;
     case S_DXIMG:                                       /* (0.6.48) DRUM IMAGE 40 */
-        set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_title("STEREO");
+        set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_title("KIT 3");
         break;
     case S_DXSEND:                                      /* (0.6.48) SEND: the snare to the REVERB, 70 % */
         set_engine_of(TSEL, ENGI_DRUM); dx_ui_lane = 1; dx_snd[1] = 3u << 6 | 47u; dx_lay[1] = 0x26; go_title("SOUND 4");
@@ -1020,10 +1020,6 @@ static void setup(int s)
     case S_ED_FILTER: go_title("FILTER"); TSEL->p[P_E5] = 90; break;   /* (0.8.5) EDIT's lens: TONE, FILTER (ANALOG) */
     case S_ED_FILTER_BP: eng(7); go_title("FILTER"); TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_ED_VOICE2: go_title("VOICE 2"); TSEL->p[P_VOICE] = 3; trk[0].v[0].stage = 2; trk[0].v[0].env = 9u << 20; break;
-    case S_ED_FOCUS: case S_ED_FOCUS_MOD:              /* .. FOCUS: CUT, (MOD) M2 moving it */
-        go_title("FOCUS"); ui.focus = 4;
-        if (s == S_ED_FOCUS_MOD) { TSEL->p[P_M2SRC] = 1; TSEL->p[P_M2DST] = MD_E1 + 4; TSEL->p[P_M2AMT] = 40; }
-        break;
     case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
         song.sel = 1; nav_scene(SEC_ENV, s == S_ENV_TRACKS ? "ALL ENV" : "ALL DEST");
         trk[1].v[0].stage = 2; trk[1].v[0].env = 10u << 20; trk[2].p[P_ED_FLT] = 60; trk[2].p[P_ED_PIT] = -40;
@@ -2088,7 +2084,7 @@ int main(int argc, char **argv)
         static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_GLO_SCREEN, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
                                    S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
-                                   S_HOME_BEING, S_EDIT_ANALOG, S_ED_FILTER, S_ED_FOCUS, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
+                                   S_HOME_BEING, S_EDIT_ANALOG, S_ED_FILTER, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
                                    S_SYSTEM, S_GLO_TOOLS, S_LY_FX_MAP, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_VX_HEAD_VOWEL, S_VX_BIRD,
                                    S_VX_MAMMAL, S_VX_KIT_HITS, S_VX_HEAD_HOME, S_VX_KIT_HOME, S_VX_BUG_SD,
                                    S_V6_ANALOG, S_V6_FM6, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_WHEEL, S_V6_NOISE, S_V6_PHASE,

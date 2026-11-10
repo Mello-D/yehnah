@@ -3194,7 +3194,7 @@ static int test_edit_cycle(void)
 {
     /* (0.9.2: one chain, SELECT a page a detent; an EDIT tap the next group's first. Was 0.8.5's lens: SELECT a level, the
      * tap the level's next set) */
-    static const char *const CH_A[] = {"EDIT 1", "EDIT 2", "FILTER", "DRIFT", "VOICE", "VOICE 2", "FOCUS"};   /* (0.5:
+    static const char *const CH_A[] = {"EDIT 1", "EDIT 2", "FILTER", "DRIFT", "VOICE", "VOICE 2"};   /* (0.5:
                                                          * ANALOG's FILTER; 0.6.45: MORPH; chord-harp fork: BLEND, now
                                                          * SAVE > MORPH; 2026-10-30: MORPH now DRIFT, VINTAGE) */
     static const char *const CH_F[] = {"EDIT 1", "EDIT 2", "FILTER", "DRIFT", "VOICE", "VOICE 2", "OP 1", "OP ENV", "OP 2"};
@@ -3209,33 +3209,32 @@ static int test_edit_cycle(void)
         ok &= !str_eq(PAGES[i].title, "ENGINE");
     bad += check("no ENGINE page (engines are the EDIT layer's)", ok);
     set_engine_of(TSEL, 0);
-    bad += check("0.9.2 EDIT chain (ANALOG): SOUND (EDIT 1 EDIT 2) . TONE (FILTER DRIFT VOICE VOICE 2) . FOCUS; taps: TRACKS, its first",
+    bad += check("0.9.2 EDIT chain (ANALOG): SOUND (EDIT 1 EDIT 2) . TONE (FILTER DRIFT VOICE VOICE 2); taps: TRACKS, its first",
                  chain_walk(B_EDIT, CH_A, NELEM(CH_A)));
     set_engine_of(TSEL, ENGI_FM6);
     bad += check("0.9.2 EDIT chain (FM6): SOUND . TONE (FILTER DRIFT VOICE VOICE 2) . OPERATOR (OPERATOR OP ENV OPERATOR 2)",
                  TSEL->eng_req == ENGI_FM6 && chain_walk(B_EDIT, CH_F, NELEM(CH_F)));
     set_engine_of(TSEL, ENGI_DIGITAL);                 /* (2026-10-30: Clipper's DIGITAL, a synth as ANALOG's chain) */
-    bad += check("0.9.2 EDIT chain (DIGITAL): SOUND . TONE (FILTER DRIFT VOICE VOICE 2) . FOCUS",
+    bad += check("0.9.2 EDIT chain (DIGITAL): SOUND . TONE (FILTER DRIFT VOICE VOICE 2)",
                  TSEL->eng_req == ENGI_DIGITAL && chain_walk(B_EDIT, CH_A, NELEM(CH_A)));
     set_engine_of(TSEL, 0);
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
         static const char *const CH_K[] = {"KIT", "KIT 2", "KIT 3", "SOUND", "SOUND 2", "SOUND 3", "SOUND 4", "LEVELS",
-                                           "LEVELS 2", "X-MOD", "FILTER", "STEREO", "VOICE"};
+                                           "LEVELS 2", "X-MOD", "FILTER"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("0.9.2 EDIT chain (DRUM): KIT (KIT KIT 2 KIT 3) . SOUND (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER STEREO VOICE)",
+        bad += check("0.9.2 EDIT chain (DRUM): KIT (KIT KIT 2 KIT 3) . SOUND (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER)",
                      chain_walk(B_EDIT, CH_K, NELEM(CH_K)));
-        {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, never IMAGE; STEREO's KNOB 1 is IMAGE */
+        {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, (2026-11-10) KNOB 4 IMAGE (was STEREO's) */
             uint8_t t0 = dx_tone, h0 = dx_hands;
             int16_t i0 = TSEL->p[P_DXIMG];
             go_title("KIT 3"); frame();
             turn(EN_K3, 3); frame();
             ok = TSEL->p[P_DXIMG] == i0 && dx_tone == t0 && dx_hands > h0;
             dx_hands = h0;
-            go_title("STEREO"); frame();
-            turn(EN_K1, 5); frame();
+            turn(EN_K4, 5); frame();
             ok &= TSEL->p[P_DXIMG] > i0 && dx_tone == t0;
             TSEL->p[P_DXIMG] = i0;
-            bad += check("KIT 3: KNOB 3 turns HANDS (0.7.9), not IMAGE; STEREO: KNOB 1 turns IMAGE", ok);
+            bad += check("KIT 3: KNOB 3 turns HANDS (0.7.9), not IMAGE; KNOB 4 turns IMAGE", ok);
         }
         go_title("LEVELS 2"); frame();
         ok = TSEL->p[P_LN5] == 127;
@@ -8477,7 +8476,7 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -2);
     ok &= str_eq(cur_page()->title, "EDIT 1");
     turn(EN_SELECT, -1);
-    ok &= str_eq(cur_page()->title, "FOCUS");                         /* (2026-11-02: it wraps, the last page) */
+    ok &= str_eq(cur_page()->title, "VOICE 2");                       /* (2026-11-02: it wraps, the last page) */
     go_title("ENV DEST"); frame(); sel_first(); turn(EN_SELECT, -1);   /* (2026-11-02: it wraps) */
     ok &= str_eq(nav_name(), "ALL DEST") && !ui.home;                 /* (ENV -> ALL DEST, the last; no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (round, never out of it); HOME: DICE ALL; never the tempo", ok);
@@ -9382,9 +9381,9 @@ static int test_lz_home(void)
     return bad;
 }
 
-/* EDIT (0.9.2, ui_lzedit.c): SOUND . TONE . the detail (FOCUS / OPERATOR / SOUND) one chain; SELECT a page a detent (no
+/* EDIT (0.9.2, ui_lzedit.c): SOUND . TONE . the detail (OPERATOR / SOUND) one chain; SELECT a page a detent (no
  * wrap), EDIT its first page, an EDIT tap on it HOME's TRACKS (held notes a b); PRESETS the sounds on every page (rule 3:
- * was KNOB 1's on the detail); FOCUS's knobs (PARAM, its value, SRC and AMT of the MOD slot aimed at it); VOICE 2 */
+ * was KNOB 1's on the detail); VOICE 2 */
 static int test_lz_edit(void)
 {
     int bad = 0, ok;
@@ -9393,25 +9392,25 @@ static int test_lz_edit(void)
     ui_power_on(); set_engine_of(TSEL, 0); frame();
     press(B_EDIT); frame();
     ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("EDIT \xB7 EDIT 1 \xB7 OSC") &&
-         lz_count_is("1/7");
+         lz_count_is("1/6");
     turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 2") && lz_count_is("2/7");
+    ok &= str_eq(cur_page()->title, "EDIT 2") && lz_count_is("2/6");
     turn(EN_SELECT, 1); frame();
     ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "FILTER") && lz_crumb_is("EDIT \xB7 FILTER") &&
-          lz_count_is("3/7");
+          lz_count_is("3/6");
     frames(320); press(B_EDIT); frame();                            /* EDIT on EDIT: HOME's TRACKS */
     ok &= ui.home && home_level() == 0u;
     frames(320); press(B_EDIT); frame();                            /* EDIT: its first page */
     ok &= str_eq(cur_page()->title, "EDIT 1");
-    turn(EN_SELECT, -1); frame();                                   /* (round: FOCUS) */
-    ok &= pd_level() == 2u && lz_tab_lit(2) && str_eq(cur_page()->title, "FOCUS") && lz_crumb_is("EDIT \xB7 FOCUS") &&
-          lz_count_is("7/7");
+    turn(EN_SELECT, -1); frame();                                   /* (round: VOICE 2) */
+    ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "VOICE 2") && lz_crumb_is("EDIT \xB7 VOICE 2") &&
+          lz_count_is("6/6");
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "EDIT 1");                      /* (2026-11-02: it wraps) */
     turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "FOCUS");
-    turn(EN_SELECT, -3); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "DRIFT");    /* (DRIFT VOICE VOICE 2 FOCUS: three back; BLEND now
+    ok &= str_eq(cur_page()->title, "VOICE 2");
+    turn(EN_SELECT, -2); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "DRIFT");    /* (DRIFT VOICE VOICE 2: two back; BLEND now
                                                                      * SAVE > MORPH) */
     frames(320); press(B_EDIT); frame();
     ok &= ui.home && home_level() == 0u;
@@ -9425,25 +9424,6 @@ static int test_lz_edit(void)
     turn(EN_PRESET, 1); frame();
     ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && str_eq(cur_page()->title, "EDIT 1");   /* (the next sound) */
     bad += check("0.9.2 EDIT: EDIT from elsewhere its first page; PRESETS the next sound, the page stays", ok);
-    ui_power_on(); set_engine_of(TSEL, 0); go_title("FOCUS"); frame();
-    ui.focus = 0;
-    turn(EN_K1, 4); frame();                                        /* PARAM: E5 (ANALOG's CUT) */
-    ok = focus_k() == 4u && str_eq(ui.col[1], "CUT|") == 0;
-    v = TSEL->p[P_E4];
-    turn(EN_K2, 5); frame();
-    ok &= TSEL->p[P_E4] > v;
-    turn(EN_K3, 1); frame();                                        /* SRC: a free slot takes CUT */
-    ok &= focus_slot(4) == 0 && TSEL->p[P_M1SRC] == 1 && TSEL->p[P_M1DST] == MD_E1 + 4;
-    turn(EN_K4, 3); frame();
-    ok &= TSEL->p[P_M1AMT] > 0;
-    turn(EN_K1, -1); frame();                                       /* KNOB 1 the parameter */
-    ok &= focus_k() == 3u && TSEL->p[P_M1SRC] == 1;
-    turn(EN_K1, 1); turn(EN_K3, -1); frame();                       /* SRC back to OFF: the slot free */
-    ok &= focus_slot(4) < 0 && TSEL->p[P_M1SRC] == 0;
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && focus_k() == 4u;   /* (rule 3: PRESETS a sound, not the parameter) */
-    bad += check("0.9.2 EDIT > FOCUS: KNOB 1 the parameter, 2 its value, 3 the MOD source (a free slot), 4 its AMT; PRESETS a sound", ok);
     ui_power_on(); set_engine_of(TSEL, 0); go_title("VOICE"); frame();
     turn(EN_SELECT, 1); frame();
     ok = str_eq(cur_page()->title, "VOICE 2");
@@ -9451,10 +9431,10 @@ static int test_lz_edit(void)
     turn(EN_K2, 3); frame();
     ok &= TSEL->p[P_DETUNE] != v;
     set_engine_of(TSEL, ENGI_DRUM); frame();
-    ok &= !nav_put(SEC_EDIT, "VOICE 2") && !nav_put(SEC_EDIT, "FOCUS");
+    ok &= !nav_put(SEC_EDIT, "VOICE 2");
     set_engine_of(TSEL, ENGI_FM6); frame();
-    ok &= !nav_put(SEC_EDIT, "FOCUS") && nav_put(SEC_EDIT, "OP 1");
-    bad += check("0.9.2 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM; FOCUS on the synths only", ok);
+    ok &= nav_put(SEC_EDIT, "OP 1");
+    bad += check("0.9.2 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM", ok);
     ui_power_on();
     return bad;
 }
@@ -10118,10 +10098,9 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
 typedef struct { uint8_t fam, lv, kind; const char *t[13]; } old_lv_t;   /* kind: EDIT's (0 synth 1 FM6 2 DRUM), 9 any */
 static const old_lv_t OLD_LV[] = {
     {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"FILTER", "DRIFT", "VOICE", "VOICE 2"}},   /* (2026-10-30: RETRIG ROTOR gone) */
-    {FAM_EDIT, 2, 0, {"FOCUS"}},
     {FAM_EDIT, 0, 1, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
     {FAM_EDIT, 2, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
-    {FAM_EDIT, 0, 2, {"EDIT 1", "EDIT 2", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "STEREO", "LEVELS", "LEVELS 2", "VOICE"}},
+    {FAM_EDIT, 0, 2, {"EDIT 1", "EDIT 2", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "LEVELS", "LEVELS 2"}},
     {FAM_EDIT, 2, 2, {"SOUND", "SOUND 2", "SOUND 3", "SOUND 4"}},
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},

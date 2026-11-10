@@ -203,7 +203,6 @@ static struct {
     uint8_t hlv, hset[2];        /* .. HOME: TRACKS (0) or MACRO (1: its set 1, ROUTES' screen; 2026-11-02: ENGINE and the
                                   * old MACRO gone) */
     uint8_t msolo;               /* (2026-11-02) HOME > MIXER's KNOB 3: the tracks soloed (not saved; perf_solo) */
-    uint8_t focus;               /* .. EDIT > FOCUS: the parameter (E1..E8: 0..7) */
     uint8_t stage;               /* .. ENV > STAGE: the stage (ATK DEC SUS REL: 0..3) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
@@ -453,16 +452,13 @@ static int page_visible(uint32_t i)
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG)   /* (0.6.48: IMAGE) */
         return trk_eng(TSEL) == ENGI_DRUM &&           /* (chord-harp fork) an LCD-4 MACHINE: no DRUM-X patch to edit
-                                                         * (SOUND 1..3, KIT 3); STEREO, X-MOD, SOUND 4's SEND stay */
-               !(dx_mach_req && ((PAGES[i].graph == GR_DXIMG && PAGES[i].id[0] == 0xFFu) ||
-                                 str_eq(PAGES[i].title, "SOUND") || str_eq(PAGES[i].title, "SOUND 2") ||
+                                                         * (SOUND 1..3); KIT 3 (only its IMAGE), X-MOD, SOUND 4's SEND stay */
+               !(dx_mach_req && (str_eq(PAGES[i].title, "SOUND") || str_eq(PAGES[i].title, "SOUND 2") ||
                                  str_eq(PAGES[i].title, "SOUND 3")));
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
         return trk_eng(TSEL) == ENGI_DRUM;
-    if (PAGES[i].graph == GR_FOCUS)                     /* (0.8.5) FOCUS: a synth's (FM6: OPERATOR, DRUM: SOUND) */
-        return trk_eng(TSEL) != ENGI_DRUM && trk_eng(TSEL) != ENGI_FM6 &&
-               !(YEHNAH_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
-    if (PAGES[i].id[0] == P_ALLOC)                      /* (0.8.5) VOICE 2: not a kit's */
+    if (PAGES[i].id[0] == P_ALLOC || PAGES[i].id[0] == P_VOICE)   /* (0.8.5) VOICE 2: not a kit's; (2026-11-10) nor VOICE (a kit is
+                                                         * one-shot POLY: its mode and PRIO do nothing) */
         return trk_eng(TSEL) != ENGI_DRUM;
     if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
         return trk_eng(TSEL) == ENGI_FM6;

@@ -103,7 +103,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **LFO** | The LFO section: from elsewhere the page last shown (at power-on LFO); inside **MOD → LFO → MSEQ**, round. | **MACRO** layer: KNOB 1–4 are M1–M4. |
 | **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH**, round. | **Punch-in FX** layer. |
 | **SCL** | The SCL section (0.9.2: its own, ARP apart): **KEY ↔ CHORD**. | **SCL** layer: keys set the root. |
-| **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE → FOCUS** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
+| **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
 | **GLO** | The GLO section: from elsewhere the page last shown; inside **MIX → GLOBAL → SYSTEM**, round. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → PROJECT → LIBRARY**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
@@ -245,7 +245,7 @@ knobs, their pictures and every function are the same, only the way between them
    DLY 2 → DLY 3 → REVERB → … → PUNCH.
 2. **The section's button: in, or on.** From another section it brings you back to the page you were last on there.
    Already inside, it jumps to the **first page of the next group** (and goes round). On FX › DLY 2, FX goes to
-   REVERB; on EDIT › FILTER, EDIT goes to FOCUS.
+   REVERB.
 3. **PRESETS loads presets.** Always: the track's sounds in every section (SEQ too), the **genre** on IDEAS > TRACK. It never changes page, track or module (in the MENU it does nothing).
 4. **KNOB 1 picks.** When a page picks something (a step, a bar, a slot, a stage, an operator, the kit's sound, a
    row) KNOB 1 is the one that picks it. The track is always **ALGORITHM**'s. SEQ › STEP: KNOB 1 walks all 64 steps,
@@ -280,9 +280,9 @@ it was in 0.9.1, with its knobs and its picture (the ones 0.8.5's lenses drew).
 | Section | Groups (the button) · pages (SELECT) | Pages |
 | --- | --- | --- |
 | **HOME** | **ECO**: ECO · MACROS — **BEING**: BEING · ROUTES — **IDEAS**: TRACK · SOUND · LFO · FX · TEXTURE | 9 |
-| **EDIT** (a synth) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (those the engine has) — **FOCUS**: FOCUS | up to 10 |
+| **EDIT** (a synth) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (those the engine has) | up to 9 |
 | **EDIT** (FM6) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · VOICE · VOICE 2 — **OPERATOR**: OPERATOR · OP ENV · OPERATOR 2 | 8 |
-| **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
+| **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER | 11 |
 | **SEQ** | **PATTERN**: PATTERN · STRETCH — **TRACK**: TRACK — **BAR**: BAR · STEP · NOTE — **STEP**: SPICE — **AUTO**: AUTOMATION | 8 |
 | **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **MASTER**: MASTER — **PUNCH**: PUNCH | 16 |
 | **GLO** | **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM | 4 |
@@ -334,9 +334,7 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
   under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
   **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of
   cells; **VOICE** / **VOICE 2** the voices one a row as full as they sound, VOICE and PRIO (VOICE 2: ALLOC), GLIDE's
-  curve; the others keep their pictures. **FOCUS** (new): one E parameter large as a gauge — KNOB 1 picks it (E1–E8),
-  KNOB 2 sets it, KNOB 3 the **source** of the MOD slot aimed at it (turned up from OFF a free slot takes it, its DEST
-  that parameter; back to OFF frees it), KNOB 4 that slot's **AMT**; E1–E8 as tabs under it.
+  curve; the others keep their pictures.
 - **IDEAS** (as HOME held + SELECT, from any page): **SELECT** turns its page (left of TRACK: ROUTES), **PRESETS** the GENRE, a knob throws an idea, **OCT+** keeps it, **OCT−** puts it back, a **HOME** tap on to ECO.
 
 ### Every page and its four knobs
@@ -400,18 +398,16 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
-| KIT 3 | BP | FEEDBK | HANDS | — | DRUM (the whole kit) |
+| KIT 3 | BP | FEEDBK | HANDS | IMAGE | DRUM (the whole kit; on an LCD-4 machine only IMAGE) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
-| STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
 | SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (one sound) |
 | SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (one sound) |
 | SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (one sound) |
 | LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
 | LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
-| VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
+| VOICE | VOICE | GLIDE | MODE | PRIO | every engine but DRUM |
 | VOICE 2 (0.8.5) | ALLOC | DETUNE (UNI's spread) | — | — | every engine but DRUM |
-| FOCUS (0.8.5) | PARAM (E1–E8) | its value | SRC (the MOD slot on it) | AMT | the synths (not FM6, DRUM) |
 
 **GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
 
@@ -857,10 +853,10 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
       each, on one knob ("REV 75%"), on top of the track's own sends. IDEAS' WILD (SOUND) sets
       LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
   - **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
-  - **STEREO**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
+  - **KIT 3, KNOB 4**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
     in the middle; the first turns open it; from there each step is another placing (each sound moves on its own
     curve), so turn it until the image sits right. The kick stays near the middle. DRV, DIST and the FILTER work on the
-    kit's sum, so with them the image narrows (the page draws the sounds grey).
+    kit's sum, so with them the image narrows.
   - KIT 3, X-MOD, LAYER, FEEDBK and SEND are saved with the section's kit.
 - **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
   sound.

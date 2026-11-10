@@ -136,24 +136,6 @@ static void graph_lfo(const track_t *t, uint16_t c)
 
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
  * height; under it the two waves it is between */
-/* (0.6.48) EDIT > IMAGE (a DRUM track): the eight sounds from left to right as IMAGE places them (as wide as DRV,
- * DIST and the FILTER let it play: dx_img_k), a row each, the kick on top, on a line from the middle */
-static void graph_dximg(const track_t *t)
-{
-    static const char *const AB[DV_NLANE] = {"BD", "SD", "CP", "CH", "OH", "TM", "RS", "CB"};
-    int32_t img = clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0, cx = PANEL_X0 + PANEL_W / 2;
-    uint32_t l;
-    cv_rect(cx, 0, 1, 96, T_RAISE);
-    for (l = 0; l < DV_NLANE; l++) {
-        int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0, y = (int32_t)l * 12;
-        int32_t x = cx + p * (PANEL_W / 2 - 14) / 64;
-        uint16_t c = k < 256 && img ? T_MID : heat_col(60u + l * 22u);   /* (narrowed by DRV DIST FILTER: grey) */
-        cv_rect(p < 0 ? x : cx, y + 6, p < 0 ? cx - x : x - cx, 1, c);
-        cv_rrect(x - 13, y, 26, 12, 2, c, T_SURF);
-        cv_text_in(x - 13, y + CAP_IN(S, 12), 26, &AF_S, AB[l], T_INK, c);
-    }
-}
-
 /* (0.8.5) the piano roll of the cursor's bar, as the approved mock-up (LENTE's BAR, under the bars' strip): its 16
  * steps as columns over the panel's width (x 4 .. 236, 14 or 15 px), PR_ROWS semitone rows of PR_RH px (4), the
  * highest on top, on a BG area; rows in the track's scale (SCL ROOT / SCALE; CHR: the white keys) tinted LANE; step
@@ -1170,8 +1152,6 @@ static uint32_t graph_signature(void)
     }
     if (pg->graph == GR_MOD)
         h ^= (mod_ui_slot + 1u) * 40503u;
-    if (pg->graph == GR_FOCUS)                       /* (0.8.5) EDIT > FOCUS: the parameter */
-        h ^= (ui.focus + 1u) * 2246822519u;
     if (pg->graph == GR_STAGE)                       /* .. ENV > STAGE: the stage */
         h ^= (ui.stage + 1u) * 3266489917u;
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
@@ -1628,12 +1608,9 @@ static void draw_graph(void)
         case GR_BLEND:
             graph_blend();
             break;
-        case GR_DXIMG:                               /* (0.6.58) KIT 3: the colony; STEREO: IMAGE */
-            if (DX_KIT3(pg)) {
-                cv_oy = 0;
-                vx_kit_page(t, -1);                  /* (chord-harp fork: the kit, was the colony) */
-            } else
-                graph_dximg(t);
+        case GR_DXIMG:                               /* KIT 3: the colony (2026-11-10: STEREO merged in) */
+            cv_oy = 0;
+            vx_kit_page(t, -1);                      /* (chord-harp fork: the kit, was the colony) */
             break;
         case GR_ROLL:
         case GR_CHANCE:

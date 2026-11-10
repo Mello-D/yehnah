@@ -575,8 +575,8 @@ enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACK
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
-       GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_FOCUS, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SETS };   /* (GR_FOCUS / GR_STAGE: LENTE's EDIT > FOCUS, ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
+       GR_PROG, GR_BLEND, GR_SETS };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -699,10 +699,9 @@ static const page_t PAGES[] = {
                                                          * SAVE's SOUND, between PRESETS and USER */
     /* (0.6.54) DRUM: the whole kit first (KIT = EDIT 1, KIT 2 = EDIT 2, KIT 3, X-MOD, FILTER), then a sound
      * (SOUND 1..4, KNOB 1 the sound on each), (0.6.58) then the volumes (LEVELS, LEVELS 2); (0.7.8) STEREO after X-MOD */
-    {"KIT 3", FAM_EDIT, SC_TRACK, GR_DXIMG, {0xFF, 0xFF, 0xFF, 0xFF}},     /* TONE's BP and FEEDBK (the kit's) */
+    {"KIT 3", FAM_EDIT, SC_TRACK, GR_DXIMG, {0xFF, 0xFF, 0xFF, P_DXIMG}},  /* the kit's BP, FEEDBK, HANDS and IMAGE (2026-11-10: STEREO
+                                                         * merged in; on an LCD-4 MACHINE only IMAGE works) */
     {"X-MOD", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},     /* (0.5.1) the kit's LFO on MORPH, RAND */
-    {"STEREO", FAM_EDIT, SC_TRACK, GR_DXIMG, {P_DXIMG, 0xFF, 0xFF, 0xFF}}, /* (0.6.58) IMAGE: the kit's stereo placings; (0.7.8)
-                                                         * with the kit's pages, before the sounds (the volumes last) */
     {"OPERATOR", FAM_EDIT, SC_TRACK, GR_FMOP, {0xFF, 0xFF, 0xFF, 0xFF}},    /* FM6 only: KNOB 1 the operator, then its */
     {"OP ENV", FAM_EDIT, SC_TRACK, GR_FMENV, {0xFF, 0xFF, 0xFF, 0xFF}},     /* bytes of the track's patch (ui_fm6op.c): */
     {"OPERATOR 2", FAM_EDIT, SC_TRACK, GR_FMOP2, {0xFF, 0xFF, 0xFF, 0xFF}}, /* CRS FINE LEVEL / STG RATE LEVEL / MODE DTUN VEL */
@@ -759,8 +758,6 @@ static const page_t PAGES[] = {
     {"VOICE 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_ALLOC, P_DETUNE, P_KTRK, P_MWDST}},   /* EDIT > TONE: ALLOC, UNISON's
                                                          * DETUNE (in TP since Felucca, on no page until then);
                                                          * (2026-11-02, NAV-LAYOUT.md) KEY>F, MW> (on no page before) */
-    {"FOCUS", FAM_EDIT, SC_TRACK, GR_FOCUS, {0xFF, 0xFF, 0xFF, 0xFF}},   /* EDIT's detail on a synth: PARAM (E1..E8), its
-                                                         * VALUE, the MOD slot aimed at it: SRC AMT (ui_input.c focus_knob) */
     {"STAGE", FAM_ENV, SC_TRACK, GR_STAGE, {0xFF, 0xFF, P_ELOOP, 0xFF}},   /* ENV's detail: STAGE (ATK DEC SUS REL), its
                                                          * value, LOOP (ui_input.c stage_knob) */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),

@@ -56,16 +56,14 @@ static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV("PRESETS", 0, 1, SV_SOU
                                NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
                                NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2)};   /* IDEAS (ideas.c; was Yehnah's GEN) */
 static const nv_t CE_SYN[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("DRIFT", 0, 1, 1),
-                              NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1),   /* (2026-10-30: MORPH now DRIFT; RETRIG,
-                                                         * ROTOR gone with our LOFI and WHEEL) */
-                              NV("FOCUS", 0, 2, 2)};
+                              NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1)};   /* (2026-10-30: MORPH now DRIFT; RETRIG,
+                                                         * ROTOR gone with our LOFI and WHEEL; FOCUS gone 2026-11-10) */
 static const nv_t CE_FM6[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("FILTER", 0, 1, 1), NV("DRIFT", 0, 1, 1),
                               NV("VOICE", 0, 1, 1), NV("VOICE 2", 0, 1, 1), NV("OPERATOR", "OP 1", 2, 2), NV("OP ENV", 0, 2, 2),
                               NV("OPERATOR 2", "OP 2", 2, 2)};
 static const nv_t CE_DRM[] = {NV("EDIT 1", "KIT", 0, 0), NV("EDIT 2", "KIT 2", 0, 0), NV("KIT 3", 0, 0, 0),
                               NV("SOUND", 0, 1, 2), NV("SOUND 2", 0, 1, 2), NV("SOUND 3", 0, 1, 2), NV("SOUND 4", 0, 1, 2),
-                              NV("LEVELS", 0, 2, 1), NV("LEVELS 2", 0, 2, 1), NV("X-MOD", 0, 3, 1), NV("FILTER", 0, 3, 1),
-                              NV("STEREO", 0, 3, 1), NV("VOICE", 0, 3, 1)};
+                              NV("LEVELS", 0, 2, 1), NV("LEVELS 2", 0, 2, 1), NV("X-MOD", 0, 3, 1), NV("FILTER", 0, 3, 1)};
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };                 /* SEQ's pictures: the bars, the roll, the step large */
 static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR), NV("SPICE", 0, 3, LV_BAR),   /* (2026-11-02:
                                                          * the main page first, the rest in their wrapped order) */
@@ -317,25 +315,3 @@ static int nav_put(uint32_t sec, const char *nm)
     return 0;
 }
 
-/* EDIT > FOCUS (a synth's detail): the parameter shown (E1..E8 that has a name: 0..7), the MOD slot aimed at it (its
- * source set; -1 none) */
-static int focus_named(uint32_t k)
-{
-    const param_desc_t *d = track_desc(TSEL, P_E0 + (k & 7u));
-    return d && d->label && d->label[0] != '-' && d->max > d->min;
-}
-static uint32_t focus_k(void)
-{
-    uint32_t k = ui.focus & 7u, n;
-    for (n = 0; n < 8u && !focus_named(k); n++)
-        k = (k + 1u) & 7u;
-    return k;
-}
-static int32_t focus_slot(uint32_t k)
-{
-    uint32_t j;
-    for (j = 0; j < 4u; j++)
-        if (TSEL->p[P_M1SRC + 3u * j] && TSEL->p[P_M1DST + 3u * j] == (int16_t)(MD_E1 + k))
-            return (int32_t)j;
-    return -1;
-}

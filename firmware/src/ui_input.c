@@ -1176,50 +1176,6 @@ static void shape_knob(uint32_t slot, int32_t steps)
         motion_capture(TSEL, P_SOFS, TSEL->p[P_SOFS]);
     }
 }
-/* (0.8.5) EDIT > FOCUS: KNOB 1 the parameter (E1..E8 with a name; 2026-11-03: wraps), 2 its value, 3 the SRC of the MOD slot aimed
- * at it (from OFF: a free slot takes it, its DEST E1..E8; back to OFF: the slot free again), 4 that slot's AMT */
-static void focus_knob(uint32_t slot, int32_t steps)
-{
-    uint32_t k = focus_k(), f = k, n;
-    int32_t j = focus_slot(k);
-    int16_t *p;
-    const param_desc_t *d;
-    if (slot == 0u) {                                   /* (a named one a detent) */
-        int32_t m = steps < 0 ? -steps : steps;
-        for (n = 0; n < 8u * (uint32_t)m && m > 0; n++) {
-            f = (f + (steps > 0 ? 1u : 7u)) & 7u;
-            if (focus_named(f)) {
-                ui.focus = (uint8_t)f;
-                m--;
-            }
-        }
-        return;
-    }
-    if (slot == 1u) {
-        d = track_desc(TSEL, P_E0 + k);
-        TSEL->p[P_E0 + k] = (int16_t)param_turn(d, TSEL->p[P_E0 + k], accel(EN_K1 + 1u, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-        motion_capture(TSEL, P_E0 + k, TSEL->p[P_E0 + k]);
-        return;
-    }
-    if (slot == 2u && j < 0) {                          /* (no slot aims at it: a free one, turned up) */
-        uint32_t m;
-        if (steps <= 0)
-            return;
-        for (m = 0; m < 4u && TSEL->p[P_M1SRC + 3u * m]; m++)
-            ;
-        if (m == 4u) {
-            ui_message("MOD: 4 SLOTS USED");
-            return;
-        }
-        j = (int32_t)m;
-        TSEL->p[P_M1DST + 3u * m] = (int16_t)(MD_E1 + k);
-    }
-    if (j < 0)
-        return;
-    p = &TSEL->p[P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u)];
-    d = track_desc(TSEL, P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u));
-    *p = (int16_t)param_turn(d, *p, slot == 2u ? (steps > 0 ? 1 : -1) : accel(EN_K1 + 3u, steps, d->max - d->min));
-}
 static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
@@ -1263,10 +1219,6 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_DXSND) {                          /* EDIT > SOUND: the DRUM-X kit (ui_dx.c) */
         dx_knob(pg, slot, steps);
-        return;
-    }
-    if (pg->graph == GR_FOCUS) {                          /* (0.8.5) EDIT > FOCUS */
-        focus_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_STAGE && slot < 2u) {             /* (0.8.5) ENV > STAGE: the stage, its value */
@@ -2563,7 +2515,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || BAR_PAGE(pg)) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_STAGE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }
