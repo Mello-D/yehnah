@@ -472,14 +472,14 @@ static void graph_roll(const track_t *t, uint16_t c)
             step_t one = *st;
             int32_t yy = -10000;
             pr_bars(st, s == si ? x + 1 : x - 1, s == si ? w - 2 : w + 1, 0, (st->flags & SF_ACCENT) != 0u, &y,
-                    s == si ? step_hits(st) : 1u);
+                    s == si && note_len(t, s, len) < 2u ? step_hits(st) : 1u);
             one.n = 1; one.note[0] = st->note[ui.pr_focus - 1u]; one.hit = 0;
             one.comp = one.comp2 = 0;                   /* (chord-harp: the note alone, not a CHORD from it) */
             pr_bars(&one, s == si ? x + 1 : x - 1, s == si ? w - 2 : w + 1, T_ACCENT, 0, &yy, s == si ? step_ratchet(st) : 1u);
         } else if (s == si) {                         /* (0.6.88: its TIMING off the grid, shown off it) */
             int32_t mo = ST_MICRO(st) * w / 64;     /* (0.9.1: 64ths) */
             pr_bars(st, x + 1 + mo < PR_RX ? PR_RX : x + 1 + mo, w - 2 + (slide ? 2 : 0),
-                    s == ui.cursor && note_pg ? T_ACCENT : 0, (st->flags & SF_ACCENT) != 0u, &y, step_hits(st));
+                    s == ui.cursor && note_pg ? T_ACCENT : 0, (st->flags & SF_ACCENT) != 0u, &y, note_len(t, s, len) < 2u ? step_hits(st) : 1u);
         } else                                        /* a TIE: the bars on through the gap before */
             pr_bars(st, x - 1, w + (slide && (si + 1u) % len != nx ? 0 : 0), s == ui.cursor && note_pg ? T_ACCENT : 0,
                     (st->flags & SF_ACCENT) != 0u, &y, 1u);
@@ -991,7 +991,7 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
             int32_t y = gy[i], x = 14 + (tie ? 0 : m / 4);   /* (0.9.1: MICRO in 64ths; as far as before) */
             uint16_t col = tie ? T_MID : f ? (ord[i] + 1u == f ? T_ACCENT : lz_note(sn, (sn->flags & SF_ACCENT) != 0u, c)) :
                                               lz_note(sn, (sn->flags & SF_ACCENT) != 0u, c);
-            pr_split(x, y, 70, BS_NH, col, tie ? 1u : step_hits(sn));
+            pr_split(x, y, 70, BS_NH, col, tie || nl > 1u ? 1u : step_hits(sn));
             note_name(b, sn->note[ord[i]]);
             GFX_HOOK_ALIGN(0, y, 0, y + BS_NH, AL_V, "big step note name on its bar");
             cv_text_on(90, y + CAP_IN(X, BS_NH), &AF_X, b, tie ? T_MID : T_TEXT, T_BG);

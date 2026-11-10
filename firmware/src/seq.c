@@ -2069,6 +2069,21 @@ static const step_t *arp_owner(const track_t *t, const step_t *s)
 /* the parts a step plays (*div: in how many equal parts of its length they fall, one each from the start): an ARP's
  * RATE, else its ECHO (0.6.42: x2..x4; 0.6.82: .. x8; an ARP wins over it), else its RATCH. (0.6.82) DIV: ECHO's and
  * RATCH's parts a step/2 .. /8 apart, as many as fit (0: the step shared out) */
+/* (2026-11-10) a note with TIEs (not a kit, not an ARP) and a RATCH / ECHO: its parts are over its whole length (the HOLD's way,
+ * seq_hold_parts), not squeezed into its first step; the steps it rings (0: not such a note) */
+static uint32_t tie_ratch_len(const track_t *t, const step_t *s)
+{
+    uint32_t len = (uint32_t)t->p[P_SLEN], idx = (uint32_t)(s - t->step), l = 1, h;
+    uint8_t a;
+    if (idx >= NSTEP || s->time != ST_NOTE || !s->n || !len || idx >= len || trk_kit(t))
+        return 0;
+    h = CP_HAS(t, s, CP_ECHO, &a) ? 2u : step_ratchet(s);
+    if (h < 2u)
+        return 0;
+    while (l < len && t->step[(idx + l) % len].time == ST_TIE)
+        l++;
+    return l > 1u ? l : 0u;
+}
 static uint32_t step_parts(const track_t *t, const step_t *s, uint32_t *div)
 {
     const step_t *o = arp_owner(t, s);
@@ -2080,6 +2095,8 @@ static uint32_t step_parts(const track_t *t, const step_t *s, uint32_t *div)
     }
     if (s->time == ST_NOTE && !trk_kit(t) && CP_HAS(t, s, CP_HOLD, 0))   /* (2026-11-10) a HOLD: one note; its RATCH / ECHO are the
                                                          * parts over its whole length (seq_hold_parts) */
+        return *div = 1;
+    if (tie_ratch_len(t, s))
         return *div = 1;
     h = s->time == ST_NOTE && CP_HAS(t, s, CP_ECHO, &a) ? 2u + (a & ~CP_ECHO_EVEN) % 7u : step_ratchet(s);
     d = CT_DIVS[CT_DIV(s) % CT_NDIV];
@@ -2631,6 +2648,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie || chord_auto(t, len);
         if (!kit && !arp && hits == 1u && CP_HAS(t, s, CP_HOLD, &ha))
             seq_to_hold(t, s, ha, period, vel);
+        else if (!kit && !arp && (ha = (uint8_t)tie_ratch_len(t, s)) != 0u)
+            seq_to_hold(t, s, ha, period, vel);
         return;
     }
     t->slide_glide = (uint8_t)slide_in;
@@ -2731,6 +2750,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     t->seq_hold = hits == 1u && ((s->flags & SF_SLIDE) != 0 || next_tie ||   /* next step a TIE: keep the notes to it */
                                  (!kit && !arp && chord_auto(t, len)));   /* (0.6.81) GLIDE on POLY: to the next chord */
     if (!kit && !arp && hits == 1u && CP_HAS(t, s, CP_HOLD, &ha))   /* (2026-11-10) HOLD: the notes ring on */
+        seq_to_hold(t, s, ha, period, vel);
+    else if (!kit && !arp && !(skip & SEQ_REP) && (ha = (uint8_t)tie_ratch_len(t, s)) != 0u)   /* (a tied note's RATCH / ECHO) */
         seq_to_hold(t, s, ha, period, vel);
 }
 

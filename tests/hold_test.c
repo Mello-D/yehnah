@@ -131,6 +131,108 @@ int main(void)
       ck("  and rings to the end: no third strike", sounding(t, 48) == 1u && a4 == a3);
     }
     seq_stop();
+    t = loop4(1);                                         /* RATCH 4 over a HOLD of 4: a strike every step */
+    t->step[0].carg2 = 4;
+    step_set_ratchet(&t->step[0], 4);
+    L = slen(t, 0);
+    { uint32_t a[5], k, d = 1;
+      for (k = 0; k < 4; k++) { run_to(t, L / 2); a[k] = age_of(t, 48); run_to(t, L / 2); }
+      for (k = 1; k < 4; k++) if (a[k] == a[k - 1]) d = 0;
+      ck("HOLD 4 + RATCH 4: struck again in every step", d);
+    }
+    seq_stop();
+    t = loop4(1);                                         /* an EVEN ECHO of 4 hits (comp) over a HOLD of 4 (comp2) */
+    t->step[0].carg2 = 4;
+    t->step[0].comp = CP_ECHO; t->step[0].carg = CP_ECHO_EVEN | 2u;
+    L = slen(t, 0);
+    { uint32_t a[5], k, d = 1;
+      for (k = 0; k < 4; k++) { run_to(t, L / 2); a[k] = age_of(t, 48); run_to(t, L / 2); }
+      for (k = 1; k < 4; k++) if (a[k] == a[k - 1]) d = 0;
+      ck("HOLD 4 + EVEN ECHO 4: struck again in every step", d);
+    }
+    seq_stop();
+
+    ui_power_on();                                        /* the device's way: HOLD by LENGTH, then NOTE's FLAG RATCH 4 */
+    t = &trk[0];
+    track_defaults_steps(t);
+    t->p[P_SLEN] = 8; t->p[P_VOICE] = V_POLY; t->p[P_SGATE] = 64; t->p[P_SSWING] = 0; song.g[G_SWING] = 0;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[1] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    go_title("STEP"); frame(); cursor_set(0);
+    { uint32_t i; for (i = 0; i < 6; i++) turn(EN_K3, 1); }
+    go_title("NOTE"); frame(); cursor_set(0);
+    { uint32_t i; for (i = 0; i < 5; i++) turn(EN_K2, 1); }
+    ck("UI path: HOLD 7 with RATCH 4", t->step[0].comp2 == CP_HOLD && step_ratchet(&t->step[0]) == 4u);
+    seq_start();
+    L = slen(t, 0);
+    { uint32_t a[9], k, ch = 0;
+      for (k = 0; k < 8; k++) { run_to(t, L / 4); a[k] = age_of(t, 60); run_to(t, L * 3 / 4); }
+      for (k = 1; k < 7; k++) if (a[k] != a[k - 1]) ch++;
+      ck("  and it is struck 3 more times over its 7 steps", ch == 3u);
+    }
+    seq_stop();
+
+    ui_power_on();                                        /* SLD from NOTE's FLAG: the next note glides on a MONO voice */
+    t = &trk[0];
+    track_defaults_steps(t);
+    t->p[P_SLEN] = 4; t->p[P_VOICE] = V_MONO; t->p[P_SGATE] = 64; t->p[P_SSWING] = 0; song.g[G_SWING] = 0; t->p[P_GLIDE] = 0;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[1] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    go_title("NOTE"); frame(); cursor_set(0);
+    { uint32_t i; for (i = 0; i < 2; i++) turn(EN_K2, 1); }
+    ck("SLD: the flag set on the step", (t->step[0].flags & SF_SLIDE) != 0);
+    seq_start();
+    L = slen(t, 0);
+    { uint32_t g0, g1;
+      run_to(t, L / 2); g0 = t->slide_glide;
+      run_to(t, L);     g1 = t->slide_glide;
+      printf("slide_glide step0 %u step1 %u\n", g0, g1);
+      ck("SLD: the second step is played as a slide (glide)", g1 == 1u);
+    }
+    seq_stop();
+
+    ui_power_on();                                        /* SLD on a POLY voice: the first voice glides on, no second strike */
+    t = &trk[0];
+    track_defaults_steps(t);
+    t->p[P_SLEN] = 4; t->p[P_VOICE] = V_POLY; t->p[P_SGATE] = 64; t->p[P_SSWING] = 0; song.g[G_SWING] = 0; t->p[P_GLIDE] = 0;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[0].flags |= SF_SLIDE;
+    t->step[1] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    seq_start();
+    L = slen(t, 0);
+    { uint32_t a, b;
+      run_to(t, L / 2); a = age_of(t, 60);
+      run_to(t, L * 3 / 4); b = age_of(t, 64);
+      ck("SLD on POLY: the same voice glides into the next note (no new strike)", a && a == b);
+    }
+    seq_stop();
+
+    ui_power_on();                                        /* a TIED note's RATCH 4 over its 4 steps (2026-11-10) */
+    t = &trk[0];
+    track_defaults_steps(t);
+    t->p[P_SLEN] = 8; t->p[P_VOICE] = V_POLY; t->p[P_SGATE] = 64; t->p[P_SSWING] = 0; song.g[G_SWING] = 0;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    go_title("STEP"); frame(); cursor_set(0);
+    { uint32_t i; for (i = 0; i < 3; i++) turn(EN_K3, 1); }
+    go_title("NOTE"); frame(); cursor_set(0);
+    { uint32_t i; for (i = 0; i < 5; i++) turn(EN_K2, 1); }
+    ck("tied note: LEN 4 with RATCH 4", step_ratchet(&t->step[0]) == 4u && t->step[1].time == ST_TIE && t->step[3].time == ST_TIE);
+    seq_start();
+    L = slen(t, 0);
+    { uint32_t a[4], k, d = 1;
+      for (k = 0; k < 4; k++) { run_to(t, L / 2); a[k] = age_of(t, 60); run_to(t, L / 2); }
+      for (k = 1; k < 4; k++) if (a[k] == a[k - 1]) d = 0;
+      ck("  struck once in every step it lasts (not four times in the first)", d);
+    }
+    seq_stop();
 
     ui_power_on();                                        /* a HOLD on a mono voice says so (2026-11-10) */
     t = &trk[0];
