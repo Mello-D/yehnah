@@ -201,6 +201,9 @@ static int32_t scale_steps(const track_t *t, int32_t n, int32_t d)
  * picks, in order (past its last: round again, every other time an octave up), in ROOT; recorded as PROG's chord ids
  * (the quality, the step's first note its root) */
 #define CD_PROG 14
+/* (2026-11-10) CHORD GUITAR (P_CHRD 15; harp.c gt_*): as HARP's on one of guitchordi's 50 chord styles (P_GSET), each key a
+ * chord as a guitar plays it in standard tuning (up to six strings), moved with ROOT; recorded as its notes */
+#define CD_GTR 15
 enum { CD_OFF, CD_TRI, CD_SEV, CD_ADD9, CD_SUS2, CD_SUS4, CD_MAJ, CD_MIN, CD_DOM7, CD_MAJ7, CD_MIN7, CD_POW };
 /* (2026-10-27) CHORD's own modes (TRIAD .. POWER) on HARP's keys: the lowest 7 keys (F..B) the scale's degrees I..VII
  * (I from G2..F#3, as HARP's chord 1), the 8th (C) I an octave up, each the chord the mode builds on it (chord_build,
@@ -222,14 +225,17 @@ static uint16_t hp_now[NTRK], hp_was[NTRK];     /* (chord-harp) playback: the CH
 static __attribute__((noinline)) int harp_on(const track_t *t)   /* (the harp out of RAM code: called, not inlined) */
 {
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
-    return (t->p[P_CHRD] == CD_HARP || t->p[P_CHRD] == CD_OMNI || t->p[P_CHRD] == CD_PROG || harp_cm(t)) && !e->oneshot &&
+    return (t->p[P_CHRD] == CD_HARP || t->p[P_CHRD] == CD_OMNI || t->p[P_CHRD] == CD_PROG || t->p[P_CHRD] == CD_GTR || harp_cm(t)) && !e->oneshot &&
            !(e->keys && e->keys(t, 0) >= 0);
 }
 static int harp_omni(const track_t *t) { return t->p[P_CHRD] == CD_OMNI; }
 static int harp_prog(const track_t *t) { return t->p[P_CHRD] == CD_PROG; }
 static uint32_t harp_pg(const track_t *t) { return (uint32_t)clamp(t->p[P_PROG], 0, (int32_t)PROG_N - 1); }   /* PROG */
+static int harp_gtr(const track_t *t) { return t->p[P_CHRD] == CD_GTR; }
 static uint32_t harp_set(const track_t *t)
 {
+    if (harp_gtr(t))
+        return HARP_GT0 + (uint32_t)clamp(t->p[P_GSET], 0, (int32_t)GT_NSET - 1);   /* (harp.c's set numbers) */
     return (uint32_t)clamp(t->p[P_CVOI], 0, harp_omni(t) ? (int32_t)OMNI_NSET - 1 : RES_OK() ? (int32_t)HARP_NALL - 1 : (int32_t)HARP_NSET - 1);   /* (chord-harp
                                                          * fork: the J-6 sets in the resource region, res.c) */
 }

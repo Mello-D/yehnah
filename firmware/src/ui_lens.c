@@ -91,7 +91,7 @@ static const nv_t CE_ENV[] = {NV("ENV", 0, 1, 1), NV("ENV DEST", 0, 1, 1), NV("S
 static const nv_t CE_LFO[] = {NV("LFO", 0, 1, 1), NV("LFO DEST", 0, 1, 1), NV("MSEQ", 0, 2, 2), NV("MSEQ 2", 0, 2, 2),
                               NV("MOD", 0, 0, 0)};
 static const nv_t CE_SCL[] = {NV("SCL", "SCALE", 0, 0), NV("CHORD", 0, 1, 1), NV("HARP", 0, 2, 1), NV("OMNI", 0, 3, 1),
-                              NV("PROG", 0, 4, 1)};
+                              NV("PROG", 0, 4, 1), NV("GUITAR", 0, 5, 1)};   /* (2026-11-10) GUITAR: guitchordi's chord styles */
 static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2), NV("ARP 3", 0, 0, 2),
 #if FELUCCA_AMBIENT
                               NV("AMBIENT", 0, 0, 2),
@@ -109,7 +109,7 @@ CH_OK(CE_HOME); CH_OK(CE_SYN); CH_OK(CE_SEQ); CH_OK(CE_FX); CH_OK(CE_GLO); CH_OK
 CH_OK(CE_ARP); CH_OK(CE_SAVE); CH_OK(CE_FM6); CH_OK(CE_DRM);
 #define NAV_KEYS (SEC_N + 2u)                           /* the sections' memories: EDIT's synth one, then FM6 DRUM */
 static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, 4), CH(CE_SYN, 3), CH(CE_SEQ, 5), CH(CE_FX, 8), CH(CE_GLO, 5),
-                                      CH(CE_ENV, 3), CH(CE_LFO, 3), CH(CE_SCL, 5), CH(CE_ARP, 1), CH(CE_SAVE, 2),
+                                      CH(CE_ENV, 3), CH(CE_LFO, 3), CH(CE_SCL, 6), CH(CE_ARP, 1), CH(CE_SAVE, 2),
                                       CH(CE_FM6, 3), CH(CE_DRM, 4)};
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }

@@ -84,6 +84,19 @@ static const harp_ch_t HARP_SETS[HARP_NSET][HARP_NCH] = {
 #include "res_decl.h"                   /* (chord-harp fork) YEHNAH_RES: the J-6 sets, PROGS in the resource region (harp_test.c builds this alone) */
 #include "harp_j6.h"
 #define HARP_NALL (HARP_NSET + J6_NSET)
+#include "harp_gtr.h"
+/* (2026-11-10) SCL > GUITAR's 50 sets (harp_gtr.h: guitchordi's chord styles, GT_GNAME the families): in this file's set
+ * numbers HARP_GT0 + n, the voicing of a guitar in standard tuning, in the style's key (C = ROOT C), moved with ROOT;
+ * no chord id either (seq.c records the notes). GUITAR's own parameter, P_GSET, holds n */
+#define HARP_GT0 HARP_NALL
+static uint32_t gt_genre_set(uint32_t g)    /* family g's first style (0 .. GT_NSET - 1) */
+{
+    uint32_t i;
+    for (i = 0; i < GT_NSET; i++)
+        if (GT_GEN[i] >= g)
+            return i;
+    return 0;
+}
 static uint32_t harp_genre(uint32_t set) { return set < HARP_NSET ? 0u : J6_GEN[(set - HARP_NSET) % J6_NSET]; }
 static uint32_t harp_genre_set(uint32_t g)   /* genre g's first set */
 {
@@ -92,6 +105,27 @@ static uint32_t harp_genre_set(uint32_t g)   /* genre g's first set */
         if (J6_GEN[i] >= g)
             return HARP_NSET + i;
     return 0;
+}
+/* a guitar set's chord: six strings low to high (the same note twice once), moved with ROOT (G .. B down) */
+static uint32_t gt_chord(uint32_t set, uint32_t idx, int32_t root, uint8_t *out)
+{
+    const uint8_t *nt = GT_NOTES[GT_CH[(set - HARP_GT0) % GT_NSET][idx % HARP_NCH % 11u]];
+    int32_t sh = (root % 12 + 12) % 12;
+    uint32_t i, n = 0;
+    if (sh > 6)
+        sh -= 12;
+    for (i = 0; i < 6u; i++)
+        if (nt[i] && (!n || out[n - 1u] != (uint8_t)(nt[i] + sh)))
+            out[n++] = (uint8_t)(nt[i] + sh);
+    return n;
+}
+static void gt_name(uint32_t set, uint32_t idx, int32_t root, char *buf)
+{
+    uint32_t c = GT_CH[(set - HARP_GT0) % GT_NSET][idx % HARP_NCH % 11u], n = 0;
+    const char *s;
+    for (s = HARP_PC[(c / 21u + (uint32_t)(root % 12 + 12)) % 12u]; *s; s++) buf[n++] = *s;
+    for (s = GT_QSUF[c % 21u]; *s && n < 15u; s++) buf[n++] = *s;
+    buf[n] = 0;
 }
 static uint32_t j6_ty(uint32_t set, uint32_t idx) { return J6_TY[J6_CH[(set - HARP_NSET) % J6_NSET][idx % HARP_NCH] & 511u]; }
 static int32_t j6_lo(uint32_t set, uint32_t idx, int32_t root)   /* the chord's bass */
@@ -128,6 +162,11 @@ static const harp_ch_t *harp_get(uint32_t set, uint32_t idx) { return &HARP_SETS
 static int32_t harp_lo(uint32_t set, uint32_t idx, int32_t root)
 {
     const harp_ch_t *c1 = harp_get(set, 0);
+    if (set >= HARP_GT0) {
+        uint8_t nt[6];
+        gt_chord(set, idx, root, nt);
+        return nt[0];
+    }
     if (set >= HARP_NSET)
         return j6_lo(set, idx, root);
     int32_t r1 = HARP_LO + (c1->root + root % 12 + 12) % 12;
@@ -142,6 +181,8 @@ static uint32_t harp_chord(uint32_t set, uint32_t idx, int32_t root, uint8_t *ou
     const harp_ch_t *c = harp_get(set, idx);
     int32_t lo = harp_lo(set, idx, root), b = c->bass < 12u ? (c->bass + root % 12 + 12) % 12 : -1;
     uint32_t i, n = 0;
+    if (set >= HARP_GT0)
+        return gt_chord(set, idx, root, out);
     if (set >= HARP_NSET)
         return j6_chord(set, idx, root, out);
     if (b >= 0) {
@@ -177,6 +218,10 @@ static void harp_name(uint32_t set, uint32_t idx, int32_t root, char *buf)
     const harp_ch_t *c = harp_get(set, idx);
     const char *s;
     uint32_t n = 0;
+    if (set >= HARP_GT0) {
+        gt_name(set, idx, root, buf);
+        return;
+    }
     if (set >= HARP_NSET) {
         j6_name(set, idx, root, buf);
         return;

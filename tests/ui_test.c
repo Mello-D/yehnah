@@ -9552,8 +9552,8 @@ static int test_lz_key(void)
     ui_power_on(); frame();
     press(B_SCL); frame();
     ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(0) &&
-         lz_tabs() == 5u && lz_crumb_is("SCL \xB7 SCALE") && lz_count_is("1/5");   /* (chord-harp fork: KEY CHORD
-                                                                     * HARP OMNI PROG) */
+         lz_tabs() == 6u && lz_crumb_is("SCL \xB7 SCALE") && lz_count_is("1/6");   /* (chord-harp fork: KEY CHORD
+                                                                     * HARP OMNI PROG GUITAR) */
     turn(EN_SELECT, 1); frame();
     ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(1) && lz_crumb_is("SCL \xB7 CHORD");
     turn(EN_SELECT, 1); frame();
@@ -9562,12 +9562,14 @@ static int test_lz_key(void)
     ok &= str_eq(cur_page()->title, "OMNI") && lz_tab_lit(3) && TSEL->p[P_CHRD] == CD_OMNI;
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "PROG") && lz_tab_lit(4) && TSEL->p[P_CHRD] == CD_PROG;
+    turn(EN_SELECT, 1); frame();
+    ok &= str_eq(cur_page()->title, "GUITAR") && lz_tab_lit(5) && TSEL->p[P_CHRD] == CD_GTR;
     frames(320); press(B_SCL); frame();
     ok &= ui.home && home_level() == 0u;                            /* (SCL on SCL: TRACKS) */
     frames(320); press(B_SCL); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
-    turn(EN_SELECT, 4); frame();
-    ok &= str_eq(cur_page()->title, "PROG");
+    turn(EN_SELECT, 5); frame();
+    ok &= str_eq(cur_page()->title, "GUITAR");
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL's chain wraps there: not into ARP) */
     turn(EN_SELECT, -1); frame();
@@ -9592,7 +9594,7 @@ static int test_lz_key(void)
     ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL from ARP: SCL's first) */
     press(B_ARP); frame();
     ok &= str_eq(cur_page()->title, "ARP");                         /* (ARP from SCL: ARP's first) */
-    bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD . HARP . OMNI . PROG, ARP ARP . ARP 2 . ARP 3 . AMBIENT; taps, SELECT, each its first page", ok);
+    bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD . HARP . OMNI . PROG . GUITAR, ARP ARP . ARP 2 . ARP 3 . AMBIENT; taps, SELECT, each its first page", ok);
     press(B_SCL); frame();
     turn(EN_SELECT, 4); frame();
     pr = TSEL->preset;

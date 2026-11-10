@@ -305,7 +305,7 @@ static void draw_load(int32_t x)
 static const char *key_mode_tag(const track_t *t)
 {
     int32_t m = t->p[P_CHRD];
-    return m == CD_HARP ? "HARP" : m == CD_OMNI ? "OMNI" : m == CD_PROG ? "PROG" : m > 0 && m < CD_HARP ? "CHORD" : 0;
+    return m == CD_HARP ? "HARP" : m == CD_OMNI ? "OMNI" : m == CD_PROG ? "PROG" : m == CD_GTR ? "GUITAR" : m > 0 && m < CD_HARP ? "CHORD" : 0;
 }
 /* .. and whether the sound plays it whole: not a kit nor an engine's own key map (the mode does not apply there), not
  * one voice (ACID) nor MONO / LEGATO / UNISON (the chord keys play the root alone). Else the badge and the sound's name
@@ -1383,6 +1383,19 @@ static void draw_cards(void)
         }
         if (cur_page()->graph == GR_SETS && c >= 2u) {
             draw_column(c, "", "", "", T_DIM, -1, ICON_NONE);
+            continue;
+        }
+        if (c == 1u && GTR_PAGE(cur_page())) {          /* (2026-11-10) SCL > GUITAR: KNOB 2 the style's family */
+            uint32_t g = GT_GEN[(uint32_t)clamp(TSEL->p[P_GSET], 0, (int32_t)GT_NSET - 1)];
+            draw_column(1, "FAMILY", GT_GNAME[g], "", VAL(1u), pick_of(GT_NGEN, g), ICON_AUTO);
+            continue;
+        }
+        if (c == 2u && GTR_PAGE(cur_page()) && d && vp) {   /* .. KNOB 3 the style within it */
+            uint32_t cs = (uint32_t)clamp(*vp, 0, (int32_t)GT_NSET - 1), g = GT_GEN[cs], f = gt_genre_set(g), e = f;
+            while (e < GT_NSET && GT_GEN[e] == g)
+                e++;
+            param_format(d, *vp, val, &unit);
+            draw_column(2, d->label, val, unit, VAL(2u), pick_of(e - f, cs - f), param_icon(d, *vp));
             continue;
         }
         if (c == 1u && HARP_PAGE(cur_page())) {         /* (2026-10-27) SCL > HARP: KNOB 2 the set's genre */

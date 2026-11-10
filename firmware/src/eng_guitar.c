@@ -14,9 +14,10 @@
  * (GT_SR: its top 11 kHz, half the work and half the line), the output interpolated back up. In float (the core's FPU;
  * fastmath.h). Its own envelope (ownenv): the ADSR is not used; the strum is HARP's. */
 #include "fastmath.h"
+#include "phys_dsp.c"                  /* PHYS: DaisySP's string (Electrosmith, Emilie Gillet; MIT), fixed point; see below */
 
-enum { GT_NYLON, GT_STEEL, GT_ELEC, GT_N };
-static const char *const N_GTMODEL[] = {"NYLON", "STEEL", "ELEC"};
+enum { GT_NYLON, GT_STEEL, GT_ELEC, GT_PHYS, GT_N };
+static const char *const N_GTMODEL[] = {"NYLON", "STEEL", "ELEC", "PHYS"};
 #define GT_POOL 6u                     /* strings sounding at once, all parts */
 #define GT_LEN 304u                    /* a line's samples: D2 (73.4 Hz) and up */
 #define GT_SR 22050.0f                 /* the string's rate: half the output's */
@@ -24,10 +25,11 @@ typedef struct {                       /* a model: its decay, its pluck, its bod
     float t60, bright, loss;           /* T60 of A2 (s); the pluck's brightness; TONE's averaging at its middle */
     float bf[2], bq[2], bg[2];
 } gt_model_t;
-static const gt_model_t GT_MODELS[GT_N] = {
+static const gt_model_t GT_MODELS[GT_N] = {    /* (PHYS has its own path: gt_phys_*; its row is only the filler) */
     {4.0f, 0.55f, 0.42f, {98.0f, 205.0f}, {6.0f, 5.0f}, {0.9f, 0.6f}},      /* NYLON: dark, a round body */
     {6.0f, 0.85f, 0.30f, {110.0f, 230.0f}, {7.0f, 6.0f}, {0.7f, 0.5f}},     /* STEEL: bright, longer */
     {7.0f, 0.75f, 0.26f, {2600.0f, 0.0f}, {1.4f, 1.0f}, {0.6f, 0.0f}},      /* ELEC: no body, the pickup's peak */
+    {4.0f, 0.55f, 0.42f, {0.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 0.0f}},         /* PHYS: unused */
 };
 typedef struct {
     float ap_c, ap_x1, ap_y1;          /* the tuning allpass: its coefficient, last input, last output */
@@ -41,7 +43,11 @@ typedef struct {
     uint8_t on, quiet, owner, slot, rel, model, oct;   /* owner: part + 1 (0 free), slot: its voice; rel: DAMP done */
 } gt_voice_t;
 static gt_voice_t gt_pool[GT_POOL];
-static int16_t gt_line[GT_POOL][GT_LEN] __attribute__((section(".pool")));
+typedef union {                        /* a string's memory: the Karplus-Strong line, or PHYS's (the larger) */
+    int16_t l[GT_LEN];
+    px_string_t px;
+} gt_slot_t;
+static gt_slot_t gt_line[GT_POOL] __attribute__((section(".pool")));
 
 #define GT_NI static __attribute__((noinline))
 /* the voice's pool entry, 0 = none (another voice took it) */
@@ -90,6 +96,63 @@ GT_NI void gt_tune(const track_t *t, gt_voice_t *s, int32_t cents)
     s->g = fm_expf(-6.9078f / (t60 * f0));              /* -60 dB over t60: a pass a period */
 }
 
+/* PHYS: DaisySP's extended Karplus-Strong string (phys_dsp.c, fixed point, 44.1 kHz): a noise burst one period long
+ * through a low-pass, a delay line with a dispersion all-pass (stiff, bright) or a curved bridge (buzzy), a damping
+ * filter. In the same string slots (gt_slot_t) as the others. Its settings per block (px_string_block).
+ * PICK the pluck position (a comb on the burst), PLUCK the brightness, DECY the damping, TONE the bridge (low: curved,
+ * buzzy; high: stiffer, more dispersion), BODY (above 64) the exciter itself mixed in (the pick), MUTE the palm
+ * (darker, much shorter), DAMP as the others'. The velocity is the burst's accent and the level. */
+#define GT_PHYS_GAIN 36000             /* (at middle C, velocity 127; lower notes ring quieter in the model: gt_phys_render) */
+GT_NI void gt_phys_on(gt_voice_t *s, const voice_t *v, int was)
+{
+    px_string_t *S = &gt_line[s - gt_pool].px;
+    uint32_t i, *w = (uint32_t *)S, seed = (uint32_t)s->nz | 1u;
+    if (!was) {                                         /* a fresh string (a ringing one is struck again) */
+        for (i = 0; i < sizeof *S / 4u; i++)
+            w[i] = 0;
+        S->rng = seed;
+        S->src = 1u << 30;
+    }
+    S->trig = 1;
+    s->rel = 0;
+    s->on = 1;
+    s->quiet = 0;
+    s->level = (float)v->vel * (1.0f / 127.0f);
+}
+GT_NI void gt_phys_render(const track_t *t, const voice_t *v, gt_voice_t *s, int32_t *out, uint32_t n, const vmod_t *m)
+{
+    px_string_t *S = &gt_line[s - gt_pool].px;
+    px_string_blk_t B;
+    const int16_t *p = t->p;
+    int32_t y[CTL], ax[CTL], mute = p[P_E6], brit, damp, strc, acc, exc, g, vel = v->vel, pk = 0;
+    uint32_t i;
+    if (n > CTL)
+        n = CTL;
+    if (!v->gate && !s->rel && p[P_E7] > 0)            /* DAMP: the key let go */
+        s->rel = 1;
+    brit = clamp(16000 + p[P_E2] * 420 - mute * 100, 4000, 65536);
+    damp = clamp(20000 + p[P_E3] * 320 - mute * 200, 3000, 61000);   /* (below 62259: it always rings out) */
+    if (s->rel)
+        damp = clamp(30000 - p[P_E7] * 220, 2000, damp);
+    strc = 8000 + p[P_E4] * 126;
+    acc = clamp(vel * 315, 0, 65536);
+    exc = clamp(p[P_E5] - 64, 0, 63) * 516;             /* Q15 */
+    g = (int32_t)((float)((GT_PHYS_GAIN * vel / 127) * (70 + 30 * vel / 127) / 100) *
+                  fm_exp2f((float)(60 - (int32_t)v->note) * (0.8f / 12.0f)));   /* (the burst's level follows the pitch: f^0.8) */
+    px_string_block(&B, S, m->inc, strc, brit, damp, acc, 0, p[P_E1] * 258);
+    px_string_excite(&B, S, ax, n);
+    px_string_run(&B, S, ax, y, n);
+    for (i = 0; i < n; i++) {
+        int32_t o = px_m(y[i] + px_m(ax[i], exc, 15), g, 20), a = o < 0 ? -o : o;
+        pk = a > pk ? a : pk;
+        out[i] += voice_amp(o, m, i) << 1;
+    }
+    if (pk < 8)                                         /* ~35 ms of nothing: the string has stopped */
+        s->quiet = (uint8_t)(s->quiet + 1u), s->on = s->quiet > 48u ? 0 : 1;
+    else
+        s->quiet = 0;
+}
+
 static void guitar_note_on(track_t *t, voice_t *v)
 {
     gt_voice_t *s = gt_of(t, v);
@@ -97,6 +160,7 @@ static void guitar_note_on(track_t *t, voice_t *v)
     float bright, vg = (float)v->vel * (1.0f / 127.0f), lp = 0.0f, amp, mute = gt_k(t, 6);
     uint32_t i, n, pk, k;
     int16_t *L;
+    int was;
     if (!s) {                                           /* a string: a free one, else the quietest */
         uint32_t best = 0;
         float lo = 1e9f;
@@ -112,8 +176,15 @@ static void guitar_note_on(track_t *t, voice_t *v)
         s->slot = (uint8_t)(v - t->v);
         s->nz = (int32_t)(0x2545F491u + v->age * 2654435761u);
     }
-    L = gt_line[s - gt_pool];
+    L = gt_line[s - gt_pool].l;
+    was = s->on && s->model == GT_PHYS;                 /* (a ringing PHYS string: its memory is not a line) */
     s->model = (uint8_t)clamp(t->p[P_E0], 0, GT_N - 1);
+    if (s->model == GT_PHYS) {
+        gt_phys_on(s, v, was);
+        return;
+    }
+    if (was)
+        s->on = 0;
     m = &GT_MODELS[s->model];
     s->rel = 0;
     gt_tune(t, s, (int32_t)v->note * 100);
@@ -158,6 +229,10 @@ static void guitar_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     int16_t *L;
     if (!s || !s->on)
         return;
+    if (s->model == GT_PHYS) {
+        gt_phys_render(t, v, s, out, n, m);
+        return;
+    }
     {   /* the pitch: the key's, with the part's bend, tune and vibrato (m->pitch16, 1/16 semitone) */
         int32_t c = m->pitch16 * 100 / 16 + m->fine * 100 / 236;
         if (!v->gate && !s->rel && t->p[P_E7] > 0) {    /* DAMP: the key let go */
@@ -167,7 +242,7 @@ static void guitar_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         if (c != s->cents)
             gt_tune(t, s, c);
     }
-    L = gt_line[s - gt_pool];
+    L = gt_line[s - gt_pool].l;
     apc = s->ap_c, apx = s->ap_x1, apy = s->ap_y1, z1 = s->z1, g = s->g, sv = s->s, dcx = s->dc_x, dcy = s->dc_y;
     bm = s->bmix;
     w = s->w, len = s->len;
@@ -257,9 +332,31 @@ static const preset_t GUITAR_PRESETS[] YEHNAH_RES = {
     {"OUD", {GT_NYLON, 20, 80, 45, 60, 90, 0, 45}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 30)},
     {"KOTO", {GT_STEEL, 15, 100, 60, 90, 40, 0, 50}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 10, 40)},
     {"SHAMISEN", {GT_STEEL, 5, 120, 30, 110, 20, 0, 70}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 25)},
+    /* (chord-harp fork, 2026-11-10) PHYS: DaisySP's string, the settings of guitchordi's guitars (stoogs/guitchordi,
+     * GPL-3.0; its sound is this model). {MODEL PICK PLUCK DECY TONE BODY MUTE DAMP} */
+    {"SOFT NYLON", {GT_PHYS, 64, 44, 72, 44, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 30)},
+    {"DAISY STEEL", {GT_PHYS, 62, 70, 56, 67, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 10, 0, 30)},
+    {"JUMBO", {GT_PHYS, 76, 54, 91, 24, 64, 0, 25}, {0, 64, 127, 40}, 0, 0, FX(0, 10, 0, 32)},
+    {"TIGHT MUTE", {GT_PHYS, 48, 56, 30, 63, 64, 50, 60}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 18)},
+    {"GLASS CLEAN", {GT_PHYS, 78, 73, 80, 79, 64, 0, 40}, {0, 64, 127, 40}, 0, 0, FX(0, 30, 20, 26)},
+    {"ROUND JAZZ", {GT_PHYS, 87, 30, 61, 44, 64, 0, 50}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 30)},
+    {"GRIT CRUNCH", {GT_PHYS, 50, 70, 59, 87, 64, 0, 40}, {0, 64, 127, 40}, 0, 0, FX(45, 0, 15, 24),
+     XP(P_DTYPE + 1, 5, P_FCUT + 1, 96)},
+    {"STRING HARP", {GT_PHYS, 90, 68, 100, 0, 64, 0, 20}, {0, 64, 127, 40}, 0, 0, FX(0, 20, 20, 60)},
+    {"DULCIMER", {GT_PHYS, 33, 90, 62, 127, 64, 0, 40}, {0, 64, 127, 40}, 0, 0, FX(0, 10, 10, 40)},
+    /* (the rest of guitchordi's string instruments: Wood, Wire, Glow, Heavy Electric, Pizzicato Cello, Electric Bass) */
+    {"WOOD", {GT_PHYS, 62, 26, 47, 67, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 30)},
+    {"WIRE", {GT_PHYS, 62, 71, 72, 119, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 10, 0, 30)},
+    {"GLOW", {GT_PHYS, 62, 50, 91, 127, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 20, 20, 40)},
+    {"HEAVY PHYS", {GT_PHYS, 41, 79, 50, 103, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(85, 0, 0, 14),
+     XP(P_DTYPE + 1, 5, P_FCUT + 1, 88)},
+    {"PIZZ CELLO", {GT_PHYS, 93, 37, 72, 8, 64, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 10, 36),
+     XP(P_TRANS + 1, -12)},
+    {"PHYS BASS", {GT_PHYS, 56, 37, 41, 20, 64, 0, 30}, {0, 64, 127, 40}, 0, 1, FX(10, 0, 0, 6),
+     XP(P_TRANS + 1, -12)},
     {"INIT", {1, 25, 70, 64, 64, 64, 0, 30}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
-static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGN";
+static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGN";
 _Static_assert(sizeof GUITAR_PT == NELEM(GUITAR_PRESETS) + 1u, "a type a preset");
 /* (engine 19: its favourites in favorites.factory[3]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(GUITAR_PRESETS) <= 128u, "GUITAR's favourites");

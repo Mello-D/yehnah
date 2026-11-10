@@ -281,16 +281,17 @@ static const char *const N_CLEN[] = {"OFF", "1", "2", "3", "4", "5", "6", "7", "
 static const param_desc_t CLEN_DESC = {"C.LEN", F_ENUM, 0, 64, 0, N_CLEN, 0};   /* (0.6.47) P_CLEN */
 static const param_desc_t DXIMG_DESC = {"IMAGE", F_INT, 0, 127, 0, 0, 0};       /* (0.6.48) P_DXIMG */
 static const char *const N_CHRD[] = {"OFF", "TRIAD", "7TH", "ADD9", "SUS2", "SUS4", "MAJ", "MIN", "7", "MAJ7", "MIN7",
-                                     "POWER", "HARP", "OMNI", "PROG", 0};
+                                     "POWER", "HARP", "OMNI", "PROG", "GUITAR", 0};
 static const char *const N_CVOI[] = {"CLOSE", "LEAD", "OPEN", "+BASS", 0};
 static const param_desc_t CHORD_DESC[3] = {              /* (0.6.81) SCL > CHORD: P_CHRD P_CVOI P_CSTR */
-    {"CHORD", F_ENUM, 0, 14, 0, N_CHRD, 0}, {"VOICING", F_ENUM, 0, 3, 0, N_CVOI, 0}, {"STRUM", F_PCT, 0, 127, 0, 0, 0}};
+    {"CHORD", F_ENUM, 0, 15, 0, N_CHRD, 0}, {"VOICING", F_ENUM, 0, 3, 0, N_CVOI, 0}, {"STRUM", F_PCT, 0, 127, 0, 0, 0}};
 static const param_desc_t CHORD_TAB_DESC = {"CHORD", F_ENUM, 1, 11, 1, N_CHRD, 0};   /* (chord-harp fork) the CHORD tab's
                                                          * knob: HARP and OMNI are tabs of their own (ui.c chord_tab) */
 static const param_desc_t HARP_SET_DESC0 = {"SET", F_ENUM, 0, HARP_NSET - 1, 0, HARP_SET_NAME, 0};   /* (chord-harp fork) HARP's
                                                          * own only: the J-6 sets in the resource region (res.c), missing */
 static const param_desc_t HARP_SET_DESC = {"SET", F_ENUM, 0, HARP_NALL - 1, 0, HARP_SET_NAME, 0};   /* HARP: P_CVOI (the
                                                          * J-6's: their place in their genre, param_format) */
+static const param_desc_t GTR_SET_DESC = {"SET", F_INT, 0, GT_NSET - 1, 0, 0, 0};   /* GUITAR: P_GSET (the style's place in its family, param_format) */
 static const param_desc_t OMNI_SET_DESC = {"SET", F_ENUM, 0, OMNI_NSET - 1, 0, OMNI_SET_NAME, 0};   /* OMNI: P_CVOI */
 static const param_desc_t HUM_DESC[3] = {                /* (0.6.87) SEQ > HUMAN: P_HVEL P_HTIM P_HGAT (127 = 0 %) */
     {"HUMAN", F_PCTINV, 0, 127, 127, 0, 0}, {"TIME", F_PCTINV, 0, 127, 127, 0, 0}, {"GATE", F_PCTINV, 0, 127, 127, 0, 0}};   /* (0.6.92:
@@ -321,6 +322,7 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         case P_CVOI: return t->p[P_CHRD] == 12 ? (RES_OK() ? &HARP_SET_DESC : &HARP_SET_DESC0) : t->p[P_CHRD] == 13 ? &OMNI_SET_DESC : &CHORD_DESC[1];   /* (HARP,
                                                          * OMNI: the set) */
         case P_CSTR: return &CHORD_DESC[2];
+        case P_GSET: return &GTR_SET_DESC;
         case P_HVEL: return &HUM_DESC[0];
         case P_HTIM: return &HUM_DESC[1];
         case P_HGAT: return &HUM_DESC[2];
@@ -445,6 +447,15 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         static char u[5] = "/";
         uint32_t g = harp_genre((uint32_t)v), f = harp_genre_set(g), n = f;
         while (n < HARP_NALL && harp_genre(n) == g) n++;
+        fmt_int(val, v - (int32_t)f + 1);
+        fmt_int(u + 1, (int32_t)(n - f));
+        *unit = u;
+        return;
+    }
+    if (d == &GTR_SET_DESC) {                           /* (2026-11-10) a guitar style: "3" "/9", its place in its family */
+        static char u[5] = "/";
+        uint32_t g = GT_GEN[(uint32_t)clamp(v, 0, (int32_t)GT_NSET - 1)], f = gt_genre_set(g), n = f;
+        while (n < GT_NSET && GT_GEN[n] == g) n++;
         fmt_int(val, v - (int32_t)f + 1);
         fmt_int(u + 1, (int32_t)(n - f));
         *unit = u;
@@ -770,13 +781,16 @@ static const page_t PAGES[] = {
                                                          * KNOB 2 GENRE (SET to the genre's first), KNOB 3 SET within
                                                          * it (2026-10-27, ui_input.c edit_param; STRUM on SCL held) */
     {"OMNI", FAM_SCL, SC_TRACK, GR_NONE, {P_ROOT, P_CVOI, P_OAUTO, P_OSTR}},
+    {"GUITAR", FAM_SCL, SC_TRACK, GR_NONE, {P_ROOT, 0xFF, P_GSET, P_HPLATE}},   /* (2026-11-10) SCL > GUITAR: guitchordi's chord
+                                                         * styles on HARP's keys; KNOB 2 FAMILY, KNOB 3 the style within it */
     {"PROG", FAM_SCL, SC_TRACK, GR_PROG, {P_ROOT, P_PROG, 0xFF, P_HPLATE}},   /* (chord-harp fork) SCL > PROG: the chord
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
                                                          * (2026-10-27, ui_input.c prog_write) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
-#define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu)   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
+#define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)          /* (2026-11-10) SCL > GUITAR: KNOB 2 FAMILY, KNOB 3 STYLE */
+#define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu && !GTR_PAGE(pg))   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
                                                          * (CHORD has PLATE too) */
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */

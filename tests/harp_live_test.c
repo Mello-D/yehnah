@@ -72,7 +72,21 @@ int main(void)
     usb.config = 1;
     mo_w = mo_r = 0;
     assert(t->p[P_VOICE] == V_POLY && !t->p[P_AMODE] && !t->p[P_AHOLD]);
-    assert(CHORD_DESC[0].max == CD_PROG && track_desc(t, P_CVOI) == &CHORD_DESC[1]);
+    assert(CHORD_DESC[0].max == CD_GTR && track_desc(t, P_CVOI) == &CHORD_DESC[1]);
+    {   /* (2026-11-10) GUITAR: style 1 chord 1 is the open C (5 strings, the low E muted), ROOT moves it, key 12 plays chord 1 again */
+        uint8_t g[HARP_NMAX];
+        char nm[16];
+        assert(harp_chord(HARP_GT0, 0, 0, g) == 5u && g[0] == 48 && g[1] == 52 && g[2] == 55 && g[3] == 60 && g[4] == 64);
+        assert(harp_chord(HARP_GT0, 0, 2, g) == 5u && g[0] == 50 && g[4] == 66);
+        assert(harp_chord(HARP_GT0, 11, 0, g) == 5u && g[0] == 48);
+        harp_name(HARP_GT0 + 1, 0, 0, nm);
+        assert(nm[0] == 'C' && nm[1] == 'm' && nm[2] == 'a' && nm[3] == 'j' && nm[4] == '7' && !nm[5]);   /* Jazz Essentials: Cmaj7 */
+        t->p[P_CHRD] = CD_GTR;
+        assert(track_desc(t, P_GSET) == &GTR_SET_DESC && harp_set(t) == HARP_GT0 && harp_j6(t));
+        t->p[P_GSET] = 49;
+        assert(harp_set(t) == HARP_GT0 + 49u);
+        t->p[P_GSET] = 0;
+    }
     t->p[P_CHRD] = CD_HARP;
     assert(track_desc(t, P_CVOI) == &HARP_SET_DESC);   /* VOICING is the SET in HARP */
     for (k = 0; k < 27u; k++)                           /* the chord keys, the black keys over them: not single notes */

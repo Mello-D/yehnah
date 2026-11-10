@@ -20,7 +20,8 @@ Every file in this tree that carries an `SPDX-License-Identifier: GPL-3.0-only` 
 
 One source file is a port and keeps the licence of its original: `firmware/src/fm6_core.c`
 (msfa, Apache-2.0). The firmware built with it is GPL-3.0-only as a whole. (The PHYS engine, ported
-from DaisySP and Rings, MIT, was removed in FELUCCA TONIC.)
+from DaisySP and Rings, MIT, was removed in FELUCCA TONIC; `firmware/src/phys_dsp.c`, DaisySP's string, MIT and
+unchanged, is back since 2026-11-10 as GUITAR's PHYS model.)
 
 You may use, study, change and share Felucca under the GPL. If you distribute Felucca, or
 firmware derived from it, you must also give your recipients its complete corresponding

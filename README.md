@@ -72,6 +72,9 @@ with a Seeed XIAO RP2040.
   contributors: keremimo, ChanceTheMaker, andreahaku, spinkham, zednaked, jasonpersinger.
 - **[SLOOP](https://github.com/isod89/sloop-fm1)** by isod89 (GPL-3.0): the sections, quick chain and SONG REC system
   the song mode is based on.
+- GUITAR's PHYS model: the string of [DaisySP](https://github.com/electro-smith/DaisySP) (Electrosmith, Emilie Gillet, [MIT](LICENSES/MIT-DaisySP.txt)),
+  in fixed point for the FM-1 by Leo Kuroshita (`firmware/src/phys_dsp.c`, unchanged); its settings follow
+  [guitchordi](https://github.com/stoogs/guitchordi) by stoogs (GPL-3.0), which plays the same string.
 - Fonts: [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) ([SIL OFL 1.1](LICENSES/OFL-ChakraPetch.txt)),
   [IBM Plex Mono](https://github.com/IBM/plex) ([SIL OFL 1.1](LICENSES/OFL-IBMPlexMono.txt)),
   [Michroma](https://github.com/googlefonts/Michroma-font) ([SIL OFL 1.1](LICENSES/OFL-Michroma.txt)),
