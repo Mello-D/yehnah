@@ -932,6 +932,7 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
         if (hl) nl = hl;
         str_cpy(b, hl ? "HOLD " : nl > 1u ? "LEN " : TIME_N[st->time % 3u], sizeof b);
         if (nl > 1u) fmt_int(b + str_len(b), (int32_t)nl);
+        if (hl && !voice_poly((int)trk_vmode(t))) str_cpy(b + str_len(b), " MONO", 6);   /* (a mono voice: the next note takes the hold) */
     }
     acc = nl > 1u;                                  /* (the text lit) */
     if (!dr && st->time == ST_NOTE && st->n && (st->comp == CP_CHORD || st->comp2 == CP_CHORD)) {   /* (chord-harp) a

@@ -7898,9 +7898,18 @@ static int test_note_page(void)
     t->step[0].vel = 100;
     go_title("NOTE"); frame();
     cursor_set(0);
-    turn(EN_K1, 1);                                     /* STEP: the cursor moves on this page too */
-    ok = ui.cursor == 1u;
-    turn(EN_K1, -1);
+    t->step[4] = (step_t){{72}, 1, ST_NOTE, 0, 100}; t->step[9] = (step_t){{50}, 1, ST_NOTE, 0, 100};
+    turn(EN_K1, 1);                                     /* NOTE: on to the next note, over the empty steps (2026-11-10) */
+    ok = ui.cursor == 4u;
+    turn(EN_K1, 5);                                     /* (a detent a note) */
+    ok &= ui.cursor == 9u;
+    turn(EN_K1, 1);                                     /* round the pattern */
+    ok &= ui.cursor == 0u;
+    turn(EN_K1, -1);                                    /* back: the last note */
+    ok &= ui.cursor == 9u;
+    turn(EN_K1, -1); turn(EN_K1, -1);
+    ok &= ui.cursor == 0u;
+    memset(&t->step[4], 0, sizeof t->step[4]); t->step[4].time = ST_REST; memset(&t->step[9], 0, sizeof t->step[9]); t->step[9].time = ST_REST;
     turn(EN_K2, 1);                                     /* FLAG 1: ACC */
     ok &= (t->step[0].flags & SF_ACCENT) && !(t->step[0].flags & SF_SLIDE);
     turn(EN_K2, 1);                                     /* .. SLD: ACC goes */
@@ -7913,7 +7922,7 @@ static int test_note_page(void)
     ok &= step_ratchet(&t->step[0]) == 2u && (t->step[0].flags & SF_SLIDE);
     turn(EN_K3, 1);                                     /* FLAG 2: RATCH 2 as well: nothing more */
     ok &= step_ratchet(&t->step[0]) == 2u && !(t->step[0].flags & SF_SLIDE);
-    bad += check("SEQ > NOTE: FLAG 1 and FLAG 2 are lists of the flags, any from each, STEP on KNOB 1", ok);
+    bad += check("SEQ > NOTE: KNOB 1 selects the notes in order; FLAG 1 and FLAG 2 are lists of the flags, any from each", ok);
     t->step[0].flags = 0; t->step[0].probability = 0; t->step[0].comp = t->step[0].carg = 0;   /* a bare step */
     { uint32_t i; for (i = 0; i < 11u; i++) turn(EN_K3, 1); }                /* FLAG 2: ACC SLD RATCH 2 .. 8 ECHO CHANCE */
     ok = step_chance(&t->step[0]) == 50u && !t->step[0].comp && step_ratchet(&t->step[0]) == 1u && !t->step[0].flags;

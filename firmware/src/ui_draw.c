@@ -1348,7 +1348,12 @@ static void draw_cards(void)
         if (!kit) nf_pair(&fa, &fb);
         fmt_int(vl, st->flags & SF_ACCENT && !kit ? 127 : st->vel ? st->vel : 96);   /* (an ACC plays 127: said, "ACC") */
         fmt_int(sn, (int32_t)ui.cursor + 1);
-        draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
+        {
+            char nn[8], nt[8];
+            uint32_t at = 0, tot = note_count(TSEL, &at);
+            fmt_int(nn, (int32_t)at); fmt_int(nt + 1, (int32_t)tot); nt[0] = '/';
+            draw_column(0, "NOTE", at ? nn : "--", nt, VAL(0u), -1, ICON_AUTO);
+        }
         draw_column(1, "FLAG 1", kit ? "--" : NF_NAMES[fa], "", on && !kit ? VAL(1u) : T_DIM, kit ? -1 : pick_of(NF_N, fa), ICON_AUTO);
         draw_column(2, "FLAG 2", kit ? "--" : NF_NAMES[fb], "", on && !kit ? VAL(2u) : T_DIM, kit ? -1 : pick_of(NF_N, fb), ICON_AUTO);
         draw_column(3, "VELOCITY", vl, !kit && (st->flags & SF_ACCENT) ? "ACC" : "", on ? VAL(3u) : T_DIM, on ? (int32_t)((st->vel ? st->vel : 96u) - 1u) * 1000 / 126 : -1,
@@ -1388,7 +1393,7 @@ static void draw_cards(void)
             fmt_int(tv, (int32_t)nl);                      /* (2026-11-10) the note's length in steps */
             draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
             draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-            draw_column(2, "LENGTH", tv, hl ? "HOLD" : "ST", step_on(st) ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+            draw_column(2, "LENGTH", tv, hl ? (voice_poly((int)trk_vmode(TSEL)) ? "HOLD" : "MONO") : "ST", step_on(st) ? VAL(2u) : T_DIM, -1, ICON_AUTO);
             draw_column(3, "MOVE", step_on(st) && !st->hit ? sn : "--", step_on(st) && !st->hit ? "<>" : "", step_on(st) ? VAL(3u) : T_DIM, -1, ICON_AUTO);
         }
         return;

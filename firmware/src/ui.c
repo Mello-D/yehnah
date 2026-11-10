@@ -849,6 +849,35 @@ static uint32_t hold_len(const step_t *s, uint32_t room)   /* its steps (carg 0:
     uint32_t a = s->comp2 == CP_HOLD ? s->carg2 : s->comp == CP_HOLD ? s->carg : 0xFFFFu;
     return a == 0xFFFFu ? 0u : a && a < room ? a : room;
 }
+/* (2026-11-10) SEQ > NOTE's KNOB 1: the notes of the pattern in order (a step that starts a NOTE or a hit; its TIEs and the steps a HOLD
+ * rings over are not notes), the cursor on the step each starts at; a note's number among them (0: the cursor is not on one) */
+static void cursor_set(int32_t c);
+static uint32_t note_count(const track_t *t, uint32_t *at)
+{
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, n = 0, pos = 0;
+    for (i = 0; i < len; i++)
+        if (step_on(&seq_steps(t)[i])) {
+            n++;
+            if (i == ui.cursor) pos = n;
+        }
+    if (at) *at = pos;
+    return n;
+}
+static void note_select(int32_t d)                      /* d notes on (negative: back), round the pattern */
+{
+    track_t *t = TSEL;
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), n = note_count(t, 0), i = ui.cursor;
+    int32_t k = d > 0 ? d : -d;
+    if (!n) { ui_message("NO NOTES"); return; }
+    while (k-- > 0) {
+        uint32_t j;
+        for (j = 0; j < len; j++) {
+            i = d > 0 ? (i + 1u) % len : (i + len - 1u) % len;
+            if (step_on(&seq_steps(t)[i])) break;
+        }
+    }
+    cursor_set((int32_t)i);
+}
 static void step_clear(step_t *st)
 {
     st->n = 0;

@@ -841,7 +841,7 @@ static void length_turn(track_t *t, uint32_t c, int32_t d)
     uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, room = c < len ? len - c : 0u, l0, l1, j;
     step_t *st = &t->step[c];
     uint8_t *ha = hold_arg(st);
-    char m[16];
+    char m[20];
     if (!room)
         return;
     if (ha) {
@@ -853,6 +853,7 @@ static void length_turn(track_t *t, uint32_t c, int32_t d)
         }
         *ha = (uint8_t)n;
         str_cpy(m, "HOLD ", sizeof m); fmt_int(m + 5, n);
+        if (!voice_poly((int)trk_vmode(t))) str_cpy(m + str_len(m), " MONO", 6);   /* (a mono voice: the next note takes it) */
         ui_message(m);
         return;
     }
@@ -870,6 +871,7 @@ static void length_turn(track_t *t, uint32_t c, int32_t d)
         if (!st->comp2) { st->comp2 = CP_HOLD; st->carg2 = (uint8_t)n; }
         else { st->comp = CP_HOLD; st->carg = (uint8_t)n; }
         str_cpy(m, "HOLD ", sizeof m); fmt_int(m + 5, (int32_t)n);
+        if (!voice_poly((int)trk_vmode(t))) str_cpy(m + str_len(m), " MONO", 6);
         ui_message(m);
     }
 }
@@ -933,12 +935,12 @@ static void move_step(int32_t steps)
     ui.bank = (uint8_t)(ui.cursor / 16u);
     ui.entry_open = 0;
 }
-/* SEQ > NOTE (2026-11-10): KNOB 1 STEP, KNOB 2 FLAG 1, KNOB 3 FLAG 2 (ui.c nf_set), KNOB 4 VELOCITY */
+/* SEQ > NOTE (2026-11-10): KNOB 1 NOTE (the notes in order, ui.c note_select), KNOB 2 FLAG 1, KNOB 3 FLAG 2 (ui.c nf_set), KNOB 4 VELOCITY */
 static void note_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     int32_t dir = steps > 0 ? 1 : -1;
-    if (slot == 0u) { cursor_turn(steps); return; }
+    if (slot == 0u) { note_select(steps > 0 ? 1 : -1); return; }   /* (a note a detent: a fast turn is not a jump over notes) */
     if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); return; }
     if (slot == 3u) {                                   /* VELOCITY 1 .. 127 (0 = the default 96; an ACC plays 127) */
         st->vel = (uint8_t)clamp((int32_t)(st->vel ? st->vel : 96u) + steps, 1, 127);
@@ -955,7 +957,8 @@ static void step_edit(uint32_t slot, int32_t steps)
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
     if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (2026-11-10) FLAG 1, FLAG 2, VELOCITY */
-        if (drum_track(TSEL) && slot != 0u && slot != 3u) ui_message("A KIT: STEP + VELOCITY");
+        if (drum_track(TSEL) && slot == 0u) note_select(steps > 0 ? 1 : -1);
+        else if (drum_track(TSEL) && slot != 3u) ui_message("A KIT: NOTE + VELOCITY");
         else if (drum_track(TSEL) && slot == 3u) {
             if (!st->hit) ui_message("NO HIT HERE");
             else st->vel = (uint8_t)clamp((int32_t)(st->vel ? st->vel : 96u) + steps, 1, 127);

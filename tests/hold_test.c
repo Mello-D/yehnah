@@ -132,6 +132,23 @@ int main(void)
     }
     seq_stop();
 
+    ui_power_on();                                        /* a HOLD on a mono voice says so (2026-11-10) */
+    t = &trk[0];
+    t->p[P_SLEN] = 8; t->p[P_VOICE] = V_MONO;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[1] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    go_title("STEP"); frame();
+    cursor_set(0);
+    turn(EN_K3, 1);
+    ck("HOLD on a MONO voice: the message says MONO", str_eq(ui.msg, "HOLD 2 MONO") && t->step[0].comp2 == CP_HOLD);
+    frame();
+    ck("  and the LENGTH card's unit", strstr(ui.col[2], "|MONO") != 0);
+    t->p[P_VOICE] = V_POLY;
+    frame();
+    ck("  POLY: HOLD", strstr(ui.col[2], "|HOLD") != 0);
+
     ui_power_on();                                        /* RATCH 5 .. 8: an EVEN ECHO (2026-11-10) */
     t = &trk[0];
     memset(t->step, 0, sizeof t->step);
