@@ -17,4 +17,9 @@ PY="${PYTHON:-python3}"
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     docker info >/dev/null 2>&1 || { echo "build.sh: Docker is not running"; exit 1; }
 fi
-exec "$PY" tools/build.py "$@"
+"$PY" tools/build.py "$@"
+# (Yehnah) a dev build always refreshes the local installer site too (build/site), so what is flashed from it is never stale
+if [ $# -eq 0 ]; then
+    "$PY" web/make_site.py build/yehnah.fwsc dev build/site
+    cmp build/yehnah.fwsc build/site/firmware/yehnah-dev.fwsc || { echo "build.sh: the installer site is stale"; exit 1; }
+fi
