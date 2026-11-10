@@ -799,7 +799,8 @@ function parseNotes(s) {
 function fmtValue(d, v) {
   const sign = (x) => (x > 0 ? "+" + x : String(x));
   switch (d.fmt) {
-    case F.PCT: return [String(d.max === 100 || d.max === 120 ? v : Math.trunc((v * 100 + 63) / 127)), "%"];   /* 0..100 (SWG): the value */
+    case F.PCT: if (d.free && v >= 127) return ["FREE", ""];
+      return [String(d.max === 100 || d.max === 120 ? v : Math.trunc((v * 100 + 63) / 127)), "%"];   /* 0..100 (SWG): the value */
     case F.BIPCT: return [sign(Math.trunc(v * 100 / 64)), "%"];
     case F.TIME: {
       const ms10 = Math.round(10 * Math.pow(10000, (v & 127) / 127));
@@ -1525,7 +1526,7 @@ function makeMockDevice(opt = {}) {
     D("FILTER", F.BIPCT, -64, 63, 0), D("PITCH", F.BIPCT, -64, 63, 0), D("SHAPE", F.BIPCT, -64, 63, 0), E("LOOP", ["OFF", "ON"], 0),   /* (0.4: P_ED_FX is the ENV LOOP) */
     D("RATE", F.LFOHZ, -12, 127, 60), E("WAVE", ["SIN", "TRI", "SAW", "SQR", "S&H"], 0), D("PHASE", F.INT, -1, 127, 0), D("FADE", F.TIME, 0, 127, 0),   /* (0.6.51) RATE < 0 in time, PHASE -1 FREE */
     D("PITCH", F.BIPCT, -64, 63, 0), D("FILTER", F.BIPCT, -64, 63, 0), D("SHAPE", F.BIPCT, -64, 63, 0), D("AMP", F.PCT, 0, 127, 0),
-    E("MODE", ["OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT", "DNUP", "UP+8", "CONV", "DIVG", "PINKY", "THUMB", "WALK", "CHORD", "TRNS", "SKIP", "HOLD", "TURNG", "STRDN", "STRUP", "STRALT", "BLOCK", "BS+CH", "SHUF", "HALF", "2/3", "FAST"], 0), E("RATE", NADIV, 2), D("OCT", F.INT, 1, 4, 1), D("GATE", F.PCT, 1, 127, 64),
+    E("MODE", ["OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT", "DNUP", "UP+8", "CONV", "DIVG", "PINKY", "THUMB", "WALK", "CHORD", "TRNS", "SKIP", "HOLD", "TURNG", "STRDN", "STRUP", "STRALT", "BLOCK", "BS+CH", "SHUF", "HALF", "2/3", "FAST"], 0), E("RATE", NADIV, 2), D("OCT", F.INT, 1, 4, 1), Object.assign(D("GATE", F.PCT, 1, 127, 64), { free: 1 }),   /* (2026-11-10) 127: FREE, the strum modes' ringing gate */ 
     D("SWING", F.PCT, 0, 100, 0), D("PROB", F.PCT, 0, 127, 127), E("HOLD", NONOFF, 0), E("ORDER", ["NOTE", "PLAY"], 0),
     D("ROOT", F.NOTE, 0, 11, 0), E("SCALE", ["CHR", "MAJ", "MIN", "DOR", "MIX", "PEN", "MPEN", "HARM", "PHRY", "LYD", "LOC", "MEL", "BLUES", "WHOLE", "DIMHW", "DIMWH"], 0), E("QUANT", ["OFF", "SNAP", "WHITE", "SEQ"], 0), D("TRANS", F.SEMI, -24, 24, 0),
     D("LEN", F.STEPS, 1, 64, 16), E("DIV", NPDIV, 2), D("SWING", F.PCT, 0, 100, 0), D("GATE", F.PCT, 1, 127, 64),

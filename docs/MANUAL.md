@@ -1134,8 +1134,19 @@ genres (GT ORIG, GT JAZZ, GT LOFI, GT ROCK, GT BLUES, GT POP, GT SOUL, GT FOLK, 
 (50 in all: Jazz Essentials, Classic Rock, Chicago Blues …). The chords are guitchordi's (stoogs/guitchordi, GPL-3.0): each is the
 six strings of a guitar in standard tuning, as it voices them (a muted string is left out, so some chords have 3 to 6 notes), in
 the style's own key; **ROOT** moves them. It works on any sound; STRUM spreads the notes low to high as for HARP, and the
-chord records as its notes. Other tunings are not
-in yet.
+chord records as its notes.
+
+**SCL > TUNE** (the tab after GUITAR; it keeps GUITAR's mode on) holds the two other settings of GUITAR chords. KNOB 1 **TUNING**:
+STD (EADGBE), DROP D, DBL DD (double drop D), OPEN D, OPEN G, OPEN E, OPEN A, DADGAD, OPN Dm, OPN Gm, OPEN C, OPN D6, -1/2 (half
+step down) and -1 (whole step down), guitchordi's 14. KNOB 2 **SHAPE** 1..6: the grip of each chord in that tuning (the same
+chord names and pitch classes on every shape; 1 is the lowest, fullest one with the root in the bass, the others climb the neck;
+in STD, SHAPE 1 is guitchordi's own voicing). A tuning changes the strings, not the key: use ROOT to move the chords. Shapes are
+searched when a key is first played after a change (a fraction of a second at most, then kept), as guitchordi's
+tuning-voicings.py does it. The ARP section needs nothing of its own: a held GUITAR chord arpeggiates or strums with the ARP's
+modes (STRDN, STRUP, STRALT, BLOCK, BS+CH, SHUF, HALF, 2/3, FAST) and the dotted rates.
+Turn the ARP's **GATE** to its top (127, shown FREE) on a stroke mode and the strings ring on, as on a guitar: each string sounds
+until it is struck again (or you let go), so one strum overlaps the next. This is what makes a strum sound like a strummed
+instrument rather than chopped chords; use a shorter GATE for a staccato chop.
 
 ### ARP
 
@@ -1144,11 +1155,13 @@ REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD, **TRNS** (the keys an
 sequence by their distance from C4, without playing notes). **Key latch**: with MODE OFF, **HOLD ON** keeps the notes
 sounding after you let go; the next chord replaces them.
 
-**Strum on hold.** The nine strokes play the held chord (the lowest six notes) as a strum each time the ARP repeats: **STRDN**
-(high to low), **STRUP** (low to high), **STRALT** (down, up, ..), **BLOCK** (all together), **BS+CH** (the bass alone, then the rest
-as a strum), **SHUF** (the notes in a random order), **HALF** and **2/3** (a random half / two thirds of the chord each time, in
-physical order), **FAST** (up, down, up: three quick strokes a repeat). The strum's speed is SCL > CHORD's / GUITAR's **STRUM** (0 =
-all together); FAST's is a stroke of 30 to 120 ms from it. Up-strokes are a little softer. They work with any chord mode, best with SCL >
+**Strum on hold.** The nine strokes play the held chord (the lowest six notes) as a strum each time the ARP repeats, with the logic of
+guitchordi's Strum: **STRDN** (a down-stroke: the low strings first), **STRUP** (the high strings first), **STRALT** (down, up, ..),
+**BLOCK** (all together), **BS+CH** (the bass, then the rest together three gaps later), **SHUF** (the notes in a random order),
+**HALF** and **2/3** (a random half / two thirds of the strings each time, struck in physical order), **FAST** (up, down, up: three
+strokes a repeat). **STRUM** (SCL > CHORD's / GUITAR's) is the time of the whole strum, 0 (all together) or 5 to 250 ms, the notes
+evenly across it, whatever their number (about 25 is guitchordi's 50 ms); FAST's three strokes share 30 to 120 ms. A strum is never longer
+than its step. All strings are struck at the same velocity. ARP **GATE** at its top is FREE (see above). They work with any chord mode, best with SCL >
 GUITAR (hold a chord key, or LATCH it). **RATE** also has the dotted **1/4D, 1/8D, 1/16D**. **SEQ > HUMAN** now moves the arp too: each
 note's velocity and each repeat's start (up to 40 ms late).
 

@@ -296,6 +296,10 @@ static const param_desc_t HARP_SET_DESC0 = {"SET", F_ENUM, 0, HARP_NSET - 1, 0, 
 static const param_desc_t HARP_SET_DESC = {"SET", F_ENUM, 0, HARP_NALL - 1, 0, HARP_SET_NAME, 0};   /* HARP: P_CVOI (the
                                                          * J-6's: their place in their genre, param_format) */
 static const param_desc_t GTR_SET_DESC = {"SET", F_INT, 0, GT_NSET - 1, 0, 0, 0};   /* GUITAR: P_GSET (the style's place in its family, param_format) */
+static const char *const N_GTUN[] = {"STD", "DROP D", "DBL DD", "OPEN D", "OPEN G", "OPEN E", "OPEN A", "DADGAD", "OPN Dm", "OPN Gm",
+                                     "OPEN C", "OPN D6", "-1/2", "-1"};   /* GUITAR > TUNE (harp.c GT_TUN's order) */
+static const char *const N_GSHP[] = {"1", "2", "3", "4", "5", "6"};
+static const param_desc_t GTR_TUN_DESC = PE("TUNING", N_GTUN, 0), GTR_SHP_DESC = PE("SHAPE", N_GSHP, 0);   /* GUITAR > TUNE: P_GTUN, P_GSHP */
 static const param_desc_t OMNI_SET_DESC = {"SET", F_ENUM, 0, OMNI_NSET - 1, 0, OMNI_SET_NAME, 0};   /* OMNI: P_CVOI */
 static const param_desc_t HUM_DESC[3] = {                /* (0.6.87) SEQ > HUMAN: P_HVEL P_HTIM P_HGAT (127 = 0 %) */
     {"HUMAN", F_PCTINV, 0, 127, 127, 0, 0}, {"TIME", F_PCTINV, 0, 127, 127, 0, 0}, {"GATE", F_PCTINV, 0, 127, 127, 0, 0}};   /* (0.6.92:
@@ -327,6 +331,8 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
                                                          * OMNI: the set) */
         case P_CSTR: return &CHORD_DESC[2];
         case P_GSET: return &GTR_SET_DESC;
+        case P_GTUN: return &GTR_TUN_DESC;
+        case P_GSHP: return &GTR_SHP_DESC;
         case P_HVEL: return &HUM_DESC[0];
         case P_HTIM: return &HUM_DESC[1];
         case P_HGAT: return &HUM_DESC[2];
@@ -464,6 +470,11 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         fmt_int(val, v - (int32_t)f + 1);
         fmt_int(u + 1, (int32_t)(n - f));
         *unit = u;
+        return;
+    }
+    if (d == &TP[P_AGATE] && v >= 127) {                /* (2026-11-10) the strum modes' FREE gate (seq.c arp_free) */
+        str_cpy(val, "FREE", 6);
+        fmt_named = 1;
         return;
     }
     if (d == &TP[P_LPHASE] && v < 0) {                  /* (0.6.51) the LFO's PHASE FREE */
@@ -788,13 +799,16 @@ static const page_t PAGES[] = {
     {"OMNI", FAM_SCL, SC_TRACK, GR_NONE, {P_ROOT, P_CVOI, P_OAUTO, P_OSTR}},
     {"GUITAR", FAM_SCL, SC_TRACK, GR_NONE, {P_ROOT, 0xFF, P_GSET, P_HPLATE}},   /* (2026-11-10) SCL > GUITAR: guitchordi's chord
                                                          * styles on HARP's keys; KNOB 2 GENRE, KNOB 3 the style within it */
+    {"TUNE", FAM_SCL, SC_TRACK, GR_NONE, {P_GTUN, P_GSHP, 0xFF, P_HPLATE}},   /* (2026-11-10) SCL > TUNE: GUITAR's tuning
+                                                         * (14) and the shape (1..6) of each chord in it; a tab of GUITAR's mode */
     {"PROG", FAM_SCL, SC_TRACK, GR_PROG, {P_ROOT, P_PROG, 0xFF, P_HPLATE}},   /* (chord-harp fork) SCL > PROG: the chord
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
                                                          * (2026-10-27, ui_input.c prog_write) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
-#define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)          /* (2026-11-10) SCL > GUITAR: KNOB 2 GENRE, KNOB 3 STYLE */
+#define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)
+#define GTU_PAGE(pg) ((pg)->id[0] == P_GTUN)          /* (2026-11-10) SCL > TUNE */          /* (2026-11-10) SCL > GUITAR: KNOB 2 GENRE, KNOB 3 STYLE */
 #define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu && !GTR_PAGE(pg))   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
                                                          * (CHORD has PLATE too) */
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))

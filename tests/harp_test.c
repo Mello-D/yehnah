@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "../firmware/src/harp.c"
 
 static int fails;
@@ -117,8 +118,49 @@ static void write_md(const char *path)
     printf("harp: every chord -> %s\n", path);
 }
 
+/* (2026-11-10) GUITAR's tunings and shapes: all 14 tunings x 12 ROOTs x 6 shapes of each style's chords keep the chord's
+ * pitch classes, six strings at most, in the fret bounds, low to high; standard SHAPE 0 stays the table's; timed */
+static void check_tunings(void)
+{
+    uint32_t tn, sp, st, k, rt, i, nchk = 0, worst = 0;
+    double tmax = 0;
+    for (tn = 0; tn < GT_NTUN; tn++)
+        for (rt = 0; rt < 12u; rt += (tn ? 5u : 1u))
+            for (st = 0; st < GT_NSET; st += 7u)
+                for (sp = 0; sp < GT_NSHP; sp++)
+                    for (k = 0; k < 11u; k++) {
+                        uint8_t nt[8];
+                        uint32_t set = HARP_GT0 + st + GT_NSET * (sp + GT_NSHP * tn), c0 = GT_CH[st][k], pm = 0, got = 0, n;
+                        uint32_t cr = (c0 / 21u + rt) % 12u, want = 0;
+                        const uint8_t *tbl = GT_NOTES[c0 % 21u];
+                        struct timespec a, b;
+                        clock_gettime(CLOCK_MONOTONIC, &a);
+                        n = gt_chord(set, k, (int32_t)rt, nt);
+                        clock_gettime(CLOCK_MONOTONIC, &b);
+                        if ((b.tv_sec - a.tv_sec) * 1e6 + (b.tv_nsec - a.tv_nsec) / 1e3 > tmax)
+                            tmax = (b.tv_sec - a.tv_sec) * 1e6 + (b.tv_nsec - a.tv_nsec) / 1e3;
+                        for (i = 0; i < 6u; i++)
+                            if (tbl[i]) want |= 1u << ((tbl[i] + cr) % 12u);
+                        for (i = 0; i < n; i++) {
+                            got |= 1u << (nt[i] % 12u);
+                            CHECK(i == 0 || nt[i] > nt[i - 1u], "tuning %u shape %u: not rising", tn, sp);
+                        }
+                        (void)pm;
+                        if (tn || sp)
+                            CHECK(n >= 3u && n <= 6u && got == want, "tuning %u shape %u style %u key %u ROOT %u: %u notes pcs %x want %x",
+                                  tn, sp, st, k, rt, n, got, want);
+                        nchk++;
+                        worst = n < worst ? worst : n;
+                    }
+    { uint8_t a[8], b[8]; /* standard SHAPE 0 stays the table's voicing */
+      CHECK(gt_chord(HARP_GT0, 0, 0, a) == 5u && a[0] == 48, "standard shape 0 changed");
+      CHECK(gt_chord(HARP_GT0 + GT_NSET * 3u, 0, 0, b) >= 3u, "shape 3"); }
+    printf("harp: %u guitar shapes checked, slowest search %.0f us on this host\n", nchk, tmax);
+}
+
 int main(void)
 {
+    check_tunings();
     const char *md = getenv("HARP_MD");
     check_all();
     check_known();

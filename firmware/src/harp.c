@@ -106,13 +106,163 @@ static uint32_t harp_genre_set(uint32_t g)   /* genre g's first set */
             return HARP_NSET + i;
     return 0;
 }
+/* (2026-11-10) TUNINGS and SHAPES (SCL > GUITAR): guitchordi's 14 tunings, and its scripts/tuning-voicings.py in C
+ * (GPL-3.0-only, stoogs/guitchordi). gt_search: the pitch-class-preserving shapes of a chord on strings tuned to GT_TUN[tn]:
+ * open strings plus a four-fret hand window (fret 0 .. 23), at most four distinct stopped frets, every pitch class sounding,
+ * three notes at least; the 8 best of each of the 20 windows (the fewest muted strings, the lowest, the root in the bass),
+ * then SHAPE 0 the best, 1..5 spread over the rest by their place on the neck. Standard tuning SHAPE 0 stays the table's
+ * voicing (GT_NOTES). The set number holds them: style + GT_NSET * (SHAPE + 6 * TUNING) */
+static const uint8_t GT_TUN[14][6] = {
+    {40, 45, 50, 55, 59, 64}, {38, 45, 50, 55, 59, 64}, {38, 45, 50, 55, 59, 62}, {38, 45, 50, 54, 57, 62},
+    {38, 43, 50, 55, 59, 62}, {40, 47, 52, 56, 59, 64}, {40, 45, 52, 57, 61, 64}, {38, 45, 50, 55, 57, 62},
+    {38, 45, 50, 53, 57, 62}, {38, 43, 50, 55, 58, 62}, {36, 43, 48, 55, 60, 64}, {38, 45, 50, 54, 59, 62},
+    {39, 44, 49, 54, 58, 63}, {38, 43, 48, 53, 57, 62}};
+#define GT_NTUN 14u
+#define GT_NSHP 6u
+#define GTS_KEEP 8u
+typedef struct { uint8_t n[6]; int16_t sc, pos; uint8_t mx; } gts_t;   /* notes (0 muted), score and place x100, top fret */
+#define GT_POOLED __attribute__((section(".pool")))   /* (all of it in the pool, zeroed at boot: RAM is full) */
+static gts_t gts_win[GTS_KEEP] GT_POOLED, gts_all[20u * GTS_KEEP] GT_POOLED;
+static uint32_t gts_nw GT_POOLED, gts_na GT_POOLED, gts_pm GT_POOLED, gts_rt GT_POOLED, gts_np GT_POOLED, gts_low GT_POOLED;
+static const uint8_t *gts_op GT_POOLED;
+static int gts_before(const gts_t *a, const gts_t *b, int by_pos)   /* a sorts before b */
+{
+    if (by_pos) {
+        uint32_t ma = 0, mb = 0, i;
+        for (i = 0; i < 6u; i++) { ma += !a->n[i]; mb += !b->n[i]; }
+        if (a->pos != b->pos) return a->pos < b->pos;
+        if (ma != mb) return ma < mb;
+    } else {
+        if (a->sc != b->sc) return a->sc < b->sc;
+        if (a->mx != b->mx) return a->mx < b->mx;
+    }
+    return memcmp(a->n, b->n, 6) < 0;
+}
+static void gts_leaf(const uint8_t *nt, uint32_t cnt, uint32_t sum, uint32_t mx)
+{
+    gts_t g;
+    uint32_t i, j, first = 0;
+    if (cnt < (gts_np > 3u ? gts_np : 3u))
+        return;
+    for (i = 0; i < 6u && !nt[i]; i++) first = i + 1u;
+    memcpy(g.n, nt, 6);
+    g.pos = (int16_t)(sum * 100u / cnt);
+    g.sc = (int16_t)((6u - cnt) * 500u + (uint32_t)g.pos + (nt[first] % 12u == gts_rt ? 0u : 200u));
+    g.mx = (uint8_t)mx;
+    for (i = 0; i < gts_nw && gts_before(&gts_win[i], &g, 0); i++) {}
+    if (i >= GTS_KEEP)
+        return;
+    if (gts_nw < GTS_KEEP)
+        gts_nw++;
+    for (j = gts_nw - 1u; j > i; j--)
+        gts_win[j] = gts_win[j - 1u];
+    gts_win[i] = g;
+}
+static void gts_dfs(uint32_t s, uint8_t *nt, uint32_t cnt, uint32_t sum, uint32_t mx, uint32_t seen, uint32_t pm, uint32_t fmin, uint32_t fmax, uint32_t last)
+{
+    uint32_t f;
+    if (s == 6u) {
+        if (pm == gts_pm)
+            gts_leaf(nt, cnt, sum, mx);
+        return;
+    }
+    nt[s] = 0;
+    gts_dfs(s + 1u, nt, cnt, sum, mx, seen, pm, fmin, fmax, last);                          /* muted */
+    for (f = 0; f < gts_low + 5u; f++) {
+        uint32_t p = gts_op[s] + f, nmin = fmin, nmax = fmax, nseen = seen;
+        if (f && f < gts_low)
+            continue;
+        if (!((gts_pm >> (p % 12u)) & 1u) || p <= last)
+            continue;
+        if (f) {
+            nmin = f < fmin ? f : fmin;
+            nmax = f > fmax ? f : fmax;
+            nseen |= 1u << f;
+            if (nmax - nmin > 4u || __builtin_popcount(nseen) > 4)
+                continue;
+        }
+        nt[s] = (uint8_t)p;
+        gts_dfs(s + 1u, nt, cnt + 1u, sum + f, f > mx ? f : mx, nseen, pm | 1u << (p % 12u), nmin, nmax, p);
+    }
+    nt[s] = 0;
+}
+/* the six shapes (out[k][string]; 0 muted) of the chord with pitch classes pm (bit n: n) and root rt, strings op */
+static void gt_search(uint32_t pm, uint32_t rt, const uint8_t *op, uint8_t out[GT_NSHP][6])
+{
+    uint8_t nt[6];
+    uint32_t i, j, k, n;
+    static const uint8_t FR[5] = {0, 1, 2, 13, 1}, FD[5] = {1, 5, 5, 20, 1};   /* 0, .2, .4, .65, 1 */
+    gts_nw = gts_na = 0;
+    gts_pm = pm; gts_rt = rt; gts_op = op;
+    for (gts_np = 0, i = 0; i < 12u; i++) gts_np += (pm >> i) & 1u;
+    for (gts_low = 0; gts_low < 20u; gts_low++) {
+        gts_nw = 0;
+        gts_dfs(0, nt, 0, 0, 0, 0, 0, 99, 0, 0);
+        for (i = 0; i < gts_nw; i++) {
+            for (j = 0; j < gts_na && memcmp(gts_all[j].n, gts_win[i].n, 6); j++) {}
+            if (j == gts_na)
+                gts_all[gts_na++] = gts_win[i];
+        }
+    }
+    if (!gts_na) {                                  /* (no shape: the chord stays open-string silent) */
+        memset(out, 0, GT_NSHP * 6u);
+        return;
+    }
+    for (i = k = 1; i < gts_na; i++)                /* the best (lowest score) first */
+        if (gts_before(&gts_all[i], &gts_all[0], 0)) {
+            gts_t x = gts_all[i]; gts_all[i] = gts_all[0]; gts_all[0] = x;
+        }
+    memcpy(out[0], gts_all[0].n, 6);
+    gts_all[0] = gts_all[--gts_na];                 /* .. the rest by place on the neck (insertion sort) */
+    for (i = 1; i < gts_na; i++) {
+        gts_t x = gts_all[i];
+        for (j = i; j && gts_before(&x, &gts_all[j - 1u], 1); j--) gts_all[j] = gts_all[j - 1u];
+        gts_all[j] = x;
+    }
+    for (k = 0; k < 5u; k++) {
+        n = gts_na ? (FR[k] * (gts_na - 1u) + FD[k] / 2u) / FD[k] : 0;
+        if (!gts_na) {                              /* (fewer than six shapes: the best again) */
+            memcpy(out[k + 1u], out[0], 6);
+            continue;
+        }
+        memcpy(out[k + 1u], gts_all[n].n, 6);
+        for (j = n; j + 1u < gts_na; j++)
+            gts_all[j] = gts_all[j + 1u];
+        gts_na--;
+    }
+}
+/* the shapes of the last few chords asked for (round robin): the key (tuning and chord, + 1), their six shapes */
+#define GT_NC 16u
+static uint16_t gt_ckey[GT_NC] GT_POOLED;
+static uint8_t gt_cval[GT_NC][GT_NSHP][6] GT_POOLED;
+static uint32_t gt_cnext GT_POOLED;
+static const uint8_t (*gt_shapes(uint32_t tn, uint32_t c))[6]   /* chord c = the root's pitch class * 21 + quality */
+{
+    uint32_t key = (tn * 252u + c) + 1u, i, pm = 0, rt = c / 21u;
+    const uint8_t *nt = GT_NOTES[c % 21u];          /* (the quality in C) */
+    for (i = 0; i < GT_NC; i++)
+        if (gt_ckey[i] == key)
+            return gt_cval[i];
+    for (i = 0; i < 6u; i++)
+        if (nt[i])
+            pm |= 1u << ((nt[i] + rt) % 12u);
+    i = gt_cnext++ % GT_NC;
+    gt_search(pm, rt, GT_TUN[tn % GT_NTUN], gt_cval[i]);
+    gt_ckey[i] = (uint16_t)key;
+    return gt_cval[i];
+}
 /* a guitar set's chord: six strings low to high (the same note twice once), moved with ROOT (G .. B down) */
 static uint32_t gt_chord(uint32_t set, uint32_t idx, int32_t root, uint8_t *out)
 {
-    const uint8_t *nt = GT_NOTES[GT_CH[(set - HARP_GT0) % GT_NSET][idx % HARP_NCH % 11u]];
+    uint32_t n0 = (set - HARP_GT0) / GT_NSET, tn = n0 / GT_NSHP % GT_NTUN, sp = n0 % GT_NSHP;
+    uint32_t c0 = GT_CH[(set - HARP_GT0) % GT_NSET][idx % HARP_NCH % 11u], rt = (uint32_t)(root % 12 + 12) % 12u;
+    const uint8_t *nt = GT_NOTES[c0];
     int32_t sh = (root % 12 + 12) % 12;
     uint32_t i, n = 0;
-    if (sh > 6)
+    if (n0) {
+        nt = gt_shapes(tn, (c0 / 21u + rt) % 12u * 21u + c0 % 21u)[sp];
+        sh = 0;
+    } else if (sh > 6)
         sh -= 12;
     for (i = 0; i < 6u; i++)
         if (nt[i] && (!n || out[n - 1u] != (uint8_t)(nt[i] + sh)))

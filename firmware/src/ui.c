@@ -655,7 +655,7 @@ static uint32_t lock_id(uint32_t k)
 #define CT_SCL 127                                      /* (chord_tab_of: the SCL tab, chords off) */
 static int chord_tab_of(const page_t *pg)            /* 0 CHORD, CD_HARP, CD_OMNI, CD_PROG, CT_SCL; -1 another page */
 {
-    return pg->fam != FAM_SCL ? -1 : pg->graph == GR_SCALE ? CT_SCL : GTR_PAGE(pg) ? CD_GTR : HARP_PAGE(pg) ? CD_HARP :
+    return pg->fam != FAM_SCL ? -1 : pg->graph == GR_SCALE ? CT_SCL : GTR_PAGE(pg) || GTU_PAGE(pg) ? CD_GTR : HARP_PAGE(pg) ? CD_HARP :
            pg->id[3] == P_OSTR ? CD_OMNI : pg->id[1] == P_PROG ? CD_PROG : pg->id[1] == P_CHRD ? 0 : -1;
 }
 static void chord_tab(const page_t *pg)
@@ -1179,7 +1179,7 @@ static int param_kept(uint32_t i)
            (i >= P_AMB && i <= P_ASPC) ||   /* (chord-harp fork) ARP > AMBIENT */   /* (chord-harp fork: PROG) */
            (!YEHNAH_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT || i == P_HRQ)) ||   /* (0.6.87) HUMAN: the sequencer's, a sound
                                                          * keeps it (YEHNAH_FM4: DIGITAL's OP SUS / LEVEL there) */
-           (!YEHNAH_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_GSET || i == P_CTABS || i == P_CLEN || i == P_TCHAN));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
+           (!YEHNAH_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_GSET || i == P_GTUN || i == P_GSHP || i == P_CTABS || i == P_CLEN || i == P_TCHAN));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
                                                          * MUTATE: the sequencer's too (a community report: browsing
                                                          * presets switched CHORD off) */
 }

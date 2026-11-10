@@ -86,6 +86,13 @@ int main(void)
         t->p[P_GSET] = 49;
         assert(harp_set(t) == HARP_GT0 + 49u);
         t->p[P_GSET] = 0;
+        /* TUNE: TUNING and SHAPE are in the set number, own parameters; standard SHAPE 1 is the table's, the others are searched */
+        assert(track_desc(t, P_GTUN) == &GTR_TUN_DESC && track_desc(t, P_GSHP) == &GTR_SHP_DESC);
+        t->p[P_GTUN] = 7; t->p[P_GSHP] = 2;
+        assert(harp_set(t) == HARP_GT0 + GT_NSET * (2u + 6u * 7u));
+        assert(harp_chord(harp_set(t), 0, 0, g) >= 3u);   /* DADGAD, C, shape 3 */
+        t->p[P_GTUN] = 0; t->p[P_GSHP] = 0;
+        assert(harp_set(t) == HARP_GT0);
     }
     t->p[P_CHRD] = CD_HARP;
     assert(track_desc(t, P_CVOI) == &HARP_SET_DESC);   /* VOICING is the SET in HARP */

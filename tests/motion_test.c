@@ -354,35 +354,51 @@ static int arp_new_modes(void)
         t->p[P_CSTR] = 20;
         arp_fresh(t, AM_STRDN, 1, CEG, 3);
         t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
-        ok = t->arp_note == 67 && t->as_n == 2 && t->as_nn[0] == 64 && t->as_nn[1] == 60 && !t->as_i;
-        for (u = 0; u < 12u; u++)
+        ok = t->arp_note == 60 && t->as_n == 2 && t->as_nn[0] == 64 && t->as_nn[1] == 67 && !t->as_i;   /* (a down stroke: low to high, guitchordi's) */
+        for (u = 0; u < 19u; u++)
             arp_tick(t, 100u);                             /* the sweep comes in */
         ok &= t->as_i == 2;
         t->arp_off = 1; arp_tick(t, 2);
         ok &= !t->arp_note && !t->as_n;
         arp_fresh(t, AM_STRUP, 1, CEG, 3);
         t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
-        ok &= t->arp_note == 60 && t->as_nn[0] == 64 && t->as_nn[1] == 67;
+        ok &= t->arp_note == 67 && t->as_nn[0] == 64 && t->as_nn[1] == 60;
         arp_fresh(t, AM_STRALT, 1, CEG, 3);
         t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
-        ok &= t->arp_note == 67 && t->as_nn[1] == 60;
-        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
         ok &= t->arp_note == 60 && t->as_nn[1] == 67;
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok &= t->arp_note == 67 && t->as_nn[1] == 60;
         bad += check("ARP STRDN / STRUP / STRALT: high to low, low to high, alternating; the gate ends the stroke", ok);
+        t->p[P_AGATE] = 127;                           /* FREE: the strings ring on; the gate does not end the stroke */
+        arp_fresh(t, AM_STRDN, 1, CEG, 3);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
+        ok = t->arp_note == 60 && t->arp_off > 1000000u;
+        for (u = 0; u < 19u; u++)
+            arp_tick(t, 100u);
+        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);      /* the next stroke: struck again, still sounding */
+        ok &= t->arp_note == 60 && t->as_n == 2;
+        arp_remove(t, 60); arp_remove(t, 64); arp_remove(t, 67);
+        arp_tick(t, CTL);                              /* let go: it ends */
+        ok &= !t->arp_note && !t->as_n;
+        t->p[P_AGATE] = 64;
+        bad += check("ARP strokes, GATE FREE (127): the stroke rings through the gate and the next stroke, a release ends it", ok);
         arp_fresh(t, AM_BLOCK, 1, CEG, 3);
         t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
         ok = t->as_n == 2 && t->as_i == 2;
+        t->p[P_CSTR] = 10;                              /* 20 ms a stroke */
         arp_fresh(t, AM_BSCH, 1, CEG, 3);
         t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
-        ok &= t->arp_note == 60 && !t->as_n;
-        t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
-        ok &= t->arp_note == 64 && t->as_n == 1 && t->as_nn[0] == 67;
-        bad += check("ARP BLOCK: all at once; BS+CH: the bass alone, then the rest", ok);
+        ok &= t->arp_note == 60 && t->as_n == 2 && !t->as_i && t->as_gap == 0 && t->as_due > 0;   /* the bass, the rest 3 gaps later together */
+        for (u = 0; u < 16u; u++)
+            arp_tick(t, 100u);
+        ok &= t->as_i == 2 && t->as_nn[0] == 64 && t->as_nn[1] == 67;
+        t->p[P_CSTR] = 20;
+        bad += check("ARP BLOCK: all at once; BS+CH: the bass, then the rest together (guitchordi's)", ok);
         arp_fresh(t, AM_FAST, 1, CEG, 3);
         t->arp_pos = 0xFFFFFFF; arp_tick(t, CTL);
         {
-            static const uint8_t W[8] = {64, 67, 67, 64, 60, 60, 64, 67};
-            ok = t->arp_note == 60 && t->as_n == 8;
+            static const uint8_t W[8] = {64, 60, 60, 64, 67, 67, 64, 60};
+            ok = t->arp_note == 67 && t->as_n == 8;
             for (i = 0; i < 8u; i++)
                 ok &= t->as_nn[i] == W[i];
         }

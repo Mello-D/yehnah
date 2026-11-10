@@ -155,6 +155,8 @@ enum {                          /* per-track parameters */
 #define P_CHRD P_FM4_ATK               /* OFF; in the scale: TRIAD 7TH ADD9 SUS2 SUS4; any key: MAJ MIN 7 MAJ7 MIN7 POWER */
 #define P_CVOI P_FM4_DEC               /* CLOSE, LEAD (each chord the inversion nearest the last), OPEN, +BASS */
 #define P_GSET P_FM2_DEC               /* (2026-11-10) SCL > GUITAR's SET: guitchordi's 50 chord styles (harp.c gt_*; was unused) */
+#define P_GTUN P_FM1_REL               /* (2026-11-10) SCL > GUITAR > TUNE's TUNING: guitchordi's 14 tunings (harp.c GT_TUN; was unused) */
+#define P_GSHP P_FM2_ATK               /* .. its SHAPE 1..6 (0..5) of each chord in that tuning (was unused) */
 #define P_CSTR P_FM4_REL               /* STRUM: 0 at once; up to ~63 ms between the notes, low to high */
 /* (chord-harp fork) SCL's CHORD, HARP and OMNI tabs each keep their own P_CVOI (VOICING, HARP's SET, OMNI's SET) and the
  * CHORD tab its mode, packed in DIGITAL's last slot (ui.c chord_tab): bits 0..3 the CHORD tab's mode (1..11, else TRIAD), 4..5 its
