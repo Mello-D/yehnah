@@ -400,7 +400,7 @@ static void graph_roll(const track_t *t, uint16_t c)
 {
     uint32_t i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u, ncol, mask = scale_mask(t), held = pr_held();
     uint64_t locks = motion_lock_steps(trk_index(t));
-    int32_t r, ybot, trw = 0, note_pg = cur_page()->id[0] == 4u;
+    int32_t r, ybot, trw = 0, note_pg = cur_page()->id[0] == 4u, outl;
     char tb[16];
     (void)c;
     pr_geom();
@@ -435,6 +435,7 @@ static void graph_roll(const track_t *t, uint16_t c)
     for (r = 0; r < PR_ROWS; r++)                     /* the keys held: their rows marked at the left */
         if ((held >> r) & 1u)
             cv_rect(PR_RX, PR_Y0 + r * PR_RH, 2, PR_RH - 1, T_ACCENT);
+    outl = note_pg && ui.cursor >= base && ui.cursor < base + ncol && ui.cursor < len && step_on(&seq_steps(t)[ui.cursor]);
     pr_jnn = 0;
     {   /* (2026-11-10) a HOLD: its bar on through the steps it rings over (drawn first: the notes over it come after) */
         uint32_t h, k;
@@ -493,9 +494,24 @@ static void graph_roll(const track_t *t, uint16_t c)
             cv_rect(x, PR_Y0, 1, ybot - PR_Y0, T_ACCENT);
         if ((locks >> si) & 1u)                       /* a parameter lock: a mark at the column's foot */
             cv_rect(x + 3, ybot - 3, PR_CWI(i) - 6, 2, T_ACCENT);
-        if (si == ui.cursor)                          /* the cursor: a frame round its column (0.8.9, the skins' mock-up:
-                                                       * TEXT) */
+        if (si == ui.cursor && !outl)                 /* the cursor: a frame round its column (0.8.9, the skins' mock-up:
+                                                       * TEXT); on NOTE the note selected is outlined instead */
             cv_frame(x, PR_Y0, PR_CWI(i) + 1, ybot - PR_Y0, T_TEXT);
+    }
+    if (outl) {   /* (2026-11-10) SEQ > NOTE: the selected note outlined, over the steps it lasts (its TIEs, or its HOLD) */
+        const step_t *os = &seq_steps(t)[ui.cursor];
+        uint32_t span = note_len(t, ui.cursor, len), hl = hold_len(os, len - ui.cursor), c0 = ui.cursor - base, c1, j;
+        int32_t ox0, ox1;
+        if (hl > span) span = hl;
+        c1 = c0 + span < ncol ? c0 + span : ncol;
+        ox0 = PR_CX(c0); ox1 = PR_CX(c1);
+        for (j = 0; j < 4u + NLANE; j++) {
+            int32_t n = pr_note(os, j), oy;
+            if (n < 0) continue;
+            oy = pr_row_y(n);
+            if (oy < PR_Y0 || oy >= ybot) continue;
+            cv_frame(ox0, oy - 1, ox1 - ox0 + 1, PR_RH + 1, T_TEXT);
+        }
     }
     if (ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u) {   /* (0.6.81) a chord held, KNOB 1 its length:
                                                          * the length to be written, outlined from the cursor on */
