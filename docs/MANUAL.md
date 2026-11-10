@@ -1274,7 +1274,7 @@ its page). PRESETS loads the track's sounds, as everywhere. The pages, their kno
 - The pictures follow the values (a turn redraws them) and, while it plays or sounds, the sound (0.8.5, FX live): the
   echoes swell with the level and a pulse runs along them, the reverb's tail swells and a line sweeps it, the chorus
   waves run at RATE, the slicer frames the step playing, MASTER's meter follows the output, PUNCH's playhead walks the
-  lane, DIST's level is a dot on its curve, AUTO PAN's dot swings. Stopped and silent they hold still (drawn by the
+  lane, DIST's level is a dot on its curve, AUTO PAN's dot swings. Live too: each hit (the output's level jumping) restarts the echoes' pulse and the reverb's sweep and the duck's dot, flashes the bars and throws sparks (delay) or sparkles (reverb); MASTER holds its peak; DIST's two scopes show the output's own wave going in and out, its flattened peaks lit; the SLICER gates that wave; AUTO PAN's ball leaves a trail; a value just turned lights the picture's frame, and DIST's old curve stays dim for a moment. Stopped and silent they hold still (drawn by the
   screen alone; nothing of the audio's time).
 
 ### Per track

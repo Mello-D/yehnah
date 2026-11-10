@@ -1387,6 +1387,15 @@ static void setup(int s)
         ui.fxmod = s == S_FXL_REVERB || s == S_FXL_BUSES ? 1u : s == S_FXL_SLICER ? 3u : s == S_FXL_MASTER ? 4u : 0u;
         go_title(T[s - S_FXL_SENDS]);
         ui.msg_t = 0;
+        if (getenv("FXLIVE")) {                         /* (FXLIVE=1: playing, a hit, then fading: the live pictures) */
+            uint32_t f, i;
+            song.playing = 1;
+            for (f = 0; f < 14; f++) {
+                for (i = 0; i < SCOPE_N; i++) scope_buf[i] = (int16_t)(sin(i * 0.3) * (f < 3 ? 11000.0 : 5000.0));
+                scope_w = 0;
+                ui_draw();
+            }
+        }
         break;
     }
     /* (0.8.5) SAVE's lens as the mock-up's data: projects NOCHE LARGA (A B C), ACID 03, DUB KIT, BOSQUE, TRANCE A; the
