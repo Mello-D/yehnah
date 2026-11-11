@@ -402,7 +402,23 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 
 _Static_assert(sizeof FMINI_CATS == FMINI_NFACTORY + 1u, "a type a preset");
 
+/* (2026-11-11) the SOUND page's rows: the whole patch (the settings past E0..E7 are VF ids, bit fields in P_LN0..6) */
+static const sound_row_t FMINI_ROWS[] = {
+    {"OSC 1", {VF(FX_R1), VF(FX_W1), VF(FX_L1)}, {"RNG", "WAV", "LVL"}},
+    {"OSC 2", {VF(FX_R2), VF(FX_W2), VF(FX_L2)}, {"RNG", "WAV", "LVL"}},
+    {"OSC 3", {VF(FX_R3), VF(FX_W3), VF(FX_L3)}, {"RNG", "WAV", "LVL"}},
+    {"TUNING", {VF(FX_D2), VF(FX_D3), VF(FX_TU)}, {"DT2", "DT3", "TUN"}},
+    {"NOISE", {VF(FX_LN), VF(FX_PK), 0xFF}, {"LVL", "CLR", ""}},
+    {"FILTER", {P_E0, P_E1, P_E7}, {"CUT", "EMP", "KBD"}},
+    {"CONTOUR", {P_E2, P_E3, P_E4}, {"AMT", "ATK", "DEC"}},
+    {"SUSTAIN", {P_E5, VF(FX_HP), 0xFF}, {"SUS", "OUT", ""}},
+    {"MOD", {P_E6, VF(FX_MM), VF(FX_SQ)}, {"AMT", "MIX", "LFO"}},
+    {"MOD TO", {VF(FX_MO), VF(FX_MF), 0xFF}, {"OSC", "FLT", ""}},
+};
+
 static const engine_t ENG_MINI = {
+    .rows = FMINI_ROWS,
+    .nrows = (uint8_t)(sizeof FMINI_ROWS / sizeof FMINI_ROWS[0]),
     .name = "FMINI",
     .page_title = {"FILTER", "MORE"},
     .edit = {

@@ -1229,6 +1229,8 @@ static void user_fill(uint32_t n)                 /* the first n user slots used
 static void go_title(const char *title)
 {
     uint32_t i;
+    if (str_eq(title, "EDIT 1") || str_eq(title, "EDIT 2"))
+        title = "PATCH";                        /* (2026-11-11: SOUND, the PATCH entry, is every other engine's page; EDIT 1 / 2 are a kit's) */
     for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, title); i++)
         ;
     if (i == NPAGES) {                          /* (0.6.80: a page renamed under a script; it read past PAGES) */
@@ -2809,10 +2811,10 @@ static int test_layer(void)
     btn_down(B_EDIT); frame();
     ok = step_on(&TSEL->step[0]) && ui.cursor == 0;
     btn_up(B_EDIT); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 1") && step_on(&TSEL->step[0]);   /* (0.9.2: EDIT is EDIT, the step stays) */
+    ok &= str_eq(cur_page()->title, "PATCH") && step_on(&TSEL->step[0]);   /* (0.9.2: EDIT is EDIT, the step stays) */
     bad += check("0.9.2 EDIT on STEP opens EDIT when let go, the step stays", ok);
     ui_power_on(); go_title("EDIT 1"); hold(B_HOME);
-    bad += check("2026-11-03 HOME held: nothing (no page, no MENU)", !ui.home && !ui.menu && str_eq(cur_page()->title, "EDIT 1"));
+    bad += check("2026-11-03 HOME held: nothing (no page, no MENU)", !ui.home && !ui.menu && str_eq(cur_page()->title, "PATCH"));
     /* no layer in ABOUT or a dialog: FX + a key is a note */
     ui_power_on(); about_open();
     btn_down(B_FX); frame(); key_down(white(3)); frame();
@@ -3195,22 +3197,22 @@ static int test_edit_cycle(void)
 {
     /* (0.9.2: one chain, SELECT a page a detent; an EDIT tap the next group's first. Was 0.8.5's lens: SELECT a level, the
      * tap the level's next set) */
-    static const char *const CH_A[] = {"EDIT 1", "EDIT 2", "FILTER", "DRIFT", "VOICE", "VOICE 2"};   /* (0.5:
+    static const char *const CH_A[] = {"SOUND", "FILTER", "DRIFT", "VOICE", "VOICE 2"};   /* (0.5:
                                                          * ANALOG's FILTER; 0.6.45: MORPH; chord-harp fork: BLEND, now
                                                          * SAVE > MORPH; 2026-10-30: MORPH now DRIFT, VINTAGE) */
-    static const char *const CH_F[] = {"EDIT 1", "EDIT 2", "FILTER", "DRIFT", "VOICE", "VOICE 2", "OP 1", "OP ENV", "OP 2"};
+    static const char *const CH_F[] = {"SOUND", "FILTER", "DRIFT", "VOICE", "VOICE 2", "OP 1", "OP ENV", "OP 2"};
     int bad = 0, ok;
     uint32_t i;
     ui_power_on();
     btn_down(B_EDIT); frame();
     ok = ui.home;
     btn_up(B_EDIT); frame();
-    bad += check("EDIT opens EDIT 1, when let go (not on press)", ok && str_eq(cur_page()->title, "EDIT 1"));
+    bad += check("EDIT opens SOUND, when let go (not on press)", ok && str_eq(cur_page()->title, "PATCH"));
     for (i = 0; i < NPAGES; i++)
         ok &= !str_eq(PAGES[i].title, "ENGINE");
     bad += check("no ENGINE page (engines are the EDIT layer's)", ok);
     set_engine_of(TSEL, 0);
-    bad += check("0.9.2 EDIT chain (ANALOG): SOUND (EDIT 1 EDIT 2) . TONE (FILTER DRIFT VOICE VOICE 2); taps: TRACKS, its first",
+    bad += check("0.9.2 EDIT chain (ANALOG): SOUND . TONE (FILTER DRIFT VOICE VOICE 2); taps: TRACKS, its first",
                  chain_walk(B_EDIT, CH_A, NELEM(CH_A)));
     set_engine_of(TSEL, ENGI_FM6);
     bad += check("0.9.2 EDIT chain (FM6): SOUND . TONE (FILTER DRIFT VOICE VOICE 2) . OPERATOR (OPERATOR OP ENV OPERATOR 2)",
@@ -3220,10 +3222,10 @@ static int test_edit_cycle(void)
                  TSEL->eng_req == ENGI_DIGITAL && chain_walk(B_EDIT, CH_A, NELEM(CH_A)));
     set_engine_of(TSEL, 0);
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CH_K[] = {"KIT", "KIT 2", "KIT 3", "SOUND", "SOUND 2", "SOUND 3", "SOUND 4", "LEVELS",
+        static const char *const CH_K[] = {"SOUND", "KIT 3", "LANE 1", "LANE 2", "LANE 3", "LANE 4", "LEVELS",
                                            "LEVELS 2", "X-MOD", "FILTER"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("0.9.2 EDIT chain (DRUM): KIT (KIT KIT 2 KIT 3) . SOUND (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER)",
+        bad += check("0.9.2 EDIT chain (DRUM): SOUND (SOUND KIT 3) . LANE (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER)",
                      chain_walk(B_EDIT, CH_K, NELEM(CH_K)));
         {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, (2026-11-10) KNOB 4 IMAGE (was STEREO's) */
             uint8_t t0 = dx_tone, h0 = dx_hands;
@@ -3245,11 +3247,11 @@ static int test_edit_cycle(void)
         apply_preset_to(TSEL, 0);
         bad += check("a factory preset load: every lane 100 % again", TSEL->p[P_LN5] == 127);
         set_engine_of(TSEL, 0); frame();
-        bad += check("LEVELS 2 of a track no longer DRUM falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
+        bad += check("LEVELS 2 of a track no longer DRUM falls back to SOUND", str_eq(cur_page()->title, "PATCH"));
     }
     go_title("EDIT 2"); frame();                        /* (0.9.2: a page put by code brings its entry) */
     go_home(); press(B_EDIT);
-    bad += check("EDIT opens its first page, not the page left (held note a)", str_eq(cur_page()->title, "EDIT 1"));
+    bad += check("EDIT opens its first page, not the page left (held note a)", str_eq(cur_page()->title, "PATCH"));
     {   /* (held note c) GLO > SCREEN FILL SNAKE: down the first column, up the next; every place once */
         uint32_t h = KN_FILL_H / 2, w = KN_W / 2, x, y, n = 0;
         int ok2;
@@ -8473,10 +8475,10 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, 5);
     ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
-    go_title("EDIT 1"); frame(); turn(EN_SELECT, 2);
-    ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.9.2: EDIT 1 EDIT 2 FILTER ..) */
-    turn(EN_SELECT, -2);
-    ok &= str_eq(cur_page()->title, "EDIT 1");
+    go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
+    ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.9.2: SOUND FILTER ..) */
+    turn(EN_SELECT, -1);
+    ok &= str_eq(cur_page()->title, "PATCH");
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "VOICE 2");                       /* (2026-11-02: it wraps, the last page) */
     go_title("ENV DEST"); frame(); sel_first(); turn(EN_SELECT, -1);   /* (2026-11-02: it wraps) */
@@ -9393,27 +9395,24 @@ static int test_lz_edit(void)
     uint32_t pr;
     ui_power_on(); set_engine_of(TSEL, 0); frame();
     press(B_EDIT); frame();
-    ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("EDIT \xB7 EDIT 1 \xB7 OSC") &&
-         lz_count_is("1/6");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 2") && lz_count_is("2/6");
+    ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("EDIT \xB7 SOUND") &&
+         lz_count_is("1/5");                                       /* (2026-11-11: SOUND, the PATCH entry, replaces EDIT 1 / EDIT 2) */
     turn(EN_SELECT, 1); frame();
     ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "FILTER") && lz_crumb_is("EDIT \xB7 FILTER") &&
-          lz_count_is("3/6");
+          lz_count_is("2/5");
     frames(320); press(B_EDIT); frame();                            /* EDIT on EDIT: HOME's TRACKS */
     ok &= ui.home && home_level() == 0u;
     frames(320); press(B_EDIT); frame();                            /* EDIT: its first page */
-    ok &= str_eq(cur_page()->title, "EDIT 1");
+    ok &= str_eq(cur_page()->title, "PATCH");
     turn(EN_SELECT, -1); frame();                                   /* (round: VOICE 2) */
     ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "VOICE 2") && lz_crumb_is("EDIT \xB7 VOICE 2") &&
-          lz_count_is("6/6");
+          lz_count_is("5/5");
     turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 1");                      /* (2026-11-02: it wraps) */
+    ok &= str_eq(cur_page()->title, "PATCH");                       /* (2026-11-02: it wraps) */
     turn(EN_SELECT, -1); frame();
     ok &= str_eq(cur_page()->title, "VOICE 2");
     turn(EN_SELECT, -2); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "DRIFT");    /* (DRIFT VOICE VOICE 2: two back; BLEND now
-                                                                     * SAVE > MORPH) */
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "DRIFT");    /* (DRIFT VOICE VOICE 2: two back) */
     frames(320); press(B_EDIT); frame();
     ok &= ui.home && home_level() == 0u;
     bad += check("0.9.2 EDIT: one chain by SELECT (round), EDIT its first page, an EDIT tap on it TRACKS; tabs, crumb, n/N", ok);
@@ -9421,10 +9420,10 @@ static int test_lz_edit(void)
     turn(EN_SELECT, 1); frame();
     open_family(FAM_ENV); frame();
     press(B_EDIT); frame();
-    ok = str_eq(cur_page()->title, "EDIT 1") && pd_level() == 0u;
+    ok = str_eq(cur_page()->title, "PATCH") && pd_level() == 0u;
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
-    ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && str_eq(cur_page()->title, "EDIT 1");   /* (the next sound) */
+    ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && str_eq(cur_page()->title, "PATCH");   /* (the next sound) */
     bad += check("0.9.2 EDIT: EDIT from elsewhere its first page; PRESETS the next sound, the page stays", ok);
     ui_power_on(); set_engine_of(TSEL, 0); go_title("VOICE"); frame();
     turn(EN_SELECT, 1); frame();
@@ -9967,16 +9966,10 @@ static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, 
 static int test_engvis(void)
 {
     static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
-        {5, "VOX LEAD", "EDIT 1", 0, "VOICE lead, EDIT"}, {5, "TALK BOX", "EDIT 2", 0, "VOICE vowels, EDIT"},
-        {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
-        {ENGI_ANALOG, "ACID", "EDIT 1", 3, "ANALOG cell, EDIT"}, {ENGI_FM6, "TINE EP", "EDIT 1", 4, "FM6 colony, EDIT"},
+        /* (2026-11-11: the synths' EDIT 1 / 2 pictures went with the pages: SOUND is a list; the kit's and FM6's operator pages keep theirs) */
+        {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"},
         {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
-        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"},
-        {7, "ROCK DRIVE", "EDIT 1", 5, "WHEEL worms, EDIT"}, {15, "JUNO BRASS", "EDIT 1", 9, "JUNO faders, EDIT"},
-        {16, "OMNICHORD", "EDIT 1", 10, "OMNI strings, EDIT"}, {17, "KALIMBA", "EDIT 1", 11, "KALIMBA tines, EDIT"},
-        {2, "BRASS", "EDIT 1", 7, "PHASE snail, EDIT"}, {3, "BYTEBEAT", "EDIT 1", 8, "LOFI caterpillar BYTE, EDIT"},
-        {3, "FLOAT PAD", "EDIT 2", 8, "LOFI caterpillar FLOAT, EDIT"},
-        {3, "PULSE LD", "EDIT 1", 8, "LOFI caterpillar PLS, EDIT"}};
+        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"}};
     int bad = 0, ok = 1, mv, st;
     uint32_t c;
     for (c = 0; c < NELEM(C); c++) {
@@ -10028,10 +10021,10 @@ static int test_engvis(void)
 #endif
     {   /* DRUM-X: KIT's beings (EDIT 1) and SOUND 1..4; KIT 2, KIT 3, X-MOD keep the colony; a hit squashes its being, a
          * ratchet's hits each */
-        static const char *const PG[] = {"EDIT 1", "SOUND", "SOUND 4", "EDIT 2", "KIT 3", "X-MOD"};
+        static const char *const PG[] = {"SOUND", "SOUND 4", "KIT 3", "X-MOD"};
         uint32_t k, h0, n = 0;
-        int ran[6];
-        vxt_case(ENGI_DRUM, "DRUM-X", "EDIT 1", 2, &mv, &st);
+        int ran[4];
+        vxt_case(ENGI_DRUM, "DRUM-X", "SOUND", 2, &mv, &st);
         for (k = 0; k < NELEM(PG); k++) {
             uint32_t f0;
             go_title(PG[k]);
@@ -10040,9 +10033,9 @@ static int test_engvis(void)
             vxt_run(48, 0);
             ran[k] = vxs.fr[VX_K(TSEL)] != f0;
         }
-        ok = ran[0] && ran[1] && ran[2] && ran[3] && ran[4] && ran[5];
-        bad += check("0.9.4 DRUM-X: KIT, SOUND 1..4, KIT 2, KIT 3 and X-MOD all draw (2026-10-29: the robot, was the kit)", ok);
-        go_title("EDIT 1");
+        ok = ran[0] && ran[1] && ran[2] && ran[3];
+        bad += check("0.9.4 DRUM-X: LANE 1 and 4, KIT 3 and X-MOD all draw (2026-10-29: the robot, was the kit)", ok);
+        go_title("SOUND");
         vxt_run(48, 0);
         h0 = vxs.hitm[3];
         for (k = 0; k < 3u; k++) {                      /* (a ratchet: three hits, a frame or two apart) */
@@ -10103,10 +10096,10 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
  * (0.9.1's numbering, the level the page is drawn as), its pages; each must be reached at that level */
 typedef struct { uint8_t fam, lv, kind; const char *t[13]; } old_lv_t;   /* kind: EDIT's (0 synth 1 FM6 2 DRUM), 9 any */
 static const old_lv_t OLD_LV[] = {
-    {FAM_EDIT, 0, 0, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 0, {"FILTER", "DRIFT", "VOICE", "VOICE 2"}},   /* (2026-10-30: RETRIG ROTOR gone) */
-    {FAM_EDIT, 0, 1, {"EDIT 1", "EDIT 2"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
+    {FAM_EDIT, 0, 0, {"PATCH"}}, {FAM_EDIT, 1, 0, {"FILTER", "DRIFT", "VOICE", "VOICE 2"}},   /* (2026-10-30: RETRIG ROTOR gone) */
+    {FAM_EDIT, 0, 1, {"PATCH"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
     {FAM_EDIT, 2, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
-    {FAM_EDIT, 0, 2, {"EDIT 1", "EDIT 2", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "LEVELS", "LEVELS 2"}},
+    {FAM_EDIT, 0, 2, {"PATCH", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "LEVELS", "LEVELS 2"}},
     {FAM_EDIT, 2, 2, {"SOUND", "SOUND 2", "SOUND 3", "SOUND 4"}},
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
@@ -10237,7 +10230,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {5, 6, 8 + XS, 6, 6, 3, 3, 2, 6, 1, 3, 10, 4, 4};   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {4, 6, 8 + XS, 6, 6, 3, 3, 2, 6, 1, 3, 9, 4, 4};   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10247,7 +10240,7 @@ static int test_nav_tasks(void)
         ok = 0;
         switch (t) {
         case 0:                                         /* the filter (CUT) of track 2 */
-            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1); tk_go(EN_SELECT, 2);
+            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1); tk_go(EN_SELECT, 1);   /* (2026-11-11: SOUND FILTER: one detent) */
             v = TSEL->p[P_FCUT]; tk_val(EN_K2, -8);
             ok = song.sel == 1u && str_eq(cur_page()->title, "FILTER") && TSEL->p[P_FCUT] != v;
             break;
@@ -10299,7 +10292,7 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "TRACK") && TSEL->p[P_HRQ] == 0;
             break;
         case 11:                                        /* DRUM-X (track 4): the snare's DECAY */
-            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 3); tk_go(EN_SELECT, 4); tk_go(EN_K1, 1);
+            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 3); tk_go(EN_SELECT, 3); tk_go(EN_K1, 1);
             { uint32_t c = dx_ui_lane & 7u; uint8_t *dv = dx_ui_side ? dx_kit[c].b : dx_kit[c].a, d0 = dv[DXP_DECAY];
               tk_val(EN_K2, -6);
               ok = song.sel == 3u && str_eq(cur_page()->title, "SOUND 2") && c == 1u && dv[DXP_DECAY] != d0; }
@@ -10323,7 +10316,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; task 11 one fewer, TOOLS gone: 67; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 67u + XS);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; task 11 one fewer, TOOLS gone: 67; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 65u + XS);
     ui_power_on();
     return bad;
 }
@@ -10357,7 +10350,7 @@ static int test_nav_rules(void)
     turn(EN_K3, -1);                                     /* LENGTH 1, turned down: 0, the note goes (2026-11-10) */
     ok &= TSEL->step[3].time == ST_REST && !TSEL->step[3].n && msg_is("NOTE: NONE");
     press(B_EDIT); frame();
-    ok &= str_eq(cur_page()->title, "EDIT 1");           /* (EDIT: EDIT) */
+    ok &= str_eq(cur_page()->title, "PATCH");           /* (EDIT: EDIT) */
     bad += check("2026-11-03 STEP / NOTE under the lowest: NONE (the step); LENGTH 0 takes the note away; EDIT opens EDIT", ok);
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame(); frame();
     btn_down(B_REC); frames(800);

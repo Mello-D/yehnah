@@ -448,8 +448,10 @@ static int page_visible(uint32_t i)
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_DRIFT)   /* (chord-harp fork, 2026-10-30: was MORPH, ANALOG PHASE
                                                          * LOFI's waves, gone with Clipper's engines) DRIFT, VINTAGE */
         return trk_eng(TSEL) != ENGI_DRUM;
-    if (PAGES[i].graph == GR_PLIST)                     /* (2026-11-11) EDIT > PATCH: FMINI's */
-        return trk_eng(TSEL) == ENGI_MINI;
+    if (PAGES[i].graph == GR_PLIST)                     /* (2026-11-11) SOUND (the PATCH entry): every engine's but a kit's */
+        return 1;
+    if (PAGES[i].scope == SC_ENGINE)                    /* EDIT 1 / EDIT 2: retired, every engine's settings are SOUND's rows (a kit's too) */
+        return 0;
     if (PAGES[i].graph == GR_CHANCE)   /* (0.6.37) a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG)   /* (0.6.48: IMAGE) */
@@ -474,6 +476,9 @@ static int page_visible(uint32_t i)
 static uint32_t page_first(uint32_t fam)
 {
     uint32_t i;
+    for (i = 0; i < NPAGES; i++)
+        if (PAGES[i].fam == fam && page_visible(i) && (fam != FAM_EDIT || PAGES[i].graph == GR_PLIST))   /* (2026-11-11: EDIT's first is SOUND) */
+            return i;
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == fam)
             return i;

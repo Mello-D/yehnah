@@ -438,6 +438,11 @@ typedef struct {
 #define PAT(n) .pat = (n)
 #define XP(...) .x = {__VA_ARGS__}  /* XP(P_GLIDE + 1, 30, P_LD_SHP + 1, 40): parameter id + 1, value */
 
+/* (2026-11-11) a row of the SOUND page (params.c sound_rows, ui_lzlist.c): KNOB 1 picks the row, KNOB 2..4 its (up to) three settings
+ * (a parameter id, or VF(k) for a patch setting); name: shown in KNOB 1's card only; s[k]: the
+ * setting's 3-letter label, 0 = the parameter's own name */
+typedef struct { const char *name; uint8_t id[3]; const char *s[3]; } sound_row_t;
+
 struct track;
 typedef struct {                 /* an engine (engines.c ENGINES[]; the eng_*.c files) */
     const char *name;            /* "ANALOG" (PRESETS, the editor) */
@@ -473,6 +478,9 @@ typedef struct {                 /* an engine (engines.c ENGINES[]; the eng_*.c 
     int (*done)(struct track *t, voice_t *v);
     /* optional: after a preset's values are in p (engines.c preset_values), the engine's own: FMINI's patch into its parameters */
     uint32_t (*pset)(int16_t *p, uint32_t pi);   /* returns 1 when the patch set the arp (P_AMODE..P_APROB) */
+    /* optional: the SOUND page's rows (0 = four generic rows over edit[]) */
+    const sound_row_t *rows;
+    uint8_t nrows;
 } engine_t;
 
 /* ------------------------------------------------- tracks, the song --- */

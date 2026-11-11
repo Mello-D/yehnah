@@ -2043,6 +2043,8 @@ int main(int argc, char **argv)
         for (s = 0; s < S_COUNT; s++) {
             char name[64];
             uint32_t k;
+            if (getenv("ONLY") && (p != UI_DEFAULT_INDEX || !strstr(S_NAME[s], getenv("ONLY"))))
+                continue;                           /* (ONLY=edit_: a quick look at some screens, the default palette; 2026-11-11) */
             if (!YEHNAH_FM4 && (s == S_OP_ENV || (s >= S_ALG1 && s <= S_OP_LEVEL)))
                 continue;                           /* (DIGITAL's own screens: YEHNAH_FM4=1 only) */
             snprintf(name, sizeof name, "%s/%s", UI_PALETTES[p].name, S_NAME[s]);
@@ -2056,6 +2058,10 @@ int main(int argc, char **argv)
             for (k = 0; k < sizeof SHOW / sizeof SHOW[0]; k++)
                 if (!strcmp(UI_PALETTES[p].name, SHOW[k])) write_ppm(out, SHOW[k], S_NAME[s]);
         }
+    if (getenv("ONLY")) {
+        fclose(rep);
+        return 0;
+    }
     {   /* every FM6 colony (the lint above, fm6_hook, runs on each) */
         uint32_t a, c0 = fmp_charts;
         for (a = 1; a <= 32u; a++) {

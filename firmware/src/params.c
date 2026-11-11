@@ -834,33 +834,49 @@ static const page_t PAGES[] = {
 #define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu && !GTR_PAGE(pg))   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
                                                          * (CHORD has PLATE too) */
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
-/* (2026-11-11) EDIT > PATCH on FMINI: every setting of the patch in one list. KNOB 1 picks the row, KNOB 2..4 are its (up to) three
- * settings; the page cur_page() hands out is a copy with the row's ids in slots 1..3. The picture (ui_lzlist.c) is the list */
-typedef struct { const char *name; uint8_t id[3]; const char *s[3]; } plist_row_t;
-static const plist_row_t PLIST[] = {
-    {"OSC 1", {VF(FX_R1), VF(FX_W1), VF(FX_L1)}, {"RNG", "WAV", "LVL"}},
-    {"OSC 2", {VF(FX_R2), VF(FX_W2), VF(FX_L2)}, {"RNG", "WAV", "LVL"}},
-    {"OSC 3", {VF(FX_R3), VF(FX_W3), VF(FX_L3)}, {"RNG", "WAV", "LVL"}},
-    {"TUNING", {VF(FX_D2), VF(FX_D3), VF(FX_TU)}, {"DT2", "DT3", "TUN"}},
-    {"NOISE", {VF(FX_LN), VF(FX_PK), 0xFF}, {"LVL", "CLR", ""}},
-    {"FILTER", {P_E0, P_E1, P_E7}, {"CUT", "EMP", "KBD"}},
-    {"CONTOUR", {P_E2, P_E3, P_E4}, {"AMT", "ATK", "DEC"}},
-    {"SUSTAIN", {P_E5, VF(FX_HP), 0xFF}, {"SUS", "OUT", ""}},
-    {"MOD", {P_E6, VF(FX_MM), VF(FX_SQ)}, {"AMT", "MIX", "LFO"}},
-    {"MOD TO", {VF(FX_MO), VF(FX_MF), 0xFF}, {"OSC", "FLT", ""}},
-};
-#define PLIST_N (sizeof(PLIST) / sizeof(PLIST[0]))
+/* (2026-11-11) the SOUND page (the PATCH entry of PAGES, GR_PLIST): every engine's settings as a list of rows. KNOB 1 picks the row,
+ * KNOB 2..4 are its (up to) three settings; the page cur_page() hands out is a copy with the row's ids in slots 1..3. The rows
+ * are the engine's own table (engine_t.rows), else four generic rows of two over edit[] (the old EDIT 1 / EDIT 2: the page_title
+ * tags the pairs). The picture (ui_lzlist.c) is the list */
+#define SR_GEN 4u
+static sound_row_t sr_gen[SR_GEN];
 static uint8_t plist_cur;
+static const sound_row_t *sound_rows(const track_t *t, uint32_t *n)
+{
+    const engine_t *e = ENGINES[eng_idx(t->eng_req)];
+    uint32_t r, k;
+    if (e->rows) {
+        *n = e->nrows;
+        return e->rows;
+    }
+    for (r = 0; r < SR_GEN; r++) {
+        const param_desc_t *d = track_desc(t, P_E0 + 2u * r);
+        sr_gen[r].name = d ? d->label : "";
+        for (k = 0; k < 3u; k++) {
+            sr_gen[r].id[k] = k < 2u ? (uint8_t)(P_E0 + 2u * r + k) : 0xFFu;
+            sr_gen[r].s[k] = 0;
+        }
+    }
+    *n = SR_GEN;
+    return sr_gen;
+}
+static uint32_t plist_n(void)
+{
+    uint32_t n;
+    sound_rows(&trk[song.sel], &n);
+    return n;
+}
 static int32_t plist_val(const track_t *t, uint32_t id) { return IS_VF(id) ? fmx_get(t->p, id - 0xA0u) : t->p[id]; }
 static const page_t *plist_page(const page_t *p)
 {
     static page_t sh;
-    uint32_t k;
+    uint32_t k, n;
+    const sound_row_t *rw = sound_rows(&trk[song.sel], &n);
     sh = *p;
-    if (plist_cur >= PLIST_N)
-        plist_cur = (uint8_t)(PLIST_N - 1u);
+    if (plist_cur >= n)
+        plist_cur = (uint8_t)(n - 1u);
     for (k = 0; k < 3u; k++)
-        sh.id[1 + k] = PLIST[plist_cur].id[k];
+        sh.id[1 + k] = rw[plist_cur].id[k];
     return &sh;
 }
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */

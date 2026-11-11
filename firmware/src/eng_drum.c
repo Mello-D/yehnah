@@ -677,7 +677,16 @@ static const param_desc_t *drum_desc(const track_t *t, uint32_t k)
     return dx_mach_req && (k == 0u || k == 4u || k == 5u || k == 6u) ? &DRUM_NONE : 0;
 }
 
+/* (2026-11-11) the SOUND page: the whole kit's eight settings */
+static const sound_row_t DRUM_ROWS[] = {
+    {"KIT", {P_E0, P_E1, P_E2}, {"MRP", "TUN", "TON"}},
+    {"HIT", {P_E3, P_E4, P_E5}, {"DEC", "NOI", "FM"}},
+    {"OUT", {P_E6, P_E7, 0xFF}, {"FLD", "DRV", ""}},
+};
+
 static const engine_t ENG_DRUM = {
+    .rows = DRUM_ROWS,
+    .nrows = 3,
     .name = "DRUM",
     .page_title = {"KIT", "KIT 2"},                     /* (0.6.54: both the whole kit's, was HIT) */
     .edit = {

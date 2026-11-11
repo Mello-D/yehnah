@@ -1386,7 +1386,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph == GR_PLIST && slot == 0u) {          /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (round) */
-        plist_cur = (uint8_t)wrap_add((int32_t)plist_cur, steps > 0 ? 1 : -1, (int32_t)PLIST_N);
+        plist_cur = (uint8_t)wrap_add((int32_t)plist_cur, steps > 0 ? 1 : -1, (int32_t)plist_n());
         ui.force = 1;
         return;
     }
