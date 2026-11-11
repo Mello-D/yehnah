@@ -847,12 +847,12 @@ static const page_t PAGES[] = {
 /* the generic rows (the old FILTER, VOICE, VOICE 2, DRIFT pages), after an engine's own: the part's filter, drive and velocity, the
  * voice mode and priority, glide, the keys' detune / key>filter / mod wheel, the wandering voices. ANALOG has its own FILTER row
  * (Clipper's model); a kit gets the first two only */
-static const sound_row_t GEN_ROWS[] = {
+static const sound_row_t GEN_ROWS[] = {                  /* (FILTER with its DRIVE, then the rows of three, the rows of two last) */
     {"FILTER", {P_FTYPE, P_FCUT, P_FRES}, {0, 0, 0}},
-    {"DRIVE", {P_DIST, P_VELF, 0xFF}, {0, 0, 0}},
+    {"DRIVE", {P_DIST, P_VELF, 0xFF}, {0, 0, 0}},        /* [1]: a kit has FILTER and DRIVE only (sound_gen_range) */
     {"VOICE", {P_VOICE, P_PRIO, P_ALLOC}, {0, 0, 0}},
-    {"GLIDE", {P_GLIDE, P_GLMODE, 0xFF}, {0, 0, 0}},
     {"KEYS", {P_DETUNE, P_KTRK, P_MWDST}, {0, 0, 0}},
+    {"GLIDE", {P_GLIDE, P_GLMODE, 0xFF}, {0, 0, 0}},
     {"DRIFT", {P_DRIFT, P_VINT, 0xFF}, {0, 0, 0}},
 };
 #define NGEN ((uint32_t)(sizeof GEN_ROWS / sizeof GEN_ROWS[0]))
