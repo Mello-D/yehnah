@@ -836,6 +836,20 @@ static void arp_fire(track_t *t, uint32_t period);
 static uint32_t hum_amt(const track_t *t, uint32_t id);   /* (SEQ > HUMAN, below: the arp's too) */
 static uint32_t hum_rnd(void);
 static int32_t hum_pm(uint32_t r);
+/* (2026-11-11) guitchordi's humanity (app.c rhythm_tick, its default 20 %): each note after the first is moved by up to
+ * +-88 samples (of 44.1 kHz) x humanity / 10 = +-0.4 ms from its nominal place (not cumulative: the offset is the note's own,
+ * here a hash of the repeat and the note, so no state), and its strength by up to +-0.02. Note i's offset, in samples */
+static int32_t st_jit(const track_t *t, uint32_t i)
+{
+    uint32_t h = (t->arp_idx * 2654435761u + i * 40503u) >> 7;
+    return i ? ((int32_t)(h % 177u) - 88) * 2 * (int32_t)(FS / 1000u) / (10 * 44) : 0;
+}
+/* the wait before overall note i (the first is 0) after note i - 1, never negative */
+static uint32_t st_due(const track_t *t, uint32_t i)
+{
+    int32_t d = (int32_t)t->as_gap + st_jit(t, i) - st_jit(t, i - 1u);
+    return t->as_gap && d > 0 ? (uint32_t)d : t->as_gap;
+}
 /* a stroke's later notes coming in, one gap apart (noinline, in the flash: arp_step is inlined into the RAM code) */
 static __attribute__((noinline)) void arp_stroke_run(track_t *t, uint32_t n)
 {
@@ -852,7 +866,7 @@ static __attribute__((noinline)) void arp_stroke_run(track_t *t, uint32_t n)
         seq_note_on(t, nt, t->as_vv[t->as_i]);
         t->as_i++;
     } while (!t->as_gap && t->as_i < t->as_n);
-    t->as_due = t->as_gap;
+    t->as_due = st_due(t, t->as_i + 1u);
 }
 static void arp_step(track_t *t, uint32_t n, uint32_t gate_n)
 {
@@ -962,6 +976,7 @@ static __attribute__((noinline)) void arp_stroke(track_t *t, const uint32_t *lis
     t->as_n = t->as_i = 0;
     for (i = 0; i < tot; i++) {
         uint32_t nt = (uint32_t)clamp((int32_t)list[o[i]], 1, 127), v = vel;
+        v = (uint32_t)clamp((int32_t)v + (int32_t)(rng() % 5u) - 2, 1, 127);   /* (guitchordi's +-0.02 strength) */
         if (hv)
             v = (uint32_t)clamp((int32_t)v + hum_pm(hv * 50u / 127u), 1, 127);
         if (!i) {
@@ -977,7 +992,7 @@ static __attribute__((noinline)) void arp_stroke(track_t *t, const uint32_t *lis
         }
     }
     t->as_gap = gap;
-    t->as_due = due;
+    t->as_due = due == gap ? st_due(t, 1u) : due;
     if (!due && t->as_n)
         arp_stroke_run(t, 0);
 }
@@ -1720,7 +1735,8 @@ static __attribute__((noinline)) void key_on(uint32_t k, track_t *t)   /* (chord
     uint32_t n = hp && harp_ck(t, k) ? harp_build(t, k, kb_snd[k]) : hp ? (kb_snd[k][0] = kb_note[k], 1u) :   /* (a plate
                                                      * key: its note; CHORD's too) */
                  chord_build(t, kb_note[k], kb_snd[k]);
-    uint32_t gap = n > 1u ? chord_gap(t) : 0u, i;
+    uint32_t gap = n > 1u && t->p[P_AMODE] < AM_STRDN ? chord_gap(t) : 0u, i;   /* (2026-11-11: the strokes sweep it themselves; a key that
+                                                     * delivered its notes over STRUM let the arp fire on the first, one string) */
     key_rpc[trk_index(t) % NTRK] = (uint8_t)((hp && harp_ck(t, k) ? harp_root(t, k) : hp ? kb_note[k] : (uint32_t)chord_r) %
                                              12u);          /* (chord-harp fork) what it plays, for SCL's circle: the
                                                      * chord's root (HARP's too), a single note (a plate key's) itself */

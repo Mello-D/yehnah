@@ -1425,8 +1425,23 @@ static void edit_param(uint32_t slot, int32_t steps)
     d = page_desc(pg, slot, &vp);
     if (!d || !vp || d->max == d->min)
         return;
-    v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-    *vp = (int16_t)v;
+    {
+        int32_t was = *vp;
+        v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
+        *vp = (int16_t)v;
+        if (vp == &TSEL->p[P_AMODE] && was < 19 && v >= 19) {   /* (2026-11-11) into the strokes (seq.c AM_STRDN ..): guitchordi's
+                                                         * start, a 50 ms sweep and the FREE gate (the strings ring on); only
+                                                         * a STRUM of 0 / a timed GATE are changed, and the user's own stay */
+            if (TSEL->p[P_CSTR] == 0) {
+                TSEL->p[P_CSTR] = 25;
+                motion_capture(TSEL, P_CSTR, 25);
+            }
+            if (TSEL->p[P_AGATE] < 127) {
+                TSEL->p[P_AGATE] = 127;
+                motion_capture(TSEL, P_AGATE, 127);
+            }
+        }
+    }
     if (vp == &fmx_ui) {                                /* (2026-11-11) FMINI's patch setting: into its packed field */
         fmx_set(TSEL->p, fmx_ui_k, v);
         motion_capture(TSEL, P_COUNT + fmx_ui_k, v);   /* (recorded when armed; a live edit is the new base) */

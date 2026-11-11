@@ -17,7 +17,7 @@
 
 enum { GT_NYLON, GT_STEEL, GT_ELEC, GT_N };
 static const char *const N_GTMODEL[] = {"NYLON", "STEEL", "ELEC"};
-#define GT_POOL 6u                     /* strings sounding at once, all parts */
+#define GT_POOL 8u                     /* strings sounding at once, all parts */
 #define GT_LEN 304u                    /* a line's samples: D2 (73.4 Hz) and up */
 #define GT_SR 22050.0f                 /* the string's rate: half the output's */
 typedef struct {                       /* a model: its decay, its pluck, its body (two resonances: f, Q, level) */
@@ -41,7 +41,7 @@ typedef struct {
     uint16_t w, len;                   /* the write position; the integer delay */
     uint8_t on, quiet, owner, slot, rel, model, oct;   /* owner: part + 1 (0 free), slot: its voice; rel: DAMP done */
 } gt_voice_t;
-static gt_voice_t gt_pool[GT_POOL];
+static gt_voice_t gt_pool[GT_POOL] __attribute__((section(".pool")));   /* (RAM is full; the pool is zeroed at boot) */
 static int16_t gt_line[GT_POOL][GT_LEN] __attribute__((section(".pool")));
 
 #define GT_NI static __attribute__((noinline))
