@@ -84,7 +84,7 @@ static const char *const N_MDST[] = {"OFF", "PITCH", "CUT", "SHP", "AMP", "PAN",
                                                          * globals (DELAY TIME FDBK TONE MIX, REVERB SIZE DAMP, CHORUS RATE
                                                          * DEPTH): mod.c macro_master, fx.c GFX() */
 static const char *const N_ENGNAME[] = {"ANALOG", "DIGITAL", "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-",
-                                             "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "FMINI",
+                                             "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "MINI",
                                              "GUITAR", "ACID", "DRIFT", "PLAITS", "STRINGS", "VPS",
                                              "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"};   /* (Yehnah:
                                              * SAMPLE 4, GRAIN 8, SLICE 13 retired; 0.8.3 ANIMAL; chord-harp fork 15 JUNO,
@@ -312,6 +312,8 @@ static const param_desc_t WROT_DESC[2] = {               /* (0.7.8) WHEEL's ROTO
 static const char *const N_FRNG[] = {"LO", "32'", "16'", "8'", "4'", "2'"};
 static const char *const N_FCLR[] = {"WHITE", "PINK"}, *const N_FLFO[] = {"LFO", "SQUARE"}, *const N_FOUT[] = {"LOWPASS", "HIGHPASS"};
 static const char *const N_FWAV[] = {"TRI", "SHARK", "SAW", "SQR", "PLS W", "PLS N", "SIN"};
+static const char *const N_A2RNG[] = {"+0", "-12", "+5", "+7", "+12", "+19", "+24", "-5"};   /* ANALOG OSC 2: semitones (eng_analog.c) */
+static const char *const N_A2WAV[] = {"SAME", "SAW", "SQR", "TRI", "SIN", "PWM"};
 static const param_desc_t FMX_DESC[NFMX] = {
     PE("RANGE", N_FRNG, 3), PE("RANGE", N_FRNG, 3), PE("RANGE", N_FRNG, 3),
     PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2),
@@ -319,6 +321,10 @@ static const param_desc_t FMX_DESC[NFMX] = {
     {"DET", F_INT, -700, 700, 0, 0, "ct"}, {"DET", F_INT, -700, 700, 0, 0, "ct"},
     {"TUNE", F_INT, -64, 63, 0, 0, 0}, PD("MIX", F_PCT, 0, 127, 0),
     PE("COLOR", N_FCLR, 0), PE("MOD>OSC", N_ONOFF, 0), PE("MOD>FLT", N_ONOFF, 0), PE("LFO", N_FLFO, 0), PE("OUTPUT", N_FOUT, 0),
+    PE("RANGE", N_A2RNG, 0), PE("WAVE2", N_A2WAV, 0), {"PW", F_BIPCT, -64, 63, 0, 0, 0}, PE("SYNC", N_ONOFF, 0),   /* ANALOG's */
+    PD("LVL", F_PCT, 0, 127, 127), PD("LVL", F_PCT, 0, 127, 127), PD("LVL", F_PCT, 0, 127, 127),                    /* DIGITAL's */
+    {"DET", F_INT, -64, 63, 0, 0, "ct"}, {"DET", F_INT, -64, 63, 0, 0, "ct"}, {"DET", F_INT, -64, 63, 0, 0, "ct"},
+    {"F4", F_INT, 0, 127, 65, 0, 0}, PD("KEYTRK", F_PCT, 0, 127, 30),                                              /* FORMANT's */
 };
 static int16_t fmx_ui;           /* a patch setting on a page: its value (page_desc), written back by ui_input.c edit_param */
 static uint8_t fmx_ui_k;
@@ -838,17 +844,44 @@ static const page_t PAGES[] = {
  * KNOB 2..4 are its (up to) three settings; the page cur_page() hands out is a copy with the row's ids in slots 1..3. The rows
  * are the engine's own table (engine_t.rows), else four generic rows of two over edit[] (the old EDIT 1 / EDIT 2: the page_title
  * tags the pairs). The picture (ui_lzlist.c) is the list */
+/* the generic rows (the old FILTER, VOICE, VOICE 2, DRIFT pages), after an engine's own: the part's filter, drive and velocity, the
+ * voice mode and priority, glide, the keys' detune / key>filter / mod wheel, the wandering voices. ANALOG has its own FILTER row
+ * (Clipper's model); a kit gets the first two only */
+static const sound_row_t GEN_ROWS[] = {
+    {"FILTER", {P_FTYPE, P_FCUT, P_FRES}, {0, 0, 0}},
+    {"DRIVE", {P_DIST, P_VELF, 0xFF}, {0, 0, 0}},
+    {"VOICE", {P_VOICE, P_PRIO, P_ALLOC}, {0, 0, 0}},
+    {"GLIDE", {P_GLIDE, P_GLMODE, 0xFF}, {0, 0, 0}},
+    {"KEYS", {P_DETUNE, P_KTRK, P_MWDST}, {0, 0, 0}},
+    {"DRIFT", {P_DRIFT, P_VINT, 0xFF}, {0, 0, 0}},
+};
+#define NGEN ((uint32_t)(sizeof GEN_ROWS / sizeof GEN_ROWS[0]))
 #define SR_GEN 4u
 static sound_row_t sr_gen[SR_GEN];
 static uint8_t plist_cur;
-static const sound_row_t *sound_rows(const track_t *t, uint32_t *n)
+static void sound_gen_range(const track_t *t, uint32_t *g0, uint32_t *g1)
+{
+    uint32_t ei = t->eng_req % NENGINES;
+    *g0 = ei == ENGI_ANALOG ? 1u : 0u;
+    *g1 = ei == ENGI_DRUM ? 2u : NGEN;
+}
+static uint32_t sound_n(const track_t *t)
 {
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
-    uint32_t r, k;
-    if (e->rows) {
-        *n = e->nrows;
-        return e->rows;
-    }
+    uint32_t g0, g1;
+    sound_gen_range(t, &g0, &g1);
+    return (e->rows ? e->nrows : SR_GEN) + g1 - g0;
+}
+/* row i of the list: the engine's, else the generic ones; (no table: four rows of two over edit[], tagged by page_title) */
+static const sound_row_t *sound_row(const track_t *t, uint32_t i)
+{
+    const engine_t *e = ENGINES[eng_idx(t->eng_req)];
+    uint32_t r, k, en = e->rows ? e->nrows : SR_GEN, g0, g1;
+    sound_gen_range(t, &g0, &g1);
+    if (i >= en)
+        return &GEN_ROWS[g0 + i - en < g1 ? g0 + i - en : g1 - 1u];
+    if (e->rows)
+        return &e->rows[i];
     for (r = 0; r < SR_GEN; r++) {
         const param_desc_t *d = track_desc(t, P_E0 + 2u * r);
         sr_gen[r].name = d ? d->label : "";
@@ -857,26 +890,21 @@ static const sound_row_t *sound_rows(const track_t *t, uint32_t *n)
             sr_gen[r].s[k] = 0;
         }
     }
-    *n = SR_GEN;
-    return sr_gen;
+    return &sr_gen[i];
 }
-static uint32_t plist_n(void)
-{
-    uint32_t n;
-    sound_rows(&trk[song.sel], &n);
-    return n;
-}
+static uint32_t plist_n(void) { return sound_n(&trk[song.sel]); }
 static int32_t plist_val(const track_t *t, uint32_t id) { return IS_VF(id) ? fmx_get(t->p, id - 0xA0u) : t->p[id]; }
 static const page_t *plist_page(const page_t *p)
 {
     static page_t sh;
-    uint32_t k, n;
-    const sound_row_t *rw = sound_rows(&trk[song.sel], &n);
+    uint32_t k, n = plist_n();
+    const sound_row_t *rw;
     sh = *p;
     if (plist_cur >= n)
         plist_cur = (uint8_t)(n - 1u);
+    rw = sound_row(&trk[song.sel], plist_cur);
     for (k = 0; k < 3u; k++)
-        sh.id[1 + k] = rw[plist_cur].id[k];
+        sh.id[1 + k] = rw->id[k];
     return &sh;
 }
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */

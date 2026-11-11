@@ -362,7 +362,16 @@ static const char OMNI_PT[] = "HHHHHHHOBHHHHEOOBN";
 _Static_assert(sizeof OMNI_PT == NELEM(OMNI_PRESETS) + 1u, "a type a preset");
 /* (engine 16: its favourites in favorites.factory[0]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(OMNI_PRESETS) <= 128u, "OMNI's favourites");
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t OMNI_ROWS[] = {
+    {"OMNI", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"TONE", {P_E3, P_E6, P_E7}, {0, 0, 0}},
+    {"SHIMMER", {P_E4, P_E5, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_OMNI = {
+    .rows = OMNI_ROWS,
+    .nrows = (uint8_t)(sizeof OMNI_ROWS / sizeof OMNI_ROWS[0]),
     .name = "OMNI",
     .page_title = {"OMNI", "TONE"},
     .edit = {

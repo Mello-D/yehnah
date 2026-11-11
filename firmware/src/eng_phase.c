@@ -131,7 +131,7 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     const int16_t *p = t->p;
     uint32_t w1 = (uint32_t)p[P_E0] & 7u, w2 = (uint32_t)p[P_E1], i;
     int32_t depth = (p[P_E2] << 8) + m->cutoff + mulq15(m->envq15, p[P_E3] * 256);
-    uint32_t dcw, inc = m->inc, inc2;
+    uint32_t dcw, dcw2, inc = m->inc, inc2;
     int32_t det = p[P_E4], line2 = det != 0 || p[P_E5], ring = p[P_E5], sub = p[P_E6] * 200;
     int32_t d16 = det * 16 / 100, rem = det * 16 - d16 * 100;
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2];
@@ -140,10 +140,12 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     depth = clamp(depth + (m->shape - (64 << 8)), 0, 127 << 8);
     dcw = (uint32_t)depth * 65535u / (127u << 8);
     dcw = (dcw * 56000u) >> 16;                              /* the classic range of the bend */
+    dcw2 = p[P_E7] ? (uint32_t)clamp(depth + (p[P_E7] << 8), 0, 127 << 8) * 65535u / (127u << 8) : dcw;   /* (2026-11-11) DCW2: WAVE2's own bend */
+    dcw2 = p[P_E7] ? (dcw2 * 56000u) >> 16 : dcw2;
     inc2 = pitch_inc(clamp(m->pitch16 + d16, 0, 2047));
     inc2 += (uint32_t)((int32_t)(inc2 >> 12) * (rem * 2367 / 16000));
     pd_setup(&b1, w1, dcw);
-    pd_setup(&b2, w2 ? w2 - 1u : w1, dcw);                   /* WAVE2 (every other cycle) */
+    pd_setup(&b2, w2 ? w2 - 1u : w1, dcw2);                   /* WAVE2 (every other cycle) */
     for (i = 0; i < n; i++) {
         uint32_t old = ph0;
         int32_t s;
@@ -173,7 +175,7 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 }
 
 static const preset_t PHASE_PRESETS[] YEHNAH_RES = {
-    /* name, {WAVE, WAVE2, DCW, ENV, DTN, LINE, SUB, -}, {A D S R}, fenv, mono */
+    /* name, {WAVE, WAVE2, DCW, ENV, DTN, LINE, SUB, DCW2}, {A D S R}, fenv, mono */
     {"CZ BASS", {5, 0, 36, 70, 0, 0, 72, 0}, {0, 64, 64, 22}, 0, 1, FX(5, 0, 0, 4), XP(P_GLIDE + 1, 36, P_TRANS + 1, -24)},
     {"SOFT KEYS", {3, 0, 40, 70, 0, 0, 0, 0}, {0, 80, 20, 50}, 0, 0, FX(0, 35, 14, 28)},
     {"CZ STRING", {0, 4, 50, 40, 12, 0, 0, 0}, {50, 90, 105, 75}, 0, 0, FX(0, 50, 20, 55)},
@@ -211,7 +213,17 @@ static void phase_spread(track_t *t, voice_t *v, uint32_t r)
     v->ph[2] += r >> 1;
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t PHASE_ROWS[] = {
+    {"WAVE", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"WAVE 2", {P_E7, 0xFF, 0xFF}, {0, 0, 0}},
+    {"ENV", {P_E3, P_E4, 0xFF}, {0, 0, 0}},
+    {"LINE", {P_E5, P_E6, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_PHASE = {
+    .rows = PHASE_ROWS,
+    .nrows = (uint8_t)(sizeof PHASE_ROWS / sizeof PHASE_ROWS[0]),
     .name = "PHASE",
     .page_title = {"PHS", "LINE"},
     .edit = {
@@ -222,7 +234,7 @@ static const engine_t ENG_PHASE = {
         {"DTN", F_INT, 0, 127, 0, 0, "ct"},
         {"LINE", F_ENUM, 0, 1, 0, N_PD_LINE, 0},
         {"SUB", F_PCT, 0, 127, 0, 0, 0},
-        {"-", F_INT, 0, 0, 0, 0, 0},
+        {"DCW2", F_BIPCT, -64, 63, 0, 0, 0},
     },
     .presets = PHASE_PRESETS,
     .npresets = NELEM(PHASE_PRESETS),

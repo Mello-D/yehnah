@@ -679,9 +679,9 @@ static const param_desc_t *drum_desc(const track_t *t, uint32_t k)
 
 /* (2026-11-11) the SOUND page: the whole kit's eight settings */
 static const sound_row_t DRUM_ROWS[] = {
-    {"KIT", {P_E0, P_E1, P_E2}, {"MRP", "TUN", "TON"}},
-    {"HIT", {P_E3, P_E4, P_E5}, {"DEC", "NOI", "FM"}},
-    {"OUT", {P_E6, P_E7, 0xFF}, {"FLD", "DRV", ""}},
+    {"KIT", {P_E0, P_E1, P_E2}, {"MORPH", "TUNE", "TONE"}},
+    {"HIT", {P_E3, P_E4, P_E5}, {"DECAY", "NOISE", "FM ENV"}},
+    {"OUT", {P_E6, P_E7, 0xFF}, {"FOLD", "DRIVE", ""}},
 };
 
 static const engine_t ENG_DRUM = {

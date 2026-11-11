@@ -13,7 +13,7 @@ static void chk(const char *what, int ok) { if (!ok) { printf("FAIL %s\n", what)
 int main(void)
 {
     uint32_t pi, k;
-    int32_t want[NFMX];
+    int32_t want[(FX_HP + 1)];
     for (pi = 0; pi < FMINI_NFACTORY; pi++) {
         int16_t before[P_COUNT], after[P_COUNT];
         const uint8_t *g = FMINI_FACTORY[pi];
@@ -40,7 +40,7 @@ int main(void)
         want[FX_TU] = (int32_t)g[FG_TUNE] - 64; want[FX_MM] = g[FG_MMIX];
         want[FX_PK] = (g[FG_SW1] & FS_PINK) != 0; want[FX_MO] = (g[FG_SW1] & FS_MOSC) != 0; want[FX_MF] = (g[FG_SW1] & FS_MFLT) != 0;
         want[FX_SQ] = (g[FG_SW2] & FTG_SQR) != 0; want[FX_HP] = (g[FG_SW2] & FTG_HP) != 0;
-        for (k = 0; k < NFMX; k++)
+        for (k = 0; k < (FX_HP + 1); k++)
             if (fmx_get(after, k) != want[k]) {
                 printf("FAIL patch %u field %u: %d, wanted %d\n", pi, k, (int)fmx_get(after, k), (int)want[k]);
                 bad++;
@@ -53,12 +53,12 @@ int main(void)
     }
     {   /* a setting written changes that field alone */
         int16_t p[P_COUNT];
-        int32_t b[NFMX];
+        int32_t b[(FX_HP + 1)];
         memset(p, 0, sizeof p);
         fmx_set(p, FX_D2, -700); fmx_set(p, FX_D3, 700); fmx_set(p, FX_TU, -64); fmx_set(p, FX_L3, 127); fmx_set(p, FX_W2, 6);
-        for (k = 0; k < NFMX; k++) b[k] = fmx_get(p, k);
+        for (k = 0; k < (FX_HP + 1); k++) b[k] = fmx_get(p, k);
         fmx_set(p, FX_MM, 99);
-        for (k = 0; k < NFMX; k++)
+        for (k = 0; k < (FX_HP + 1); k++)
             chk("a field written leaves the others", k == FX_MM ? fmx_get(p, k) == 99 : fmx_get(p, k) == b[k]);
         chk("DET 2", b[FX_D2] == -700); chk("DET 3", b[FX_D3] == 700); chk("TUNE", b[FX_TU] == -64);
     }

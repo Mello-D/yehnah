@@ -543,7 +543,16 @@ static const preset_t ANIMAL_PRESETS[] YEHNAH_RES = {
 static const char ANIMAL_PT[] = "XXXXXXXXXXXXXXXXXXXXXXXXN";
 _Static_assert(sizeof ANIMAL_PT == NELEM(ANIMAL_PRESETS) + 1u, "a type a preset");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t ANIMAL_ROWS[] = {
+    {"SRC", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"BODY", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"CALL", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_ANIMAL = {
+    .rows = ANIMAL_ROWS,
+    .nrows = (uint8_t)(sizeof ANIMAL_ROWS / sizeof ANIMAL_ROWS[0]),
     .name = "ANIMAL",
     .page_title = {"SRC", "CALL"},
     .edit = {

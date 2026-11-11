@@ -168,7 +168,17 @@ static const int8_t VECTOR_TRIM[] = {-3, -17, -4, -11, 0, -8, -5, -8, -9, -3, 9,
 _Static_assert(sizeof VECTOR_TRIM == NELEM(VECTOR_PRESETS), "a trim a preset");
 _Static_assert(NELEM(VECTOR_PRESETS) <= 128u, "VECTOR's favourites");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t VECTOR_ROWS[] = {
+    {"WAVES", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"WAVE D", {P_E3, 0xFF, 0xFF}, {0, 0, 0}},
+    {"JOYSTK", {P_E4, P_E5, P_E6}, {0, 0, 0}},
+    {"LPF", {P_E7, 0xFF, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_VECTOR = {
+    .rows = VECTOR_ROWS,
+    .nrows = (uint8_t)(sizeof VECTOR_ROWS / sizeof VECTOR_ROWS[0]),
     .name = "VECTOR",
     .page_title = {"WAVES", "JOYSTICK"},
     .edit = {

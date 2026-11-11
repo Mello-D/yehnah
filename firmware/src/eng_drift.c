@@ -184,7 +184,16 @@ static const char DRIFT_PT[] = "PPPPEPPPPKBXPN";
 _Static_assert(sizeof DRIFT_PT == NELEM(DRIFT_PRESETS) + 1u, "a type a preset");
 /* (engine 21: its favourites in favorites.factory[5]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(DRIFT_PRESETS) <= 128u, "DRIFT's favourites");
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t DRIFT_ROWS[] = {
+    {"SOURCE", {P_E0, P_E1, 0xFF}, {0, 0, 0}},
+    {"MOTION", {P_E2, P_E3, P_E4}, {0, 0, 0}},
+    {"AIR", {P_E5, P_E6, P_E7}, {0, 0, 0}},
+};
+
 static const engine_t ENG_DRIFT = {
+    .rows = DRIFT_ROWS,
+    .nrows = (uint8_t)(sizeof DRIFT_ROWS / sizeof DRIFT_ROWS[0]),
     .name = "DRIFT",
     .page_title = {"DRIFT", "AIR"},
     .edit = {

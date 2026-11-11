@@ -189,7 +189,7 @@ async function editorMock() {
   inp.onmidimessage = (e) => link.receive(e.data);
   const rq = async (r, o) => link.request(r, o);
   const info = E.parse[E.CMD.INFO](await rq(E.req.info()));
-  ok(info.nengines === 30 && info.engines[29] === "HYBRID" && info.engines[19] === "GUITAR" && info.engines[20] === "ACID" && info.engines[21] === "DRIFT" && info.engines[22] === "PLAITS" && info.engines[23] === "STRINGS" && info.engines[24] === "VPS" && info.engines[25] === "MODAL" && info.engines[26] === "WSEQ" && info.engines[27] === "TERRAIN" && info.engines[28] === "VECTOR" && info.engines[1] === "DIGITAL" && info.engines[12] === "FM6" && info.engines[13] === "-" && info.engines[14] === "ANIMAL" && info.engines[15] === "JUNO" && info.engines[16] === "OMNI" && info.engines[17] === "KALIMBA" && info.engines[18] === "FMINI"
+  ok(info.nengines === 30 && info.engines[29] === "HYBRID" && info.engines[19] === "GUITAR" && info.engines[20] === "ACID" && info.engines[21] === "DRIFT" && info.engines[22] === "PLAITS" && info.engines[23] === "STRINGS" && info.engines[24] === "VPS" && info.engines[25] === "MODAL" && info.engines[26] === "WSEQ" && info.engines[27] === "TERRAIN" && info.engines[28] === "VECTOR" && info.engines[1] === "DIGITAL" && info.engines[12] === "FM6" && info.engines[13] === "-" && info.engines[14] === "ANIMAL" && info.engines[15] === "JUNO" && info.engines[16] === "OMNI" && info.engines[17] === "KALIMBA" && info.engines[18] === "MINI"
  && info.engines[5] === "VOICE" && info.engines[6] === "-" && info.engines[7] === "WHEEL" && info.engines[8] === "-" && info.engines[9] === "-" && info.engines[10] === "DRUM" && info.engines[11] === "NOISE" && info.pcount === 141 && info.pe0 === 133 && info.engines[4] === "-",
     "editor: INFO");
   let descs = 0;
@@ -309,7 +309,7 @@ async function editorMock() {
   ok(!prefs.favorites[info.nengines][31] && !E.devicePresetRows(info, names, prefs).some((r) => r.user), "editor: erased slot disappears and loses star");
   {   /* the lists in the device's order (engines.c ENGINE_ORDER; chord-harp fork: A to Z), "-" never; the numbers stay */
     const shown = E.engineOrder(info.engines).map((i) => info.engines[i]);
-    ok(shown.join() === "ACID,ANALOG,ANIMAL,DIGITAL,DRIFT,DRUM,FM6,FMINI,GUITAR,HYBRID,JUNO,KALIMBA,LOFI,MODAL,NOISE,OMNI,PHASE,PLAITS,STRINGS,TERRAIN,VECTOR,VOICE,VPS,WHEEL,WSEQ" &&
+    ok(shown.join() === "ACID,ANALOG,ANIMAL,DIGITAL,DRIFT,DRUM,FM6,MINI,GUITAR,HYBRID,JUNO,KALIMBA,LOFI,MODAL,NOISE,OMNI,PHASE,PLAITS,STRINGS,TERRAIN,VECTOR,VOICE,VPS,WHEEL,WSEQ" &&
        E.engineOrder(info.engines).join() === "20,0,14,1,21,10,12,18,19,29,15,17,3,25,11,16,2,22,23,27,28,5,24,7,26",
        "editor: engines listed A to Z (chord-harp fork; indices kept)");
     ok(E.engineOrder(["ANALOG", "X", "-", "DRUM", "FM6"]).join() === "0,3,4,1", "editor: an unknown engine follows the known ones");

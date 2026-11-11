@@ -687,11 +687,11 @@ static int test_init_dry(void)
         t->p[P_E5] = 0;                                         /* DENS 0 */
         for (b = 0; b < 8u; b++) mix_block(o, CTL);
         trk_note_on(t, 60, 100);
-        for (b = 0; b < 400u; b++) {
+        for (b = 0; b < 1600u; b++) {
             mix_block(o, CTL);
             for (i = 0; i < 2u * CTL; i++) pk = o[i] > pk ? o[i] : -o[i] > pk ? -o[i] : pk;
         }
-        bad += check("NOISE DUST at DENS 0 still crackles", pk > 200);
+        bad += check("NOISE DUST at DENS 0 still crackles", pk > 100);   /* (2026-11-11: the dust is random, a peak of ~180..210) */
     }
     return bad;
 }
@@ -3197,10 +3197,10 @@ static int test_edit_cycle(void)
 {
     /* (0.9.2: one chain, SELECT a page a detent; an EDIT tap the next group's first. Was 0.8.5's lens: SELECT a level, the
      * tap the level's next set) */
-    static const char *const CH_A[] = {"SOUND", "FILTER", "DRIFT", "VOICE", "VOICE 2"};   /* (0.5:
+    static const char *const CH_A[] = {"SOUND"};   /* (2026-11-11: FILTER DRIFT VOICE VOICE 2 are SOUND's rows) */   /* (0.5:
                                                          * ANALOG's FILTER; 0.6.45: MORPH; chord-harp fork: BLEND, now
                                                          * SAVE > MORPH; 2026-10-30: MORPH now DRIFT, VINTAGE) */
-    static const char *const CH_F[] = {"SOUND", "FILTER", "DRIFT", "VOICE", "VOICE 2", "OP 1", "OP ENV", "OP 2"};
+    static const char *const CH_F[] = {"SOUND", "OP 1", "OP ENV", "OP 2"};
     int bad = 0, ok;
     uint32_t i;
     ui_power_on();
@@ -3223,7 +3223,7 @@ static int test_edit_cycle(void)
     set_engine_of(TSEL, 0);
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
         static const char *const CH_K[] = {"SOUND", "KIT 3", "LANE 1", "LANE 2", "LANE 3", "LANE 4", "LEVELS",
-                                           "LEVELS 2", "X-MOD", "FILTER"};
+                                           "LEVELS 2", "X-MOD"};
         set_engine_of(TSEL, ENGI_DRUM);
         bad += check("0.9.2 EDIT chain (DRUM): SOUND (SOUND KIT 3) . LANE (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER)",
                      chain_walk(B_EDIT, CH_K, NELEM(CH_K)));
@@ -8476,11 +8476,9 @@ static int test_bpm_lock(void)
     ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
-    ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.9.2: SOUND FILTER ..) */
+    ok &= str_eq(cur_page()->title, "PATCH");                         /* (2026-11-11: EDIT is one page, SOUND: it stays) */
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "PATCH");
-    turn(EN_SELECT, -1);
-    ok &= str_eq(cur_page()->title, "VOICE 2");                       /* (2026-11-02: it wraps, the last page) */
     go_title("ENV DEST"); frame(); sel_first(); turn(EN_SELECT, -1);   /* (2026-11-02: it wraps) */
     ok &= str_eq(nav_name(), "ALL DEST") && !ui.home;                 /* (ENV -> ALL DEST, the last; no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (round, never out of it); HOME: DICE ALL; never the tempo", ok);
@@ -9396,23 +9394,13 @@ static int test_lz_edit(void)
     ui_power_on(); set_engine_of(TSEL, 0); frame();
     press(B_EDIT); frame();
     ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("EDIT \xB7 SOUND") &&
-         lz_count_is("1/5");                                       /* (2026-11-11: SOUND, the PATCH entry, replaces EDIT 1 / EDIT 2) */
+         lz_count_is("1/1");                                       /* (2026-11-11: SOUND, the PATCH entry, the whole chain: FILTER VOICE VOICE 2 DRIFT are its rows) */
     turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "FILTER") && lz_crumb_is("EDIT \xB7 FILTER") &&
-          lz_count_is("2/5");
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "PATCH");
     frames(320); press(B_EDIT); frame();                            /* EDIT on EDIT: HOME's TRACKS */
     ok &= ui.home && home_level() == 0u;
     frames(320); press(B_EDIT); frame();                            /* EDIT: its first page */
     ok &= str_eq(cur_page()->title, "PATCH");
-    turn(EN_SELECT, -1); frame();                                   /* (round: VOICE 2) */
-    ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "VOICE 2") && lz_crumb_is("EDIT \xB7 VOICE 2") &&
-          lz_count_is("5/5");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "PATCH");                       /* (2026-11-02: it wraps) */
-    turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "VOICE 2");
-    turn(EN_SELECT, -2); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "DRIFT");    /* (DRIFT VOICE VOICE 2: two back) */
     frames(320); press(B_EDIT); frame();
     ok &= ui.home && home_level() == 0u;
     bad += check("0.9.2 EDIT: one chain by SELECT (round), EDIT its first page, an EDIT tap on it TRACKS; tabs, crumb, n/N", ok);
@@ -9425,14 +9413,17 @@ static int test_lz_edit(void)
     turn(EN_PRESET, 1); frame();
     ok &= (TSEL->preset != pr || TSEL->eng_req != 0u) && str_eq(cur_page()->title, "PATCH");   /* (the next sound) */
     bad += check("0.9.2 EDIT: EDIT from elsewhere its first page; PRESETS the next sound, the page stays", ok);
-    ui_power_on(); set_engine_of(TSEL, 0); go_title("VOICE"); frame();
-    turn(EN_SELECT, 1); frame();
-    ok = str_eq(cur_page()->title, "VOICE 2");
-    v = TSEL->p[P_DETUNE];
-    turn(EN_K2, 3); frame();
-    ok &= TSEL->p[P_DETUNE] != v;
+    ui_power_on(); set_engine_of(TSEL, 0); go_title("PATCH"); frame();
+    {   /* (2026-11-11) SOUND's KEYS row (the old VOICE 2: DETUNE, KEY>F, MW>) */
+        uint32_t r;
+        for (r = 0; r < plist_n() && sound_row(TSEL, r)->id[0] != P_DETUNE; r++) ;
+        ok = r < plist_n();
+        plist_cur = (uint8_t)r; frame();
+        v = TSEL->p[P_DETUNE];
+        turn(EN_K2, 3); frame();
+        ok &= TSEL->p[P_DETUNE] != v;
+    }
     set_engine_of(TSEL, ENGI_DRUM); frame();
-    ok &= !nav_put(SEC_EDIT, "VOICE 2");
     set_engine_of(TSEL, ENGI_FM6); frame();
     ok &= nav_put(SEC_EDIT, "OP 1");
     bad += check("0.9.2 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM", ok);
@@ -10096,10 +10087,10 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
  * (0.9.1's numbering, the level the page is drawn as), its pages; each must be reached at that level */
 typedef struct { uint8_t fam, lv, kind; const char *t[13]; } old_lv_t;   /* kind: EDIT's (0 synth 1 FM6 2 DRUM), 9 any */
 static const old_lv_t OLD_LV[] = {
-    {FAM_EDIT, 0, 0, {"PATCH"}}, {FAM_EDIT, 1, 0, {"FILTER", "DRIFT", "VOICE", "VOICE 2"}},   /* (2026-10-30: RETRIG ROTOR gone) */
-    {FAM_EDIT, 0, 1, {"PATCH"}}, {FAM_EDIT, 1, 1, {"FILTER", "VOICE", "VOICE 2"}},
-    {FAM_EDIT, 2, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
-    {FAM_EDIT, 0, 2, {"PATCH", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "LEVELS", "LEVELS 2"}},
+    {FAM_EDIT, 0, 0, {"PATCH"}},   /* (2026-11-11: FILTER DRIFT VOICE VOICE 2 are SOUND's rows) */
+    {FAM_EDIT, 0, 1, {"PATCH"}},
+    {FAM_EDIT, 1, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
+    {FAM_EDIT, 0, 2, {"PATCH", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "LEVELS", "LEVELS 2"}},
     {FAM_EDIT, 2, 2, {"SOUND", "SOUND 2", "SOUND 3", "SOUND 4"}},
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
@@ -10240,9 +10231,14 @@ static int test_nav_tasks(void)
         ok = 0;
         switch (t) {
         case 0:                                         /* the filter (CUT) of track 2 */
-            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1); tk_go(EN_SELECT, 1);   /* (2026-11-11: SOUND FILTER: one detent) */
-            v = TSEL->p[P_FCUT]; tk_val(EN_K2, -8);
-            ok = song.sel == 1u && str_eq(cur_page()->title, "FILTER") && TSEL->p[P_FCUT] != v;
+            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1);
+            {   /* (2026-11-11) SOUND's FILTER row (the generic one: P_FTYPE P_FCUT P_FRES), KNOB 1 steps to it */
+                uint32_t r;
+                for (r = 0; r < plist_n() && sound_row(TSEL, r)->id[0] != P_FTYPE; r++) ;
+                plist_cur = (uint8_t)r; tk_n++;                 /* (one KNOB 1 action, as the old SELECT detent) */
+            }
+            v = TSEL->p[P_FCUT]; tk_val(EN_K3, -8);
+            ok = song.sel == 1u && str_eq(cur_page()->title, "PATCH") && TSEL->p[P_FCUT] != v;
             break;
         case 1:                                         /* the reverb's SIZE */
             tk_start(0); tk_btn(B_FX); tk_go(EN_SELECT, 4);
@@ -10505,12 +10501,12 @@ static int test_engine_order_099(void)
 {
     static const char *const IDX[NENGINES] = {"ANALOG", 0, "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-", "DRUM",
                                               "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI",
-                                              "KALIMBA", "FMINI", "GUITAR", "ACID", "DRIFT", "PLAITS",
+                                              "KALIMBA", "MINI", "GUITAR", "ACID", "DRIFT", "PLAITS",
                                               "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"};
     static const char *const PC[] = {"ANALOG", "FM6", "DIGITAL",
                                      "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL",
                                      "JUNO", "OMNI", "KALIMBA", "GUITAR", "ACID", "DRIFT", "PLAITS",
-                                     "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID", "FMINI"}; /* (chord-harp fork:
+                                     "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID", "MINI"}; /* (chord-harp fork:
                                                                                                 * after the rest) */
     int bad = 0, ok = 1;
     uint32_t i, e, k, n, all, seen = 0;

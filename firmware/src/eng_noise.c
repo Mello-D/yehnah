@@ -298,7 +298,16 @@ static void noise_spread(track_t *t, voice_t *v, uint32_t r)
         v->s[2] = 1;
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t NOISE_ROWS[] = {
+    {"SRC", {P_E0, P_E1, 0xFF}, {0, 0, 0}},
+    {"FILTER", {P_E2, P_E3, P_E4}, {0, 0, 0}},
+    {"MOVE", {P_E5, P_E6, P_E7}, {0, 0, 0}},
+};
+
 static const engine_t ENG_NOISE = {
+    .rows = NOISE_ROWS,
+    .nrows = (uint8_t)(sizeof NOISE_ROWS / sizeof NOISE_ROWS[0]),
     .name = "NOISE",
     .page_title = {"SRC", "MOVE"},
     .edit = {

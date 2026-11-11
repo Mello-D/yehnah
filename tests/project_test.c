@@ -478,6 +478,19 @@ int main(void)
         bad += check("FUN4 phys 0: PHYS DUST -> ANALOG (PHYS retired)", ok);
     }
 
+    {   /* (2026-11-11) MINI's packed patch (P_LN0..P_LN6 hold up to 15 bits): FUND's 'P' 'X' block keeps them whole */
+        project_t a, c;
+        project_store_t st;
+        memset(&a, 0, sizeof a);
+        a.magic = PROJ_MAGIC; a.size = sizeof a; a.parts = NPART; a.phys = PROJ_PHYS;
+        chain_defaults(&a.chain);
+        a.t[2].p[P_LN0] = 0x2A55; a.t[2].p[P_LN3] = 0x7FFF; a.t[2].p[P_LN6] = 100; a.t[1].p[P_LN1] = 90;
+        a.sum = proj_sum(&a);
+        bad += check("a packed MINI patch (slots past a byte) saves and loads whole ('P' 'X')",
+                     proj_pack(&st, &a) && proj_import(&c, &st, sizeof st) && c.t[2].p[P_LN0] == 0x2A55 &&
+                     c.t[2].p[P_LN3] == 0x7FFF && c.t[2].p[P_LN6] == 100 && c.t[1].p[P_LN1] == 90 && c.t[0].p[P_LN0] == 0);
+    }
+
     {   /* the FUN7 name: the reserved tail's last 12 bytes, covered by the hash; zero = no name */
         project_t a, c;
         project_store_t st, st2;

@@ -31,6 +31,20 @@ static inline uint32_t fm_ratio_inc(uint32_t inc, uint32_t r)
 
 static inline uint32_t digital_mod(int32_t x, int32_t idx) { return (uint32_t)(x * idx) * 2065u; }
 
+/* (2026-11-11) SOUND rows OPS LEVEL / DETUNE: operators 2..4's level (all 100 % by default: x1 exactly) and detune in cents */
+static uint32_t digital_pset(int16_t *p, uint32_t pi)
+{
+    uint32_t i;
+    (void)pi;
+    for (i = P_LN0; i <= P_LN6; i++)
+        p[i] = 0;
+    fmx_set(p, FX_D_L2, 127); fmx_set(p, FX_D_L3, 127); fmx_set(p, FX_D_L4, 127);
+    fmx_set(p, FX_D_T2, 0); fmx_set(p, FX_D_T3, 0); fmx_set(p, FX_D_T4, 0);
+    return 0;
+}
+static inline int32_t dg_lv(int32_t lv) { return lv >= 127 ? 32768 : lv * 258; }   /* Q15, 127 = 1.0 exactly */
+static inline uint32_t dg_det(uint32_t inc, int32_t c) { return c ? inc + (uint32_t)(int32_t)(((int64_t)inc * c * 606) >> 20) : inc; }
+
 static void digital_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
     const int16_t *p = t->p;
@@ -38,8 +52,12 @@ static void digital_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
     uint32_t i1 = m->inc;
     uint32_t i2 = fm_ratio_inc(m->inc, RATIO_Q8[p[P_E1] % 15]), i3 = fm_ratio_inc(m->inc, RATIO_Q8[p[P_E2] % 15]);
     uint32_t i4 = fm_ratio_inc(m->inc, RATIO_Q8[p[P_E3] % 15]);
+    int32_t l2 = dg_lv(fmx_get(p, FX_D_L2)), l3 = dg_lv(fmx_get(p, FX_D_L3)), l4 = dg_lv(fmx_get(p, FX_D_L4));
     int32_t me, idx, fb = p[P_E6], fb1, fb2, didx, idq;      /* fb1, fb2: op 4 feedback history */
     uint32_t ph0, ph1, ph2, ph4;
+    i2 = dg_det(i2, fmx_get(p, FX_D_T2));
+    i3 = dg_det(i3, fmx_get(p, FX_D_T3));
+    i4 = dg_det(i4, fmx_get(p, FX_D_T4));
     /* modulator envelope: decays (MODDEC) towards 25 %, per block */
     v->s[4] += mulq16((1 << 22) - v->s[4], ENV_EXP[p[P_E5] & 127]);
     me = v->s[4] >> 9;                                         /* Q15 */
@@ -83,48 +101,49 @@ static void digital_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
         o4 = sine_i((ph4 + digital_mod((fb1 + fb2) >> 1, fb)));
         fb2 = fb1;
         fb1 = o4;
+        o4 = mulq15(o4, l4);
         switch (alg) {
         case 0:
-            o3 = sine_i((ph2 + digital_mod(o4, idx)));
-            o2 = sine_i((ph1 + digital_mod(o3, idx)));
+            o3 = mulq15(sine_i((ph2 + digital_mod(o4, idx))), l3);
+            o2 = mulq15(sine_i((ph1 + digital_mod(o3, idx))), l2);
             s = sine_i((ph0 + digital_mod(o2, idx)));
             break;
         case 1:
-            o3 = sine_i(ph2);
-            o2 = sine_i((ph1 + digital_mod((o3 + o4) >> 1, idx)));
+            o3 = mulq15(sine_i(ph2), l3);
+            o2 = mulq15(sine_i((ph1 + digital_mod((o3 + o4) >> 1, idx))), l2);
             s = sine_i((ph0 + digital_mod(o2, idx)));
             break;
         case 2:
-            o3 = sine_i(ph2);
-            o2 = sine_i((ph1 + digital_mod(o3, idx)));
+            o3 = mulq15(sine_i(ph2), l3);
+            o2 = mulq15(sine_i((ph1 + digital_mod(o3, idx))), l2);
             s = sine_i((ph0 + digital_mod((o2 + o4) >> 1, idx)));
             break;
         case 3:
-            o3 = sine_i((ph2 + digital_mod(o4, idx)));
-            o2 = sine_i(ph1);
+            o3 = mulq15(sine_i((ph2 + digital_mod(o4, idx))), l3);
+            o2 = mulq15(sine_i(ph1), l2);
             s = sine_i((ph0 + digital_mod((o2 + o3) >> 1, idx)));
             break;
         case 4:
-            o3 = sine_i((ph2 + digital_mod(o4, idx)));
-            o2 = sine_i(ph1);
+            o3 = mulq15(sine_i((ph2 + digital_mod(o4, idx))), l3);
+            o2 = mulq15(sine_i(ph1), l2);
             o1 = sine_i((ph0 + digital_mod(o2, idx)));
             s = (o1 + o3) >> 1;
             break;
         case 5:
-            o3 = sine_i((ph2 + digital_mod(o4, idx)));
-            o2 = sine_i((ph1 + digital_mod(o4, idx)));
+            o3 = mulq15(sine_i((ph2 + digital_mod(o4, idx))), l3);
+            o2 = mulq15(sine_i((ph1 + digital_mod(o4, idx))), l2);
             o1 = sine_i((ph0 + digital_mod(o4, idx)));
             s = mulq15(o1 + o2 + o3, 10923);           /* / 3 without a divide */
             break;
         case 6:
-            o3 = sine_i((ph2 + digital_mod(o4, idx)));
-            o2 = sine_i(ph1);
+            o3 = mulq15(sine_i((ph2 + digital_mod(o4, idx))), l3);
+            o2 = mulq15(sine_i(ph1), l2);
             o1 = sine_i(ph0);
             s = mulq15(o1 + o2 + o3, 10923);           /* / 3 without a divide */
             break;
         default:
-            o3 = sine_i(ph2);
-            o2 = sine_i(ph1);
+            o3 = mulq15(sine_i(ph2), l3);
+            o2 = mulq15(sine_i(ph1), l2);
             o1 = sine_i(ph0);
             s = (o1 + o2 + o3 + o4) >> 2;
             break;
@@ -201,8 +220,20 @@ static void digital_spread(track_t *t, voice_t *v, uint32_t r)
     v->s[7] = (int32_t)((uint32_t)v->s[7] + (uint32_t)(((uint64_t)r * RATIO_Q8[p[P_E3] % 15]) >> 8));
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t DIGITAL_ROWS[] = {
+    {"ALGO", {P_E0, 0xFF, 0xFF}, {0, 0, 0}},
+    {"RATIOS", {P_E1, P_E2, P_E3}, {0, 0, 0}},
+    {"LEVELS", {VF(FX_D_L2), VF(FX_D_L3), VF(FX_D_L4)}, {"OP 2", "OP 3", "OP 4"}},
+    {"DETUNE", {VF(FX_D_T2), VF(FX_D_T3), VF(FX_D_T4)}, {"OP 2", "OP 3", "OP 4"}},
+    {"MOD", {P_E4, P_E5, P_E6}, {0, 0, 0}},
+};
+
 static const engine_t ENG_DIGITAL = {
+    .rows = DIGITAL_ROWS,
+    .nrows = (uint8_t)(sizeof DIGITAL_ROWS / sizeof DIGITAL_ROWS[0]),
     .name = "DIGITAL",
+    .pset = digital_pset,
     .page_title = {"OPS", "MOD"},
     .edit = {
         {"ALG", F_ENUM, 0, 7, 0, N_FMALG, 0},

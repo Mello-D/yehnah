@@ -244,7 +244,8 @@ static const param_desc_t *ed_tdesc(const track_t *t, uint32_t id) { return para
 static int16_t ed_fmx_v;         /* (2026-11-11) the virtual id P_COUNT + k: FMINI's patch setting k (core.h fmx_get), INFO 'X' */
 static const param_desc_t *ed_desc(uint32_t scope, uint32_t id, int16_t **vp)
 {
-    if (scope == 0 && id >= P_COUNT && id < P_COUNT + NFMX && ed_eng(TSEL) == ENGI_MINI) {
+    if (scope == 0 && id >= P_COUNT && id < P_COUNT + NFMX &&
+        ed_eng(TSEL) == (id - P_COUNT <= FX_HP ? ENGI_MINI : id - P_COUNT < FX_D_L2 ? ENGI_ANALOG : id - P_COUNT < FX_F_F4 ? ENGI_DIGITAL : ENGI_VOICE)) {
         ed_fmx_v = (int16_t)fmx_get(TSEL->p, id - P_COUNT);
         *vp = &ed_fmx_v;
         return &FMX_DESC[id - P_COUNT];
@@ -478,7 +479,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT 9..40 */
         ed_b(0x4A); ed_b(1); ed_b(1);   /* (0.6.62) 'J': this is Yehnah (the web installer writes over it, web/index_pkg.html) */
         ed_b(0x4F); ed_b(1); ed_b(LM_N);   /* (0.8.5) 'O': the DRUM-X octaves, a step's lane modes 0..6 after its ratchet */
-        ed_b(0x58); ed_b(1); ed_b(NFMX);   /* (2026-11-11) 'X': FMINI's patch settings as the ids P_COUNT .. P_COUNT + NFMX - 1 (GET / SET / DESC) */
+        ed_b(0x58); ed_b(1); ed_b(FX_HP + 1);   /* (2026-11-11) 'X': FMINI's patch settings as the ids P_COUNT .. P_COUNT + NFMX - 1 (GET / SET / DESC) */
         ed_b(0x57); ed_b(1); ed_b(P_COUNT >> 7); ed_b(P_E0 >> 7);   /* (chord-harp fork) 'W': wide parameter ids (ed_id);
                                                          * the bits of P_COUNT and P_E0 past the 7 above */
         break;

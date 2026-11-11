@@ -117,7 +117,16 @@ static void strings_spread(track_t *t, voice_t *v, uint32_t r)
     v->ph[2] += r >> 1;
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t STRINGS_ROWS[] = {
+    {"REG", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"ENSEMB", {P_E3, P_E5, P_E6}, {0, 0, 0}},
+    {"VCF", {P_E4, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_STRINGS = {
+    .rows = STRINGS_ROWS,
+    .nrows = (uint8_t)(sizeof STRINGS_ROWS / sizeof STRINGS_ROWS[0]),
     .name = "STRINGS",
     .page_title = {"REG", "TONE"},
     .edit = {

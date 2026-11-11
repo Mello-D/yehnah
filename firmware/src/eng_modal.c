@@ -51,7 +51,16 @@ static const char MODAL_PT[] = "IIIIIMMMMMEEEIIIIIN";
 _Static_assert(sizeof MODAL_PT == NELEM(MODAL_PRESETS) + 1u, "a type a preset");
 /* (engine 25: its favourites in favorites.factory[9]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(MODAL_PRESETS) <= 128u, "MODAL's favourites");
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t MODAL_ROWS[] = {
+    {"BAR", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"TONE", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"PLAY", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_MODAL = {
+    .rows = MODAL_ROWS,
+    .nrows = (uint8_t)(sizeof MODAL_ROWS / sizeof MODAL_ROWS[0]),
     .name = "MODAL",
     .page_title = {"BAR", "PLAY"},
     .edit = {

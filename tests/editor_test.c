@@ -164,7 +164,7 @@ static int preferences(void)
         host_wire[n0 - 7] == 0x56 && host_wire[n0 - 6] == 1 && host_wire[n0 - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
         host_wire[n0 - 4] == 0x4A && host_wire[n0 - 3] == 1 && host_wire[n0 - 2] == 1 &&   /* (0.6.62) Yehnah: the installer */
         host_wire[n - 11] == 0x4F && host_wire[n - 10] == 1 && host_wire[n - 9] == LM_N &&   /* (0.8.5) DRUM lane modes */
-        host_wire[n - 8] == 0x58 && host_wire[n - 7] == 1 && host_wire[n - 6] == NFMX &&   /* FMINI's patch settings */
+        host_wire[n - 8] == 0x58 && host_wire[n - 7] == 1 && host_wire[n - 6] == FX_HP + 1 &&   /* FMINI's patch settings */
         host_wire[n - 5] == 0x57 && host_wire[n - 4] == 1 && host_wire[n - 3] == P_COUNT >> 7 &&   /* wide ids */
         host_wire[n - 2] == P_E0 >> 7 && host_wire[5u + sizeof("Yehnah " YEHNAH_VERSION) + 1u] == (P_COUNT & 127u));
     request(ED_UI_SET, a, 2);
@@ -711,7 +711,7 @@ static int fmini_ids(void)
     {   uint32_t i, k, ch = 0;
         for (i = 0; i < P_COUNT; i++)
             ch += i != P_LN4 && TSEL->p[i] != before[i];
-        for (k = 0; k < NFMX; k++)
+        for (k = 0; k < FX_HP + 1; k++)
             ch += k != FX_D2 && fmx_get(TSEL->p, k) != fmx_get(before, k);
         bad += check("... which changes that field alone", !ch);
     }

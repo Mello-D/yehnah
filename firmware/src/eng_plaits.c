@@ -642,7 +642,16 @@ _Static_assert(sizeof PLAITS_PT == NELEM(PLAITS_PRESETS) + 1u, "a type a preset"
 /* (engine 22: its favourites in favorites.factory[6]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(PLAITS_PRESETS) <= 128u, "PLAITS' favourites");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t PLAITS_ROWS[] = {
+    {"MODEL", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"MORPH", {P_E3, P_E4, 0xFF}, {0, 0, 0}},
+    {"OUT", {P_E5, P_E6, P_E7}, {0, 0, 0}},
+};
+
 static const engine_t ENG_PLAITS = {
+    .rows = PLAITS_ROWS,
+    .nrows = (uint8_t)(sizeof PLAITS_ROWS / sizeof PLAITS_ROWS[0]),
     .name = "PLAITS",
     .page_title = {"MODEL", "OUT"},
     .edit = {

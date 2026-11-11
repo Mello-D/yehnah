@@ -759,6 +759,24 @@ static int proj_bl_used(const project_t *q)            /* (chord-harp fork) the 
             return 1;
     return 0;
 }
+/* (2026-11-11) the tracks whose packed patch slots P_LN0..P_LN6 (core.h FMX_BITS: MINI's patch, ANALOG's / DIGITAL's / VOICE's extras) hold
+ * more than a byte's 7 bits: FUND's 'P' 'X' block (count; per track: the track, the 7 slots as 16 bits), the main stream holding their low 7 bits */
+static int proj_px_slot(int16_t v) { return v < -64 || v > 127; }
+static uint32_t proj_px_has(const project_t *q, uint32_t t)
+{
+    uint32_t i;
+    for (i = P_LN0; i <= P_LN6; i++)
+        if (proj_px_slot(q->t[t].p[i]))
+            return 1;
+    return 0;
+}
+static uint32_t proj_px_tracks(const project_t *q)
+{
+    uint32_t t, n = 0;
+    for (t = 0; t < NTRK; t++)
+        n += proj_px_has(q, t);
+    return n;
+}
 static uint32_t proj_ct_tracks(const project_t *q)
 {
     uint32_t t, n = 0;
@@ -816,6 +834,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u;
     if (proj_ct_tracks(q))                              /* (chord-harp fork) P_CTABS's high bits: their block */
         n += 3u + 2u * proj_ct_tracks(q);
+    if (proj_px_tracks(q))                              /* (2026-11-11) the packed patch slots: their block */
+        n += 3u + 15u * proj_px_tracks(q);
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -847,7 +867,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
         for (i = 0; i < FM6_PACKED; i++)
             if (q->fm6[t][i] > 127u) return 0;
         for (i = 0; i < P_COUNT; i++)
-            if (i != P_CTABS && (q->t[t].p[i] < -64 || q->t[t].p[i] > 127))
+            if (i != P_CTABS && !(i >= P_LN0 && i <= P_LN6) && (q->t[t].p[i] < -64 || q->t[t].p[i] > 127))
                 return 0;                               /* (P_CTABS: 16 bits, its high ones in 'C' 'T') */
         for (i = 0; i < NSTEP; i++) {
             const step_t *s = &q->t[t].step[i];
@@ -870,7 +890,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
         for (i = 0; i < P_COUNT; i++)
             if (q->t[t].p[i] != proj_pdef(e, i)) {
                 b[map + i / 8u] |= (uint8_t)(1u << (i & 7u));
-                b[pos++] = (uint8_t)((i == P_CTABS ? q->t[t].p[i] & 127 : q->t[t].p[i]) + 64);   /* (P_CTABS: its low bits) */
+                b[pos++] = (uint8_t)((i == P_CTABS || (i >= P_LN0 && i <= P_LN6 && proj_px_slot(q->t[t].p[i])) ? q->t[t].p[i] & 127 : q->t[t].p[i]) + 64);   /* (P_CTABS: its low bits) */
             }
         map = pos;
         pos += 8u;                                      /* (the steps' map, filled below) */
@@ -971,6 +991,17 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'B'; b[pos++] = 'L';
         for (i = 0; i < 4u; i++)
             b[pos++] = (uint8_t)clamp(q->g[G_BLA + i], 0, 127);
+    }
+    if (proj_px_tracks(q)) {                            /* (2026-11-11) the packed patch slots, 16 bits each */
+        b[pos++] = 'P'; b[pos++] = 'X'; b[pos++] = (uint8_t)proj_px_tracks(q);
+        for (t = 0; t < NTRK; t++)
+            if (proj_px_has(q, t)) {
+                b[pos++] = (uint8_t)t;
+                for (i = P_LN0; i <= P_LN6; i++) {
+                    b[pos++] = (uint8_t)((uint16_t)q->t[t].p[i] & 255u);
+                    b[pos++] = (uint8_t)((uint16_t)q->t[t].p[i] >> 8);
+                }
+            }
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1263,6 +1294,17 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         for (i = 0; i < 4u; i++)
             q->g[G_BLA + i] = (int16_t)clamp(b[pos + 2u + i], GP[G_BLA + i].min, GP[G_BLA + i].max);
         pos += 6u;
+    }
+    if (pos + 3u <= room && b[pos] == 'P' && b[pos + 1u] == 'X') {   /* (2026-11-11) the packed patch slots (else the low 7 bits) */
+        uint32_t k, c = b[pos + 2u];
+        if (!c || c > nt || pos + 3u + 15u * c > room) return 0;
+        for (k = 0; k < c; k++) {
+            uint32_t tk = b[pos + 3u + 15u * k], j;
+            if (tk >= nt) return 0;
+            for (j = 0; j < 7u; j++)
+                q->t[tk].p[P_LN0 + j] = (int16_t)(uint16_t)(b[pos + 4u + 15u * k + 2u * j] | (uint32_t)b[pos + 5u + 15u * k + 2u * j] << 8);
+        }
+        pos += 3u + 15u * c;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)

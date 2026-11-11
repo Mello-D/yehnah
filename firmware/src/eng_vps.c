@@ -141,7 +141,16 @@ static void vps_spread(track_t *t, voice_t *v, uint32_t r)
     v->ph[2] += r >> 1;
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t VPS_ROWS[] = {
+    {"VPS", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"OSC 2", {P_E3, P_E6, P_E7}, {0, 0, 0}},
+    {"LPF", {P_E4, P_E5, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_VPS = {
+    .rows = VPS_ROWS,
+    .nrows = (uint8_t)(sizeof VPS_ROWS / sizeof VPS_ROWS[0]),
     .name = "VPS",
     .page_title = {"VECTOR", "TONE"},
     .edit = {

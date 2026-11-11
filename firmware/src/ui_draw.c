@@ -1373,9 +1373,8 @@ static void draw_cards(void)
             continue;
         }
         if (cur_page()->graph == GR_PLIST && c == 0u) {  /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (its name; n/N) */
-            uint32_t pn;
-            const sound_row_t *pr = sound_rows(TSEL, &pn);
-            draw_column(0, "ROW", pr[plist_cur % pn].name, "", VAL(0u), pick_of(pn, plist_cur), ICON_NONE);
+            uint32_t pn = sound_n(TSEL);
+            draw_column(0, "ROW", sound_row(TSEL, plist_cur % pn)->name, "", VAL(0u), pick_of(pn, plist_cur), ICON_NONE);
             continue;
         }
         if (cur_page()->graph == GR_SETS && c == 0u) {   /* (topic C) GLO's lists: KNOB 1 the row (its name; n/N) */

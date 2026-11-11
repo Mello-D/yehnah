@@ -447,7 +447,10 @@ static int page_visible(uint32_t i)
         return 0;                                       /* (0.6.30) LOAD ECO: no SLICER, no chorus: their pages gone */
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_DRIFT)   /* (chord-harp fork, 2026-10-30: was MORPH, ANALOG PHASE
                                                          * LOFI's waves, gone with Clipper's engines) DRIFT, VINTAGE */
-        return trk_eng(TSEL) != ENGI_DRUM;
+        return 0;                                       /* (2026-11-11) SOUND's DRIFT row */
+    if (PAGES[i].fam == FAM_EDIT && PAGES[i].scope == SC_TRACK && PAGES[i].graph == GR_NONE &&
+        (PAGES[i].id[0] == P_VOICE || PAGES[i].id[0] == P_ALLOC || PAGES[i].id[0] == P_FTYPE || PAGES[i].id[0] == P_FMODEL))
+        return 0;                                       /* (2026-11-11) FILTER, VOICE, VOICE 2: SOUND's rows (kept in PAGES: its indices) */
     if (PAGES[i].graph == GR_PLIST)                     /* (2026-11-11) SOUND (the PATCH entry): every engine's but a kit's */
         return 1;
     if (PAGES[i].scope == SC_ENGINE)                    /* EDIT 1 / EDIT 2: retired, every engine's settings are SOUND's rows (a kit's too) */

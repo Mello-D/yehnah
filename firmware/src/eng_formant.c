@@ -126,6 +126,18 @@ static void formant_note_on(track_t *t, voice_t *v)
     }
 }
 
+/* (2026-11-11) SOUND > RESON: F4 (2000 + 20 Hz x the value; 65 = the old 3300) and KEY TRK (30 / 127 as before) */
+static uint32_t formant_pset(int16_t *p, uint32_t pi)
+{
+    uint32_t i;
+    (void)pi;
+    for (i = P_LN0; i <= P_LN6; i++)
+        p[i] = 0;
+    fmx_set(p, FX_F_F4, 65);
+    fmx_set(p, FX_F_KT, FMT_FOLOW);
+    return 0;
+}
+
 static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
     const int16_t *p = t->p;
@@ -157,7 +169,7 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
         vowel_at(v1 + m->cutoff, fb, bb);
     }
     /* SHIFT (semitones) and FOLOW (key tracking around C4, fixed), one ratio for all four */
-    ratio = fmt_ratio(p[P_E3] * 16 + ((FMT_FOLOW * (v->pitch_cur - 60 * 16) * 516) >> 16));   /* FOLOW / 127 */
+    ratio = fmt_ratio(p[P_E3] * 16 + (((int32_t)fmx_get(p, FX_F_KT) * (v->pitch_cur - 60 * 16) * 516) >> 16));   /* FOLOW / 127 */
     bws = fmt_ratio((64 - p[P_E6]) * 4);                /* Q: bandwidth x2.5 .. x0.4 */
     f0 = (uint32_t)(((uint64_t)inc * 705600u) >> 32);   /* F0 in Hz * 16 */
     for (j = 0; j < 3; j++) {
@@ -174,7 +186,7 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
     fres_coef(&r1, (uint32_t)fa[0], (uint32_t)ba[0]);
     fres_coef(&r2, (uint32_t)fa[1], (uint32_t)ba[1]);
     fres_coef(&r3, (uint32_t)fa[2], (uint32_t)ba[2]);
-    fres_coef(&r4, (uint32_t)clamp((int32_t)((3300u * 16u * (uint64_t)ratio) >> 16), 60 * 16, 7000 * 16),
+    fres_coef(&r4, (uint32_t)clamp((int32_t)(((uint32_t)(2000 + 20 * fmx_get(p, FX_F_F4)) * 16u * (uint64_t)ratio) >> 16), 60 * 16, 7000 * 16),
               (uint32_t)clamp((int32_t)((((250u * 16u * (uint64_t)ratio) >> 16) * bws) >> 16), 20 * 16, 1500 * 16));
 
     /* source: BUZZ (+ SHP modulation, + velocity) -> open quotient and tilt */
@@ -267,8 +279,19 @@ _Static_assert(sizeof FORMANT_PT == NELEM(FORMANT_PRESETS) + 1u, "a type a prese
 static const int8_t FORMANT_TRIM[] = {0, 0, -8, 0, 0, -6, -2, 0, 0, -4, 0, 0, 0, 0, -3};
 _Static_assert(sizeof FORMANT_TRIM == NELEM(FORMANT_PRESETS), "a trim a preset");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t FORMANT_ROWS[] = {
+    {"VOWEL", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"SOURCE", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"RESON", {P_E6, VF(FX_F_F4), VF(FX_F_KT)}, {"Q", "FORMANT 4", "KEY TRACK"}},
+    {"RANDOM", {P_E7, 0xFF, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_FORMANT = {
+    .rows = FORMANT_ROWS,
+    .nrows = (uint8_t)(sizeof FORMANT_ROWS / sizeof FORMANT_ROWS[0]),
     .name = "VOICE",
+    .pset = formant_pset,
     .page_title = {"VOWL", "TONE"},
     .edit = {
         {"VOWEL", F_INT, 0, 127, 0, 0, 0},

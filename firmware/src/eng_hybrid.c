@@ -830,7 +830,17 @@ _Static_assert(sizeof HY_TRIM == NELEM(HY_PRESETS), "a trim a preset");
 _Static_assert(NELEM(HY_PRESETS) <= 128u, "HYBRID's favourites");
 _Static_assert(HY_NFACTORY <= 255u, "hy_act.seen");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t HYBRID_ROWS[] = {
+    {"FILT", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"PATCH", {P_E3, 0xFF, 0xFF}, {0, 0, 0}},
+    {"MACRO", {P_E4, P_E5, P_E6}, {0, 0, 0}},
+    {"MACRO 4", {P_E7, 0xFF, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_HYBRID = {
+    .rows = HYBRID_ROWS,
+    .nrows = (uint8_t)(sizeof HYBRID_ROWS / sizeof HYBRID_ROWS[0]),
     .name = "HYBRID",
     .page_title = {"FILT", "MACRO"},
     .edit = {

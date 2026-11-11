@@ -1155,14 +1155,15 @@ static uint32_t graph_signature(void)
     if (pg->graph == GR_STAGE)                       /* .. ENV > STAGE: the stage */
         h ^= (ui.stage + 1u) * 3266489917u;
     if (pg->graph == GR_PLIST) {                     /* (2026-11-11) EDIT > PATCH: the row, every value in the list */
-        uint32_t r, k, pn;
-        const sound_row_t *pr = sound_rows(t, &pn);
+        uint32_t r, k, pn = sound_n(t);
         h ^= (plist_cur + 1u) * 2654435761u;
-        h ^= (uint32_t)(uintptr_t)pr >> 2;               /* (another engine's rows) */
-        for (r = 0; r < pn; r++)
+        h ^= (uint32_t)(uintptr_t)sound_row(t, 0) >> 2;  /* (another engine's rows) */
+        for (r = 0; r < pn; r++) {
+            const sound_row_t *pr = sound_row(t, r);
             for (k = 0; k < 3u; k++)
-                if (pr[r].id[k] != 0xFFu)
-                    h = (h ^ (uint32_t)(uint16_t)plist_val(t, pr[r].id[k])) * 16777619u;
+                if (pr->id[k] != 0xFFu)
+                    h = (h ^ (uint32_t)(uint16_t)plist_val(t, pr->id[k])) * 16777619u;
+        }
     }
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;

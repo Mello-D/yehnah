@@ -570,7 +570,7 @@ static uint32_t rb_of(uint32_t ei)
         [ENGI_GUITAR] = RB_GUITAR + 1, [ENGI_ACID] = RB_ACID + 1, [ENGI_DRIFT] = RB_DRIFT + 1, [ENGI_PLAITS] = RB_PLAITS + 1,
         [ENGI_STRINGS] = RB_STRINGS + 1, [ENGI_VPS] = RB_VPS + 1, [ENGI_MODAL] = RB_MODAL + 1, [ENGI_WSEQ] = RB_WSEQ + 1,
         [ENGI_TERRAIN] = RB_TERRAIN + 1, [ENGI_VECTOR] = RB_VECTOR + 1, [ENGI_DIGITAL] = RB_DIGITAL + 1,
-        [ENGI_HYBRID] = RB_HYBRID + 1};
+        [ENGI_HYBRID] = RB_HYBRID + 1, [ENGI_MINI] = RB_MINI + 1};
     return ei < NENGINES && M[ei] && eng_ok(ei) ? M[ei] - 1u : RB_NROBOTS;
 }
 /* the dance's clock: a beat each four 1/16 steps of the song playing (mod.c clk_step) */

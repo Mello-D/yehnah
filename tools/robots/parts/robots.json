@@ -555,6 +555,18 @@
    "eyes": "shades",
    "talk": false,
    "shape": "std"
+  },
+  {
+   "name": "MINI",
+   "head": "wide",
+   "hr": "black",
+   "br": "wood",
+   "ac": "cream",
+   "em": "wave",
+   "ant": "none",
+   "eyes": "dots",
+   "talk": false,
+   "shape": "squat"
   }
  ]
 }

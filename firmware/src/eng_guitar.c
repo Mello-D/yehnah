@@ -271,7 +271,16 @@ static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGGGN";
 _Static_assert(sizeof GUITAR_PT == NELEM(GUITAR_PRESETS) + 1u, "a type a preset");
 /* (engine 19: its favourites in favorites.factory[3]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(GUITAR_PRESETS) <= 128u, "GUITAR's favourites");
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t GUITAR_ROWS[] = {
+    {"STRING", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"BODY", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"HAND", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_GUITAR = {
+    .rows = GUITAR_ROWS,
+    .nrows = (uint8_t)(sizeof GUITAR_ROWS / sizeof GUITAR_ROWS[0]),
     .name = "GUITAR",
     .page_title = {"STRING", "HAND"},
     .edit = {

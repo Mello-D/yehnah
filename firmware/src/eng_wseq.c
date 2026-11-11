@@ -263,7 +263,16 @@ static void wseq_spread(track_t *t, voice_t *v, uint32_t r)
         v->s[4] = 1;
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t WSEQ_ROWS[] = {
+    {"SEQ", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"PLAY", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"LPF", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_WSEQ = {
+    .rows = WSEQ_ROWS,
+    .nrows = (uint8_t)(sizeof WSEQ_ROWS / sizeof WSEQ_ROWS[0]),
     .name = "WSEQ",
     .page_title = {"SEQUENCE", "TONE"},
     .edit = {

@@ -269,7 +269,11 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
  * OSC 2 / 3 DETUNE in cents (-700..700), TUNE (-64..63: +-100 cents), MOD MIX (LFO .. noise), NOISE colour (WHITE PINK), MOD>OSC,
  * MOD>FILTER, the LFO's shape (the part's / SQUARE), the output (LP HP) */
 enum { FX_R1, FX_R2, FX_R3, FX_W1, FX_W2, FX_W3, FX_L1, FX_L2, FX_L3, FX_LN, FX_D2, FX_D3, FX_TU, FX_MM, FX_PK, FX_MO, FX_MF, FX_SQ,
-       FX_HP, NFMX };
+       FX_HP,
+       /* (2026-11-11) the SOUND rows of other engines in the same packed slots (only one engine's are live in a track; the engine's pset
+        * clears them and sets the defaults): ANALOG's OSC 2 RANGE / WAVE, PW offset, SYNC; DIGITAL's operator 2..4 LEVEL and DETUNE;
+        * FORMANT's F4 and KEY TRK */
+       FX_A_RNG, FX_A_WAV, FX_A_PW, FX_A_SYN, FX_D_L2, FX_D_L3, FX_D_L4, FX_D_T2, FX_D_T3, FX_D_T4, FX_F_F4, FX_F_KT, NFMX };
 /* the motion ids (parameter locks, automation, the editor's wire): FMINI's patch setting k is the id P_COUNT + k (motion.c mp_get / mp_set) */
 #define MOT_NID (P_COUNT + NFMX)
 #define MOT_W ((MOT_NID + 31u) / 32u)            /* words of a bit per motion id */
@@ -278,7 +282,11 @@ enum { FX_R1, FX_R2, FX_R3, FX_W1, FX_W2, FX_W3, FX_L1, FX_L2, FX_L3, FX_LN, FX_
 static const struct { uint8_t slot, shift, bits; int16_t bias; } FMX_BITS[NFMX] = {
     {P_LN0, 0, 3, 0}, {P_LN0, 3, 3, 0}, {P_LN0, 6, 3, 0}, {P_LN0, 9, 3, 0}, {P_LN0, 12, 3, 0}, {P_LN1, 0, 3, 0},
     {P_LN2, 0, 7, 0}, {P_LN2, 7, 7, 0}, {P_LN3, 0, 7, 0}, {P_LN3, 7, 7, 0}, {P_LN4, 0, 11, 700}, {P_LN5, 0, 11, 700},
-    {P_LN1, 8, 7, 64}, {P_LN6, 0, 7, 0}, {P_LN1, 3, 1, 0}, {P_LN1, 4, 1, 0}, {P_LN1, 5, 1, 0}, {P_LN1, 6, 1, 0}, {P_LN1, 7, 1, 0}};
+    {P_LN1, 8, 7, 64}, {P_LN6, 0, 7, 0}, {P_LN1, 3, 1, 0}, {P_LN1, 4, 1, 0}, {P_LN1, 5, 1, 0}, {P_LN1, 6, 1, 0}, {P_LN1, 7, 1, 0},
+    {P_LN0, 0, 3, 0}, {P_LN0, 3, 3, 0}, {P_LN1, 0, 7, 64}, {P_LN0, 6, 1, 0},   /* (the other engines' extras: one byte a slot, so a project and a USER
+                                                         * preset keep them; only MINI's patch needs the 'P' 'X' block) */
+    {P_LN0, 0, 7, 0}, {P_LN1, 0, 7, 0}, {P_LN2, 0, 7, 0}, {P_LN3, 0, 7, 64}, {P_LN4, 0, 7, 64}, {P_LN5, 0, 7, 64},
+    {P_LN0, 0, 7, 0}, {P_LN1, 0, 7, 0}};
 static inline int32_t fmx_get(const int16_t *p, uint32_t k)
 {
     return (((int32_t)p[FMX_BITS[k].slot] >> FMX_BITS[k].shift) & ((1 << FMX_BITS[k].bits) - 1)) - FMX_BITS[k].bias;

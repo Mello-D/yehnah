@@ -104,7 +104,16 @@ static const int8_t TERRAIN_TRIM[] = {-10, -10, 5, 15, -10, -9, -18, -8, 1, -8, 
 _Static_assert(sizeof TERRAIN_TRIM == NELEM(TERRAIN_PRESETS), "a trim a preset");
 _Static_assert(NELEM(TERRAIN_PRESETS) <= 128u, "TERRAIN's favourites");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t TERRAIN_ROWS[] = {
+    {"SURFACE", {P_E0, P_E1, P_E4}, {0, 0, 0}},
+    {"POSITN", {P_E2, P_E3, P_E5}, {0, 0, 0}},
+    {"LPF", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_TERRAIN = {
+    .rows = TERRAIN_ROWS,
+    .nrows = (uint8_t)(sizeof TERRAIN_ROWS / sizeof TERRAIN_ROWS[0]),
     .name = "TERRAIN",
     .page_title = {"ORBIT", "MOTION"},
     .edit = {

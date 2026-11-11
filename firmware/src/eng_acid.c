@@ -106,7 +106,16 @@ static const int8_t ACID_TRIM[] = {-3, 1, -2, -2, -7, -1, 5, -3, -3, -6, 0};
 _Static_assert(sizeof ACID_TRIM == NELEM(ACID_PRESETS), "a trim a preset");
 _Static_assert(NELEM(ACID_PRESETS) <= 128u, "ACID's favourites");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t ACID_ROWS[] = {
+    {"OSC", {P_E0, P_E6, P_E7}, {0, 0, 0}},
+    {"VCF", {P_E1, P_E2, P_E3}, {0, 0, 0}},
+    {"ENV", {P_E4, P_E5, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_ACID = {
+    .rows = ACID_ROWS,
+    .nrows = (uint8_t)(sizeof ACID_ROWS / sizeof ACID_ROWS[0]),
     .name = "ACID",
     .page_title = {"VCF", "ENV"},
     .edit = {

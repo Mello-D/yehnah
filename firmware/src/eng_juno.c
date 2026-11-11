@@ -244,7 +244,17 @@ static void juno_spread(track_t *t, voice_t *v, uint32_t r)
     v->ph[2] ^= r;
 }
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t JUNO_ROWS[] = {
+    {"DCO", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"NOISE", {P_E3, P_E4, 0xFF}, {0, 0, 0}},
+    {"VCF", {P_E5, P_E6, 0xFF}, {0, 0, 0}},
+    {"CHORUS", {P_E7, 0xFF, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_JUNO = {
+    .rows = JUNO_ROWS,
+    .nrows = (uint8_t)(sizeof JUNO_ROWS / sizeof JUNO_ROWS[0]),
     .name = "JUNO",
     .page_title = {"DCO", "VCF"},
     .edit = {

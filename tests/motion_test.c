@@ -661,10 +661,10 @@ static int lock_fmini(void)
     track_t *t = lock_track(0);
     uint32_t k;
     int16_t v, base[P_COUNT];
-    int32_t others[NFMX];
+    int32_t others[(FX_HP + 1)];
     t->eng_req = ENGI_MINI;
     fmx_set(t->p, FX_W1, 2); fmx_set(t->p, FX_L2, 90); fmx_set(t->p, FX_TU, -5); fmx_set(t->p, FX_HP, 1);
-    for (k = 0; k < NFMX; k++) others[k] = fmx_get(t->p, k);
+    for (k = 0; k < (FX_HP + 1); k++) others[k] = fmx_get(t->p, k);
     bad += check("FMINI: a lock of a detune is refused (past a record's range), TUNE and WAVE take one",
         !motion_param(P_COUNT + FX_D2) && motion_param(P_COUNT + FX_W1) && !motion_set_lock(t, 1, P_COUNT + FX_W1, 5) &&
         !motion_set_lock(t, 1, P_COUNT + FX_TU, -30));
@@ -678,7 +678,7 @@ static int lock_fmini(void)
     {   uint32_t j, ok = 1;                                  /* the saved slots hold the bases */
         for (j = 0; j < P_COUNT; j++)
             base[j] = motion_base_value(t, j);
-        for (j = 0; j < NFMX; j++)
+        for (j = 0; j < (FX_HP + 1); j++)
             ok &= (int32_t)fmx_get(base, j) == (j == FX_W1 ? 2 : j == FX_TU ? -5 : others[j]);
         bad += check("  .. and a project save (motion_base_value of the slots) keeps the base fields", ok);
     }

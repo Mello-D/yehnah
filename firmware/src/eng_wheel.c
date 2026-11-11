@@ -298,7 +298,16 @@ static const int8_t WHEEL_TRIM[] = {-14, -10, -8, -10, -7, -12, 11, 7, 2, -9, -1
 _Static_assert(sizeof WHEEL_TRIM == NELEM(WHEEL_PRESETS), "a trim a preset");
 _Static_assert(NELEM(WHEEL_PRESETS) <= 128u, "WHEEL's favourites");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t WHEEL_ROWS[] = {
+    {"BARS", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"TOP", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"OUT", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_WHEEL = {
+    .rows = WHEEL_ROWS,
+    .nrows = (uint8_t)(sizeof WHEEL_ROWS / sizeof WHEEL_ROWS[0]),
     .name = "WHEEL",
     .page_title = {"BARS", "TONE"},
     .edit = {

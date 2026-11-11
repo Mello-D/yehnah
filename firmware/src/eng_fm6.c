@@ -560,7 +560,16 @@ static const int8_t FM6_TRIM[] = {0, 4, 14, 19, 2, 23, 11, 23, [22] = 0};
 _Static_assert(sizeof FM6_TRIM == NELEM(FM6_PRESETS), "a trim a preset");
 _Static_assert(sizeof FM6_PT == NELEM(FM6_PRESETS) + 1u, "a type a preset");
 
+/* (2026-11-11) the SOUND page's rows (core.h sound_row_t): the engine's eight settings, then params.c's generic rows */
+static const sound_row_t FM6_ROWS[] = {
+    {"ALGO", {P_E0, P_E1, P_E2}, {0, 0, 0}},
+    {"OPS", {P_E3, P_E4, P_E5}, {0, 0, 0}},
+    {"PATCH", {P_E6, P_E7, 0xFF}, {0, 0, 0}},
+};
+
 static const engine_t ENG_FM6 = {
+    .rows = FM6_ROWS,
+    .nrows = (uint8_t)(sizeof FM6_ROWS / sizeof FM6_ROWS[0]),
     .name = "FM6",
     .page_title = {"OPS", "PATCH"},
     .edit = {
