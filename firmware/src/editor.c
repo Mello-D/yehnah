@@ -241,8 +241,14 @@ static void ed_sync(void)                                /* main loop */
  * (t->engine follows in the audio ISR, after a short fade) */
 static const param_desc_t *ed_tdesc(const track_t *t, uint32_t id) { return param_desc_of(trk_eng(t), id); }
 /* descriptor and value slot of (scope, id): scope 0 = the selected track, 1 = global */
+static int16_t ed_fmx_v;         /* (2026-11-11) the virtual id P_COUNT + k: FMINI's patch setting k (core.h fmx_get), INFO 'X' */
 static const param_desc_t *ed_desc(uint32_t scope, uint32_t id, int16_t **vp)
 {
+    if (scope == 0 && id >= P_COUNT && id < P_COUNT + NFMX && ed_eng(TSEL) == ENGI_MINI) {
+        ed_fmx_v = (int16_t)fmx_get(TSEL->p, id - P_COUNT);
+        *vp = &ed_fmx_v;
+        return &FMX_DESC[id - P_COUNT];
+    }
     if (scope == 0 && id < P_COUNT) {
         *vp = &TSEL->p[id];
         return ed_tdesc(TSEL, id);
@@ -472,6 +478,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT 9..40 */
         ed_b(0x4A); ed_b(1); ed_b(1);   /* (0.6.62) 'J': this is Yehnah (the web installer writes over it, web/index_pkg.html) */
         ed_b(0x4F); ed_b(1); ed_b(LM_N);   /* (0.8.5) 'O': the DRUM-X octaves, a step's lane modes 0..6 after its ratchet */
+        ed_b(0x58); ed_b(1); ed_b(NFMX);   /* (2026-11-11) 'X': FMINI's patch settings as the ids P_COUNT .. P_COUNT + NFMX - 1 (GET / SET / DESC) */
         ed_b(0x57); ed_b(1); ed_b(P_COUNT >> 7); ed_b(P_E0 >> 7);   /* (chord-harp fork) 'W': wide parameter ids (ed_id);
                                                          * the bits of P_COUNT and P_E0 past the 7 above */
         break;
@@ -491,11 +498,14 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
                 motion_djf_set(TSEL, (int16_t)clamp(ed_rv(a + 2 + w), d->min, d->max));
             } else if (d->max > d->min) {
                 *vp = (int16_t)enum_orig(d, clamp(ed_rv(a + 2 + w), d->min, d->max));
+                if (a[0] == 0 && id >= P_COUNT)               /* FMINI's patch setting: into its bit field */
+                    fmx_set(TSEL->p, id - P_COUNT, *vp);
                 if (a[0] == 0)
                     (void)motion_capture(TSEL, id, *vp);
             }
             ui.force = 1;
-            ed_w.v[a[0] ? P_COUNT + id : id] = *vp;       /* the editor's own change: no push */
+            if (a[0] || id < P_COUNT)
+                ed_w.v[a[0] ? P_COUNT + id : id] = *vp;   /* the editor's own change: no push */
         }
         ed_b(a[0]);
         ed_id_out(id, w);

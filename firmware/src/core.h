@@ -270,6 +270,9 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
  * MOD>FILTER, the LFO's shape (the part's / SQUARE), the output (LP HP) */
 enum { FX_R1, FX_R2, FX_R3, FX_W1, FX_W2, FX_W3, FX_L1, FX_L2, FX_L3, FX_LN, FX_D2, FX_D3, FX_TU, FX_MM, FX_PK, FX_MO, FX_MF, FX_SQ,
        FX_HP, NFMX };
+/* the motion ids (parameter locks, automation, the editor's wire): FMINI's patch setting k is the id P_COUNT + k (motion.c mp_get / mp_set) */
+#define MOT_NID (P_COUNT + NFMX)
+#define MOT_W ((MOT_NID + 31u) / 32u)            /* words of a bit per motion id */
 #define VF(k) (0xA0u + (k))              /* a patch setting's id on a page (real parameter ids are < P_COUNT, the menu rows 0xD0..) */
 #define IS_VF(id) ((id) >= 0xA0u && (id) < 0xA0u + NFMX)
 static const struct { uint8_t slot, shift, bits; int16_t bias; } FMX_BITS[NFMX] = {
@@ -469,7 +472,7 @@ typedef struct {                 /* an engine (engines.c ENGINES[]; the eng_*.c 
     uint8_t ownenv;
     int (*done)(struct track *t, voice_t *v);
     /* optional: after a preset's values are in p (engines.c preset_values), the engine's own: FMINI's patch into its parameters */
-    void (*pset)(int16_t *p, uint32_t pi);
+    uint32_t (*pset)(int16_t *p, uint32_t pi);   /* returns 1 when the patch set the arp (P_AMODE..P_APROB) */
 } engine_t;
 
 /* ------------------------------------------------- tracks, the song --- */

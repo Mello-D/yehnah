@@ -632,22 +632,35 @@ static void section_preview_ui(void)                  /* (2026-11-06) SAVE > PRO
 
 /* parameter locks: a page whose KNOB 1..4 can lock (a track's sound: one of its parameters can be motion; not MOD's
  * slots), the parameter KNOB k locks (ui.plk_src's page, HOME's four), 0xFF = none */
+/* the page whose four ids the locks use (EDIT > PATCH: the page with the row's settings, params.c plist_page) */
+static const page_t *lock_pg(uint32_t i) { return PAGES[i].graph == GR_PLIST ? plist_page(&PAGES[i]) : &PAGES[i]; }
+/* a page id as a motion id: FMINI's patch settings (VF) are P_COUNT + k; 0xFF if it cannot lock */
+static uint32_t lock_mid(uint32_t id)
+{
+    if (IS_VF(id))
+        id = trk_eng(TSEL) == ENGI_MINI ? P_COUNT + (id - 0xA0u) : 0xFFu;
+    return id != 0xFFu && id < MOT_NID && motion_param(id) ? id : 0xFFu;
+}
 static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
+    const page_t *pg;
     if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD ||
         PAGES[i].graph == GR_MSEQ)
         return 0;
+    if (PAGES[i].graph == GR_PLIST)                     /* (the row changes: any of the page's settings can lock) */
+        return 1;
+    pg = lock_pg(i);
     for (k = 0; k < 4u; k++)
-        if (PAGES[i].id[k] != 0xFFu && motion_param(PAGES[i].id[k]))
+        if (pg->id[k] != 0xFFu && motion_param(pg->id[k]))
             return 1;
     return 0;
 }
 static uint32_t lock_id(uint32_t k)
 {
-    uint32_t id = ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? PAGES[ui.plk_src - 1u].id[k & 3u]
+    uint32_t id = ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? lock_pg(ui.plk_src - 1u)->id[k & 3u]
                                                                : trk_engp(TSEL)->knob[k & 3u];
-    return id < P_COUNT && motion_param(id) ? id : 0xFFu;
+    return lock_mid(id);
 }
 
 /* (chord-harp fork) SCL's CHORD, HARP and OMNI tabs, kept apart: going to HARP or OMNI turns that mode on, going to
@@ -1262,7 +1275,7 @@ static uint32_t preset_nth(const engine_t *e, uint32_t n)
 
 static void set_engine_of(track_t *t, uint32_t ei);
 /* engine e's preset pi into the values p: the sound (not param_kept's; the steps are the track's) */
-static void preset_values(int16_t *p, const engine_t *e, uint32_t pi)
+static uint32_t preset_values(int16_t *p, const engine_t *e, uint32_t pi)   /* 1: the preset set the arp */
 {
     static const uint8_t FX_DEF[4] = {0, 24, 28, 36};
     const preset_t *pr = &e->presets[pi];
@@ -1286,7 +1299,8 @@ static void preset_values(int16_t *p, const engine_t *e, uint32_t pi)
     p[P_TRIM] = e->trim ? e->trim[pi] : 0;            /* (Clipper's level trim, 1/2 dB) */
     preset_extras(p, pr);                             /* (chord-harp fork) glide, pitch / LFO modulation, voice mode */
     if (e->pset)                                      /* (2026-11-11) FMINI: the patch's values into the parameters */
-        e->pset(p, pi);
+        return e->pset(p, pi) || preset_arp(pr) != 0;
+    return preset_arp(pr) != 0;
 }
 
 /* preset pi of the engine the track asked for: the sound only (not the steps, not param_kept) */
@@ -1319,8 +1333,7 @@ static void apply_preset_to(track_t *t, uint32_t pi)
         uint32_t k = trk_index(t) % NTRK, i, same = (pre_on >> k) & 1u;
         for (i = 0; i < 4u && same; i++)
             same = t->p[P_AMODE + i] == pre_arp[k][i];
-        preset_values(t->p, e, pi);
-        if (preset_arp(&e->presets[pi])) {
+        if (preset_values(t->p, e, pi)) {
             for (i = 0; i < 4u; i++)
                 pre_arp[k][i] = t->p[P_AMODE + i];
             pre_on |= (uint8_t)(1u << k);

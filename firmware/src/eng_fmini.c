@@ -37,7 +37,7 @@ static int32_t fmini_det(const uint8_t *g, uint32_t lo)
 }
 
 /* preset pi's patch into the track values p (the hook of engines.c preset_values; E0..E6 and the rest are the preset's) */
-static void fmini_pset(int16_t *p, uint32_t pi)
+static uint32_t fmini_pset(int16_t *p, uint32_t pi)
 {
     const uint8_t *g = FMINI_FACTORY[pi % FMINI_NFACTORY];
     const fmini_x_t *x = &FMINI_X[pi % FMINI_NFACTORY];
@@ -68,6 +68,14 @@ static void fmini_pset(int16_t *p, uint32_t pi)
     p[P_LD_AMP] = x->mod[1];
     p[P_ED_PIT] = x->mod[2];
     p[P_TRIM] = (int16_t)((int32_t)x->level - 104 + 10);   /* FMini-1 levelled each patch with LEVEL (default 104, 1/2 dB steps); +5 dB: the host mix is louder than its own */
+    if (!x->arp[0])                                  /* a patch with no arpeggiator leaves the track's */
+        return 0;
+    for (i = 0; i < 4u; i++)                         /* MODE RATE OCT GATE */
+        p[P_AMODE + i] = x->arp[i];
+    p[P_ASWING] = x->arp[4];
+    p[P_APROB] = x->arp[5];
+    p[P_AHOLD] = 0;
+    return 1;
 }
 
 /* per part, in .pool (zeroed at boot): the noise generator, its pink filter and this block's noise, the smoothed knobs */

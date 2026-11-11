@@ -21,10 +21,12 @@ int main(void)
         for (i = 0; i < P_COUNT; i++)
             before[i] = (int16_t)(1000 + (int32_t)i);          /* a marker in every parameter */
         memcpy(after, before, sizeof after);
-        fmini_pset(after, pi);
+        int sets = (int)fmini_pset(after, pi), na = 0;
+        chk("pset says arp iff the patch has one", sets == (FMINI_X[pi].arp[0] != 0));
         for (i = 0; i < P_COUNT; i++) {
             int owned = (i >= P_LN0 && i <= P_LN6) || i == P_E7 || i == P_GLIDE || i == P_LRATE || i == P_LWAVE || i == P_LFADE ||
-                        i == P_LD_PIT || i == P_LD_AMP || i == P_ED_PIT || i == P_TRIM;
+                        i == P_LD_PIT || i == P_LD_AMP || i == P_ED_PIT || i == P_TRIM ||
+                        (sets && ((i >= P_AMODE && i <= P_APROB) || i == P_AHOLD));
             if (!owned && after[i] != before[i]) {
                 printf("FAIL patch %u wrote parameter %u (not FMINI's)\n", pi, i);
                 bad++;
@@ -43,6 +45,9 @@ int main(void)
                 printf("FAIL patch %u field %u: %d, wanted %d\n", pi, k, (int)fmx_get(after, k), (int)want[k]);
                 bad++;
             }
+        if (sets)
+            chk("arp values", after[P_AMODE] == FMINI_X[pi].arp[0] && after[P_ARATE] == FMINI_X[pi].arp[1] && after[P_AGATE] == FMINI_X[pi].arp[3] && after[P_APROB] == FMINI_X[pi].arp[5]);
+        (void)na;
         chk("KBD in E7", after[P_E7] == g[FG_KBD]);
         chk("every setting inside its descriptor", 1);
     }

@@ -10,8 +10,8 @@
  * (motion_unlock). A lock lasts the whole step, its RATCH parts too; swing only moves the step's start. */
 static motion_store_t motion;
 static int16_t motion_base[NTRK][P_COUNT];
-static uint32_t motion_active[NTRK][(P_COUNT + 31u) / 32u];
-static uint32_t motion_locked[NTRK][(P_COUNT + 31u) / 32u];   /* the ids a lock holds now (put back at the next step) */
+static uint32_t motion_active[NTRK][MOT_W];
+static uint32_t motion_locked[NTRK][MOT_W];   /* the ids a lock holds now (put back at the next step) */
 static uint8_t motion_base_valid, motion_full;
 /* (0.9.1) the DJ FILTER's records (MOT_DJF): the global's value before they moved it (the knob's), and the tracks whose
  * record moved it this pass (bit per track; 0: song.g[G_DJF] is the knob's own) */
@@ -39,6 +39,8 @@ static int motion_param(uint32_t id)
 {
     /* Sound only: transport, routing, voice allocation and discrete engine
      * changes never become automation. FX sends and continuous mix are safe. */
+    if (id >= P_COUNT && id < MOT_NID)                  /* (2026-11-11) FMINI's patch settings, but the detunes (+-700 ct: past a record's -64..127) */
+        return id != P_COUNT + FX_D2 && id != P_COUNT + FX_D3;
     return id == MOT_DJF || (id < P_COUNT && (id <= P_REL || (id >= P_ED_FLT && id <= P_LD_AMP) ||
         (id >= P_DIST && id <= P_REV) || id == P_GLIDE || id == P_PAN ||
         id == P_DETUNE || (id >= P_FM1_ATK && id <= P_FM4_LEVEL) || (id >= P_SOFS && id <= P_LN7) ||
@@ -121,31 +123,50 @@ static int motion_lock_get(const track_t *t, uint32_t step, uint32_t id, int16_t
 }
 /* the parameters track k's MOTION will change (PLAY ON, at least one event): a bit per P_* id in m[].
  * Main loop only (the ISR never writes the events); at most MOTION_MAX records, once per card redraw. */
-static uint32_t motion_mask(uint32_t k, uint32_t m[(P_COUNT + 31u) / 32u])
+static uint32_t motion_mask(uint32_t k, uint32_t m[MOT_W])
 {
     uint32_t i, any = 0;
-    memset(m, 0, ((P_COUNT + 31u) / 32u) * sizeof m[0]);
+    memset(m, 0, MOT_W * sizeof m[0]);
     if (k >= NTRK || !((motion.on >> k) & 1u)) return 0;
     for (i = 0; i < motion.count; i++) {
         const motion_event_t *e = &motion.event[i];
-        if (MOTION_TRK(e) != k || MOTION_ID(e) >= P_COUNT) continue;
+        if (MOTION_TRK(e) != k || MOTION_ID(e) >= MOT_NID) continue;
         m[MOTION_ID(e) / 32u] |= 1u << (MOTION_ID(e) % 32u);
         any = 1;
     }
     return any;
+}
+/* a motion id's value in a parameter array (a track's p, motion_base): FMINI's patch settings are bit fields (core.h fmx_get) */
+static int16_t mp_get(const int16_t *a, uint32_t id) { return id < P_COUNT ? a[id] : (int16_t)fmx_get(a, id - P_COUNT); }
+static void mp_set(int16_t *a, uint32_t id, int16_t v)
+{
+    if (id < P_COUNT) a[id] = v;
+    else fmx_set(a, id - P_COUNT, v);
 }
 static int16_t motion_base_value(const track_t *t, uint32_t id)
 {
     uint32_t k = trk_index(t);
     if (id == MOT_DJF)
         return motion_djf_value();
-    return (motion_active[k][id / 32u] >> (id % 32u)) & 1u ? motion_base[k][id] : t->p[id];
+    if ((motion_active[k][id / 32u] >> (id % 32u)) & 1u)
+        return mp_get(motion_base[k], id);
+    if (id >= P_LN0 && id <= P_LN6) {                   /* FMINI's packed slot: the fields a lock holds as their base */
+        int32_t v = t->p[id];
+        uint32_t j;
+        for (j = 0; j < NFMX; j++)
+            if (FMX_BITS[j].slot == id && ((motion_active[k][(P_COUNT + j) / 32u] >> ((P_COUNT + j) % 32u)) & 1u)) {
+                int32_t mk = ((1 << FMX_BITS[j].bits) - 1) << FMX_BITS[j].shift;
+                v = (v & ~mk) | (motion_base[k][id] & mk);
+            }
+        return (int16_t)v;
+    }
+    return mp_get(t->p, id);
 }
 static void motion_restore(track_t *t)
 {
     uint32_t k = trk_index(t), id, f = motion_guard();
-    for (id = 0; id < P_COUNT; id++)
-        if ((motion_active[k][id / 32u] >> (id % 32u)) & 1u) t->p[id] = motion_base[k][id];
+    for (id = 0; id < MOT_NID; id++)
+        if ((motion_active[k][id / 32u] >> (id % 32u)) & 1u) mp_set(t->p, id, mp_get(motion_base[k], id));
     motion_djf_off(k);
     memset(motion_active[k], 0, sizeof motion_active[k]);
     memset(motion_locked[k], 0, sizeof motion_locked[k]);
@@ -261,7 +282,7 @@ static int motion_capture(track_t *t, uint32_t id, int16_t value)
         /* A live edit becomes a new base, even when an earlier motion value is
          * currently sounding. Subsequent recorded events can still override it. */
         f = motion_guard();
-        if ((motion_base_valid >> k) & 1u) motion_base[k][id] = value;
+        if ((motion_base_valid >> k) & 1u) mp_set(motion_base[k], id, value);
         motion_unguard(f);
         return 0;
     }
@@ -298,12 +319,12 @@ static void motion_djf_set(track_t *t, int16_t v)
 static __attribute__((noinline)) void motion_unlock(track_t *t, uint32_t step, const motion_store_t *m)
 {
     uint32_t k = trk_index(t), id, i;
-    for (id = 0; id < P_COUNT; id++) {
+    for (id = 0; id < MOT_NID; id++) {
         int32_t best = -1;
         int16_t v;
         if (!((motion_locked[k][id / 32u] >> (id % 32u)) & 1u))
             continue;
-        v = motion_base[k][id];
+        v = mp_get(motion_base[k], id);
         for (i = 0; i < m->count; i++) {
             const motion_event_t *e = &m->event[i];
             int32_t s = (int32_t)MOTION_STEP(e);
@@ -312,7 +333,7 @@ static __attribute__((noinline)) void motion_unlock(track_t *t, uint32_t step, c
             best = s;
             v = (int16_t)param_fit(param_desc_of(eng_idx(t->eng_req), id), MOTION_VAL(e));
         }
-        t->p[id] = v;
+        mp_set(t->p, id, v);
     }
     memset(motion_locked[k], 0, sizeof motion_locked[k]);
 }
@@ -325,7 +346,7 @@ static __attribute__((noinline)) void motion_step(track_t *t, uint32_t step, con
         memcpy(motion_base[k], t->p, sizeof t->p);
         motion_base_valid |= (uint8_t)(1u << k);
     }
-    for (w = 0; w < (P_COUNT + 31u) / 32u; w++)
+    for (w = 0; w < MOT_W; w++)
         any |= motion_locked[k][w];
     if (!step) motion_restore(t);
     else if (any) motion_unlock(t, step, m);
@@ -340,7 +361,8 @@ static __attribute__((noinline)) void motion_step(track_t *t, uint32_t step, con
             continue;
         }
         const param_desc_t *d = param_desc_of(eng_idx(t->eng_req), id);
-        t->p[id] = (int16_t)param_fit(d, MOTION_VAL(e));
+        if (id >= P_COUNT && eng_idx(t->eng_req) != ENGI_MINI) continue;   /* (FMINI's patch settings: on FMINI only) */
+        mp_set(t->p, id, (int16_t)param_fit(d, MOTION_VAL(e)));
         motion_active[k][id / 32u] |= 1u << (id % 32u);
         if (e->param & MOTION_LOCK)
             motion_locked[k][id / 32u] |= 1u << (id % 32u);

@@ -7430,7 +7430,8 @@ static int test_browse_no_pattern(void)
             loads++;
             /* (2026-10-30) a preset that sets the arp (Clipper's ARP PLUCK ..) may start it */
             uint32_t arp_pre = !t->user && ENGINES[t->eng_req % NENGINES]->npresets &&
-                               !!preset_arp(&ENGINES[t->eng_req % NENGINES]->presets[t->preset]);
+                               (!!preset_arp(&ENGINES[t->eng_req % NENGINES]->presets[t->preset]) ||
+                                (t->eng_req == ENGI_MINI && FMINI_X[t->preset % FMINI_NFACTORY].arp[0]));
             if (!seq_is_empty(t) || (t->p[P_AMODE] && !arp_pre) || t->nheld ||
                 (!(pass & 1u) && (song.playing || transport_req))) {
                 printf("  pass %u, sound %u (%s %u): steps %d ARP %d held %u playing %d\n", pass, n,

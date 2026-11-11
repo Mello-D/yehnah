@@ -653,6 +653,42 @@ static int lock_playback(void)
     seq_stop();
     return bad;
 }
+/* (2026-11-11) a lock of an FMINI patch setting (the motion id P_COUNT + k, a bit field of P_LN*): set at its step, put back at the next,
+ * the other fields and the saved base untouched */
+static int lock_fmini(void)
+{
+    int bad = 0;
+    track_t *t = lock_track(0);
+    uint32_t k;
+    int16_t v, base[P_COUNT];
+    int32_t others[NFMX];
+    t->eng_req = ENGI_MINI;
+    fmx_set(t->p, FX_W1, 2); fmx_set(t->p, FX_L2, 90); fmx_set(t->p, FX_TU, -5); fmx_set(t->p, FX_HP, 1);
+    for (k = 0; k < NFMX; k++) others[k] = fmx_get(t->p, k);
+    bad += check("FMINI: a lock of a detune is refused (past a record's range), TUNE and WAVE take one",
+        !motion_param(P_COUNT + FX_D2) && motion_param(P_COUNT + FX_W1) && !motion_set_lock(t, 1, P_COUNT + FX_W1, 5) &&
+        !motion_set_lock(t, 1, P_COUNT + FX_TU, -30));
+    bad += check("  .. read back", motion_lock_get(t, 1, P_COUNT + FX_W1, &v) && v == 5);
+    seq_start(); seq_tick(t, CTL);
+    bad += check("  step 0: nothing yet", fmx_get(t->p, FX_W1) == 2);
+    lock_next(t);
+    bad += check("  step 1: the lock sounds, the other fields stay", fmx_get(t->p, FX_W1) == 5 && fmx_get(t->p, FX_TU) == -30 &&
+        fmx_get(t->p, FX_L2) == 90 && fmx_get(t->p, FX_HP) == 1);
+    bad += check("  .. its base value is the sound's own", motion_base_value(t, P_COUNT + FX_W1) == 2);
+    {   uint32_t j, ok = 1;                                  /* the saved slots hold the bases */
+        for (j = 0; j < P_COUNT; j++)
+            base[j] = motion_base_value(t, j);
+        for (j = 0; j < NFMX; j++)
+            ok &= (int32_t)fmx_get(base, j) == (j == FX_W1 ? 2 : j == FX_TU ? -5 : others[j]);
+        bad += check("  .. and a project save (motion_base_value of the slots) keeps the base fields", ok);
+    }
+    lock_next(t);
+    bad += check("  step 2: both back", fmx_get(t->p, FX_W1) == 2 && fmx_get(t->p, FX_TU) == -5);
+    seq_stop();
+    bad += check("  a stop leaves the sound as it was", fmx_get(t->p, FX_W1) == 2 && fmx_get(t->p, FX_TU) == -5 && fmx_get(t->p, FX_L2) == 90);
+    motion_clear(t);
+    return bad;
+}
 static int lock_edit(void)
 {
     int bad = 0;
@@ -892,6 +928,6 @@ int main(void)
 {
     int bad = motion_recording() + motion_capacity() + probability_playback() + compact_project() + fun7_89() + loads_and_song() + repeat_mode();
     bad += arp_new_modes() + seq_shift() + song_scenes();
-    bad += lock_playback() + lock_edit() + lock_project() + lock_ui() + lock_undo();
+    bad += lock_playback() + lock_fmini() + lock_edit() + lock_project() + lock_ui() + lock_undo();
     printf("%s\n", bad ? "MOTION TEST FAILED" : "motion/chance/compact storage tests passed"); return bad != 0;
 }

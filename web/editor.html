@@ -435,6 +435,7 @@ const parse = {
       o.motionMax = 64; o.chance = trailer[7] === 1;
       if (trailer[8] === 0x42 && trailer[9] === 1) o.backupCaps = trailer[10] & 3;
     }
+    o.fmx = 0;                                    /* (2026-11-11) 'X': FMINI's patch settings, the ids pcount .. pcount + fmx - 1 */
     o.fm6 = null;                                 /* FM6 patches (cmds 68..71): the factory and bank slot counts */
     o.syncCaps = 0;                               /* live sync: bit 0 WATCH while on keeps pending pushes, bit 1 no RELOAD */
     o.ratchet = 0;                                /* a step's ratchet (STEP_SET's byte after the chance), 0 = none */
@@ -455,6 +456,8 @@ const parse = {
     }
     /* (chord-harp fork) 'W' 1 pc pe, the last tag: wide parameter ids; P_COUNT's and P_E0's bits past the header's 7
        (0.8.5's 'Y', LYRIC, after it: gone with VOICE's words, 2026-11-02) */
+    const tx = trailer.length - 7;                /* 'X' 1 n, just before 'W' (FMINI's patch settings) */
+    if (tx >= 0 && trailer[tx] === 0x58 && trailer[tx + 1] === 1 && trailer[tx + 4] === 0x57) o.fmx = trailer[tx + 2];
     const tw = trailer.length - 4;
     o.wide = tw >= 0 && trailer[tw] === 0x57 && trailer[tw + 1] === 1;
     if (o.wide) { o.pcount |= trailer[tw + 2] << 7; o.pe0 |= trailer[tw + 3] << 7; }
@@ -3203,6 +3206,9 @@ const LAYOUT = (pe0) => [
       [96 + 4 * k, 97 + 4 * k, 98 + 4 * k, 99 + 4 * k]])] : [])] },   /* (Yehnah) the modulation sequence: LEN DIV SLEW, its 16 levels */
   ...(pe0 >= 61 ? [{ t: "MOD", mod: 49 }] : []),   /* the matrix: P_M1SRC 49 .. P_M4AMT 60, one row per slot */
   { t: "EDIT", engine: true, pages: [["EDIT 1", 0, [pe0, pe0 + 1, pe0 + 2, pe0 + 3]], ["EDIT 2", 0, [pe0 + 4, pe0 + 5, pe0 + 6, pe0 + 7]],
+    ...(dev && dev.info && dev.info.fmx && engName() === "FMINI" ?   /* the patch: OSC 1..3, noise, tuning, the mixer / modulation, output */
+      [["OSC 1", 0, [0, 3, 6]], ["OSC 2", 0, [1, 4, 7]], ["OSC 3", 0, [2, 5, 8]], ["NOISE", 0, [9, 14]], ["TUNING", 0, [10, 11, 12]],
+       ["MOD", 0, [13, 17, 15, 16]], ["OUTPUT", 0, [18]]].map(([n, s, ids]) => [n, s, ids.map((k) => dev.info.pcount + k)]) : []),
     ...(pe0 >= 91 && engName() === "DRUM" ? [["LANES", 0, P_LANES.slice(0, 4)], ["LANES 2", 0, P_LANES.slice(4)]] : [])] },   /* lane levels 83..90 */
   ...(pe0 >= 81 && engName() === "DIGITAL" ? [{ t: "OP ENV", pages: [   /* P_FM1_ATK 61: ATK DEC SUS REL LVL per operator (a
                                                     YEHNAH_FM4=1 firmware only: DIGITAL retired, its engine is "-") */
@@ -3321,7 +3327,18 @@ async function sessionRequest(d, r, opt) {
 }
 const rq = (r, opt) => sessionRequest(dev, r, opt);
 async function getDesc(scope, id, d = dev) { return parse[CMD.DESC](await sessionRequest(d, req.desc(scope, id))); }
-async function getDump(d = dev) { const reply = await sessionRequest(d, req.dump()); lastDump = Date.now(); return parse[CMD.DUMP](reply, d.info); }
+async function getDump(d = dev) {
+  const reply = await sessionRequest(d, req.dump()); lastDump = Date.now();
+  const dump = parse[CMD.DUMP](reply, d.info);
+  if (d.info.fmx && d.info.engines[dump.engine] === "FMINI") {   /* (2026-11-11) FMINI's 19 patch settings: bit fields in the track's lane slots, */
+    for (let k = 0; k < d.info.fmx; k++) {                       /* so the device serves them as the ids pcount + k (not in the DUMP) */
+      const id = d.info.pcount + k;
+      if (!d.pdesc[id]) d.pdesc[id] = await getDescOrNull(0, id, d);
+      dump.p[id] = parse[CMD.GET](await sessionRequest(d, req.get(0, id))).value;
+    }
+  }
+  return dump;
+}
 async function getStep(i, d = dev) { return parse[CMD.STEP_GET](await sessionRequest(d, req.stepGet(i, !!(d && d.info && d.info.laneModes)))); }
 
 /* the whole connect sequence */

@@ -145,7 +145,7 @@ static int preferences(void)
     int bad = 0;
     uint8_t a[4] = {0, 1, 0, 0};
     reset();
-    uint32_t n = request(ED_INFO, a, 0), n0 = n - 7u;    /* (0.8.5: the 'O' tag, the DRUM lane modes, (chord-harp fork) 'W'
+    uint32_t n = request(ED_INFO, a, 0), n0 = n - 10u;   /* (2026-11-11 the 'X' tag; 0.8.5: the 'O' tag, the DRUM lane modes, (chord-harp fork) 'W'
                                                           * last; 'Y', LYRIC, gone 2026-11-02) */
     bad += check("INFO explicitly tags display capabilities after SONG without changing command 33",
         ED_SONG == 33 && ED_UI_STATE == 34 && ED_FAV_SET == 38 &&
@@ -163,7 +163,8 @@ static int preferences(void)
         host_wire[n0 - 10] == 0x4C && host_wire[n0 - 9] == 1 && host_wire[n0 - 8] == 1 &&   /* 1.1 parameter locks */
         host_wire[n0 - 7] == 0x56 && host_wire[n0 - 6] == 1 && host_wire[n0 - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
         host_wire[n0 - 4] == 0x4A && host_wire[n0 - 3] == 1 && host_wire[n0 - 2] == 1 &&   /* (0.6.62) Yehnah: the installer */
-        host_wire[n - 8] == 0x4F && host_wire[n - 7] == 1 && host_wire[n - 6] == LM_N &&   /* (0.8.5) DRUM lane modes */
+        host_wire[n - 11] == 0x4F && host_wire[n - 10] == 1 && host_wire[n - 9] == LM_N &&   /* (0.8.5) DRUM lane modes */
+        host_wire[n - 8] == 0x58 && host_wire[n - 7] == 1 && host_wire[n - 6] == NFMX &&   /* FMINI's patch settings */
         host_wire[n - 5] == 0x57 && host_wire[n - 4] == 1 && host_wire[n - 3] == P_COUNT >> 7 &&   /* wide ids */
         host_wire[n - 2] == P_E0 >> 7 && host_wire[5u + sizeof("Yehnah " YEHNAH_VERSION) + 1u] == (P_COUNT & 127u));
     request(ED_UI_SET, a, 2);
@@ -686,6 +687,37 @@ static int names_pages(void)
     return check("NAMES in pages: JUNO's 114 from FROM (600 bytes a reply), ANALOG's in one", ok);
 }
 
+/* (2026-11-11) FMINI's patch settings as the ids P_COUNT + k: DESC, GET, SET write the packed field and nothing else */
+static int fmini_ids(void)
+{
+    int bad = 0;
+    uint8_t a[8];
+    uint32_t n, id = P_COUNT + FX_D2;
+    int16_t before[P_COUNT];
+    reset();
+    trk[0].eng_req = ENGI_ANALOG;
+    a[0] = 0; a[1] = id & 127u; a[2] = id >> 7;
+    bad += check("an FMINI id on another engine: no reply", !request(ED_GET, a, 3));
+    trk[0].eng_req = ENGI_MINI;
+    fmx_set(TSEL->p, FX_D2, -123);
+    n = request(ED_GET, a, 3);
+    bad += check("GET of an FMINI setting", n == 11u && ed_rv(host_wire + 8) == -123);
+    n = request(ED_DESC, a, 3);
+    bad += check("DESC of an FMINI setting", n > 12u && host_wire[8] == FMX_DESC[FX_D2].fmt);
+    memcpy(before, TSEL->p, sizeof before);
+    a[3] = (8192 + 345) & 127; a[4] = (8192 + 345) >> 7;
+    n = request(ED_SET, a, 5);
+    bad += check("SET of an FMINI setting", n == 11u && ed_rv(host_wire + 8) == 345 && fmx_get(TSEL->p, FX_D2) == 345);
+    {   uint32_t i, k, ch = 0;
+        for (i = 0; i < P_COUNT; i++)
+            ch += i != P_LN4 && TSEL->p[i] != before[i];
+        for (k = 0; k < NFMX; k++)
+            ch += k != FX_D2 && fmx_get(TSEL->p, k) != fmx_get(before, k);
+        bad += check("... which changes that field alone", !ch);
+    }
+    return bad;
+}
+
 static int wide_ids(void)
 {
     int bad = 0;
@@ -1068,7 +1100,7 @@ int main(void)
 {
     int bad = preferences() + motion_locks() + framing() + uart_recovery() + steps() + stop_failures() + song_protocol() + malformed_saves() +
               fm6_patches() + user_preset_roundtrip() + live_sync() + usb_burst() + menu_protocol() + drum_kit_retired() +
-              wide_ids() + names_pages();
+              wide_ids() + names_pages() + fmini_ids();
     printf("%s\n", bad ? "EDITOR TEST FAILED" : "editor test passed");
     return bad != 0;
 }

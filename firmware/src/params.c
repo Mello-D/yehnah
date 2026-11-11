@@ -326,6 +326,8 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
     if (IS_VF(id))                                    /* (2026-11-11) FMINI's patch settings (core.h VF) */
         return &FMX_DESC[id - 0xA0u];
+    if (id >= P_COUNT && id < MOT_NID)                /* .. and as a motion id (lock_turn) */
+        return &FMX_DESC[id - P_COUNT];
     if (id == MOT_DJF)                                /* (0.9.1) a DJ FILTER record (motion.c): the global's */
         return &GP[G_DJF];
     if (id >= P_E0 && id <= P_E7) {                   /* the engine asked for (t->engine follows after a fade) */
@@ -365,6 +367,8 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
  * only; range and default are the same): what the editor protocol, user presets and projects use */
 static const param_desc_t *param_desc_of(uint32_t e, uint32_t id)
 {
+    if (id >= P_COUNT && id < MOT_NID)                  /* (2026-11-11) FMINI's patch settings (core.h MOT_NID) */
+        return &FMX_DESC[id - P_COUNT];
     return id >= P_E0 ? &ENGINES[e]->edit[id - P_E0] : &TP[id];
 }
 
