@@ -97,13 +97,14 @@ static const preset_t STRINGS_PRESETS[] YEHNAH_RES = {
     {"CHOIR STR", {20, 127, 90, 127, 80, 30, 60, 30}, {70, 100, 120, 90}, 0, 0, FX(0, 0, 10, 65)},
     {"LOW STR", {127, 60, 0, 90, 70, 40, 10, 10}, {60, 100, 120, 80}, 0, 0, FX(0, 0, 0, 45), XP(P_TRANS + 1, -12)},
     {"TAPE STR", {60, 127, 50, 127, 80, 20, 0, 10}, {60, 100, 120, 80}, 0, 0, FX(0, 0, 10, 55), XP(P_LRATE + 1, 30, P_LD_PIT + 1, 2)},
+    {"DREAM STR", {0, 90, 127, 120, 110, 60, 40, 30}, {110, 100, 120, 120}, 0, 0, FX(0, 10, 30, 80)},   /* (Yehnah) SHIMR scene: engines.c PRESET_SCENE; not yet heard */
     {"INIT", {40, 127, 70, 100, 92, 50, 0, 10}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
 /* (chord-harp fork) each preset's sound type (ui.c PTYPE) and level trim (1/2 dB, P_TRIM: Clipper's
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
-static const char STRINGS_PT[] = "SSSSSSSSSSVSSN";
+static const char STRINGS_PT[] = "SSSSSSSSSSVSSSN";
 _Static_assert(sizeof STRINGS_PT == NELEM(STRINGS_PRESETS) + 1u, "a type a preset");
-static const int8_t STRINGS_TRIM[] = {-6, -7, -1, -9, -4, -6, -2, 0, 0, 3, -2, 0, -3, 0};
+static const int8_t STRINGS_TRIM[] = {-6, -7, -1, -9, -4, -6, -2, 0, 0, 3, -2, 0, -3, 0, 0};
 _Static_assert(sizeof STRINGS_TRIM == NELEM(STRINGS_PRESETS), "a trim a preset");
 _Static_assert(NELEM(STRINGS_PRESETS) <= 128u, "STRINGS's favourites");
 

@@ -178,9 +178,11 @@ static const preset_t DRIFT_PRESETS[] YEHNAH_RES = {
     {"DRIFT BASS", {DR_HARM, 30, 10, 20, 15, 10, 0, 0}, {0, 80, 110, 40}, 0, 1, FX(0, 0, 10, 20), PAT(2)},
     {"WIND GLASS", {DR_GLASS, 90, 40, 70, 100, 20, 40, 80}, {100, 100, 127, 120}, 0, 0, FX(0, 30, 50, 110), PAT(5)},
     {"SLOW BLOOM", {DR_FIFTH, 75, 20, 15, 50, 15, 127, 0}, {127, 100, 127, 112}, 0, 0, FX(0, 40, 35, 100), PAT(5)},
+    {"GAZE DRIFT", {DR_FIFTH, 75, 20, 15, 50, 15, 127, 0}, {60, 100, 127, 112}, 0, 0, FX(40, 20, 35, 100), XP(P_DTYPE + 1, 6),
+     PAT(5)},   /* (Yehnah) REVRS scene: engines.c PRESET_SCENE; not yet heard */
     {"INIT", {0, 50, 40, 30, 30, 20, 30, 0}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
-static const char DRIFT_PT[] = "PPPPEPPPPKBXPN";
+static const char DRIFT_PT[] = "PPPPEPPPPKBXPPN";
 _Static_assert(sizeof DRIFT_PT == NELEM(DRIFT_PRESETS) + 1u, "a type a preset");
 /* (engine 21: its favourites in favorites.factory[5]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(DRIFT_PRESETS) <= 128u, "DRIFT's favourites");

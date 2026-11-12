@@ -160,13 +160,17 @@ static const preset_t ANALOG_PRESETS[] YEHNAH_RES = {
      XP(P_VELF + 1, 40, P_TRANS + 1, -12, P_FMODEL + 1, FM_MOOG)},
     {"WAH LEAD", {0, 8, 64, 0, 60, 70, 20, 64}, {2, 70, 110, 40}, 0, 1, FX(0, 10, 26, 24),
      XP(P_MWDST + 1, MWD_WAH, P_LRATE + 1, 70, P_LD_FLT + 1, 20, P_GLIDE + 1, 30)},
+    /* (Yehnah, 2026-11-12) synthwave / shoegaze, each brings an FX scene (engines.c PRESET_SCENE); not yet heard */
+    {"NEON SAW", {0, 14, 64, 0, 90, 18, 12, 64}, {2, 70, 110, 46}, 12, 1, FX(0, 20, 50, 40), XP(P_VOICE + 1, 3, P_DETUNE + 1, 40, P_GLIDE + 1, 24)},
+    {"GAZE FUZZ", {0, 14, 64, 0, 74, 20, 10, 64}, {50, 90, 115, 100}, 8, 0, FX(56, 30, 24, 70),
+     XP(P_VOICE + 1, 3, P_DETUNE + 1, 80, P_DTYPE + 1, 6, P_DTONE + 1, -8)},
     {"INIT", {0, 10, 64, 0, 90, 30, 0, 64}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
 /* (chord-harp fork) each preset's sound type (ui.c PTYPE) and level trim (1/2 dB, P_TRIM: Clipper's
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
-static const char ANALOG_PT[] = "BBBBBBBBBLURLPSPWLBLPBLPRBLKUBLN";
+static const char ANALOG_PT[] = "BBBBBBBBBLURLPSPWLBLPBLPRBLKUBL" "LPN";
 _Static_assert(sizeof ANALOG_PT == NELEM(ANALOG_PRESETS) + 1u, "a type a preset");
-static const int8_t ANALOG_TRIM[] = {-9, -10, -10, -8, -4, -6, 3, 2, 6, -10, 7, 7, -18, -7, -4, -9, -7, -5, 4, -6, -23, 11, -3, -14, 8, 5, 2, 5, 9, 11, -2, 0};
+static const int8_t ANALOG_TRIM[] = {-9, -10, -10, -8, -4, -6, 3, 2, 6, -10, 7, 7, -18, -7, -4, -9, -7, -5, 4, -6, -23, 11, -3, -14, 8, 5, 2, 5, 9, 11, -2, 0, 0, 0};
 _Static_assert(sizeof ANALOG_TRIM == NELEM(ANALOG_PRESETS), "a trim a preset");
 _Static_assert(NELEM(ANALOG_PRESETS) <= 128u, "ANALOG's favourites");
 

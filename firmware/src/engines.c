@@ -158,6 +158,10 @@ static const struct { const preset_t *p; uint8_t scene; } PRESET_SCENE[] = {
     {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 4u], 10},   /* GAZE SWELL: REVRS */
     {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 3u], 8},    /* NEON DRIVE: PING */
     {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 2u], 7},    /* OUTRUN PAD: TAPE */
+    {&ANALOG_PRESETS[NELEM(ANALOG_PRESETS) - 3u], 8},    /* NEON SAW: PING */
+    {&ANALOG_PRESETS[NELEM(ANALOG_PRESETS) - 2u], 2},    /* GAZE FUZZ: HALL */
+    {&STRINGS_PRESETS[NELEM(STRINGS_PRESETS) - 2u], 4},  /* DREAM STR: SHIMR */
+    {&DRIFT_PRESETS[NELEM(DRIFT_PRESETS) - 2u], 10},     /* GAZE DRIFT: REVRS */
 };
 static uint32_t preset_scene(const preset_t *pr)
 {
