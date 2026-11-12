@@ -477,8 +477,16 @@ static int test_sound_loads(void)
         song.g[G_RTYPE] = 1; song.g[G_RSIZE] = 33;
         apply_preset_to(t, plain);
         int ok = song.g[G_RTYPE] == 1 && song.g[G_RSIZE] == 33;
-        apply_preset_to(t, gz);
-        ok &= song.g[G_RTYPE] == 5 && t->p[P_DTYPE] == 6;   /* REVRS, and the preset's own FUZZ */
+        track_t *o = t == &trk[1] ? &trk[2] : &trk[1];
+        for (k = 0; k < NTRK; k++) if (&trk[k] != t) trk[k].p[P_REV] = trk[k].p[P_DLY] = 0;   /* nobody else listens */
+        ui.msg[0] = 0;
+        apply_preset_to(t, gz);                    /* nobody else listens to the bus: no notice */
+        ok &= song.g[G_RTYPE] == 5 && t->p[P_DTYPE] == 6 && !str_eq(ui.msg, "REVERB REVRS");   /* REVRS, and the preset's own FUZZ */
+        song.g[G_RTYPE] = 1; o->p[P_REV] = 60; ui.msg[0] = 0;
+        apply_preset_to(t, gz);                    /* another track sends to the reverb: the notice names the model */
+        ok &= song.g[G_RTYPE] == 5 && str_eq(ui.msg, "REVERB REVRS");
+        if (!ok) printf("scene notice: rtype %d msg [%s]\n", (int)song.g[G_RTYPE], ui.msg);
+        o->p[P_REV] = 0;
         bad += check("FX scenes: a factory preset brings its scene (GAZE SWELL: REVRS); another leaves the bus", ok);
         set_engine_of(t, 0); t->engine = t->eng_req;
     }

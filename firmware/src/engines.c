@@ -163,12 +163,34 @@ static const struct { const preset_t *p; uint8_t scene; } PRESET_SCENE[] = {
     {&STRINGS_PRESETS[NELEM(STRINGS_PRESETS) - 2u], 4},  /* DREAM STR: SHIMR */
     {&DRIFT_PRESETS[NELEM(DRIFT_PRESETS) - 2u], 10},     /* GAZE DRIFT: REVRS */
 };
+/* the same by name inside one engine's table (SC: the table, the preset's name, the scene) */
+#define SC(arr, nm, sc) {arr, (uint16_t)NELEM(arr), nm, sc}
+static const struct { const preset_t *arr; uint16_t n; const char *name; uint8_t scene; } PRESET_SCENE_NM[] = {
+    SC(DRIFT_PRESETS, "SHIMMER SWELL", 4), SC(DRIFT_PRESETS, "GLASS DRONE", 4), SC(DRIFT_PRESETS, "BELL HAZE", 4),
+    SC(DRIFT_PRESETS, "OCTAVE CLOUD", 5), SC(DRIFT_PRESETS, "WIND GLASS", 5), SC(DRIFT_PRESETS, "DEEP DRONE", 2),
+    SC(DRIFT_PRESETS, "SLOW BLOOM", 2),
+    SC(FORMANT_PRESETS, "AIR CHOIR", 2), SC(FORMANT_PRESETS, "CHOIR AAH", 2), SC(FORMANT_PRESETS, "GHOST VOX", 4),
+    SC(GUITAR_PRESETS, "AMBIENT GTR", 4),
+    SC(KALIMBA_PRESETS, "WIND CHIMES", 4), SC(KALIMBA_PRESETS, "GLASS HARP", 4),
+    SC(OMNI_PRESETS, "DREAM HARP", 4),
+    SC(VECTOR_PRESETS, "SPACE DRONE", 5),
+    SC(PLAITS_PRESETS, "RAIN GLASS", 5),
+    SC(ANALOG_PRESETS, "ATMOS PAD", 2),
+    SC(JUNO_PRESETS, "DREAM PAD", 2),
+};
 static uint32_t preset_scene(const preset_t *pr)
 {
-    uint32_t i;
+    uint32_t i, k;
     for (i = 0; i < NELEM(PRESET_SCENE); i++)
         if (PRESET_SCENE[i].p && PRESET_SCENE[i].p == pr)
             return PRESET_SCENE[i].scene;
+    for (i = 0; i < NELEM(PRESET_SCENE_NM); i++)
+        if (pr >= PRESET_SCENE_NM[i].arr && pr < PRESET_SCENE_NM[i].arr + PRESET_SCENE_NM[i].n) {
+            const char *a = pr->name, *b = PRESET_SCENE_NM[i].name;
+            for (k = 0; a[k] && a[k] == b[k]; k++) {}
+            if (!a[k] && !b[k])
+                return PRESET_SCENE_NM[i].scene;
+        }
     return 0;
 }
 

@@ -1284,6 +1284,7 @@ static uint32_t preset_nth(const engine_t *e, uint32_t n)
 static void set_engine_of(track_t *t, uint32_t ei);
 /* engine e's preset pi into the values p: the sound (not param_kept's; the steps are the track's) */
 static void fx_scene(uint32_t n);                       /* params.c: a preset of engines.c PRESET_SCENE loads its scene */
+static const char *fx_scene_load(uint32_t n, const track_t *self);
 static uint32_t preset_values(int16_t *p, const engine_t *e, uint32_t pi)   /* 1: the preset set the arp */
 {
     static const uint8_t FX_DEF[4] = {0, 24, 28, 36};
@@ -1333,6 +1334,7 @@ static void apply_preset_to(track_t *t, uint32_t pi)
         load_end(t);
         return;
     }
+    const char *scene_say = 0;
     pi = preset_orig(e, pi % ENG_NP(e));
     t->preset = (uint8_t)pi;
     {   /* (chord-harp fork, 2026-10-30) an arp a preset started (Clipper's: ARP PLUCK, TURING JUNO..) stops with the next
@@ -1342,8 +1344,7 @@ static void apply_preset_to(track_t *t, uint32_t pi)
         uint32_t k = trk_index(t) % NTRK, i, same = (pre_on >> k) & 1u;
         for (i = 0; i < 4u && same; i++)
             same = t->p[P_AMODE + i] == pre_arp[k][i];
-        if (preset_scene(&e->presets[pi]))             /* (Yehnah) a preset that brings its FX scene: the buses */
-            fx_scene(preset_scene(&e->presets[pi]));
+        scene_say = fx_scene_load(preset_scene(&e->presets[pi]), t);   /* (Yehnah) a preset that brings its FX scene: the buses */
         if (preset_values(t->p, e, pi)) {
             for (i = 0; i < 4u; i++)
                 pre_arp[k][i] = t->p[P_AMODE + i];
@@ -1357,6 +1358,8 @@ static void apply_preset_to(track_t *t, uint32_t pi)
     }
     fm6_track_loaded(t);                              /* FM6: the preset's patch (its SLOT) */
     load_end(t);
+    if (scene_say)                                    /* the bus changed under another track's sends */
+        ui_say("REVERB ", scene_say);
 }
 
 /* the engine's defaults and its first preset. With the audio IRQ off: the ISR sees the old engine with

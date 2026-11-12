@@ -708,6 +708,22 @@ static void fx_scene(uint32_t n)                        /* 1..N_SCENES (0: none,
     scene_ui = ufx_ui = (int16_t)n;
 #endif
 }
+/* (Yehnah, 2026-11-12) a preset of engines.c PRESET_SCENE loads scene n for track `self`: the whole bus changes for every
+ * track. Returns the reverb model's name when that changes what another track (a REV or DLY send above 0) hears, so ui.c
+ * can say so; 0 otherwise (no change, or nobody else listens) */
+static const char *fx_scene_load(uint32_t n, const track_t *self)
+{
+    uint32_t i, diff = 0, other = 0;
+    if (!n || n > N_SCENES)
+        return 0;
+    for (i = 0; i < 17u; i++)
+        diff |= song.g[FX_SCENE_ID[i]] != clamp(FX_SCENE[n - 1u][i], GP[FX_SCENE_ID[i]].min, GP[FX_SCENE_ID[i]].max);
+    for (i = 0; i < NTRK; i++)
+        if (&trk[i] != self && (trk[i].p[P_REV] > 0 || trk[i].p[P_DLY] > 0))
+            other = 1;
+    fx_scene(n);
+    return diff && other ? GP[G_RTYPE].names[clamp(song.g[G_RTYPE], 0, 5)] : 0;
+}
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* 0.4: LOOP */
