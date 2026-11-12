@@ -106,7 +106,9 @@ _Static_assert(sizeof rev_comb / 2u >= SP_LEN && sizeof rev_u.sp / 4u >= 4u * (S
  * and bloom), the second stage's gain rising with the drive (clean .. crunch .. lead); then a cabinet: the two-pole
  * low-pass at a speaker's corner (TONE moves it ~2.5 .. 6 kHz) and a resonance at ~1.8 kHz (a state-variable band
  * added: the presence a 12" cone has). State: dist_dc (the coupling), dist_cab_l / _b (the cabinet) */
-enum { DT_SOFT, DT_HARD, DT_FOLD, DT_CRUSH, DT_RECT, DT_AMP };
+enum { DT_SOFT, DT_HARD, DT_FOLD, DT_CRUSH, DT_RECT, DT_AMP, DT_FUZZ };
+/* DT_FUZZ (Yehnah, after Album 01's pedal by joshbartlettband-web, MIT): a Big Muff's two clipping stages, the first
+ * biased, the second at x3; the make-up and the low-pass TONE as the others */
 #define AMP_B1 7000                                     /* the stages' biases (Q15 into tanh) */
 #define AMP_B2 (-3500)
 static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, int32_t x, int32_t g, int32_t d)
@@ -138,6 +140,9 @@ static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, i
         t->dist_dc += (a - t->dist_dc) >> 6;             /* the coupling capacitor: ~110 Hz high-pass */
         a -= t->dist_dc;
         return softclip(((a * (24 + d)) >> 4) + AMP_B2) - softclip(AMP_B2);   /* stage 2: x1.5 .. x8 */
+    case DT_FUZZ:
+        a = softclip(v + 2400) - softclip(2400);
+        return softclip(a * 3);
     default:
         return softclip(v + 2400) - softclip(2400);
     }
@@ -185,7 +190,7 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
     g = 4096 + d * d * 2;                                /* Q12: 1x .. ~9x, gentle at first */
     k = clamp(32000 - d * 95 + t->p[P_DTONE] * 300, 2500, 32767);   /* tone: transparent at low drive .. ~3 kHz, Q15 */
     mk = type == DT_HARD || type == DT_FOLD || type == DT_CRUSH ? 30000 - d * 60 : 30000 - d * 120;   /* make-up */
-    if (type > DT_AMP)
+    if (type > DT_FUZZ)
         type = DT_SOFT;
     if (type == DT_AMP) {                               /* the cabinet's corner: ~4 kHz, TONE 2.5 .. 6 kHz; its make-up */
         k = clamp(14500 + t->p[P_DTONE] * 90, 9000, 20000);
@@ -505,7 +510,7 @@ static volatile uint8_t fx_usb_fixed;
  * or a computer whose input clips at the full level (usb.c uac_tap reads it) */
 static volatile int32_t fx_usb_gain = 4096;
 #define UAC_GAIN() fx_usb_gain
-static const uint8_t REV_LITE[3][5] = {{0, 1, 2, 3, 4}, {0, 1, 0, 1, 0}, {1, 1, 1, 1, 1}};   /* (0.6.29) LOAD FULL, LITE, ECO
+static const uint8_t REV_LITE[3][6] = {{0, 1, 2, 3, 4, 5}, {0, 1, 0, 1, 0, 0}, {1, 1, 1, 1, 1, 1}};   /* (0.6.29) LOAD FULL, LITE, ECO
                                                          * (voice.c sys_load): each reverb's lighter kin */
 #define MASTER_FULL 4096                /* main.c: the MASTER knob's top, Q12 */
 /* the MASTER pot (ADC 0..1023, smoothed in main.c) to its level, square law: 0 .. 4088 (Q12) */
@@ -1188,6 +1193,61 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         shim_fb[i] = t[i];                               /* (the tail into the line, next block) */
     }
 }
+/* REVRS (G_RTYPE 5, Yehnah): a reverse reverb in the manner of the SPX90's reverse gate (after Album 01 by
+ * joshbartlettband-web, MIT): the input is written at half rate into CLOUD's line (rev_x, 0.74 s) and read back at 16
+ * delays a side spread over the window (PRE shows WINDOW: 0.15 .. 0.70 s), the later ones louder (k squared), so a
+ * note swells up and stops at the window's end. The left and right taps lean off the even spacing by their own
+ * jitter (WIDE: how far apart). The taps go through ROOM's network (SIZE its tail, DAMP its tone, MOD) and are heard
+ * under it; a short SIZE keeps the gate. The window glides to a new setting (fx.cl_gr: its length now, half-rate
+ * samples; 0 = start). State is CLOUD's (cl_w the write count, cl_half the odd sample): nothing new in RAM */
+#define RV_T 16u
+static const int8_t RV_JL[RV_T] = {14, -34, 42, -6, 27, -48, 3, 37, -22, 46, -39, 10, -15, 32, -46, 18};
+static const int8_t RV_JR[RV_T] = {-27, 43, -10, 24, -41, 15, 47, -18, 33, -44, 5, 39, -30, 9, 37, -48};
+static __attribute__((noinline)) void rev_reverse(const int32_t *rev_in, int32_t *out, uint32_t n)
+{
+    uint32_t i, k;
+    int32_t want = (1500 + clamp(song.g[G_RPRE], 0, 100) * 55) * 22 / 10, wd = song.g[G_RWIDE];
+    int32_t dl[RV_T], dr[RV_T], g[CTL], t[CTL];
+    if (fx.cl_gr <= 0)
+        fx.cl_gr = want;
+    fx.cl_gr += (want - fx.cl_gr) / 8;
+    for (k = 0; k < RV_T; k++) {                         /* the taps' delays now, half-rate samples */
+        int32_t sp = fx.cl_gr / (int32_t)RV_T, base = sp * (int32_t)(k + 1u);
+        dl[k] = clamp(base + sp * RV_JL[k] / 127, 4, (int32_t)CL_LEN - 8);
+        dr[k] = clamp(base + sp * RV_JR[k] / 127, 4, (int32_t)CL_LEN - 8);
+    }
+    for (i = 0; i < n; i++) {
+        int32_t l = 0, r = 0, x = rev_in[i] >> 1, m, w = (int32_t)(fx.cl_w >> 1);
+        if (fx.cl_w & 1u)
+            cloud_buf[w & (CL_LEN - 1u)] = (int16_t)clamp((fx.cl_half + x) >> 1, -32768, 32767);
+        else
+            fx.cl_half = x;
+        fx.cl_w++;
+        if (fx.cl_w & 1u) {                              /* the taps move at half rate: the odd sample repeats */
+            for (k = 0; k < RV_T; k++) {
+                int32_t gk = (int32_t)(24u * (k + 1u) * (k + 1u));
+                l += mulq15(cloud_buf[(uint32_t)(w - dl[k]) & (CL_LEN - 1u)], gk);
+                r += mulq15(cloud_buf[(uint32_t)(w - dr[k]) & (CL_LEN - 1u)], gk);
+            }
+            fx.cl_gl = l;
+            fx.cl_next = r;
+        } else {
+            l = fx.cl_gl;
+            r = fx.cl_next;
+        }
+        m = (l + r) >> 1;
+        g[i] = m * 2;
+        t[i] = 0;
+        if (wd) {
+            int32_t sd = ((l - r) * wd) >> 9;
+            fx_sl[i] += sd;
+            fx_sr[i] -= sd;
+        }
+    }
+    rev_room(g, t, n);
+    for (i = 0; i < n; i++)
+        out[i] += t[i] + (t[i] >> 1) + g[i];
+}
 /* the model ty's block into out */
 static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n)
 {
@@ -1196,6 +1256,7 @@ static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n
     case 2: rev_shimmer(rev_in, out, n); break;
     case 3: rev_reso(rev_in, out, n); break;
     case 4: rev_cloud(rev_in, out, n); break;
+    case 5: rev_reverse(rev_in, out, n); break;
     default:
         if (song.g[G_RMOD] || song.g[G_RWIDE]) rev_room_mod(rev_in, out, n, song.g[G_RWIDE]);
         else rev_room(rev_in, out, n);
@@ -1242,7 +1303,7 @@ static __attribute__((noinline)) void rev_line_clear(uint32_t n)
  * ROOM, SPRING and RESO nothing, the pre-delay's line runs on as it always has */
 static uint32_t rev_line_dirty(uint32_t from, uint32_t to)
 {
-    return to == 4u ? CL_LEN : to == 2u ? SH_LEN : from == 2u || from == 4u ? RPRE_LEN : 0u;
+    return to == 4u || to == 5u ? CL_LEN : to == 2u ? SH_LEN : from == 2u || from == 4u || from == 5u ? RPRE_LEN : 0u;
 }
 /* every buffer and state of the reverb silenced (fx_trip, the tests) */
 static void rev_clear(void)
@@ -1779,7 +1840,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             fx_sr[i] -= side;
         }
     }
-    rt = (uint32_t)song.g[G_RTYPE] <= 4u ? song.g[G_RTYPE] : 0;
+    rt = (uint32_t)song.g[G_RTYPE] <= 5u ? song.g[G_RTYPE] : 0;
     rt = REV_LITE[sys_load % 3u][rt];                   /* (0.6.29) LOAD LITE: SHIMMER, CLOUD as ROOM, RESO as SPRING; ECO:
                                                          * all SPRING */
     if (rt != fx.rtype) {                               /* the model changed: the old one's block fades out, */

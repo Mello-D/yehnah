@@ -1550,7 +1550,7 @@ function makeMockDevice(opt = {}) {
       "-", "-", "DRUM", "NOISE", "FM6", "-", "ANIMAL", "JUNO", "OMNI", "KALIMBA", "MINI", "GUITAR", "ACID", "DRIFT", "PLAITS", "STRINGS", "VPS", "MODAL", "WSEQ", "TERRAIN", "VECTOR", "HYBRID"], 0), D("CLIP", F.PCT, 0, 100, 0),   /* G_CLIP (was SET); 0.8.3
       ANIMAL; chord-harp fork 15 JUNO, 16 OMNI, 17 KALIMBA, 18 LCD-4 (retired) */
     E("CLRSQ", NGO, 0), E("INIT", NGO, 0),
-    E("TYPE", ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"], 0),               /* G_RTYPE (id 24, was G_DRCH): the reverb's model */
+    E("TYPE", ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD", "REVRS"], 0),               /* G_RTYPE (id 24, was G_DRCH): the reverb's model */
     D("PUNCH", F.PCT, 0, 100, 0), D("DUCK", F.PCT, 0, 100, 0),   /* G_PUNCH, G_DUCK (Yehnah; were G_DRLVL, G_DRREV) */
     D("STEREO", F.BIPCT, -64, 63, 0), D("WIDE", F.PCT, 0, 127, 0),   /* (Yehnah, FUNB) G_DHPF (0.6.9: G_CSTER, the CHORUS's stereo), G_WIDTH: width */
     D("MOD", F.PCT, 0, 127, 0), D("RATE", F.LFOHZ, 0, 127, 30), D("PRE", F.INT, -24, 100, 0),   /* the reverb's modulation, pre-delay (0.6.12: SHIMMER / CLOUD AIR below 0) */
@@ -1788,6 +1788,9 @@ function makeMockDevice(opt = {}) {
         P("BRASSY ORG", [2, 34, 56, 0, 0, 8, 0, 1], [0, 36, 109, 0]), P("LOW DARK", [2, 40, 0, 0, 0, 71, 0, 2], [83, 23, 109, 42]),
         P("CELLO", [0, 0, 0, 0, 0, 75, 0, 0], [48, 65, 90, 34]),
         P("OWGAN", [2, 45, 56, 0, 0, 38, 84, 0], [0, 49, 55, 0]),
+        P("DREAM HAZE", [2, 60, 10, 6, 2, 80, 6, 3], [100, 100, 118, 120]), P("GAZE WALL", [0, 0, 24, 8, 1, 74, 10, 3], [40, 100, 120, 110]),
+        P("GAZE SWELL", [2, 40, 30, 4, 1, 66, 14, 3], [16, 90, 60, 70]), P("NEON DRIVE", [0, 0, 50, 0, 1, 88, 24, 1], [2, 80, 110, 50], 1),
+        P("OUTRUN PAD", [2, 44, 40, 0, 1, 84, 16, 3], [60, 100, 110, 100]),
         P("INIT", [2, 30, 40, 0, 1, 90, 20, 1], [0, 64, 127, 30])] },
     /* 16: OMNI (chord-harp fork, src/eng_omni.c from FoMni): the Omnichord's harp, chord and bass voices */
     { name: "OMNI", titles: ["OMNI", "TONE"], edit: [E("MODE", ["HARP", "CHORD", "BASS", "AUTO"], 0), D("HARP1", F.PCT, 0, 127, 102),
@@ -2143,7 +2146,7 @@ function makeMockDevice(opt = {}) {
   for (let op = 0; op < 4; op++) TP.push(D("ATK", F.TIME, 0, 127, 0), D("DEC", F.TIME, 0, 127, 0), D("SUS", F.PCT, 0, 127, 127), D("REL", F.TIME, 0, 127, 0), D("LEVEL", F.PCT, 0, 127, 127));
   TP.push(D("ROTATE", F.INT, -32, 32, 0), D("PITCH", F.SEMI, -24, 24, 0));   /* 81, 82: STRETCH's ROTATE, TRACK's PITCH (Yehnah; SHIFT until 0.6.91; the chord keys before) */
   for (const l of ["KICK", "SNARE", "CLAP", "HATCL", "HATOP", "TOM", "RIM", "BELL"]) TP.push(D(l, F.PCT, 0, 127, 127));   /* 83..90: DRUM lane levels */
-  TP.push(E("TYPE", ["SOFT", "HARD", "FOLD", "CRUSH", "RECT", "AMP"], 0), D("TONE", F.BIPCT, -64, 63, 0),   /* 91, 92: DIST (Yehnah, FUNB) */
+  TP.push(E("TYPE", ["SOFT", "HARD", "FOLD", "CRUSH", "RECT", "AMP", "FUZZ"], 0), D("TONE", F.BIPCT, -64, 63, 0),   /* 91, 92: DIST (Yehnah, FUNB) */
     D("LEN", F.STEPS, 1, 16, 16), E("DIV", NDIV, 2), D("SLEW", F.PCT, 0, 127, 0));   /* 93..95: the modulation sequence */
   for (let k = 0; k < 16; k++) TP.push(D("LEVEL", F.PCT, 0, 127, 0));                     /* 96..111: its levels */
   TP.push(E("TYPE", ["LP", "HP", "BP", "COMB"], 0),                                    /* 112: the FILTER's type (0.5) */

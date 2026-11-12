@@ -214,18 +214,32 @@ static const preset_t JUNO_PRESETS[] YEHNAH_RES = {
     {"LOW DARK", {JW_SP, 40, 0, 0, 0, 71, 0, 2}, {83, 23, 109, 42}, 0, 0, FX(0, 0, 0, 40), XP(P_TRANS + 1, -12, P_KTRK + 1, 37, P_LRATE + 1, 21, P_LD_SHP + 1, 20)},
     {"CELLO", {JW_SAW, 0, 0, 0, 0, 75, 0, 0}, {48, 65, 90, 34}, 1, 0, FX(0, 0, 0, 40), XP(P_TRANS + 1, -12, P_KTRK + 1, -8, P_LD_PIT + 1, 1, P_LFADE + 1, 45)},
     {"OWGAN", {JW_SP, 45, 56, 0, 0, 38, 84, 0}, {0, 49, 55, 0}, 16, 0, FX(0, 0, 0, 25), XP(P_TRANS + 1, -12, P_KTRK + 1, 56)},
+    /* (Yehnah, 2026-11-12) dreampop / synthwave / shoegaze: each brings an FX scene (engines.c PRESET_SCENE: the last five
+     * before INIT, in this order). Written from the code, not yet heard; DIST TYPE 6 = FUZZ */
+    {"DREAM HAZE", {JW_SP, 60, 10, 6, 2, 80, 6, 3}, {100, 100, 118, 120}, 4, 0, FX(0, 0, 30, 80),
+     XP(P_LRATE + 1, 14, P_LD_SHP + 1, 50, P_VINT + 1, 40)},
+    {"GAZE WALL", {JW_SAW, 0, 24, 8, 1, 74, 10, 3}, {40, 100, 120, 110}, 8, 0, FX(56, 0, 24, 76),
+     XP(P_VOICE + 1, 3, P_DETUNE + 1, 50, P_DTYPE + 1, 6, P_DTONE + 1, -8)},
+    {"GAZE SWELL", {JW_SP, 40, 30, 4, 1, 66, 14, 3}, {16, 90, 60, 70}, 20, 0, FX(30, 0, 20, 90),
+     XP(P_VOICE + 1, 3, P_DETUNE + 1, 40, P_DTYPE + 1, 6)},
+    {"NEON DRIVE", {JW_SAW, 0, 50, 0, 1, 88, 24, 1}, {2, 80, 110, 50}, 14, 1, FX(0, 0, 56, 40),
+     XP(P_GLIDE + 1, 20, P_LRATE + 1, 64, P_LD_PIT + 1, 3, P_VOICE + 1, 5)},
+    {"OUTRUN PAD", {JW_SP, 44, 40, 0, 1, 84, 16, 3}, {60, 100, 110, 100}, 10, 0, FX(0, 0, 40, 56),
+     XP(P_LRATE + 1, 24, P_LD_SHP + 1, 30, P_VINT + 1, 30)},
     {"INIT", {JW_SP, 30, 40, 0, 1, 90, 20, 1}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
 /* (chord-harp fork) each preset's sound type (ui.c PTYPE) and level trim (1/2 dB, P_TRIM: Clipper's
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char JUNO_PT[] = "PRBSKLKIPBRAXOLLA"
                               "RRRWSSVIOOOOPEIIEMMRRSSSWRRGGUKBLLLKBKIKPPXUXUPKESSMOKWUEPSPOORGKSWBPKKPEKOBRPPWORIXBWMBEKERPSO"   /* the 106's bank */
+                              "PPPLP"                                                                    /* dreampop .. shoegaze */
                               "N";
 _Static_assert(sizeof JUNO_PT == NELEM(JUNO_PRESETS) + 1u, "a type a preset");
 static const int8_t JUNO_TRIM[] = {1, 5, 10, 2, 7, 3, 14, 16, 1, 3, 7, 23, 3, 3, 5, 10, 22, 12, -1, 5, 15, -6, 13, 4, 15, -25, -7, -5, -2, 0,
     16, 21, 15, 8, 14, 18, 6, 1, -9, 30, 0, 7, 19, -8, 13, 39, 14, -5, 6, -11, -8, -5, 16, -20, -12, -10, 11, -4, 2, -1, 0,
     23, 7, 5, 12, -5, -7, 5, 42, 3, 28, 59, 30, 17, 24, 13, 14, -5, 13, 7, 46, -5, -15, -1, 4, 2, 17, 10, 9, 8, 25,
     -6, 52, -5, -5, 29, 11, -7, 23, 8, -6, -5, 33, 26, -6, 15, 1, 15, 3, -5, -3, -1,
+    1, 3, 3, 3, 1,   /* DREAM HAZE .. OUTRUN PAD (the nearest old sounds' trims; not levelled) */
     0};   /* INIT; the 106 bank (ours, not Clipper's) levelled: from
  * its VCA LEVEL (tools/gen_juno106.py, with its VCF KYBD as KEY>F), its loud windows (95th percentile of 50 ms RMS) at
  * the median of Clipper's 17 through the whole mix, up to +50 dB (fx.c), then held back where that went past Clipper's

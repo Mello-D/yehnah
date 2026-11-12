@@ -1453,7 +1453,7 @@ static void draw_cards(void)
         } else {
             param_format(d, *vp, val, &unit);
             if (sys_load && cur_page()->scope == SC_GLOBAL &&   /* (0.6.29) LOAD LITE / ECO swaps it while it sounds */
-                ((cur_page()->id[c] == G_RTYPE && REV_LITE[sys_load % 3u][*vp <= 4 ? *vp : 0] != *vp) ||
+                ((cur_page()->id[c] == G_RTYPE && REV_LITE[sys_load % 3u][*vp <= 5 ? *vp : 0] != *vp) ||
                  ((cur_page()->id[c] == G_DPIT || cur_page()->id[c] == G_DSPRY) && *vp)))
                 unit = N_LOAD[LOAD_ECO - sys_load % 3u];
             if (sys_load == LOAD_ECO && cur_page()->scope == SC_TRACK && cur_page()->id[c] == P_CHOR && *vp)

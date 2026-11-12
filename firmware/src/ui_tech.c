@@ -47,6 +47,7 @@ static int32_t tk_dist_y(uint32_t type, int32_t x, int32_t g, int32_t d)
     case DT_AMP:                                        /* (0.7.8) the two stages, without the coupling's drift */
         a = softclip(clamp(v + (v >> 1), -400000, 400000) + AMP_B1) - softclip(AMP_B1);
         return softclip(((a * (24 + d)) >> 4) + AMP_B2) - softclip(AMP_B2);
+    case DT_FUZZ: a = softclip(v + 2400) - softclip(2400); return softclip(a * 3);
     default: return softclip(v + 2400) - softclip(2400);
     }
 }

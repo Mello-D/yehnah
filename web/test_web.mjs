@@ -279,9 +279,9 @@ async function editorMock() {
     }
     names.push(all);
   }
-  ok(names[15].length === 113 && names[15][0] === "JUNO 106 PAD" && names[15][112] === "INIT" && pages15 >= 1 &&
+  ok(names[15].length === 118 && names[15][0] === "JUNO 106 PAD" && names[15][117] === "INIT" && pages15 >= 1 &&
      names[0].length === E.parse[E.CMD.NAMES](await rq(E.req.names(0))).names.length,
-     "editor: NAMES in pages (JUNO's 113 from FROM, ANALOG in one; chord-harp fork)");
+     "editor: NAMES in pages (JUNO's 118 from FROM, ANALOG in one; chord-harp fork)");
   let prefs = await E.readDevicePreferences(rq, info, names);
   ok(info.uiCaps === 9 && prefs.palettes.length === 5 && prefs.palettes[0] === "VAP DK" && prefs.palettes[1] === "VAP LT" && prefs.palettes[2] === "NOIRE" && prefs.palettes[4] === "CREAM",
      "editor: preference capabilities (palette, favorites) and palette names");
@@ -347,9 +347,9 @@ async function editorMock() {
     const r0 = E.parse[E.CMD.SET](await rq(E.req.set(1, 24, 0)));
     const inert = [25, 26].map(async (id) => E.parse[E.CMD.DESC](await rq(E.req.desc(1, id))));
     const [d25, d26] = await Promise.all(inert);
-    ok(rd.label === "TYPE" && rd.def === 0 && eq(rd.names, ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"]) && r1.value === 4 && r0.value === 0 &&
+    ok(rd.label === "TYPE" && rd.def === 0 && eq(rd.names, ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD", "REVRS"]) && r1.value === 5 && r0.value === 0 &&
        d25.label === "PUNCH" && d26.label === "DUCK" && d25.max === 100 && info.gcount === 75,
-      "editor: REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD, set 10 clamps to 4, global id 24; 25, 26 PNCH and DUCK, Yehnah's master)");
+      "editor: REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD REVRS, set 10 clamps to 5, global id 24; 25, 26 PNCH and DUCK, Yehnah's master)");
   }
   const st = E.parse[E.CMD.STEP_SET](await rq(E.req.stepSet(5, { n: 2, notes: [60, 64], time: 0, flags: 1, vel: 100 })));
   ok(st.n === 2 && st.notes[1] === 64 && st.vel === 100, "editor: STEP_SET");

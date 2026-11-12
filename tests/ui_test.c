@@ -466,6 +466,22 @@ static int test_sound_loads(void)
         bad += check("ARP PLUCK (a preset with an arp) starts it; the next stops it, a player's arp stays", nx && t->p[P_AMODE] == 3);
         set_engine_of(t, 0); t->engine = t->eng_req;
     }
+    {   /* (Yehnah) a factory preset in engines.c PRESET_SCENE brings its scene; any other leaves the bus as it was */
+        const engine_t *je = ENGINES[ENGI_JUNO];
+        uint32_t k, gz = 0, plain = 0;
+        for (k = 0; k < ENG_NP(je); k++) {
+            if (str_eq(je->presets[k].name, "GAZE SWELL")) gz = k;
+            if (str_eq(je->presets[k].name, "JUNO BRASS")) plain = k;
+        }
+        set_engine_of(t, ENGI_JUNO); t->engine = t->eng_req;
+        song.g[G_RTYPE] = 1; song.g[G_RSIZE] = 33;
+        apply_preset_to(t, plain);
+        int ok = song.g[G_RTYPE] == 1 && song.g[G_RSIZE] == 33;
+        apply_preset_to(t, gz);
+        ok &= song.g[G_RTYPE] == 5 && t->p[P_DTYPE] == 6;   /* REVRS, and the preset's own FUZZ */
+        bad += check("FX scenes: a factory preset brings its scene (GAZE SWELL: REVRS); another leaves the bus", ok);
+        set_engine_of(t, 0); t->engine = t->eng_req;
+    }
     t->p[P_AMODE] = 2;
     before = *t;
     for (i = 0; i < ENGINES[0]->npresets; i++)   /* several loads, into the next engine */

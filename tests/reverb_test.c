@@ -780,14 +780,15 @@ static void test_yehnah(void)
  * combs and SHIMMER's octave loop below 1; CLOUD's grains read only the last ~0.5 s); CLOUD FREEZE (SIZE full) holds */
 static void test_new_types(void)
 {
-    static const char *const NM[3] = {"SHIMMER", "RESO", "CLOUD"};
+    static const char *const NM[4] = {"SHIMMER", "RESO", "CLOUD", "REVRS"};
     uint32_t k, i;
-    for (k = 0; k < 3u; k++) {
+    for (k = 0; k < 4u; k++) {
         double side, early, late;
         int32_t pk = 0;
         jreset();
         song.g[G_RTYPE] = (int16_t)(2 + k);
         song.g[G_RSIZE] = 90; song.g[G_RDAMP] = 40; song.g[G_RMOD] = 80; song.g[G_RRATE] = 60; song.g[G_RWIDE] = 60;
+        song.g[G_RPRE] = k == 3u ? 60 : 0;               /* (REVRS: WINDOW 0.48 s) */
         jrun(0, burst, FS * 2u, &side);
         for (i = 0; i < FS * 2u; i++) if (abs(jw[i]) > pk) pk = abs(jw[i]);
         early = band_e(FS / 5u, FS * 3u / 5u);
@@ -808,10 +809,23 @@ static void test_new_types(void)
         jrun(0, 0, FS * 2u, &side);
         check("CLOUD: SIZE full freezes the cloud (it still sounds 2 s on)", band_e(FS * 3u / 2u, FS * 2u) > 1e8);
     }
+    {   /* REVRS: a burst swells up to the end of its window and stops: the last third of a 0.48 s window carries more
+         * than the first, and nothing but the (short) room tail is left a second after the window */
+        double side, e1, e3, tail;
+        jreset();
+        song.g[G_RTYPE] = 5; song.g[G_RSIZE] = 20; song.g[G_RDAMP] = 50; song.g[G_RMOD] = 0; song.g[G_RPRE] = 60;
+        song.g[G_RWIDE] = 0; song.g[G_RRATE] = 30;
+        jrun(0, burst, FS * 2u, &side);
+        e1 = band_e(FS / 100u, FS * 16u / 100u);
+        e3 = band_e(FS * 32u / 100u, FS * 48u / 100u);
+        tail = band_e(FS * 3u / 2u, FS * 2u);
+        printf("reverb: REVRS first third %.3g, last third %.3g, tail %.3g\n", e1, e3, tail);
+        check("REVRS: the burst swells towards the end of the window, then stops", e3 > e1 * 2.0 && tail < e3 * 0.05);
+    }
     {   /* (0.5.1) SIZE 126, every model: 2 s of loud noise stay bounded; then 2 s alone: the tail long but dying */
-        static const char *const N5[5] = {"ROOM", "SPRING", "SHIMMER", "RESO", "CLOUD"};
+        static const char *const N5[6] = {"ROOM", "SPRING", "SHIMMER", "RESO", "CLOUD", "REVRS"};
         int ok = 1;
-        for (k = 0; k < 5u; k++) {
+        for (k = 0; k < 6u; k++) {
             double side, e0, e1;
             int32_t pk = 0;
             jreset();

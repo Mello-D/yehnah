@@ -210,7 +210,7 @@ static void fxg_reverb(int32_t x, int32_t y, int32_t w, int32_t h, int lab)
         fxs_run(1, x, y, cols, rows);
     }
     if (lab)
-        fxg_label(x, y, N_RTYPE[clamp(ty, 0, 4)], T_MID, 0);
+        fxg_label(x, y, N_RTYPE[clamp(ty, 0, 5)], T_MID, 0);
 }
 static void fxg_chorus(int32_t x, int32_t y, int32_t w, int32_t h, int lab)
 {
@@ -367,7 +367,7 @@ static void fxg_slpitch(int32_t x, int32_t y, int32_t w, int32_t h)
 static void fxd_curve(const track_t *t, int32_t x, int32_t y, int32_t s)
 {
     int32_t d = t->p[P_DIST], g = 4096 + d * d * 2, i, py = 0, n, cy;
-    uint32_t type = (uint32_t)t->p[P_DTYPE] > DT_AMP ? DT_SOFT : (uint32_t)t->p[P_DTYPE];
+    uint32_t type = (uint32_t)t->p[P_DTYPE] > DT_FUZZ ? DT_SOFT : (uint32_t)t->p[P_DTYPE];
     uint8_t gk = (uint8_t)(d * 7 + type * 31);
     FP = s >= 100 ? 4 : 2;
     n = s / FP, cy = n / 2;
@@ -401,7 +401,7 @@ static void fxd_curve(const track_t *t, int32_t x, int32_t y, int32_t s)
 static void fxd_scope(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h, int out)
 {
     int32_t d = t->p[P_DIST], g = 4096 + d * d * 2, i, py = 0, cols, rows, mid;
-    uint32_t type = (uint32_t)t->p[P_DTYPE] > DT_AMP ? DT_SOFT : (uint32_t)t->p[P_DTYPE];
+    uint32_t type = (uint32_t)t->p[P_DTYPE] > DT_FUZZ ? DT_SOFT : (uint32_t)t->p[P_DTYPE];
     FP = 2;
     cols = w / FP, rows = h / FP, mid = rows / 2;
     fxb(x, y, 0, 0, cols, 1, T_LINE), fxb(x, y, 0, rows - 1, cols, 1, T_LINE);

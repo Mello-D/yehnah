@@ -149,6 +149,25 @@ static const uint8_t *preset_arp(const preset_t *pr)
     return 0;
 }
 
+/* (Yehnah, 2026-11-12) the presets that bring an FX scene (params.c N_SCENE: 1 ROOM .. 10 REVRS) with them: the reverb and
+ * delay buses are song-wide, so loading one of these sets the whole bus, as a USER preset saved with an FX scene does
+ * (upreset.c). A side table as PRESET_ARP, not a field of preset_t (543 presets); any other preset leaves the bus alone */
+static const struct { const preset_t *p; uint8_t scene; } PRESET_SCENE[] = {
+    {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 6u], 4},    /* DREAM HAZE: SHIMR */
+    {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 5u], 2},    /* GAZE WALL: HALL */
+    {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 4u], 10},   /* GAZE SWELL: REVRS */
+    {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 3u], 8},    /* NEON DRIVE: PING */
+    {&JUNO_PRESETS[NELEM(JUNO_PRESETS) - 2u], 7},    /* OUTRUN PAD: TAPE */
+};
+static uint32_t preset_scene(const preset_t *pr)
+{
+    uint32_t i;
+    for (i = 0; i < NELEM(PRESET_SCENE); i++)
+        if (PRESET_SCENE[i].p && PRESET_SCENE[i].p == pr)
+            return PRESET_SCENE[i].scene;
+    return 0;
+}
+
 /* (chord-harp fork) a preset's extra values (preset_t.x), after the rest of its sound */
 static void preset_extras(int16_t *p, const preset_t *pr)
 {

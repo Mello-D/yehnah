@@ -55,7 +55,7 @@ static const char *const N_BMOVE[] = {"OFF", "VEL", "WHEEL", "LFO 1", "LFO 2", "
 /* seq.c kb_map; 1 = SNAP (stored projects: the former ON); 3 = SEQ: SNAP, and the sequencer's notes snap too as
  * they play (seq.c seq_step; the steps keep what was written). Append-only: older projects hold 0..2 */
 static const char *const N_QUANT[] = {"OFF", "SNAP", "WHITE", "SEQ"};
-static const char *const N_DTYPE[] = {"SOFT", "HARD", "FOLD", "CRUSH", "RECT", "AMP"};   /* (Yehnah) fx.c DT_*; 0.7.8 AMP */
+static const char *const N_DTYPE[] = {"SOFT", "HARD", "FOLD", "CRUSH", "RECT", "AMP", "FUZZ"};   /* (Yehnah) fx.c DT_*; 0.7.8 AMP */
 static const char *const N_FTYPE[] = {"LP", "HP", "BP", "COMB"};   /* (0.5) P_FTYPE: eng_analog.c FT_* */
 static const char *const N_VOICE[] = {"POLY", "MONO", "LEG", "UNI", "UNI2", "UNI4"};   /* V_POLY .. V_PUNI4 */
 static const char *const N_GLMODE[] = {"RATE", "TIME"};
@@ -67,7 +67,7 @@ static const char *const N_MIDI_INPUT[] = {"USB", "TRS"};
 static const char *const N_ROUTE[] = {"CH1-6", "SEL"};   /* MIDI IN (seq.c): 1..6 -> parts, 7..16 ignored / all -> selected */
 static const char *const N_NOTE[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 static const char *const N_DASH[] = {"--"};
-static const char *const N_RTYPE[] = {"ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"};   /* (0.5: + 3) */   /* G_RTYPE: the reverb bus's model (fx.c) */
+static const char *const N_RTYPE[] = {"ROOM", "SPRING", "SHIMR", "RESO", "CLOUD", "REVRS"};   /* (0.5: + 3) */   /* G_RTYPE: the reverb bus's model (fx.c) */
 static const char *const N_GO[] = {"--", "GO"};
 static const char *const N_SLCR[] = {"OFF", "GATE", "STUT"};             /* SL_OFF .. SL_STUT (slicer.c) */
 static const char *const N_SLDIV[] = {"1/8", "1/16", "1/32", "8T", "16T", "32T"};   /* SL_DEN */
@@ -168,7 +168,7 @@ static const param_desc_t TP[P_COUNT] = {
     LANE(0, "KICK"), LANE(1, "SNARE"), LANE(2, "CLAP"), LANE(3, "HATCL"),
     LANE(4, "HATOP"), LANE(5, "TOM"), LANE(6, "RIM"), LANE(7, "BELL"),
 #undef LANE
-    [P_DTYPE] = PE("TYPE", N_DTYPE, 0),         /* (Yehnah) DIST: SOFT (as before) HARD FOLD CRUSH RECT AMP */
+    [P_DTYPE] = PE("TYPE", N_DTYPE, 0),         /* (Yehnah) DIST: SOFT (as before) HARD FOLD CRUSH RECT AMP FUZZ */
     [P_DTONE] = PD("TONE", F_BIPCT, -64, 63, 0),   /* .. its tone: darker / brighter */
     [P_MSLEN] = PD("LEN", F_STEPS, 1, 16, 16),  /* (Yehnah) the modulation sequence (mod.c MS_STEP) */
     [P_MSDIV] = PE("DIV", N_DIV, 2),
@@ -673,11 +673,13 @@ static uint8_t rev_rt0 = 0xFFu;                         /* (the reverb model ui_
  * upreset.c UP_FX_AT), loaded with the sound. Not in the song: the bus's values themselves are */
 #define G_SCENEP 0xFBu
 #define G_UFXP 0xFAu
-static const char *const N_SCENE[] = {"--", "ROOM", "HALL", "SPRING", "SHIMR", "CLOUD", "RESO", "TAPE", "PING", "GRAIN"};
-#define N_SCENES 9u
+static const char *const N_SCENE[] = {"--", "ROOM", "HALL", "SPRING", "SHIMR", "CLOUD", "RESO", "TAPE", "PING", "GRAIN", "REVRS"};
 static const param_desc_t SCENE_DESC = PE("SCENE", N_SCENE, 0);
 static const param_desc_t UFX_DESC = PE("FX", N_SCENE, 0);
 static int16_t scene_ui, ufx_ui;
+#endif /* FELUCCA_FXSCENE */
+#define N_SCENES 10u                                    /* (Yehnah, 2026-11-12) the scene table and fx_scene are in every build: engines.c
+                                                         * PRESET_SCENE (a preset that brings its scene) needs them; the page, SAVE > USER FX stay behind the flag */
 /* (chord-harp fork, 2026-11-02) the FX scenes (N_SCENE): the reverb's TYPE SIZE DAMP PRE MOD RATE FILT WIDE,
  * the delay's TIME FEEDBK TONE MIX PITCH SPRAY MOD TYPE PING. A scene sets the whole bus at once (every track hears it) */
 static const uint8_t FX_SCENE_ID[17] = {G_RTYPE, G_RSIZE, G_RDAMP, G_RPRE, G_RMOD, G_RRATE, G_RFILT, G_RWIDE,
@@ -692,6 +694,7 @@ static const int8_t FX_SCENE[N_SCENES][17] = {
     {0,  60, 70,  0,  0, 30,   0,   0,   1, 70, 40, 100,  0,  0, 60, 0, 0},   /* TAPE: a small room, a wobbly echo */
     {0,  80, 60,  0,  0, 30,   0,  40,   1, 55, 64,  90,  0,  0,  0, 1, 1},   /* PING: clean echoes left and right */
     {0, 100, 55,  0, 20, 30,   0,  60,   0, 65, 50,  90,  7, 60, 10, 0, 1},   /* GRAIN: each repeat a fifth up, scattered */
+    {5, 30, 55, 60, 40, 30,   0, 100,   0, 50, 40,  60,  0,  0, 10, 0, 1},   /* REVRS: swells into each note (Yehnah) */
 };
 static void fx_scene(uint32_t n)                        /* 1..N_SCENES (0: none, the bus as it is) */
 {
@@ -701,9 +704,10 @@ static void fx_scene(uint32_t n)                        /* 1..N_SCENES (0: none,
     for (i = 0; i < 17u; i++)
         song.g[FX_SCENE_ID[i]] = (int16_t)clamp(FX_SCENE[n - 1u][i], GP[FX_SCENE_ID[i]].min, GP[FX_SCENE_ID[i]].max);
     rev_rt0 = (uint8_t)song.g[G_RTYPE];                 /* (the scene's PRE / AIR, DAMP as set: not the model change's) */
+#if FELUCCA_FXSCENE
     scene_ui = ufx_ui = (int16_t)n;
+#endif
 }
-#endif /* FELUCCA_FXSCENE */
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* 0.4: LOOP */
@@ -915,6 +919,7 @@ static const param_desc_t RESO_FOLW = PE("FOLLOW", N_RFOLW, 0);          /* .. t
 static const param_desc_t REV_PRE = PD("PRE", F_INT, 0, 100, 0);       /* ROOM / SPRING: the pre-delay, ms (G_RPRE) */
 static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12) SHIMMER / CLOUD: pitch and tone, down dark,
                                                                        * up airy (G_RPRE; fx.c rev_air) */
+static const param_desc_t REV_WIN = PD("WINDOW", F_PCT, 0, 100, 0);    /* (Yehnah) REVRS: the window the taps spread over, 0.15 .. 0.70 s (G_RPRE) */
 static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) AUTO PAN's RATE on the tempo (SYNC BEAT) */
 static uint8_t sl_ui_step;       /* (0.6.3) the SL PITCH page: the step KNOB 2 edits */
 
@@ -993,6 +998,8 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         *valp = &song.g[id];
         if (song.g[G_RTYPE] == 3 && (id == G_RPRE || id == G_RDAMP))   /* (0.6.5) RESO: PITCH, FOLW in their slots */
             return id == G_RPRE ? &RESO_PITCH : &RESO_FOLW;
+        if (id == G_RPRE && song.g[G_RTYPE] == 5)     /* (Yehnah) REVRS: WINDOW */
+            return &REV_WIN;
         if (id == G_RPRE)                             /* (0.6.12) SHIMMER / CLOUD: AIR; ROOM / SPRING: PRE */
             return song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? &REV_AIR : &REV_PRE;
         return &GP[id];
