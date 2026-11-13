@@ -323,7 +323,7 @@ static void rec_clear(void)
 #define RK_CIN 4u
 #define RK_UNDO 5u
 #define RK_RST 6u
-#define RK_RVA 7u                                      /* (the key F4 was REVERT ALL: gone with MUTATE) */
+#define RK_RVA 7u                                      /* F4: CLEAR FX, the punch-in lane (2026-11-12; was REVERT ALL, gone with MUTATE) */
 #define RK_PLAY 8u                                     /* G4 A4 B4 C5: PLAY A..D */
 #define RK_LOOP 12u                                    /* D5: LOOP / SONG (what PLAY plays) */
 #define RK_SREC 13u                                    /* E5: SONG REC */
@@ -513,8 +513,21 @@ static void sq_key(uint32_t k)
         ui_message(m);
     ui.force = 1;
 }
+static int pfx_lane_used(void)
+{
+    uint32_t i;
+    for (i = 0; i < 64u; i++)
+        if (pfx_lane_at(i))
+            return 1;
+    return 0;
+}
 static void rec_key(uint32_t p)
 {
+    if (p == RK_RVA) {                                  /* (2026-11-12, was FX > PUNCH > CLEAR) the punch-in lane, it asks first */
+        if (chain_busy()) ui_message("STOP TO EDIT");
+        else confirm_open(CF_CLEAR_PFX, song.sel);
+        return;
+    }
     if (p == RK_ALL) {                                  /* (2026-11-10, was SEQ > TOOLS' CLEAR ALL) */
         if (chain_busy()) ui_message("STOP TO EDIT");
         else confirm_open(CF_CLEAR_ALL, song.sel);
@@ -719,7 +732,7 @@ static uint32_t layer_leds(uint32_t *br)
         } else if (l == LAYER_REC && !b && p <= RK_RVA) {   /* the click / count-in on, LOOP: lit, else they breathe; CLEAR: */
             on = p == RK_MODE && rec_loop;   /* something to clear, not
                                                          * while a song plays; TAP breathes; UNDO: one to undo */
-            can = p == RK_RVA ? 0u : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p == 1u || p == RK_CIN ? 0u : p ? 1u : !chain_busy() && rec_clearable();
+            can = p == RK_RVA ? pfx_lane_used() && !chain_busy() : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p == 1u || p == RK_CIN ? 0u : p ? 1u : !chain_busy() && rec_clearable();
         }
         m |= on << k;
         n |= (can & !on) << k;
@@ -805,6 +818,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         if (p == RK_RST) {
             str_cpy(nm, "RESTART", 12);
             return restart_ok() ? LS_OFF : LS_DIM;
+        }
+        if (p == RK_RVA) {
+            str_cpy(nm, "CLR FX", 12);
+            return pfx_lane_used() && !chain_busy() ? LS_OFF : LS_DIM;
         }
         if (p == RK_CIN || p == 1u)                     /* (CLICK, COUNT-IN: GLO > MAIN) */
             return LS_OFF;

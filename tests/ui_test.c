@@ -170,6 +170,7 @@ static void ui_power_on(void)
     chain_defaults(&chain_config);
     live.mode = 0;                                /* (0.6.81: PLAY the loop, as at power-on; a song leaves SONG) */
     memset(&ui, 0, sizeof ui);
+    fxa_cur = 0; fxa_cnt = 0; fxa_k = 0; memset(fxa_curs, 0, sizeof fxa_curs); fxa_key = 0xFFFFFFFFu;       /* (2026-11-13: FX ALL's cursor, scroll and rows) */
     cin_left = cin_total = 0;                     /* (no count-in) */
     memset(&nm, 0, sizeof nm);                    /* NAME closed, no project name */
     proj_name[0] = 0;
@@ -250,6 +251,7 @@ static void press(uint32_t label)                 /* a tap: down, a frame, up, a
     frame();
 }
 static void frames(uint32_t ms) { uint32_t i; for (i = 0; i < ms / 16u; i++) frame(); }
+static uint32_t glo_kn;                                 /* (the knob glo_id last found: the row's setting) */
 static uint32_t glo_row(uint32_t r);                    /* (2026-11-02: the MENU's rows on GLO's pages) */
 static void about_open(void);
 static int lz_tab_lit(uint32_t l);                     /* (0.8.5: below, with the lenses' tests) */
@@ -272,10 +274,26 @@ static void turn(uint32_t role, int32_t s)
     frame();
     host_ticks += 200000u;                        /* (no knob acceleration between the turns) */
 }
+/* (2026-11-13) SELECT as a chain step: on a list page (SOUND, ENV, LFO, ARP: rows of FX ALL's design) whose chain has other pages it walks the
+ * rows and leaves at the end; a test that means "the next page" turns until the page changes (at most 40 detents) */
+static void sel_turn(int32_t s)
+{
+    int32_t d = s < 0 ? -1 : 1, n = s < 0 ? -s : s, i, k;
+    if (ui.home || PAGES[ui.page].graph != GR_FXALL || fxa_kind_of(&PAGES[ui.page]) == FXK_FX || nav_vis_n() <= 1u || !fxall_on()) {
+        turn(EN_SELECT, s);                             /* (a page of the chain, or FX ALL itself: as it is) */
+        return;
+    }
+    for (i = 0; i < n; i++) {
+        uint32_t pg = ui.page;
+        turn(EN_SELECT, d);
+        for (k = 0; k < 40 && !ui.home && ui.page == pg && fxall_on(); k++)
+            turn(EN_SELECT, d);
+    }
+}
 static void held_turn(uint32_t label, int32_t s)  /* (0.6.67) a button held + SELECT, let go after */
 {
     fm1_in.buttons |= 1u << panel.btn[label]; host_pressed |= 1u << panel.btn[label];
-    turn(EN_SELECT, s);
+    sel_turn( s);
     fm1_in.buttons &= ~(1u << panel.btn[label]);
 }
 static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC + KNOB 3 (was GLO + SELECT) */
@@ -1149,9 +1167,9 @@ static int test_save(void)
     }
     press(B_SAVE);                                        /* a SAVE tap on SAVE: TRACKS (held note b) */
     bad += check("SAVE again: HOME's TRACKS (was the next group, SECTIONS)", ui.home && home_level() == 0u);
-    press(B_SAVE); turn(EN_SELECT, 2);
+    press(B_SAVE); sel_turn( 2);
     bad += check("(2026-11-06) SAVE's pages: PROJECT, ARRANGE, SONG EDIT (SELECT twice)", cur_page()->graph == GR_SEDIT && ui.act == 0u);
-    turn(EN_SELECT, -1);
+    sel_turn( -1);
     bad += check("SELECT left: ARRANGE", cur_page()->graph == GR_SONG);
     go_home();
     press(B_SAVE);
@@ -1255,6 +1273,15 @@ static void go_title(const char *title)
     uint32_t i;
     if (str_eq(title, "EDIT 1") || str_eq(title, "EDIT 2"))
         title = "PATCH";                        /* (2026-11-11: SOUND, the PATCH entry, is every other engine's page; EDIT 1 / 2 are a kit's) */
+    if (str_eq(title, "MAIN") || str_eq(title, "DEVICE") || str_eq(title, "CONTROL") || str_eq(title, "SYSTEM")) {   /* (2026-11-13: GLO's
+                                                         * four lists are one page: GLO, its cursor on that list's first row) */
+        uint32_t r;
+        go_title("GLO");
+        for (r = 0; r < fxa_cnt && !(fxa_r[r].first && str_eq(fxa_sn[fxa_r[r].sec], title)); r++)
+            ;
+        fxa_cur = (uint8_t)(r < fxa_cnt ? r : 0u);
+        return;
+    }
     for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, title); i++)
         ;
     if (i == NPAGES) {                          /* (0.6.80: a page renamed under a script; it read past PAGES) */
@@ -1264,6 +1291,32 @@ static void go_title(const char *title)
     ui.home = 0;
     ui.page = (uint8_t)i;
     page_entered();
+    if (PAGES[i].graph == GR_FXALL) {                   /* (the rows built: a caller may look at fxa_r) */
+        fxa_sync(fxa_kind_of(&PAGES[i]));
+        fxa_build();
+    }
+}
+static void go_list(const char *title, uint32_t row)  /* (2026-11-12) a row-list page (GR_RLIST), its cursor on row */
+{
+    go_title(title);
+    fxa_sync(fxa_kind_of(&PAGES[ui.page]));
+    fxa_build();
+    fxa_cur = (uint8_t)row;
+}
+static void go_fx(const char *src)                   /* (2026-11-13) FX ALL, its cursor on the row of the old effect page src (DLY, REVERB 2, ..) */
+{
+    uint32_t i;
+    go_title("FX ALL");
+    fxa_build();
+    for (i = 0; i < fxa_cnt; i++)
+        if (str_eq(PAGES[fxa_r[i].pi].title, src)) fxa_cur = (uint8_t)i;
+}
+static const kn_t *cells_of_cur(void)                /* the focused row's cells, as draw_cards puts them (kn_cells) */
+{
+    uint32_t c;
+    for (c = 0; c < 4u; c++) { kn_buf[c].l[0] = kn_buf[c].u[0] = kn_buf[c].v[0] = 0; kn_buf[c].r = -1; kn_buf[c].m = kn_buf[c].d = kn_buf[c].n = 0; }
+    draw_cards();
+    return kn_buf;
 }
 static void tools_pick(uint32_t n)                /* (0.6.25) TOOLS: the n-th action picked (KNOB 1 down the list) */
 {
@@ -1724,25 +1777,25 @@ static int test_display_preferences(void)
     ui.force = 1; ui_draw();
     memcpy(before, host_screen, sizeof before);
     settings.palette = 0; palette_set(0);
-    turn(EN_K2, 1); ui_draw();
+    turn((EN_K1 + glo_kn), 1); ui_draw();
     bad += check("COLOR KNOB 1 shows the next palette (VAP LT, light) at once",
                  settings.palette == 1 && str_eq(UI_PALETTES[1].name, "VAP LT") && T_BG == UI_PALETTES[1].bg && ux.light &&
                  !song.octave && memcmp(before, host_screen, sizeof before) && !memcmp(sounds, trk, sizeof sounds));
     bad += check("COLOR KNOB 1 steps on to NOIRE and the pastel DUSK and CREAM, then wraps to VAP DK",
-                 (turn(EN_K2, 1), settings.palette == 2u) && str_eq(UI_PALETTES[2].name, "NOIRE") &&
-                 !ux.light && T_BG == 0u && (turn(EN_K2, 1), settings.palette == 3u) && !ux.light &&
-                 (turn(EN_K2, 1), settings.palette == 4u) && ux.light && (turn(EN_K2, 1), settings.palette == 0u) &&
-                 str_eq(UI_PALETTES[0].name, "VAP DK") && !ux.light && (turn(EN_K2, 1), turn(EN_K2, 1), settings.palette == 2u));
+                 (turn((EN_K1 + glo_kn), 1), settings.palette == 2u) && str_eq(UI_PALETTES[2].name, "NOIRE") &&
+                 !ux.light && T_BG == 0u && (turn((EN_K1 + glo_kn), 1), settings.palette == 3u) && !ux.light &&
+                 (turn((EN_K1 + glo_kn), 1), settings.palette == 4u) && ux.light && (turn((EN_K1 + glo_kn), 1), settings.palette == 0u) &&
+                 str_eq(UI_PALETTES[0].name, "VAP DK") && !ux.light && (turn((EN_K1 + glo_kn), 1), turn((EN_K1 + glo_kn), 1), settings.palette == 2u));
     settings.lowcut = 0; fx_lowcut = 0;
     glo_row(MI_LOWCUT);                                 /* (GLO > AUDIO's KNOB 1) */
     {   /* #42: SPEAKER EQ FLAT (the old OFF, stored 0) LOWCUT BASS+; KNOB 1 steps them, the audio follows at once */
         int ok = str_eq(MI_NAME[MI_LOWCUT], "SPEAKER EQ") && str_eq(SPK_EQ[0], "FLAT") && str_eq(SPK_EQ[1], "LOWCUT") &&
                  str_eq(SPK_EQ[2], "BASS+");
-        turn(EN_K2, 1); ok &= settings.lowcut == 1u && fx_lowcut == 1u;
-        turn(EN_K2, 1); ok &= settings.lowcut == 2u && fx_lowcut == 2u;
-        turn(EN_K2, 1); ok &= settings.lowcut == 0u && !fx_lowcut;    /* (2026-11-03: KNOB 1 wraps) */
-        turn(EN_K2, -1); ok &= settings.lowcut == 2u;
-        turn(EN_K2, 1); ok &= settings.lowcut == 0u && !fx_lowcut;
+        turn((EN_K1 + glo_kn), 1); ok &= settings.lowcut == 1u && fx_lowcut == 1u;
+        turn((EN_K1 + glo_kn), 1); ok &= settings.lowcut == 2u && fx_lowcut == 2u;
+        turn((EN_K1 + glo_kn), 1); ok &= settings.lowcut == 0u && !fx_lowcut;    /* (2026-11-03: KNOB 1 wraps) */
+        turn((EN_K1 + glo_kn), -1); ok &= settings.lowcut == 2u;
+        turn((EN_K1 + glo_kn), 1); ok &= settings.lowcut == 0u && !fx_lowcut;
         bad += check("#42 SPEAKER EQ: FLAT (old OFF) / LOWCUT / BASS+ on KNOB 1, fx_lowcut follows", ok);
     }
     press(B_HOME);
@@ -1755,19 +1808,18 @@ static int test_display_preferences(void)
 static uint32_t glo_id(uint32_t id)                     /* (topic C) GLO's lists: go to the one holding row `id`, KNOB 1 put on it;
                                                          * returns the knob that sets it (KNOB 2's slot, 1) */
 {
-    uint32_t i, k, ls = 0;
-    for (i = 0; i < NPAGES; i++) {
-        if (PAGES[i].graph != GR_SETS)
-            continue;
-        for (k = 0; k < SETS_MAX; k++)
-            if (SETS[ls][k] == id) {
-                sets_cur[ls] = (uint8_t)k;
-                go_title(PAGES[i].title);
+    uint32_t r, k;
+    go_title("GLO");                                    /* (2026-11-13: GLO's rows are one page: the row holding id, the knob that sets it) */
+    fxa_sync(fxa_kind_of(&PAGES[ui.page]));
+    fxa_build();
+    for (r = 0; r < fxa_cnt; r++)
+        for (k = 0; k < 4u; k++)
+            if (fxa_r[r].id[k] == id) {
+                fxa_cur = (uint8_t)r;
                 frame();
-                return 1u;
+                glo_kn = k;
+                return k;
             }
-        ls++;
-    }
     printf("ui:   no GLO list holds row %u\n", id);
     return 1;
 }
@@ -1795,12 +1847,12 @@ static int test_information(void)
     bad += check("ABOUT QR keeps its complete white quiet zone above the fixed footer", quiet);
     memcpy(header, host_screen, sizeof header);
     memcpy(footer, host_screen + 221 * 240, sizeof footer);
-    turn(EN_SELECT, 3);
+    sel_turn( 3);
     ui_draw();
     bad += check("0.9.2 SELECT (was PRESETS) scrolls ABOUT with its header and controls fixed",
                  ui.menu == 2 && ui.menu_scroll > 0 && !memcmp(header, host_screen, sizeof header) &&
                  !memcmp(footer, host_screen + 221 * 240, sizeof footer));
-    turn(EN_SELECT, 12);
+    sel_turn( 12);
     ui_draw();
     bad += check("0.9.2 SELECT continues from ABOUT into CREDITS without changing pages",
                  ui.menu == 2 && ui.menu_scroll > 216 && !memcmp(header, host_screen, sizeof header) &&
@@ -1809,16 +1861,16 @@ static int test_information(void)
     press(B_OCTUP);
     bad += check("OCT+ does not switch pages or alter the octave in the document",
                  ui.menu == 2 && ui.menu_scroll == position && song.octave == 0);
-    turn(EN_SELECT, 10000);
-    turn(EN_SELECT, 10000);
+    sel_turn( 10000);
+    sel_turn( 10000);
     ui_draw();
     bad += check("the continuous document stops at its final credit",
                  ui.menu == 2 && ui.menu_scroll == menu_scroll_max());
-    turn(EN_SELECT, -10000);
+    sel_turn( -10000);
     bad += check("scrolling back through CREDITS returns to ABOUT's top", ui.menu == 2 && !ui.menu_scroll);
     press(B_OCTDN);
     bad += check("OCT- returns to GLO > TOOLS without changing sounds or patterns",
-                 !ui.menu && str_eq(cur_page()->title, "SYSTEM") && !memcmp(sounds, trk, sizeof sounds));
+                 !ui.menu && cur_page()->fam == FAM_GLO && !memcmp(sounds, trk, sizeof sounds));
     about_open();
     bad += check("reopening ABOUT starts the continuous document at the top", ui.menu == 2 && !ui.menu_scroll);
     menu_close();
@@ -2093,9 +2145,9 @@ static int test_soak_cards(void)
             quiet = 0;
         } else if (r < 29u) {                           /* a page */
             uint32_t i = SOAK_RND(NPAGES);
-            if (page_visible(i)) { ui.home = 0; ui.page = (uint8_t)i; page_entered(); }
+            if (page_visible(i)) { ui.menu = 0; ui.home = 0; ui.page = (uint8_t)i; page_entered(); }   /* (2026-11-13: a page change closes a menu, CPU's: else one turn right of a seed's GLO list kept it open for good) */
             quiet = 0;
-        } else if (r < 30u) { ui.home = 1; page_entered(); quiet = 0; }
+        } else if (r < 30u) { ui.menu = 0; ui.home = 1; page_entered(); quiet = 0; }
         else if (r < 31u) transport_req = song.playing ? 2u : 1u;
         else if (r == 31u && SOAK_RND(3u) == 0u) rec_tap();
         else if (r == 32u) { host_enc[panel.enc[EN_ALGO]] += SOAK_RND(2u) ? 1 : -1; quiet = 0; }
@@ -2387,7 +2439,7 @@ static int test_presets_knob(void)
     bad += check("PRESETS on every SEQ page (STEP NOTE COMP BAR PATTERN TRACK ..): the next sound, the steps and the page stay",
                  seq_ok && n_seq >= 9u);
     bad += check("0.9.2 PRESETS everywhere else (EDIT ENV LFO FX SCL ARP GLO SAVE: USER TOOLS PROJECT ..): the next sound, the page stays",
-                 snd_ok && n_snd >= 40u);
+                 snd_ok && n_snd >= 25u);
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUM);
     TSEL->engine = TSEL->eng_req;
@@ -2429,11 +2481,11 @@ static int test_product_ux(void)
     bad += check("MIXER K3 solos, never sequence length", TSEL->p[P_SLEN] == len && ui.msolo == 1u);
     turn(EN_K3, -1);
     frames(320);                                       /* (taps further apart than a double tap: #83) */
-    turn(EN_SELECT, 1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain; GLO its */
-    press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "MAIN");   /* first) */
+    sel_turn( 1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain; GLO its */
+    press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLO");   /* first) */
     press(B_GLO); frames(320); ok &= ui.home && home_level() == 0u;
-    press(B_GLO); ok &= str_eq(cur_page()->title, "MAIN");
-    bad += check("GLO: MAIN (its first); a GLO tap on it TRACKS; again MAIN", ok);
+    press(B_GLO); ok &= str_eq(cur_page()->title, "GLO");
+    bad += check("GLO: its one page (2026-11-13); a GLO tap on it TRACKS; again GLO", ok);
     go_home(); hold(B_SEQ);
     bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
     go_page(GR_SONG);
@@ -2546,7 +2598,7 @@ static int test_product_ux(void)
     for (p = 0; p < NPALETTES; p++) for (b = 0; b < 1u; b++) {
         static uint16_t graph[240 * TF_SC_H], columns[240 * TF_KN_H];   /* (2026-11-02: the knob cells under the panel) */
         ui_power_on(); palette_set(p); settings.zoom = 1;
-        open_family(FAM_ENV); frame();
+        open_family(FAM_SCL); frame();                  /* (2026-11-13: ENV is FX ALL's design now: no knob band) */
         ok &= kn_cells() && graph_y() == TF_SC_Y;
         memcpy(graph, host_screen + TF_SC_Y * 240, sizeof graph);
         memcpy(columns, host_screen + TF_KN_Y * 240, sizeof columns);
@@ -2747,7 +2799,7 @@ static int test_layer(void)
                  ok && !perf_held && !ui.layer && !perf_k[3] && mo_w == mo);
     /* REVERB > TYPE (FX family, global): ROOM / SPRING on KNOB 1, kept by a project */
     ui_power_on();
-    go_title("REVERB");
+    go_fx("REVERB");
     ok = cur_page()->fam == FAM_FX && cur_page()->id[0] == G_RTYPE && cur_page()->id[1] == G_RSIZE &&
          cur_page()->id[2] == G_RDAMP && song.g[G_RTYPE] == 0;
     turn(EN_K1, 1);
@@ -2759,7 +2811,7 @@ static int test_layer(void)
     turn(EN_K1, -1);
     ok &= song.g[G_RTYPE] == 3;
     project_load(2);
-    bad += check("REVERB page: TYPE ROOM -> SPRING .. CLOUD on KNOB 1 (SIZE, DAMP beside it); a project keeps CLOUD",
+    bad += check("REVERB page: TYPE ROOM -> SPRING .. CLOUD on KNOB 1 (SIZE, DAMP beside it; 2026-11-13: FX ALL's REVERB row); a project keeps CLOUD",
                  ok && song.g[G_RTYPE] == 4);
     {   /* (0.5.1) the DRUM-X kit's X-MOD kept by a project (the kit's reserved bytes) */
         static const uint8_t XM[4] = {6, 90, 4, 70};
@@ -3184,7 +3236,7 @@ static int sel_first(void)
     for (k = 0; k < 64u; k++) {
         if (nav_list(nav_sec(), v) && v[0] == nav_cur())
             return 1;
-        turn(EN_SELECT, -1); frames(2);
+        sel_turn( -1); frames(2);
     }
     return 0;
 }
@@ -3198,7 +3250,7 @@ static int chain_walk(uint32_t btn, const char *const *want, uint32_t n)
     ok &= sel_first();
     for (i = 0; i < n; i++) {
         if (i) {
-            turn(EN_SELECT, 1);
+            sel_turn( 1);
             frames(2);
         }
         if (!str_eq(nav_name(), want[i])) {
@@ -3206,11 +3258,11 @@ static int chain_walk(uint32_t btn, const char *const *want, uint32_t n)
             ok = 0;
         }
     }
-    turn(EN_SELECT, 1); frames(2);
+    sel_turn( 1); frames(2);
     ok &= str_eq(nav_name(), want[0]);                   /* (the end: it wraps, 2026-11-02) */
-    turn(EN_SELECT, -1); frames(2);
+    sel_turn( -1); frames(2);
     ok &= str_eq(nav_name(), want[n - 1u]);
-    turn(EN_SELECT, 1); frames(2);
+    sel_turn( 1); frames(2);
     press(btn); frames(320);
     ok &= ui.home && home_level() == 0u;                 /* (on it: TRACKS) */
     press(btn); frames(320);
@@ -3224,7 +3276,7 @@ static int test_edit_cycle(void)
     static const char *const CH_A[] = {"SOUND"};   /* (2026-11-11: FILTER DRIFT VOICE VOICE 2 are SOUND's rows) */   /* (0.5:
                                                          * ANALOG's FILTER; 0.6.45: MORPH; chord-harp fork: BLEND, now
                                                          * SAVE > MORPH; 2026-10-30: MORPH now DRIFT, VINTAGE) */
-    static const char *const CH_F[] = {"SOUND", "OP 1", "OP ENV", "OP 2"};
+    static const char *const CH_F[] = {"SOUND"};   /* (2026-11-13: the operators are SOUND's rows) */
     int bad = 0, ok;
     uint32_t i;
     ui_power_on();
@@ -3246,8 +3298,7 @@ static int test_edit_cycle(void)
                  TSEL->eng_req == ENGI_DIGITAL && chain_walk(B_EDIT, CH_A, NELEM(CH_A)));
     set_engine_of(TSEL, 0);
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CH_K[] = {"SOUND", "KIT 3", "LANE 1", "LANE 2", "LANE 3", "LANE 4", "LEVELS",
-                                           "LEVELS 2", "X-MOD"};
+        static const char *const CH_K[] = {"SOUND"};   /* (2026-11-13: KIT 3, the lanes, LEVELS, X-MOD are SOUND's rows) */
         set_engine_of(TSEL, ENGI_DRUM);
         bad += check("0.9.2 EDIT chain (DRUM): SOUND (SOUND KIT 3) . LANE (1..4) . LEVELS (LEVELS LEVELS 2) . TONE (X-MOD FILTER)",
                      chain_walk(B_EDIT, CH_K, NELEM(CH_K)));
@@ -3382,10 +3433,10 @@ static int test_quick_layers(void)
             uint32_t j, sig, okk;
             int16_t bpm, lf[8], rs, rv;
             go_home(); frames(8);
-            btn_down(B_ENV); frame(); turn(EN_SELECT, 1); frame();   /* (2026-11-02: not ENV's chain any more: nothing,
+            btn_down(B_ENV); frame(); sel_turn( 1); frame();   /* (2026-11-02: not ENV's chain any more: nothing,
                                                          * the turn and the tap swallowed) */
             ok = ui.home && nav_cur() == 0u && !ui.confirm;
-            btn_up(B_ENV); frame(); turn(EN_SELECT, 1); frames(30);   /* (the same turn, the button let go first) */
+            btn_up(B_ENV); frame(); sel_turn( 1); frames(30);   /* (the same turn, the button let go first) */
             ok &= ui.home && nav_cur() == 0u && !ui.layer;
             sig = steps_sig(TSEL);
             go_home(); frames(8);
@@ -3417,7 +3468,7 @@ static int test_quick_layers(void)
             press(B_OCTDN); frame();                    /* (nothing to put back: TRACKS) */
             ok &= !gen_on() && ui.home;
             bpm = song.g[G_BPM];
-            btn_down(B_GLO); frame(); turn(EN_SELECT, 3); frame(); btn_up(B_GLO); frames(4);
+            btn_down(B_GLO); frame(); sel_turn( 3); frame(); btn_up(B_GLO); frames(4);
             ok &= song.g[G_BPM] == bpm && ui.home;
             song.g[G_BPM] = bpm;
             bad += check("0.6.67: ENV / SEQ / GLO + SELECT nothing (2026-11-02); IDEAS TRACK / LFO / FX: a turn throws (OCT- BACK, OCT+ KEEP)", ok);
@@ -3563,31 +3614,23 @@ static int test_quick_layers(void)
     bad += check("2026-11-02: REC + E4 RESTART playing (from the top, not stopped); stopped: PLAY; CLK EXT: says why", ok);
     usb.config = 0;
 
-    /* (2026-11-09, held menus) SCL, EDIT, GLO held past HOLD open a list that stays open; the keys play; OCT- or the button closes it */
+    /* (2026-11-09, held menus) EDIT, GLO held past HOLD open a list that stays open; the keys play; OCT- or the button closes it.
+     * (2026-11-12) SCL has none any more: its STRUM is ARP LIST's row */
     ui_power_on();
     TSEL->p[P_ROOT] = 0; TSEL->p[P_SCALE] = 1; TSEL->p[P_QUANT] = 0; TSEL->p[P_CSTR] = 0;
     btn_down(B_SCL); frame();
     ok = !ui.hm && !ui.layer;
     frames(512);
-    ok &= ui.hm == HM_SCL && !ui.layer;
+    ok &= !ui.hm && !ui.layer;
     btn_up(B_SCL); frame(); frame();
-    ok &= ui.hm == HM_SCL && ui.home;                               /* (open after the release; no page opened) */
+    ok &= !ui.hm && ui.home;                                        /* (no menu, no page: held past HOLD is swallowed) */
     key_down(white(4)); frame();
     ok &= gates() > 0 && TSEL->p[P_ROOT] == 0;                      /* (a note, not a ROOT key) */
     key_up(white(4)); frame();
-    turn(EN_K2, 1); frame();
-    ok &= TSEL->p[P_CSTR] > 0 && TSEL->p[P_ROOT] == 0;              /* (STRUM the only row) */
-    bad += check("SCL held: the menu opens and stays after the release; the keys play; KNOB 1 the row, KNOB 2 ROOT / STRUM", ok);
-    oct_back();
-    bad += check("  OCT- closes the held menu (the page as it was)", !ui.hm && ui.home);
-    btn_down(B_SCL); frames(512); btn_up(B_SCL); frame();
-    ok = ui.hm == HM_SCL;
-    press(B_SCL); frame();
-    ok &= !ui.hm && ui.home;                                        /* (its own button: closes, no page) */
-    btn_down(B_SCL); frames(512); btn_up(B_SCL); frame();
+    bad += check("SCL held: nothing opens (STRUM moved to ARP LIST), no page; the keys play", ok);
     press(B_ENV); frame();
-    ok &= !ui.hm && !ui.home && cur_page()->fam == FAM_ENV;         /* (another button: closes and acts) */
-    bad += check("  the button's tap closes it; another button's tap closes it and acts", ok);
+    ok = !ui.hm && cur_page()->fam == FAM_ENV;
+    bad += check("  another button's tap acts as ever", ok);
     TSEL->p[P_CSTR] = 0;
     ui_power_on();
     btn_down(B_EDIT); frames(512); btn_up(B_EDIT); frame();
@@ -3655,14 +3698,14 @@ static int test_quick_layers(void)
     bad += check("in a dialog: SCL held shows no map and taps nothing", ok && ui.confirm == CF_CLEAR_SEQ);
     /* one held menu at a time: a second button's hold is ignored while one is open; the keys play */
     ui_power_on();
-    btn_down(B_SCL); frames(512); btn_up(B_SCL); frame();
-    btn_down(B_EDIT); frames(512);
-    ok = ui.hm == HM_SCL && TSEL->eng_req == trk[0].eng_req;
+    btn_down(B_EDIT); frames(512); btn_up(B_EDIT); frame();
+    btn_down(B_GLO); frames(512);
+    ok = ui.hm == HM_EDIT && TSEL->eng_req == trk[0].eng_req;
     key_down(white(5)); frame();
     ok &= gates() > 0 && TSEL->p[P_ROOT] == 0;
-    key_up(white(5)); btn_up(B_EDIT); frame();
+    key_up(white(5)); btn_up(B_GLO); frame();
     oct_back();
-    bad += check("SCL menu open, EDIT held: the second one ignored (its keys notes, no page)", ok && !ui.hm && ui.home);
+    bad += check("EDIT menu open, GLO held: the second one ignored (its keys notes, no page)", ok && !ui.hm && ui.home);
     return bad;
 }
 
@@ -4803,7 +4846,7 @@ static int test_page_leds(void)
                 }
         }
     ui.home = 1;
-    return check("the page's section's button lit, no other section's (MIXER / SENDS / PRESETS / MORPH: HOME)", ok && n > 40u);
+    return check("the page's section's button lit, no other section's (MIXER / SENDS / PRESETS / MORPH: HOME)", ok && n > 25u);
 }
 static int test_breath(void)
 {
@@ -5251,7 +5294,7 @@ static int test_screen_off(void)
     v0 = *vp;
     for (i = 0; i < 20u; i++) turn(EN_K1, 1);        /* a knob turned to wake it, still turning (on past the wake) */
     ok = scr_woke(n) && *vp == v0;
-    turn(EN_PRESET, 1); turn(EN_ALGO, 1); turn(EN_SELECT, 1); turn(EN_K4, -1);
+    turn(EN_PRESET, 1); turn(EN_ALGO, 1); sel_turn( 1); turn(EN_K4, -1);
     ok &= *vp == v0 && song.sel == 0u && song.g[G_BPM] == GP[G_BPM].def && scrn.eat;
     frames(400u);                                     /* at rest SCR_EAT_MS: the knobs are the page's again */
     turn(EN_K1, 1);
@@ -5561,20 +5604,20 @@ static int test_layer_knob_leak(void)
                  !fails && arp_fx == 4u);
     /* the quiet time is short: KNOB 1 edits the page again 0.3 s after FX */
     ui_power_on();
-    go_page(GR_ARP);
+    go_list("ARP LIST", 0);              /* (2026-11-12: ARP LIST's first row, ARP: KNOB 2 is MODE) */
     {
         int16_t m = TSEL->p[P_AMODE];
         btn_down(B_FX); frame(); turn(EN_K1, 4); btn_up(B_FX); frame();
         frames(320);
         turn(EN_K1, 1);
-        ok = TSEL->p[P_AMODE] == m + 1 && !perf_k[0] && str_eq(cur_page()->title, "ARP");
+        ok = TSEL->p[P_AMODE] == m + 1 && !perf_k[0] && str_eq(cur_page()->title, "ARP LIST");
     }
     bad += check("  0.3 s after FX is let go KNOB 1 is ARP MODE again; a knob turned with FX opened no FX page", ok);
     /* a tap of FX with a knob turned in that frame: a combo, no FX page */
     ui_power_on();
-    go_page(GR_ARP);
+    go_title("ARP LIST");
     btn_down(B_FX); frame(); lk_turn(1); btn_up(B_FX); frame(); frames(100);
-    bad += check("  FX tapped while a knob turns: no FX page, no ARP change", str_eq(cur_page()->title, "ARP") &&
+    bad += check("  FX tapped while a knob turns: no FX page, no ARP change", str_eq(cur_page()->title, "ARP LIST") &&
                  TSEL->p[P_AMODE] == 0);
     return bad;
 }
@@ -5688,7 +5731,7 @@ static int test_layer_knob_race(void)
                     }
                 }
     bad += check("#102 FX SCL (held, combo, locked) x KNOB 1..4, detents counted mid-pass: the layer's only",
-                 !fails && runs > 400u);
+                 !fails && runs > 250u);
     /* HOME, REC armed and playing: FX's macros record nothing into T1's automation */
     ok = 1;
     for (l = 0; l < 1u; l++)
@@ -5855,7 +5898,7 @@ static int test_save_lens(void)
     bad += check("SAVE: one chain PROJECT STRUCT TRIM; a SAVE tap on it TRACKS",
                  chain_walk(B_SAVE, CH, 3));
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
-    turn(EN_SELECT, 1); frame();                                         /* ARRANGE, left there */
+    sel_turn( 1); frame();                                         /* ARRANGE, left there */
     go_home(); frame(); press(B_SAVE); frame();
     ok = cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u;   /* (its first, PROJECTS) */
     bad += check("SAVE from elsewhere its first, PROJECT (not the page left, ARRANGE)", ok);
@@ -5896,11 +5939,11 @@ static int test_lente(void)
     open_family(FAM_SEQ); frame();
     ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && lz_tabs() == 6u &&
          lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 STEP") && lz_count_is("1/8");   /* (6 runs: BAR's group split by the wrap) */
-    turn(EN_SELECT, -1); frames(32);
+    sel_turn( -1); frames(32);
     ok &= str_eq(cur_page()->title, "BAR") && bars_view(cur_page()) && lz_tab_lit(2) && lz_count_is("8/8");
-    turn(EN_SELECT, 2); frames(32);
+    sel_turn( 2); frames(32);
     ok &= str_eq(cur_page()->title, "NOTE") && roll_view(cur_page()) && !bigstep_view(cur_page());   /* (NOTE: the roll) */
-    turn(EN_SELECT, 1); frames(32);
+    sel_turn( 1); frames(32);
     ok &= str_eq(cur_page()->title, "SPICE") && roll_view(cur_page()) && !bigstep_view(cur_page());
     bad += check("SEQ: enters at STEP (1/8, 2026-11-10); BAR 8/8; BAR's bars, NOTE the roll, COMP the step large", ok);
     bad += check("0.9.2 SEQ: one chain of 8 by SELECT (round, 2026-11-10: TOOLS a layer); a SEQ tap each group's first, round",
@@ -5908,7 +5951,7 @@ static int test_lente(void)
     /* the memory: the section's (not the track's) */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     go_step(); frame();
-    turn(EN_SELECT, 2); frames(32);                                                /* COMP */
+    sel_turn( 2); frames(32);                                                /* COMP */
     go_title("ENV"); frame();
     open_family(FAM_SEQ); frame();
     ok = str_eq(cur_page()->title, "STEP");                                        /* (its first, held note a) */
@@ -5926,7 +5969,7 @@ static int test_lente(void)
     /* BAR: KNOB 1 the bar (wrapping, the cursor at its place), KNOB 2 LEN; STEP's KNOB 1 into the next bar */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     go_step(); frame();
-    turn(EN_SELECT, -1); frames(32);
+    sel_turn( -1); frames(32);
     cursor_set(5);
     turn(EN_K1, 1);
     ok = str_eq(cur_page()->title, "BAR") && ui.cursor == 21u && ui.bank == 1u && TSEL->p[P_SLEN] == 64 &&
@@ -5946,7 +5989,7 @@ static int test_lente(void)
     TSEL->p[P_SLEN] = 32;
     turn(EN_K1, 3);
     ok &= ui.bank == 1u && ui.cursor == 21u;                                       /* (LEN 32: two bars) */
-    turn(EN_SELECT, 1); frames(32);
+    sel_turn( 1); frames(32);
     cursor_set(15);
     turn(EN_K1, 1);
     ok &= str_eq(cur_page()->title, "STEP") && ui.cursor == 16u && ui.bank == 1u;  /* STEP: the step, into the next bar */
@@ -5986,11 +6029,11 @@ static int test_lente(void)
     go_step(); frame();
     ok = grid_on() && roll_view(cur_page()) && lens_level() == LV_BAR && song.grid == 1u;
     frames(500);
-    turn(EN_SELECT, -1); frames(32);
+    sel_turn( -1); frames(32);
     ok &= bars_view(cur_page());
     turn(EN_K1, 1);
     ok &= ui.bank == 1u;
-    turn(EN_SELECT, 3); frames(32);
+    sel_turn( 3); frames(32);
     ok &= str_eq(cur_page()->title, "SPICE") && grid_on() && lens_level() == LV_BAR;
     bad += check("  DRUM: STEP is the grid (its keys); BAR its bars, KNOB 1 the bar; SPICE the grid too", ok);
     return bad;
@@ -6269,6 +6312,16 @@ static int test_clear_all(void)
         any |= !seq_is_empty(&trk[k]);
     bad += check("REC held + G5 CLEAR ALL: CLEAR ALL SEQUENCES?; OCT+: every track empty, the lane too",
                  ok && !ui.confirm && !any && !pfx_lane[3] && msg_is("ALL CLEARED"));
+    /* (2026-11-12) REC held + F4 CLEAR FX: the punch-in lane only (it asks first); nothing to clear: still asks, harmless */
+    ui_power_on();
+    my_steps(TSEL);
+    pfx_lane[3] = 0x22;
+    go_home(); frame();
+    sl_key(7u);
+    ok = ui.confirm == CF_CLEAR_PFX && !song.rec;
+    press(B_OCTUP);
+    bad += check("REC held + F4 CLEAR FX: CLEAR PUNCH LANE?; OCT+: the lane empty, the track's steps kept",
+                 ok && !ui.confirm && !pfx_lane[3] && !seq_is_empty(TSEL));
     return bad;
 }
 
@@ -6508,7 +6561,7 @@ static int test_scl_alltr(void)
     turn(EN_K4, 1); turn(EN_K4, 1); frame();
     ok &= song.g[G_STRN] == 2 && t->p[P_TRANS] == 0;
     song.rec = 0;
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "CHORD");          /* (no SCL 2 between) */
     {
         uint32_t i, n2 = 0;
@@ -6528,59 +6581,58 @@ static int test_scl_alltr(void)
  * SENDS. (Was 0.8.5's lens: SELECT TRACK <-> BUSES <-> EFFECT, PRESETS the module, the FX tap the level's next) */
 static int test_fx_sections(void)
 {
-    static const char *const CH[18] = {"SENDS", "DIST", "AUTO PAN", "PHASER", "BUSES",
+    static const char *const ROWS[] = {"FX", "DIST", "AUTO PAN", "PHASER",
 #if FELUCCA_FXSCENE
                                        "SCENE",
 #endif
-                                       "DELAY", "DELAY 2", "DELAY 3", "REVERB", "REVERB 2",
-                                       "CHORUS", "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "MASTER", "PUNCH"};
+                                       "DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2", "CHORUS", "SLICER", "SL BUS", "SL BUS 2",
+                                       "SL PITCH", "MASTER", "PUNCH"};
     int bad = 0, ok;
-    uint32_t pr;
-    ui_power_on();
-    bad += check("0.9.2 FX: one chain of 18 (TRK BUS DLY REV CHO SLC MST PCH; 2026-11-02: SCENE) by SELECT, round; an FX tap on it TRACKS",
-                 chain_walk(B_FX, CH, 17 + XS));
+    uint32_t i, pr, n = NELEM(ROWS);
     ui_power_on(); go_home(); frame(); press(B_FX); frame();
-    ok = fx_on() && fx_level() == FXL_TRACK && lz_on() && card_y() == TF_KN_Y && lz_tabs() == 8u && lz_tab_lit(0) &&
-         lz_crumb_is("FX \xB7 SENDS") && lz_count_is(XS ? "1/18" : "1/17");
-    turn(EN_SELECT, 4); frame();
-    ok &= fx_level() == FXL_BUSES && cur_page()->graph == GR_BUSES && lz_tab_lit(1) && lz_crumb_is("FX \xB7 BUSES");
-    ok &= cur_page()->id[0] == G_DMIX && cur_page()->id[1] == G_RSIZE && cur_page()->id[2] == G_CDEPTH && cur_page()->id[3] == G_SLDEP;
-    song.g[G_RSIZE] = 50; turn(EN_K2, 3); frame();
-    ok &= song.g[G_RSIZE] > 50;
-    turn(EN_SELECT, 2 + XS); frame();                    /* ([SCENE,] DLY, DLY 2) */
-    ok &= fx_level() == FXL_EFFECT && str_eq(cur_page()->title, "DLY 2") && lz_tab_lit(2) &&
-          lz_crumb_is("FX \xB7 DELAY 2") && lz_count_is(XS ? "8/18" : "7/17") && ui.fxmod == 0u;
-    ok &= str_eq(pg_short("DELAY 2"), "DELAY2") && str_eq(pg_short("SL PITCH"), "SL PCH") &&   /* (the page row's */
-          str_eq(pg_short("REVERB"), "REVERB");         /* short forms, 2026-11-02) */
-    {                                                   /* (every page's name bold in the middle pill, 3 px each side) */
-        uint32_t c, e;
-        for (c = 0; c < NELEM(CHAINS); c++)
-            for (e = 0; e < CHAINS[c].n; e++) {
-                const char *nm = CHAINS[c].e[e].nm ? CHAINS[c].e[e].nm : CHAINS[c].e[e].t;
-                if (nm && text_w(&AF_B, nm) > PG_MID_W - 6) {
-                    printf("  page row: %s %d px in B\n", nm, (int)text_w(&AF_B, nm));
-                    ok = 0;
-                }
-            }
+    ok = fx_on() && PAGES[ui.page].graph == GR_FXALL && fxall_on() && lz_on() && CHAINS[SEC_FX].n == 1u && fxa_cnt == n &&
+         graph_h() == 240u - TF_SC_Y - 4u && graph_h() * 240u > CV_MAX / 2u;
+    for (i = 0; i < n; i++) {                           /* a slow turn: a row (every old page, in order) */
+        if (!str_eq(cur_page()->title, ROWS[i])) printf("  FX ALL row %u: %s, want %s (cur %u, cnt %u)\n", i, cur_page()->title, ROWS[i], fxa_cur, fxa_cnt);
+        ok &= str_eq(cur_page()->title, ROWS[i]);
+        if (i + 1u < n) { sel_turn( 1); frames(6); }
     }
+    sel_turn( 1); frames(6);                      /* (the list goes round: the last row, then the first) */
+    ok &= str_eq(cur_page()->title, "FX");
+    sel_turn( -1); frames(6);
+    ok &= str_eq(cur_page()->title, "PUNCH");
+    sel_turn( 2); frames(6); ok &= str_eq(cur_page()->title, "FX");          /* a fast turn round the end: the first section */
+    sel_turn( -2); frames(6); ok &= str_eq(cur_page()->title, "PUNCH");      /* .. and back: the last */
+    sel_turn( -2); frames(6); ok &= str_eq(cur_page()->title, "MASTER");     /* a fast turn: a section */
+    sel_turn( -2); frames(6); ok &= str_eq(cur_page()->title, "SL PITCH");
+    sel_turn( -2); frames(6); ok &= str_eq(cur_page()->title, "SL BUS");    /* (its first row, not BUS 2) */
+    sel_turn( 2); frames(6); ok &= str_eq(cur_page()->title, "SL PITCH");
+    sel_turn( 1); frames(6); ok &= str_eq(cur_page()->title, "MASTER");
+    sel_turn( -1); frames(6); sel_turn( -1); frames(6); sel_turn( -1); frames(6);   /* (slow: SL PITCH, SL BUS 2, SL BUS) */
+    ok &= str_eq(cur_page()->title, "SL BUS");
+    sel_turn( -2); frames(6); ok &= str_eq(cur_page()->title, "SLICER");   /* (from a section's first row: the one before) */
+    sel_turn( 1); frames(6); sel_turn( 1); frames(6); ok &= str_eq(cur_page()->title, "SL BUS 2");
+    sel_turn( -2); frames(6); ok &= str_eq(cur_page()->title, "SL BUS");   /* (from the middle of a section: its own first row) */
+    bad += check("2026-11-13 FX ALL: the FX button's one page; SELECT a row a slow turn (every effect page's row, in order), round the ends, a section a fast turn", ok);
+    go_fx("DLY 2"); frame();
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
-    ok &= str_eq(cur_page()->title, "DLY 2") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    turn(EN_SELECT, 2); frame();
-    ok &= str_eq(cur_page()->title, "REVERB") && ui.fxmod == 1u;
-    bad += check("0.9.2 FX: the page row (short forms), crumb FX . DELAY 2 8/18; BUSES' knobs; PRESETS a sound (was the module)", ok);
-    go_home(); frame();
-    press(B_FX); frame();
-    ok = str_eq(nav_name(), "SENDS") && fx_level() == FXL_TRACK;
-    turn(EN_SELECT, 8 + XS); frame();
-    ok &= str_eq(cur_page()->title, "REVERB") && fx_level() == FXL_EFFECT;
-    ui_load = LOAD_ECO; frame();                                   /* LOAD ECO: no CHORUS, no SLICER */
-    turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "REVERB 2");
-    turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "MASTER");   /* (CHORUS, SLICER skipped) */
-    ok &= lz_tabs() == 6u && lz_count_is(XS ? "12/13" : "11/12");
-    turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "PUNCH");
-    ui_load = LOAD_FULL; frame();
-    bad += check("0.9.2 FX: from elsewhere SENDS; LOAD ECO: CHORUS and SLICER out of the chain and the tabs", ok);
+    ok = PAGES[ui.page].graph == GR_FXALL && str_eq(cur_page()->title, "DLY 2") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
+    song.g[G_DMIX] = 40; song.g[G_WIDTH] = 30;
+    turn(EN_K1, 5); ok &= song.g[G_WIDTH] != 30;        /* (KNOB 1..4 are the focused row's own four settings) */
+    ok &= cur_page()->id[0] == G_WIDTH && cur_page()->id[3] == G_DMOD;
+    bad += check("2026-11-13 FX ALL: PRESETS a sound, the page and the row stay; KNOB 1..4 the row's settings from KNOB 1 (DLY 2: WIDTH PITCH SPRAY MOD)", ok);
+    go_home(); frame(); press(B_FX); frame();
+    ok = str_eq(cur_page()->title, "DLY 2");            /* (the row kept: FX again) */
+    load_put(0u); frames(4); fxa_build();              /* LOAD ECO: no CHORUS, SLICER, SL BUS, SL PITCH rows */
+    if (fxa_cnt != n - 5u) printf("  ECO rows %u, want %u (sys_load %u)\n", fxa_cnt, n - 5u, (unsigned)sys_load);
+    ok &= fxa_cnt == n - 5u;
+    for (i = 0; i < fxa_cnt; i++)
+        ok &= !(str_eq(PAGES[fxa_r[i].pi].title, "CHORUS") || str_eq(PAGES[fxa_r[i].pi].title, "SLICER") ||
+                str_eq(PAGES[fxa_r[i].pi].title, "SL BUS") || str_eq(PAGES[fxa_r[i].pi].title, "SL PITCH"));
+    load_put(2u); frames(4); fxa_build();
+    ok &= fxa_cnt == n;
+    bad += check("2026-11-13 FX ALL: FX again the row it was on; LOAD ECO: CHORUS, SLICER, SL BUS, SL PITCH rows out", ok);
     ui_power_on();
     return bad;
 }
@@ -6594,7 +6646,7 @@ static int test_fx_scenes(void)
     ui_power_on();
     scene_ui = ufx_ui = 0;                              /* (as at power-on: not the song's, ui_power_on keeps them) */
     go_home(); frame(); press(B_FX); frame();
-    turn(EN_SELECT, 5); frame();
+    sel_turn( 5); frame();
     ok = str_eq(cur_page()->title, "SCENE") && scene_ui == 0;
     turn(EN_K1, 4); frame();                            /* ROOM HALL SPRING SHIMR */
     ok &= scene_ui == 4 && ufx_ui == 4 && song.g[G_RTYPE] == 2 && song.g[G_RMOD] == 90 && song.g[G_DPING] == 1;
@@ -6645,11 +6697,11 @@ static int test_dice_all(void)
         for (i = 0; i < 3u; i++) { turn(EN_K1, 1); frames(32); }
         ok = ix.genre != g0 && host_big_fills == f0;
         fm1_ms += 500u;                                 /* (past the SELECT turn that opened it) */
-        turn(EN_SELECT, 1); frames(32);                 /* (SELECT IDEAS' next page) */
+        sel_turn( 1); frames(32);                 /* (SELECT IDEAS' next page) */
         ok &= gen_page() == IX_SOUND && host_big_fills == f0;
-        turn(EN_SELECT, 3); frames(32);                 /* (right: TEXTURE, the chain's end) */
+        sel_turn( 3); frames(32);                 /* (right: TEXTURE, the chain's end) */
         ok &= ui.confirm == CF_DICE_ALL && gen_page() == IX_TEX;
-        turn(EN_SELECT, -4); frames(8);
+        sel_turn( -4); frames(8);
         ok &= gen_page() == IX_TRACK;
         bad += check("IDEAS: a knob or SELECT (its page) repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
     }
@@ -7221,7 +7273,7 @@ static int test_fx_latch(void)
 static int test_div_order(void)
 {
     int bad = 0, ok = 1;
-    uint32_t id, c, k, found = 0;
+    uint32_t id, c, k, row, found = 0;
     static const param_desc_t *const LISTS[] = {&TP[P_SDIV], &TP[P_ARATE], &GP[G_DTIME], &GP[G_SLRATE]};   /* (0.6.9: the bus's) */
     ui_power_on();
     for (k = 0; k < NELEM(LISTS); k++) {           /* left end -> right end: each one shorter than the one before */
@@ -7275,20 +7327,26 @@ static int test_div_order(void)
     bad += check("#48 DIV / RATE / TIME / SLICER RATE step longest -> shortest, every value once, TIME's ends hold, the picks wrap", ok);
     ok = 1;                                         /* the real knob on the pages that show them, the gauge follows */
     for (id = 0; id < NPAGES; id++)
-        for (c = 0; c < 4u; c++) {
-            int16_t *vp;
-            const param_desc_t *d;
-            ui_power_on();
-            ui.home = 0; ui.page = (uint8_t)id; page_entered();
-            if (!page_visible(id) || !(d = page_desc(cur_page(), c, &vp)) || !vp || !enum_order(d))
-                continue;
-            found++;
-            *vp = d->names != N_SLDIV ? 2 : 1;      /* 1/16 */
-            turn(EN_K1 + c, 1);
-            ok &= *vp == (d->names != N_SLDIV ? 5 : 4);  /* 16T */
-            turn(EN_K1 + c, -2);
-            ok &= *vp == (d->names != N_SLDIV ? 4 : 3);  /* 8T */
-        }
+        for (row = 0; row < (PAGES[id].graph == GR_FXALL ? 20u : 1u); row++)   /* (FX ALL: its rows, as pages) */
+            for (c = 0; c < 4u; c++) {
+                int16_t *vp;
+                const param_desc_t *d;
+                ui_power_on();
+                ui.home = 0; ui.page = (uint8_t)id; page_entered();
+                if (PAGES[id].graph == GR_FXALL) {
+                    fxa_build();
+                    if (row >= fxa_cnt) continue;
+                    fxa_cur = (uint8_t)row;
+                }
+                if (!page_visible(id) || !(d = page_desc(cur_page(), c, &vp)) || !vp || !enum_order(d))
+                    continue;
+                found++;
+                *vp = d->names != N_SLDIV ? 2 : 1;      /* 1/16 */
+                turn(EN_K1 + c, 1);
+                ok &= *vp == (d->names != N_SLDIV ? 5 : 4);  /* 16T */
+                turn(EN_K1 + c, -2);
+                ok &= *vp == (d->names != N_SLDIV ? 4 : 3);  /* 8T */
+            }
     bad += check("#48 the pages' knobs step the divisions by length (SEQ, ARP, DLY, SLICER)", ok && found >= 4u);
     return bad;
 }
@@ -8072,9 +8130,9 @@ static int test_click_menu(void)
         turn(EN_K1 + c, 1); ok &= cin_bars == 1u;
         turn(EN_K1 + c, 1); ok &= cin_bars == 2u;
         glo_id(G_TRKS); frame();                      /* TRACKS: MAIN's list, KNOB 2 (G_TRKS; chord-harp fork: 1..6) */
-        ok &= cur_page()->id[1] == G_TRKS && trk_live == 4u && menu_get(MI_TRACKS) == 3u && str_eq(menu_vname(MI_TRACKS, 0), "1");
-        turn(EN_K2, -1); frame(); ok &= trk_live == 3u && !(ui_rec_prefs & 0x80u) && ui_trks == 3u;
-        turn(EN_K2, 1); turn(EN_K2, 1); turn(EN_K2, 1); frame();   /* (a value a detent) */
+        ok &= cur_page()->id[glo_kn] == G_TRKS && trk_live == 4u && menu_get(MI_TRACKS) == 3u && str_eq(menu_vname(MI_TRACKS, 0), "1");
+        turn((EN_K1 + glo_kn), -1); frame(); ok &= trk_live == 3u && !(ui_rec_prefs & 0x80u) && ui_trks == 3u;
+        turn((EN_K1 + glo_kn), 1); turn((EN_K1 + glo_kn), 1); turn((EN_K1 + glo_kn), 1); frame();   /* (a value a detent) */
         ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && ui_trks == 6u;   /* 6 (the old bit too) */
         press(B_HOME);
         bad += check("GLO > CLICK: CLICK, CLICK LEVEL, COUNT-IN on their knobs; SYSTEM: TRACKS; applied at once", ok && !ui.menu);
@@ -8106,18 +8164,18 @@ static int test_click_menu(void)
     }
     {   /* (0.6.19) GLO > SYSTEM's TRKS (KNOB 2): the same setting, both ways */
         glo_id(G_TRKS);
-        turn(EN_K2, -2); frame();
+        turn((EN_K1 + glo_kn), -2); frame();
         ok = trk_live == 4u && !(ui_rec_prefs & 0x80u) && trks_ui == 3;
-        turn(EN_K2, 2); frame();
+        turn((EN_K1 + glo_kn), 2); frame();
         ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 5 && msg_is("6 TRACKS");
         trks_put(2); frame();
         ok &= trks_ui == 2;                             /* (MENU's change shown there) */
         trks_put(5); frame();
         glo_id(G_LOADP);
         ok &= load_ui == 2 && sys_load == LOAD_FULL;    /* (0.6.30) LOAD: FULL, the default */
-        turn(EN_K2, -1); frame();
+        turn((EN_K1 + glo_kn), -1); frame();
         ok &= load_ui == 1 && sys_load == LOAD_LITE && ui_load == 1u && msg_is("LOAD LITE: LIGHTER FX");
-        turn(EN_K2, -1); frame();
+        turn((EN_K1 + glo_kn), -1); frame();
         ok &= load_ui == 0 && sys_load == LOAD_ECO && ui_load == 2u && trk_live == NTRK;   /* (TRACKS its own) */
         load_put(2u); frame();
         ok &= load_ui == 2 && sys_load == LOAD_FULL && !ui_load;
@@ -8160,8 +8218,8 @@ static int test_click_menu(void)
         ok &= fx.rtype == 0u;                           /* CLOUD as ROOM */
         ft.engine = ENGI_FM6;
         ok &= trk_nvoice(&ft) == LITE_FM6_POLY;         /* FM6: two voices */
-        song.g[G_RTYPE] = 2; go_title("REVERB"); frame();
-        ok &= strstr(ui.col[0], "|SHIMR|LITE") != 0;   /* the card says it is swapped */
+        song.g[G_RTYPE] = 2; go_fx("REVERB"); frame();
+        ok &= str_eq(cells_of_cur()[0].v, "SHIMR") && str_eq(cells_of_cur()[0].u, "LITE");   /* the cell says it is swapped */
         load_put(2u);
         ok &= !sys_load && trk_nvoice(&ft) == FM6_POLY;
         song.g[G_RTYPE] = 2; mix_block(o, CTL); mix_block(o, CTL);
@@ -8184,19 +8242,24 @@ static int test_click_menu(void)
             ft.engine = ENGI_DRUM;
             ok &= trk_nvoice(&ft) == (ENGINES[ENGI_DRUM]->poly ? ENGINES[ENGI_DRUM]->poly : NVOICE);
             for (i = 0; i < NPAGES; i++) {
-                int sl = PAGES[i].graph == GR_SLCR || PAGES[i].graph == GR_SLPIT || str_eq(PAGES[i].title, "CHORUS");
-                if (sl) hidden &= !page_visible(i);
-                shown += str_eq(PAGES[i].title, "REVERB") && page_visible(i);
+                (void)i;
+            }
+            fxa_cnt = 0; fxa_build();                   /* (FX ALL: no CHORUS, SLICER, SL BUS, SL PITCH row; the reverb's stays) */
+            for (i = 0; i < fxa_cnt; i++) {
+                int sl = PAGES[fxa_r[i].pi].graph == GR_SLCR || PAGES[fxa_r[i].pi].graph == GR_SLPIT || str_eq(PAGES[fxa_r[i].pi].title, "CHORUS");
+                if (sl) hidden = 0;
+                shown += str_eq(PAGES[fxa_r[i].pi].title, "REVERB");
             }
             ok &= hidden && shown == 1u;
             ok &= voice_cap() == ECO_VOICES && fx.sp_ns == SP_N_ECO;   /* (0.6.70) 6 voices shared, a shorter SPRING */
-            go_title("REVERB"); frame();
-            ok &= strstr(ui.col[0], "|ROOM|ECO") != 0;
+            go_fx("REVERB"); frame();
+            ok &= str_eq(cells_of_cur()[0].v, "ROOM") && str_eq(cells_of_cur()[0].u, "ECO");
             load_put(2u);
             song.g[G_RTYPE] = 1; mix_block(o, CTL);
             ok &= voice_cap() == NVOICE && fx.sp_ns == SP_N;   /* FULL: all of them */
-            for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SLICER"); i++) {}
-            ok &= slicer_on() && page_visible(i);
+            fxa_cnt = 0; fxa_build();
+            for (i = 0; i < fxa_cnt && !str_eq(PAGES[fxa_r[i].pi].title, "SLICER"); i++) {}
+            ok &= slicer_on() && i < fxa_cnt;
             song.g[G_SLMODE] = sm0;
             press(B_HOME); frame();
             bad += check("LOAD ECO: reverb SPRING (4 stages), no SLICER / chorus (pages hidden), 4 voices a synth, 6 shared, DRUM as ever; FULL back", ok);
@@ -8489,21 +8552,21 @@ static int test_bpm_lock(void)
     frame();
     go_title("MAIN"); frame();                        /* (0.6.67: SELECT alone scrolls the pages, never the tempo) */
     b0 = song.g[G_BPM];
-    turn(EN_SELECT, 1);
-    ok = song.g[G_BPM] == b0 && str_eq(cur_page()->title, "DEVICE");
-    turn(EN_SELECT, -1);
-    ok &= str_eq(cur_page()->title, "MAIN");
-    go_home(); frame(); turn(EN_SELECT, 1);
+    sel_turn( 1);
+    ok = song.g[G_BPM] == b0 && cur_page()->fam == FAM_GLO && fxa_cur == 1u;   /* (2026-11-13: SELECT scrolls GLO's rows) */
+    sel_turn( -1);
+    ok &= cur_page()->fam == FAM_GLO && fxa_cur == 0u;
+    go_home(); frame(); sel_turn( 1);
     ok &= !ui.home && !ui.confirm && str_eq(cur_page()->title, "PRESETS");   /* (2026-11-02: TRACKS PRESETS MORPH MIXER
                                                          * SENDS MACRO IDEAS ..) */
-    turn(EN_SELECT, 5);
+    sel_turn( 5);
     ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
-    go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
+    go_title("EDIT 1"); frame(); sel_turn( 1);
     ok &= str_eq(cur_page()->title, "PATCH");                         /* (2026-11-11: EDIT is one page, SOUND: it stays) */
-    turn(EN_SELECT, -1);
+    sel_turn( -1);
     ok &= str_eq(cur_page()->title, "PATCH");
-    go_title("ENV DEST"); frame(); sel_first(); turn(EN_SELECT, -1);   /* (2026-11-02: it wraps) */
+    go_title("ENV DEST"); frame(); sel_first(); sel_turn( -1);   /* (2026-11-02: it wraps) */
     ok &= str_eq(nav_name(), "ALL DEST") && !ui.home;                 /* (ENV -> ALL DEST, the last; no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (round, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
@@ -8513,7 +8576,7 @@ static int test_bpm_lock(void)
         go_title(i ? "SYSTEM" : "MAIN");
         frame();
         b0 = song.g[G_BPM];
-        turn(EN_SELECT, 1);
+        sel_turn( 1);
         ok &= song.g[G_BPM] == b0 && !ui.bpm_t;
     }
     bad += check("SELECT alone leaves the tempo on GLOBAL and SYSTEM", ok);
@@ -8525,7 +8588,7 @@ static int test_bpm_lock(void)
         go_title("ENV"); frame();
         for (j = 0; j < 8u; j++) before[j] = TSEL->p[P_E0 + j];
         b0 = song.g[G_BPM]; fm1_ms += 1200u;
-        turn(EN_SELECT, 1);                             /* (0.6.67) SELECT alone: a page on, no dice */
+        sel_turn( 1);                             /* (0.6.67) SELECT alone: a page on, no dice */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
         ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "ENV DEST") && !ui.confirm;   /* (0.9.2: the next page) */
         fm1_ms += 1200u;
@@ -8585,7 +8648,7 @@ static int test_bpm_lock(void)
     {   /* (0.6.67) the MIXER: SELECT the next of GLO's pages, the tempo kept */
         go_title("MIXER"); frame(); fm1_ms += 1200u;
         b0 = song.g[G_BPM];
-        turn(EN_SELECT, 1);                             /* (0.9.2: MIXER -> SENDS, the next page) */
+        sel_turn( 1);                             /* (0.9.2: MIXER -> SENDS, the next page) */
         ok = song.g[G_BPM] == b0 && str_eq(cur_page()->title, "SENDS") && !ui.confirm;
         bad += check("0.6.69: SELECT on the MIXER goes through GLO's pages (0.9.2: SENDS next)", ok);
     }
@@ -8593,8 +8656,8 @@ static int test_bpm_lock(void)
     /* ON: GLO > GLOBAL's BPM knob */
     glo_id(G_BPM); frame();
     b0 = song.g[G_BPM];
-    turn(EN_K2, 1);
-    ok = str_eq(cur_page()->title, "MAIN") && cur_page()->id[1] == G_BPM && song.g[G_BPM] == b0 + 1;
+    turn((EN_K1 + glo_kn), 1);
+    ok = cur_page()->fam == FAM_GLO && cur_page()->id[0] == G_BPM && song.g[G_BPM] == b0 + 1;
     bad += check("GLO > MAIN: BPM (KNOB 2 on its row) still sets the tempo", ok);
 
     /* ON: REC + KNOB 3 (a combo: the map, no arming, no page; was GLO + SELECT), OCT- puts nothing back, B3 TAP */
@@ -8941,7 +9004,7 @@ static int test_skin(void)
         ui_power_on(); frame();
         press(B_EDIT);
         ok = !frames_layer_hint(HINT_DWELL_MS + 64u) && !ui.hint_pg;
-        go_title("SPICE"); frames(160); turn(EN_SELECT, 1); frames(HINT_DWELL_MS + 64u);
+        go_title("SPICE"); frames(160); sel_turn( 1); frames(HINT_DWELL_MS + 64u);
         ok &= str_eq(cur_page()->title, "AUTOMATION") && ui.msg_t && ui.hint_pg && msg_is("REC + PLAY, TURN A KNOB");
         go_title("ENV"); frame();
         ok &= !ui.msg_t && !ui.hint_pg;
@@ -8956,6 +9019,7 @@ static int test_skin(void)
             ui.force = 1; frame();
             if (!lz_on() || ui.home) continue;
             npg++;
+            if (PAGES[i].graph == GR_FXALL) { okp &= fxall_on() && graph_h() == 240u - TF_SC_Y - 4u && skin_ink(TF_KN_Y, TF_KN_Y + TF_KN_H) > 0; continue; }   /* (its panel runs to the foot) */
             okp &= card_y() == TF_KN_Y && skin_ink(TF_KN_Y, TF_KN_Y + TF_KN_H) > 0 && skin_ink(TF_PG_Y, 240) > 0;
             if (!okp) { printf("  %s\n", PAGES[i].title); break; }
         }
@@ -8968,7 +9032,7 @@ static int test_skin(void)
             ok &= lz_on() && lz_fam() == LZ_HOME && home_level() == i && skin_ink(TF_PG_Y, 240) > 0 &&   /* (the page row) */
                   graph_h() * 240u <= CV_MAX;   /* (the canvas holds the whole panel: else its foot is never redrawn) */
         }
-        bad += check("every page of the lenses and HOME's three levels drawn", ok && npg > 40u);
+        bad += check("every page of the lenses and HOME's three levels drawn", ok && npg > 33u);
     }
     ui_power_on(); frame();
     return bad;
@@ -9260,7 +9324,7 @@ static int lz_tab_lit(uint32_t l)
     if (pg_row() && ui.layer)                           /* (2026-11-02) a layer: MAP STATE in the page row */
         return (ui.lylv & 1u) == l && swap16(host_screen[(TF_PG_Y + 2) * 240 + 120]) == T_THEME;
     if (pg_row())
-        return nav_ch(nav_sec())->e[nav_cur()].g == l && swap16(host_screen[(TF_PG_Y + 2) * 240 + 120]) == T_THEME;
+        return nav_ch(nav_sec())->e[nav_cur()].g == l && (fxall_on() || swap16(host_screen[(TF_PG_Y + 2) * 240 + 120]) == T_THEME);   /* (FX ALL's design: no page row, its panel runs to the foot) */
     return 0;
 }
 static uint32_t lz_tabs(void)                           /* how many tabs (a button's page: its groups shown) */
@@ -9314,45 +9378,45 @@ static int test_lz_home(void)
          lz_tabs() == 4u && lz_crumb_is("HOME \xB7 TRACKS") && lz_count_is(HCNT(1));
     press(B_HOME); frame();                                         /* a HOME tap on TRACKS: TRACKS */
     ok &= ui.home && home_level() == 0u && lz_count_is(HCNT(1));
-    turn(EN_SELECT, 1); frame();                                    /* SELECT right: PRESETS */
+    sel_turn( 1); frame();                                    /* SELECT right: PRESETS */
     ok &= !ui.home && nav_sec() == SEC_HOME && str_eq(cur_page()->title, "PRESETS") && lz_tab_lit(1) &&
           lz_crumb_is("HOME \xB7 PRESETS") && lz_count_is(HCNT(2));
-    turn(EN_SELECT, 1); frame();                                    /* MORPH */
+    sel_turn( 1); frame();                                    /* MORPH */
     ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(3));
     press(B_HOME); frame();                                         /* a HOME tap: TRACKS */
     ok &= ui.home && home_level() == 0u && !home_set();
-    turn(EN_SELECT, 3); frame();                                    /* MIXER */
+    sel_turn( 3); frame();                                    /* MIXER */
     ok &= str_eq(cur_page()->title, "MIXER") && lz_tab_lit(2) && lz_crumb_is("HOME \xB7 MIXER") && lz_count_is(HCNT(4));
 #if FELUCCA_MACROPAGE
-    turn(EN_SELECT, 2); frame();                                    /* SENDS, MACRO */
+    sel_turn( 2); frame();                                    /* SENDS, MACRO */
     ok &= ui.home && home_macros() && lz_crumb_is("HOME \xB7 MACRO") && lz_count_is("6/11");
     k = macro_v[0];
     turn(EN_K1, 3); frame();
     ok &= macro_v[0] == (uint8_t)(k + 3u) && !strncmp(ui.col[0], "M1|", 3);
     c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
-    turn(EN_SELECT, -5); frame();                                   /* TRACKS: the HOME knobs */
+    sel_turn( -5); frame();                                   /* TRACKS: the HOME knobs */
 #else
-    turn(EN_SELECT, 1); frame();                                    /* SENDS (2026-11-06: no MACRO page) */
+    sel_turn( 1); frame();                                    /* SENDS (2026-11-06: no MACRO page) */
     ok &= !home_macros();
     k = macro_v[0] - 3u;                                            /* (the check below adds the 3 the MACRO page turned) */
     c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
-    turn(EN_SELECT, -4); frame();                                   /* TRACKS: the HOME knobs */
+    sel_turn( -4); frame();                                   /* TRACKS: the HOME knobs */
 #endif
     turn(EN_K1, 1); frame();
     ok &= ui.home && !home_set() && home_level() == 0u && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c &&
           macro_v[0] == (uint8_t)(k + 3u);
-    turn(EN_SELECT, -1); frame();                                   /* (it wraps, IDEA TEX) */
+    sel_turn( -1); frame();                                   /* (it wraps, IDEA TEX) */
     ok &= gen_on() && nav_cur() == HOME_IDEA + 4u;
-    turn(EN_SELECT, 1); frame();                                    /* (.. and on round: TRACKS) */
+    sel_turn( 1); frame();                                    /* (.. and on round: TRACKS) */
     ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
     bad += check("HOME: TRACKS PRESETS MORPH MIXER SENDS MACRO IDEAS one chain by SELECT (round), a HOME tap TRACKS, n/11", ok);
 #if FELUCCA_MACROPAGE
-    turn(EN_SELECT, 5); frame();                                    /* MACRO */
+    sel_turn( 5); frame();                                    /* MACRO */
     ok = home_macros() && lz_tab_lit(2);
     fm1_ms += 1000u;
-    turn(EN_SELECT, 1); frame();                                    /* IDEAS: TRACK */
+    sel_turn( 1); frame();                                    /* IDEAS: TRACK */
 #else
-    turn(EN_SELECT, 5); frame();                                    /* IDEAS: TRACK (SENDS was the last page before) */
+    sel_turn( 5); frame();                                    /* IDEAS: TRACK (SENDS was the last page before) */
     ok = 1;
     fm1_ms += 1000u;
 #endif
@@ -9361,33 +9425,33 @@ static int test_lz_home(void)
     k = ix.genre;
     turn(EN_PRESET, 1); frame();
     ok &= ix.genre == (k + 1u) % (NDSTYLE + 1u);                    /* PRESETS: the GENRE */
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(FELUCCA_MACROPAGE ? "8/11" : "7/10");
-    turn(EN_SELECT, -2); frame();                                   /* back: MACRO (else TRACKS-side SENDS), IDEAS shut */
+    sel_turn( -2); frame();                                   /* back: MACRO (else TRACKS-side SENDS), IDEAS shut */
 #if FELUCCA_MACROPAGE
     ok &= !ui.confirm && ui.home && home_macros();
 #else
     ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "SENDS");
 #endif
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= gen_on() && gen_page() == 0u;
     press(B_HOME); frame();                                         /* a HOME tap on IDEAS: round to TRACKS */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     bad += check("HOME: MACRO, then IDEAS TRACK SOUND .. (PRESETS its GENRE); SELECT back out; a HOME tap on IDEAS: TRACKS", ok);
-    turn(EN_SELECT, FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
+    sel_turn( FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
     ok = gen_on() && gen_page() == 1u;
     press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
-    ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV");
+    ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV LIST");
     press(B_HOME); frame();                                         /* HOME: TRACKS (IDEAS shut) */
     ok &= !gen_on() && ui.home && home_level() == 0u;
-    turn(EN_SELECT, FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
+    sel_turn( FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
     turn(EN_ALGO, 1); frame();
     ok &= song.sel == 1u && gen_on() && gen_page() == 1u;           /* (ALGORITHM the track there too) */
     turn(EN_ALGO, -1); frame();
     press(B_OCTDN); frame();                                        /* OCT-: TRACKS */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     bad += check("HOME: IDEAS are HOME's pages, not modal (ENV leaves them, HOME then TRACKS, ALGORITHM works); OCT- TRACKS", ok);
-    turn(EN_SELECT, 3); frame();                                    /* MIXER */
+    sel_turn( 3); frame();                                    /* MIXER */
     open_family(FAM_ENV); frame();
     ok = !ui.home;
     press(B_HOME); frame();                                         /* HOME from elsewhere: TRACKS */
@@ -9396,7 +9460,7 @@ static int test_lz_home(void)
         ui.force = 1; frame();                                      /* TRACKS */
         ok &= trk_face() && graph_y() == TF_SC_Y && card_y() == TF_KN_Y;
 #if FELUCCA_MACROPAGE
-        turn(EN_SELECT, 5); frame(); ui.force = 1; frame();        /* MACRO */
+        sel_turn( 5); frame(); ui.force = 1; frame();        /* MACRO */
         ok &= home_macros() && !trk_face() && graph_y() == TF_SC_Y && lz_tab_lit(2);
 #endif
     }
@@ -9419,7 +9483,7 @@ static int test_lz_edit(void)
     press(B_EDIT); frame();
     ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("EDIT \xB7 SOUND") &&
          lz_count_is("1/1");                                       /* (2026-11-11: SOUND, the PATCH entry, the whole chain: FILTER VOICE VOICE 2 DRIFT are its rows) */
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "PATCH");
     frames(320); press(B_EDIT); frame();                            /* EDIT on EDIT: HOME's TRACKS */
     ok &= ui.home && home_level() == 0u;
@@ -9429,7 +9493,7 @@ static int test_lz_edit(void)
     ok &= ui.home && home_level() == 0u;
     bad += check("0.9.2 EDIT: one chain by SELECT (round), EDIT its first page, an EDIT tap on it TRACKS; tabs, crumb, n/N", ok);
     frames(320); press(B_EDIT); frame();
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     open_family(FAM_ENV); frame();
     press(B_EDIT); frame();
     ok = str_eq(cur_page()->title, "PATCH") && pd_level() == 0u;
@@ -9440,16 +9504,17 @@ static int test_lz_edit(void)
     ui_power_on(); set_engine_of(TSEL, 0); go_title("PATCH"); frame();
     {   /* (2026-11-11) SOUND's KEYS row (the old VOICE 2: DETUNE, KEY>F, MW>) */
         uint32_t r;
-        for (r = 0; r < plist_n() && sound_row(TSEL, r)->id[0] != P_DETUNE; r++) ;
-        ok = r < plist_n();
-        plist_cur = (uint8_t)r; frame();
+        cur_page();
+        for (r = 0; r < fxa_cnt && fxa_r[r].id[1] != P_DETUNE; r++) ;
+        ok = r < fxa_cnt;
+        fxa_cur = (uint8_t)r; frame();
         v = TSEL->p[P_DETUNE];
         turn(EN_K2, 3); frame();
         ok &= TSEL->p[P_DETUNE] != v;
     }
     set_engine_of(TSEL, ENGI_DRUM); frame();
     set_engine_of(TSEL, ENGI_FM6); frame();
-    ok &= nav_put(SEC_EDIT, "OP 1");
+    ok &= nav_put(SEC_EDIT, "SOUND");
     bad += check("0.9.2 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM", ok);
     ui_power_on();
     return bad;
@@ -9465,23 +9530,18 @@ static int test_lz_env(void)
     uint32_t pr;
     ui_power_on(); frame();
     press(B_ENV); frame();
-    ok = pd_on() && lz_fam() == LZ_ENV && pd_level() == 1u && str_eq(cur_page()->title, "ENV") && lz_tab_lit(1) &&
-         lz_crumb_is("ENV \xB7 ENV") && lz_count_is("1/5");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("ENV \xB7 ENV DEST") && lz_count_is("2/5");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "STAGE") && lz_tab_lit(2) && lz_count_is("3/5");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 0u && lz_tab_lit(0) && str_eq(cur_page()->title, "ENV") && lz_crumb_is("ENV \xB7 ALL ENV") &&
-          lz_count_is("4/5");
-    turn(EN_SELECT, 1); frame();
+    ok = pd_on() && lz_fam() == LZ_ENV && pd_level() == 1u && str_eq(cur_page()->title, "ENV LIST") &&
+         lz_crumb_is("ENV \xB7 ENV") && lz_count_is("1/3");
+    sel_turn( 1); frame();                                          /* (the list's end goes on: ALL ENV) */
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "ENV") && lz_crumb_is("ENV \xB7 ALL ENV") && lz_count_is("2/3");
+    sel_turn( 1); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("ENV \xB7 ALL DEST");
     frames(320); press(B_ENV); frame();
     ok &= ui.home && home_level() == 0u;                            /* (ENV on ENV: TRACKS) */
     frames(320); press(B_ENV); frame();
     ok &= pd_level() == 1u && lz_crumb_is("ENV \xB7 ENV");
-    bad += check("ENV: opens on ENV (2026-11-02); ENV, ENV DEST, STAGE, ALL ENV, ALL DEST by SELECT; the taps", ok);
-    turn(EN_SELECT, -2); frame();                                   /* ALL ENV (round) */
+    bad += check("ENV: opens on ENV LIST (2026-11-12: ENV + ENV DEST as a picture and rows); ENV LIST, ALL ENV, ALL DEST (2026-11-13: STAGE is gone, its rows are ENV LIST's); the taps", ok);
+    sel_turn( -2); frame();                                   /* ALL ENV (round) */
     pr = TSEL->preset;                                              /* TRACKS: ALGORITHM the track, PRESETS the sound */
     turn(EN_ALGO, 1); frame();
     ok = song.sel == 1u && pd_level() == 0u && pd_on();
@@ -9490,23 +9550,22 @@ static int test_lz_env(void)
     turn(EN_PRESET, 1); frame();
     ok &= song.sel == 0u && pd_level() == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
     bad += check("0.9.2 ENV > TRACKS: ALGORITHM picks the track (the tiles), PRESETS the sound (was the track); the page stays", ok);
-    go_title("STAGE"); frame();
-    ui.stage = 0;
-    turn(EN_K1, 1); frame();
-    ok = ui.stage == 1u && !strncmp(ui.col[1], "DEC|", 4);
-    v = TSEL->p[P_DEC];
+    go_list("ENV LIST", 0); frame();                                /* (2026-11-13) rows of four on KNOB 1..4, SELECT the rows */
+    v = TSEL->p[P_ATK];
+    turn(EN_K1, 3); frame();
+    ok = TSEL->p[P_ATK] != v;
+    v = TSEL->p[P_REL];
+    turn(EN_K4, 3); frame();
+    ok &= TSEL->p[P_REL] != v;
+    turn(EN_SELECT, 1); turn(EN_SELECT, -1); turn(EN_SELECT, 1); turn(EN_SELECT, 1); frame();   /* (a row a detent: TARGETS) */
+    v = TSEL->p[P_ED_PIT];
     turn(EN_K2, 3); frame();
-    ok &= TSEL->p[P_DEC] > v;
-    turn(EN_K1, 1); frame();
-    ok &= ui.stage == 2u;
-    v = TSEL->p[P_ELOOP];
-    turn(EN_K3, 1); frame();
-    ok &= TSEL->p[P_ELOOP] != v;
-    turn(EN_K1, 5); frame();
-    ok &= ui.stage == 3u;                                           /* (no wrap) */
-    turn(EN_PRESET, 1); frame();
-    ok &= ui.stage == 3u && str_eq(cur_page()->title, "STAGE");     /* (PRESETS: a sound, not the stage) */
-    bad += check("0.9.2 ENV > STAGE: KNOB 1 the stage, 2 its value, 3 LOOP; PRESETS a sound (was the stage)", ok);
+    ok &= fxa_cur == 2u && TSEL->p[P_ED_PIT] != v;
+    go_list("LFO LIST", 1); frame();
+    v = TSEL->p[P_LD_FLT];
+    turn(EN_K3, 3); frame();
+    ok &= TSEL->p[P_LD_FLT] != v;
+    bad += check("2026-11-13 ENV LIST / LFO LIST: rows of four on KNOB 1..4, SELECT the rows (ENV, TARGETS; LFO's TARGETS)", ok);
     ui_power_on();
     return bad;
 }
@@ -9519,40 +9578,39 @@ static int test_lz_mod(void)
     uint32_t pr;
     ui_power_on(); frame();
     press(B_LFO); frame();
-    ok = pd_on() && lz_fam() == LZ_MOD && pd_level() == 1u && str_eq(cur_page()->title, "LFO") && lz_tab_lit(1) &&
-         lz_crumb_is("LFO \xB7 LFO") && lz_count_is("1/5");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "LFO DEST");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "MSEQ") && lz_crumb_is("LFO \xB7 MSEQ");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "MSEQ 2") && lz_crumb_is("LFO \xB7 MSEQ 2");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "MOD") && lz_tab_lit(0) && lz_count_is("5/5");
+    ok = pd_on() && lz_fam() == LZ_MOD && pd_level() == 1u && str_eq(cur_page()->title, "LFO LIST") &&
+         lz_crumb_is("LFO \xB7 LFO");
     frames(320); press(B_LFO); frame();
     ok &= ui.home && home_level() == 0u;                            /* (LFO on LFO: TRACKS) */
     frames(320); press(B_LFO); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "LFO");
-    bad += check("LFO: opens on LFO (2026-11-02); LFO, LFO DEST, MSEQ, MSEQ 2, MOD by SELECT; an LFO tap on it TRACKS", ok);
-    turn(EN_SELECT, -1); frame();                                   /* MOD (round) */
-    mod_ui_slot = 0;
-    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
-    turn(EN_K1, 1); frame();
-    ok = mod_ui_slot == 1u;
-    turn(EN_K1, -1); frame();
-    ok &= mod_ui_slot == 0u;
-    pr = TSEL->preset;
-    turn(EN_PRESET, 1); frame();
-    ok &= mod_ui_slot == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0)) && str_eq(cur_page()->title, "MOD");
-    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
-    {
-        static uint16_t a[240 * 140];
-        frames(1600);                                               /* (any toast gone) */
-        memcpy(a, host_screen + graph_y() * 240, sizeof a);
-        frames(160);
-        ok &= memcmp(a, host_screen + graph_y() * 240, sizeof a) != 0;   /* (the pulse along slot 1's curve) */
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "LFO LIST");
+    bad += check("LFO: opens on LFO LIST (2026-11-12); one page (MSEQ, MOD are its rows); an LFO tap on it TRACKS", ok);
+    {   /* (2026-11-13) MOD and MSEQ are LFO LIST's rows: a slot a row (SRC DST AMT), the steps four to a row */
+        uint32_t r;
+        int16_t v;
+        go_list("LFO LIST", 0); frame();
+        cur_page();
+        for (r = 0; r < fxa_cnt && fxa_r[r].id[0] != P_M2SRC; r++) ;
+        ok = r < fxa_cnt;
+        fxa_cur = (uint8_t)r; frame();
+        v = TSEL->p[P_M2AMT];
+        turn(EN_K3, 3); frame();
+        ok &= TSEL->p[P_M2AMT] != v;
+        for (r = 0; r < fxa_cnt && fxa_r[r].id[0] != P_MS0 + 4u; r++) ;
+        ok &= r < fxa_cnt;
+        fxa_cur = (uint8_t)r; frame();
+        v = TSEL->p[P_MS0 + 6u];
+        turn(EN_K3, 3); frame();
+        ok &= TSEL->p[P_MS0 + 6u] != v;
+        for (r = 0; r < fxa_cnt && fxa_r[r].id[0] != P_MSLEN; r++) ;
+        ok &= r < fxa_cnt;
+        fxa_cur = (uint8_t)r; frame();
+        v = TSEL->p[P_MSDIV];
+        turn(EN_K2, 1); frame();
+        ok &= TSEL->p[P_MSDIV] != v;
+        (void)pr;
     }
-    bad += check("0.9.2 LFO > MOD: KNOB 1 the slot (PRESETS a sound, was the slot); the net's pulse runs", ok);
+    bad += check("2026-11-13 LFO LIST: MOD slots and MSEQ steps are rows (KNOB 1..4)", ok);
     ui_power_on();
     return bad;
 }
@@ -9569,55 +9627,46 @@ static int test_lz_key(void)
     ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(0) &&
          lz_tabs() == 7u && lz_crumb_is("SCL \xB7 SCALE") && lz_count_is("1/7");   /* (chord-harp fork: KEY CHORD
                                                                      * HARP OMNI PROG GUITAR) */
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(1) && lz_crumb_is("SCL \xB7 CHORD");
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "HARP") && lz_tab_lit(2) && TSEL->p[P_CHRD] == CD_HARP;
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "OMNI") && lz_tab_lit(3) && TSEL->p[P_CHRD] == CD_OMNI;
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "PROG") && lz_tab_lit(4) && TSEL->p[P_CHRD] == CD_PROG;
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "GUITAR") && lz_tab_lit(5) && TSEL->p[P_CHRD] == CD_GTR;
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "TUNE") && lz_tab_lit(6) && TSEL->p[P_CHRD] == CD_GTR;   /* (GUITAR's tunings and shapes: its mode stays on) */
     frames(320); press(B_SCL); frame();
     ok &= ui.home && home_level() == 0u;                            /* (SCL on SCL: TRACKS) */
     frames(320); press(B_SCL); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
-    turn(EN_SELECT, 5); frame();
+    sel_turn( 5); frame();
     ok &= str_eq(cur_page()->title, "GUITAR");
-    turn(EN_SELECT, 2); frame();
+    sel_turn( 2); frame();
     ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL's chain wraps there: not into ARP) */
-    turn(EN_SELECT, -1); frame();
+    sel_turn( -1); frame();
     frames(320); press(B_ARP); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "ARP") && lz_tab_lit(0) && lz_tabs() == 1u &&
-          lz_crumb_is("ARP \xB7 ARP") && lz_count_is(FELUCCA_AMBIENT ? "1/4" : "1/3");
-    turn(EN_SELECT, 2); frame();                                    /* (2026-11-02) ARP 3: SPICE, LOOP */
-    ok &= str_eq(cur_page()->title, "ARP 3") && cur_page()->id[0] == P_SPICE && cur_page()->id[1] == P_SLOOP;
-#if FELUCCA_AMBIENT
-    turn(EN_SELECT, 1); frame();                                    /* (2026-11-05) AMBIENT: AMBNT, DENS, MOTN, SPACE */
-    ok &= str_eq(cur_page()->title, "AMBIENT") && cur_page()->id[0] == P_AMB && cur_page()->id[3] == P_ASPC;
-    turn(EN_SELECT, -2); frame();
-#else
-    turn(EN_SELECT, -1); frame();
-#endif
-    ok &= str_eq(cur_page()->title, "ARP 2") && lz_crumb_is("ARP \xB7 ARP 2");
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "ARP LIST") && lz_tab_lit(0) && lz_tabs() == 1u &&
+          lz_crumb_is("ARP \xB7 ARP");                              /* (2026-11-12) ARP, ARP 2, ARP 3, AMBIENT and STRUM: one list */
+    ok &= PAGES[ui.page].graph == GR_FXALL && fxall_on() && fxa_cnt == (FELUCCA_AMBIENT ? 4u : 3u);
     frames(320); press(B_ARP); frame();
     ok &= ui.home && home_level() == 0u;                            /* (ARP on ARP: TRACKS) */
     frames(320); press(B_ARP); frame();
-    turn(EN_SELECT, 1); frame();
+    sel_turn( 1); frame();
     press(B_SCL); frame();
     ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL from ARP: SCL's first) */
     press(B_ARP); frame();
-    ok &= str_eq(cur_page()->title, "ARP");                         /* (ARP from SCL: ARP's first) */
-    bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD . HARP . OMNI . PROG . GUITAR . TUNE, ARP ARP . ARP 2 . ARP 3 . AMBIENT; taps, SELECT, each its first page", ok);
+    ok &= str_eq(cur_page()->title, "ARP LIST");                    /* (ARP from SCL: ARP's first) */
+    bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD . HARP . OMNI . PROG . GUITAR . TUNE, ARP one list (ARP LIST); taps, SELECT, each its first page", ok);
     press(B_SCL); frame();
-    turn(EN_SELECT, 4); frame();
+    sel_turn( 4); frame();
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
     ok = song.sel == 0u && str_eq(cur_page()->title, "PROG") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    turn(EN_SELECT, -4); frame();
+    sel_turn( -4); frame();
     r = TSEL->p[P_ROOT];
     turn(EN_PRESET, 1); frame();
     ok &= pd_level() == 0u && TSEL->p[P_ROOT] == r;
@@ -9641,51 +9690,42 @@ static int test_lz_glo(void)
     turn(EN_K3, 4); frame();
     ok &= TSEL->p[P_DLY] > v;
     frames(320); press(B_GLO); frame();
-    ok &= pd_on() && lz_fam() == LZ_GLO && pd_level() == 1u && str_eq(cur_page()->title, "MAIN") && lz_tab_lit(0) &&
-         lz_crumb_is("GLO \xB7 MAIN") && lz_count_is("1/4");
-    turn(EN_SELECT, 1); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "DEVICE");
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "CONTROL");
-    turn(EN_SELECT, -1); frame();
+    ok &= pd_on() && lz_fam() == LZ_GLO && pd_level() == 1u && str_eq(cur_page()->title, "GLO") && lz_crumb_is("GLO \xB7 GLO");
+    sel_turn( 1); frame();
+    ok &= fxa_cur == 1u && str_eq(cur_page()->title, "GLO");        /* (2026-11-13: SELECT the rows) */
+    sel_turn( -1); frame();
     frames(320); press(B_GLO); frame();
     ok &= ui.home && home_level() == 0u;                            /* (GLO on GLO: TRACKS) */
     open_family(FAM_ENV); frame();
     press(B_GLO); frame();
-    ok &= str_eq(cur_page()->title, "MAIN");                        /* (from elsewhere: its first) */
-    turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "DEVICE");
+    ok &= str_eq(cur_page()->title, "GLO");                         /* (from elsewhere: its page) */
     {                                                   /* (2026-11-02) the MENU's rows as GLO's knobs */
         uint32_t pal = settings.palette, hold = settings_hold;
-        glo_row(MI_COLOR);                              /* (topic C: KNOB 2 sets the row KNOB 1 is on) */
-        turn(EN_K2, 1); frame();
-        ok &= settings.palette != pal && glo_k == 1u;
-        turn(EN_K2, -1); frame();
+        uint32_t kc = glo_row(MI_COLOR);
+        turn(EN_K1 + kc, 1); frame();
+        ok &= settings.palette != pal && glo_k == kc;
+        turn(EN_K1 + kc, -1); frame();
         ok &= settings.palette == pal;
-        turn(EN_K1, 1); frame();                          /* (KNOB 1: the next row, SCREEN OFF) */
-        ok &= sets_cur[1] == 1u && cur_page()->id[1] == MROW(MI_SCROFF) && settings.palette == pal;
-        turn(EN_K1, -1); turn(EN_K1, -1); frame();      /* (round: the last, SCALE LEDS) */
-        ok &= sets_cur[1] == 4u && cur_page()->id[1] == MROW(MI_SCLLED);
-        glo_row(MI_HOLD); frame();
-        turn(EN_K2, 1); frame();
+        kc = glo_row(MI_HOLD); frame();
+        turn(EN_K1 + kc, 1); frame();
         ok &= settings_hold != hold;
-        turn(EN_K2, -1); frame();
-        glo_row(MI_PANEL); frame();
-        turn(EN_K2, -1); frame();
+        turn(EN_K1 + kc, -1); frame();
+        kc = glo_row(MI_PANEL); frame();
+        turn(EN_K1 + kc, -1); frame();
         ok &= ui.confirm == CF_NONE;                    /* (an action: a turn left does nothing) */
-        turn(EN_K2, 1); frame();
+        turn(EN_K1 + kc, 1); frame();
         ok &= ui.confirm == CF_CALIB;
         press(B_OCTDN); frame();
         ok &= ui.confirm == CF_NONE;
-        glo_row(MI_ABOUT); frame();
-        turn(EN_K2, 1); frame();
+        kc = glo_row(MI_ABOUT); frame();
+        turn(EN_K1 + kc, 1); frame();
         ok &= ui.confirm == CF_ABOUT;
         press(B_OCTUP); frame();
         ok &= ui.menu == 2;
         press(B_OCTDN); frame();
-        ok &= ui.menu == 0 && str_eq(cur_page()->title, "SYSTEM");
+        ok &= ui.menu == 0 && cur_page()->fam == FAM_GLO;
     }
-    bad += check("0.9.2 GLO: its 4 lists by SELECT, GLO its first page, a tap on it TRACKS; (2026-11-02) the MENU's rows its knobs, TOOLS' actions a dialog", ok);
+    bad += check("0.9.2 GLO: one page of rows (2026-11-13), a tap on it TRACKS; (2026-11-02) the MENU's rows its knobs, TOOLS' actions a dialog", ok);
     ui_power_on();
     return bad;
 }
@@ -9705,7 +9745,7 @@ static int test_lz_layer(void)
     turn(EN_ALGO, 1); frame();
     ok &= ui.lylv == 1u && song.sel == 0u;                          /* (no wrap) */
     b0 = song.g[G_BPM];
-    turn(EN_SELECT, 2); frame();
+    sel_turn( 2); frame();
     ok &= song.g[G_BPM] == b0;                                      /* (SCL + SELECT: nothing) */
     btn_up(B_SAVE); frame(); frame();
     ok &= !ui.layer && !lz_on() == !lz_on();
@@ -9784,8 +9824,8 @@ static int test_toasts(void)
     bad += check("  gone with the message: the page whole again", gone);
     for (sk = 0; sk < 1u; sk++) {                   /* playing: the page moves on behind it */
         ui_power_on(); settings.palette = UI_DEFAULT_INDEX; palette_set(UI_DEFAULT_INDEX);
-        TSEL->p[P_APDEP] = 100; song.playing = 1;      /* (as test_fx_live: AUTO PAN's dot runs while it plays) */
-        go_title("AUTO PAN"); frames(800);
+        song.playing = 1;                              /* (HOME's beings move while it plays; 2026-11-13: the FX sketches are still) */
+        go_home(); frames(800);
         ui_message("SAVED A LONG MESSAGE"); frame();
         toast_box(ui.msg, b);
         memcpy(toast_snap, host_screen, sizeof toast_snap);
@@ -9797,7 +9837,7 @@ static int test_toasts(void)
         moved &= ui.msg_t && n > 0u;
         song.playing = 0;
     }
-    bad += check("  playing: the page (AUTO PAN's dot) goes on moving behind the toast", moved);
+    bad += check("  playing: the page (HOME's beings) go on moving behind the toast", moved);
     ui_power_on(); settings.palette = UI_DEFAULT_INDEX; palette_set(UI_DEFAULT_INDEX);   /* NOTICE: the page back whole */
     go_title("ENV"); ui.force = 1; frames(800);
     memcpy(toast_snap, host_screen, sizeof toast_snap);
@@ -9809,13 +9849,13 @@ static int test_toasts(void)
     /* hints: walking SEQ's chain with SELECT (SPICE > AUTOMATION > PATTERN) says nothing; dwelt on, AUTOMATION's; at most HINT_MAX */
     ui_power_on(); go_title("SPICE"); frames(400);
     for (seen = passed = 0, k = 0; k < 2u; k++) {
-        turn(EN_SELECT, 1); passed |= str_eq(cur_page()->title, "AUTOMATION");
+        sel_turn( 1); passed |= str_eq(cur_page()->title, "AUTOMATION");
         for (n = 0; n < 12u; n++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
     }
     for (n = 0; n < 200u; n++) { frame(); seen |= ui.msg_t && ui.msg[0]; }
     bad += check("0.9.5 a page's hint: none while SELECT walks past it (SPICE > AUTOMATION > PATTERN), nor carried onto the next",
                  passed && str_eq(cur_page()->title, "PATTERN") && !seen);
-    turn(EN_SELECT, -1);                                /* back to AUTOMATION: stay */
+    sel_turn( -1);                                /* back to AUTOMATION: stay */
     ok = str_eq(cur_page()->title, "AUTOMATION");
     frames(HINT_DWELL_MS - 160u);
     ok &= !ui.msg_t;
@@ -9847,7 +9887,7 @@ static int test_toasts(void)
         settings_export(&p);
         ui_power_on();                                  /* (a fresh power-on: favorites cleared, then the settings loaded) */
         ok = hint_given(HK_MOTION) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MOTION) == HINT_MAX;
-        go_title("SPICE"); frames(160); turn(EN_SELECT, 1);
+        go_title("SPICE"); frames(160); sel_turn( 1);
         for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
         go_home(); frames(160); ui.msg_t = 0;
         press(B_SAVE);
@@ -9874,7 +9914,7 @@ static int test_toasts(void)
     confirm_open(CF_INIT_SYS, 0); ui.force = 1; frame();
     press(B_OCTUP); frames(160);
     ok = !ui.confirm && hint_given(HK_MOTION) == 0u;
-    go_title("SPICE"); frames(160); turn(EN_SELECT, 1); ui.msg_t = 0;
+    go_title("SPICE"); frames(160); sel_turn( 1); ui.msg_t = 0;
     for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
     bad += check("  INIT SYSTEM: the counts start over (AUTOMATION's hint again)", ok && seen);
     return bad;
@@ -9893,21 +9933,16 @@ static int fx_panel_moves(const char *title)
 static int test_fx_live(void)
 {
     int bad = 0, ok = 1;
-    static const char *const LIVE[] = {"DLY", "REVERB", "CHORUS", "AUTO PAN"};
     uint32_t i;
     ui_power_on();
     TSEL->p[P_APDEP] = 100; song.g[G_CDEPTH] = 90;
     song.playing = 1;
-    for (i = 0; i < NELEM(LIVE); i++) {
-        int m = fx_panel_moves(LIVE[i]);
-        if (!m) printf("  FX live: %s still\n", LIVE[i]);
-        ok &= m;
-    }
+    ok &= !fx_panel_moves("FX ALL");                    /* (2026-11-13: FX ALL's sketches are drawn, not animated: still while it plays) */
     song.playing = 0;
     for (i = 0; i < NTRK; i++) trk[i].peak = 0;
     memset(scope_buf, 0, sizeof scope_buf);
-    ok &= !fx_panel_moves("DLY");
-    bad += check("0.8.5 FX live: DLY, REVERB, CHORUS, AUTO PAN move while it plays; stopped and silent they hold still", ok);
+    ok &= !fx_panel_moves("FX ALL");
+    bad += check("2026-11-13 FX ALL: the sketches hold still, playing or not", ok);
     ui_power_on();
     return bad;
 }
@@ -10101,7 +10136,7 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
         uint8_t v[NAV_MAX];
         rv_add();
         at = nav_cur();
-        turn(EN_SELECT, 1); frames(2);
+        sel_turn( 1); frames(2);
         if (nav_cur() == at || (nav_list(nav_sec(), v) && v[0] == nav_cur()))   /* (round: it wraps) */
             break;
     }
@@ -10113,21 +10148,16 @@ typedef struct { uint8_t fam, lv, kind; const char *t[13]; } old_lv_t;   /* kind
 static const old_lv_t OLD_LV[] = {
     {FAM_EDIT, 0, 0, {"PATCH"}},   /* (2026-11-11: FILTER DRIFT VOICE VOICE 2 are SOUND's rows) */
     {FAM_EDIT, 0, 1, {"PATCH"}},
-    {FAM_EDIT, 1, 1, {"OPERATOR", "OP ENV", "OPERATOR 2"}},
-    {FAM_EDIT, 0, 2, {"PATCH", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "LEVELS", "LEVELS 2"}},
-    {FAM_EDIT, 2, 2, {"SOUND", "SOUND 2", "SOUND 3", "SOUND 4"}},
-    {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
-    {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
-    {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
-    {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"MAIN"}},
-    {FAM_GLO, 2, 9, {"DEVICE", "CONTROL", "SYSTEM"}},
+    /* (2026-11-13: the operators, KIT 3, X-MOD, LEVELS, SOUND 1..4, STAGE, MOD, MSEQ, MAIN .. SYSTEM are rows of SOUND / ENV LIST / LFO LIST / GLO) */
+    {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV LIST"}},
+    {FAM_LFO, 1, 9, {"LFO LIST"}},
+    {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP LIST"}},
+    {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLO"}},
     {FAM_SAVE, SV_LIB, 9, {"PROJECT"}}, {FAM_SAVE, SV_PROJ, 9, {"ARRANGE", "SONG EDIT"}},
     {FAM_SAVE, SV_SOUND, 9, {"PRESETS", "MORPH"}},
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "STRETCH", "TRACK"}},
     {FAM_SEQ, LV_BAR, 9, {"STEP", "NOTE", "SPICE", "AUTOMATION"}},   /* (NOTE's STEP view: merged into BAR's, the mock-up's "páginas repetidas") */
-    {FAM_FX, FXL_TRACK, 9, {"FX", "DIST", "AUTO PAN"}}, {FAM_FX, FXL_BUSES, 9, {"BUSES"}},
-    {FAM_FX, FXL_EFFECT, 9, {"DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2", "CHORUS", "SLICER", "SL BUS", "SL BUS 2",
-                             "SL PITCH", "MASTER", "PUNCH"}},
+    {FAM_FX, FXL_TRACK, 9, {"FX ALL"}},   /* (2026-11-13: one page for every effect) */
 };
 static int test_lz_reach(void)
 {
@@ -10152,7 +10182,7 @@ static int test_lz_reach(void)
                 rv_walk(sec);
             go_home(); frames(32); press(B_SEQ); frames(32);
             for (i = 0; i < NPAGES; i++) {              /* every page this track shows, in a section */
-                if (!page_visible(i))
+                if (!page_visible(i) || page_in_rows(i))   /* (2026-11-13: a row of a list page is not a page of a chain) */
                     continue;
                 if (PAGES[i].graph == GR_CHANCE || (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ))
                     continue;                           /* (hidden in 0.9.1 too: code puts them) */
@@ -10190,7 +10220,7 @@ static int test_lz_reach(void)
                          (k >= HOME_IDEA ? gen_on() && gen_page() == k - HOME_IDEA :
                           CE_HOME[k].t ? !ui.home && str_eq(cur_page()->title, CE_HOME[k].t) :
                           ui.home && home_macros() == (k == HOME_MACRO));
-                    turn(EN_SELECT, 1); frames(2);
+                    sel_turn( 1); frames(2);
                 }
                 okh &= n == NELEM(CE_HOME);
                 press(B_OCTDN); frames(2);
@@ -10238,14 +10268,14 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
     trk[0].p[P_SLEN] = 64;
     go_home(); frames(64);
     if (from == 1u) { nav_put(SEC_SEQ, "STEP"); frames(320); }
-    if (from == 2u) { nav_put(SEC_FX, "DELAY"); frames(320); }
+    if (from == 2u) { nav_put(SEC_FX, "FX ALL"); frame(); go_fx("DLY"); frames(320); }   /* (2026-11-13: FX ALL, on DELAY's first row) */
     if (from == 3u) { nav_put(SEC_SAVE, "ARRANGE"); frames(32); press(B_HOME); frames(320); }
     fm1_ms += 1200u;
     tk_n = 0;
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {4, 6, 8 + XS, 6, 6, 3, 3, 2, 6, 1, 3, 9, 4, 4};   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {4, 7 + XS, 7 + XS, 6, 6, 3, 3, 2, 3, 1, 3, 11, 4, 2};   /* (2026-11-13: FX ALL: the FX tasks 2, 3 by fast turns of SELECT, a section each) */   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10258,19 +10288,23 @@ static int test_nav_tasks(void)
             tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 1);
             {   /* (2026-11-11) SOUND's FILTER row (the generic one: P_FTYPE P_FCUT P_FRES), KNOB 1 steps to it */
                 uint32_t r;
-                for (r = 0; r < plist_n() && sound_row(TSEL, r)->id[0] != P_FTYPE; r++) ;
-                plist_cur = (uint8_t)r; tk_n++;                 /* (one KNOB 1 action, as the old SELECT detent) */
+                cur_page();
+                for (r = 0; r < fxa_cnt && fxa_r[r].id[1] != P_FCUT; r++) ;
+                fxa_cur = (uint8_t)r; tk_n++;                 /* (one KNOB 1 action, as the old SELECT detent) */
             }
-            v = TSEL->p[P_FCUT]; tk_val(EN_K3, -8);
+            v = TSEL->p[P_FCUT]; tk_val(EN_K2, -8);
             ok = song.sel == 1u && str_eq(cur_page()->title, "PATCH") && TSEL->p[P_FCUT] != v;
             break;
         case 1:                                         /* the reverb's SIZE */
-            tk_start(0); tk_btn(B_FX); tk_go(EN_SELECT, 4);
+            tk_start(0); tk_btn(B_FX);
+            { uint32_t j; for (j = 0; j < 5u + XS; j++) { sel_turn( 2); frames(4); tk_n++; } }   /* (fast: a section a turn) */
             v = song.g[G_RSIZE]; tk_val(EN_K2, 6);
-            ok = cur_page()->graph == GR_BUSES && song.g[G_RSIZE] != v;
+            ok = str_eq(cur_page()->title, "REVERB") && song.g[G_RSIZE] != v;
             break;
-        case 2:                                         /* DLY 2's MOD */
-            tk_start(0); tk_btn(B_FX); tk_go(EN_SELECT, 6 + XS);   /* (2026-11-02: SCENE before DLY) */
+        case 2:                                         /* the delay's MOD */
+            tk_start(0); tk_btn(B_FX);
+            { uint32_t j; for (j = 0; j < 4u + XS; j++) { sel_turn( 2); frames(4); tk_n++; } }   /* (fast: SENDS .. PHASER [SCENE] to DELAY) */
+            tk_go(EN_SELECT, 1);                        /* (a row on: DLY 2, WIDTH PITCH SPRAY MOD) */
             v = song.g[G_DMOD]; tk_val(EN_K4, 6);
             ok = str_eq(cur_page()->title, "DLY 2") && song.g[G_DMOD] != v;
             break;
@@ -10294,17 +10328,17 @@ static int test_nav_tasks(void)
             break;
         case 7:                                         /* the envelope's RELEASE */
             tk_start(0); tk_btn(B_ENV);   /* (2026-11-02: ENV first) */
-            v = TSEL->p[P_REL]; tk_val(EN_K4, 6);
-            ok = str_eq(cur_page()->title, "ENV") && TSEL->p[P_REL] != v;
+            v = TSEL->p[P_REL]; tk_val(EN_K4, 6);   /* (2026-11-13: ENV LIST's first row: REL on KNOB 4) */
+            ok = str_eq(cur_page()->title, "ENV LIST") && TSEL->p[P_REL] != v;
             break;
         case 8:                                         /* FX: DELAY to SLICER */
-            tk_start(2); tk_go(EN_SELECT, 6);
+            tk_start(2); { uint32_t j; for (j = 0; j < 3u; j++) tk_val(EN_SELECT, 2); }   /* (2026-11-13: fast turns: REVERB, CHORUS, SLICER) */
             ok = str_eq(cur_page()->title, "SLICER");
             break;
         case 9: {                                       /* the next preset, on FX > DLY */
             uint32_t pr, e;
             tk_start(2); pr = TSEL->preset; e = TSEL->eng_req; tk_go(EN_PRESET, 1);
-            ok = (TSEL->preset != pr || TSEL->eng_req != e) && str_eq(cur_page()->title, "DLY");
+            ok = (TSEL->preset != pr || TSEL->eng_req != e) && str_eq(cur_page()->title, "DLY") && PAGES[ui.page].graph == GR_FXALL;
             break;
         }
         case 10:                                        /* REC Q 0 % (BAR, then TRACK: 2026-11-10) */
@@ -10312,7 +10346,9 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "TRACK") && TSEL->p[P_HRQ] == 0;
             break;
         case 11:                                        /* DRUM-X (track 4): the snare's DECAY */
-            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 3); tk_go(EN_SELECT, 3); tk_go(EN_K1, 1);
+            tk_start(0); tk_btn(B_EDIT); tk_go(EN_ALGO, 3);
+            { uint32_t j; for (j = 0; j < 40u && !(str_eq(cur_page()->title, "SOUND") && dx_ui_lane == 1u); j++) tk_val(EN_SELECT, 2); }   /* (2026-11-13: SOUND is rows: fast turns, a group each, to the snare's, then its second row) */
+            tk_go(EN_SELECT, 1);
             { uint32_t c = dx_ui_lane & 7u; uint8_t *dv = dx_ui_side ? dx_kit[c].b : dx_kit[c].a, d0 = dv[DXP_DECAY];
               tk_val(EN_K2, -6);
               ok = song.sel == 3u && str_eq(cur_page()->title, "SOUND 2") && c == 1u && dv[DXP_DECAY] != d0; }
@@ -10322,9 +10358,9 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "SPICE") && TSEL->step[ui.cursor].comp2 != 0u;
             break;
         default:                                        /* GLO: six tracks (SYSTEM > TRACKS) */
-            tk_start(0); trks_put(4); frame(); sets_cur[0] = 0; tk_btn(B_GLO);   /* (topic C: MAIN's list: KNOB 1 to TRACKS, KNOB 2 to six) */
-            tk_go(EN_K1, 2); tk_val(EN_K2, 1); frame();
-            ok = str_eq(cur_page()->title, "MAIN") && trk_live == NTRK;
+            tk_start(0); trks_put(4); frame(); fxa_curs[FXK_GLO] = 0; fxa_cur = 0; tk_btn(B_GLO);   /* (2026-11-13: GLO's first row: TRACKS on KNOB 3) */
+            tk_val(EN_K3, 1); frame();
+            ok = cur_page()->fam == FAM_GLO && trk_live == NTRK;
             break;
         }
         got[t] = tk_n;
@@ -10336,7 +10372,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; task 11 one fewer, TOOLS gone: 67; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 65u + XS);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; task 11 one fewer, TOOLS gone: 67; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 62u + XS);
     ui_power_on();
     return bad;
 }

@@ -629,7 +629,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -851,8 +851,21 @@ static const page_t PAGES[] = {
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
                                                          * (2026-10-27, ui_input.c prog_write) */
-    {"PATCH", FAM_EDIT, SC_TRACK, GR_PLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-11) FMINI's whole patch as a list: KNOB 1 the row,
+    {"PATCH", FAM_EDIT, SC_TRACK, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-11) FMINI's whole patch as a list: KNOB 1 the row,
                                                          * KNOB 2..4 its settings (plist_page); on FMINI only (page_visible) */
+    {"ENV LIST", FAM_ENV, SC_TRACK, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-12) ENV and ENV DEST as a picture + a short row list
+                                                         * (LST_ENV); the old two stay for ENV > ALL ENV / ALL DEST */
+    {"LFO LIST", FAM_LFO, SC_TRACK, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-12) LFO and LFO DEST likewise (LST_LFO); the old two hidden */
+    {"DELAY LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-12) DLY, DLY 2, DLY 3: the taps and four rows (LST_DLY) */
+    {"REVERB LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* REVERB, REVERB 2: the tail and three rows */
+    {"CHORUS LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},
+    {"SL BUS LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* SL BUS, SL BUS 2 */
+    {"MASTER LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},
+    {"PUNCH LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* PUNCH: the lane's picture, LEN RES; its CLEAR is the REC layer's */
+    {"ARP LIST", FAM_ARP, SC_TRACK, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* ARP, ARP 2, ARP 3, AMBIENT and the STRUM of SCL held */
+    {"GLO", FAM_GLO, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) GLO's four lists as one page of rows (ui_fxall.c); the four GR_SETS
+                                                         * pages stay for the held GLO menu (ui_hmenu.c) */
+    {"FX ALL", FAM_FX, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) every effect's rows on one scrollable page (ui_fxall.c) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)
@@ -914,15 +927,110 @@ static const sound_row_t *sound_row(const track_t *t, uint32_t i)
 }
 static uint32_t plist_n(void) { return sound_n(&trk[song.sel]); }
 static int32_t plist_val(const track_t *t, uint32_t id) { return IS_VF(id) ? fmx_get(t->p, id - 0xA0u) : t->p[id]; }
+/* (2026-11-12) the row-list pages (GR_RLIST): ENV, LFO and, in FX and ARP, the buses' and the arpeggiator's settings as a short list of rows,
+ * the picture strip on top where the picture carries information (ENV, LFO, DELAY, REVERB). The same row machinery as SOUND: a fixed
+ * table per page (LST_TAB, found by the page's title), a cursor each. FX's are global (song.g, GP), ARP's the track's (t->p) */
+static const sound_row_t LST_ENV[] = {
+    {"ENV", {P_ATK, P_DEC, P_SUS}, {0, 0, 0}},
+    {"RELEASE", {P_REL, P_ELOOP, 0xFF}, {0, 0, 0}},
+    {"TARGETS", {P_ED_FLT, P_ED_PIT, P_ED_SHP}, {0, 0, 0}},
+};
+static const sound_row_t LST_LFO[] = {
+    {"LFO", {P_LRATE, P_LWAVE, P_LPHASE}, {0, 0, 0}},
+    {"DEPTH", {P_LFADE, P_LD_AMP, 0xFF}, {0, 0, 0}},
+    {"TARGETS", {P_LD_PIT, P_LD_FLT, P_LD_SHP}, {0, 0, 0}},
+};
+static const sound_row_t LST_DLY[] = {                    /* DLY, DLY 2, DLY 3 */
+    {"DELAY", {G_DTIME, G_DFDBK, G_DCOLOR}, {0, 0, 0}},
+    {"TYPE", {G_DTYPE, G_DMOD, 0xFF}, {0, 0, 0}},
+    {"MIX", {G_DMIX, G_WIDTH, G_DPING}, {0, 0, 0}},
+    {"GRAIN", {G_DPIT, G_DSPRY, 0xFF}, {0, 0, 0}},
+};
+static const sound_row_t LST_REV[] = {                    /* REVERB, REVERB 2: the model (page_desc) says what PRE / DAMP are */
+    {"REVERB", {G_RTYPE, G_RSIZE, G_RDAMP}, {0, 0, 0}},
+    {"TONE", {G_RPRE, G_RFILT, G_RWIDE}, {0, 0, 0}},
+    {"MOTION", {G_RMOD, G_RRATE, 0xFF}, {0, 0, 0}},
+};
+static const sound_row_t LST_CHO[] = {
+    {"CHORUS", {G_CRATE, G_CDEPTH, G_CSTER}, {0, 0, 0}},
+};
+static const sound_row_t LST_SLB[] = {                    /* SL BUS, SL BUS 2: what goes into the slicer */
+    {"T1-T3", {G_SLT1, G_SLT1 + 1, G_SLT1 + 2}, {0, 0, 0}},
+    {"T4-T6", {G_SLT1 + 3, G_SLT1 + 4, G_SLT6}, {0, 0, 0}},
+    {"FX", {G_SLFX, 0xFF, 0xFF}, {0, 0, 0}},
+};
+static const sound_row_t LST_MST[] = {
+    {"OUTPUT", {G_CLIP, G_PUNCH, 0xFF}, {0, 0, 0}},
+    {"DUCK", {G_DUCK, G_DREL, 0xFF}, {0, 0, 0}},
+};
+static const sound_row_t LST_PUN[] = {                   /* PUNCH: the lane's length and resolution (CLEAR is the REC layer's F4) */
+    {"PUNCH", {G_PFXLEN, G_PFXRES, 0xFF}, {0, 0, 0}},
+};
+static const sound_row_t LST_ARP[] = {                    /* ARP, ARP 2, ARP 3, AMBIENT, and SCL's held STRUM */
+    {"ARP", {P_AMODE, P_ARATE, P_AOCT}, {0, 0, 0}},
+    {"FEEL", {P_AGATE, P_ASWING, P_APROB}, {0, 0, 0}},
+    {"ORDER", {P_AORDER, P_AHOLD, 0xFF}, {0, 0, 0}},
+    {"SPICE", {P_SPICE, P_SLOOP, 0xFF}, {0, 0, 0}},
+    {"STRUM", {P_CSTR, 0xFF, 0xFF}, {0, 0, 0}},
+#if FELUCCA_AMBIENT
+    {"AMBIENT", {P_AMB, P_ADEN, P_AMOT}, {0, 0, 0}},
+    {"SPACE", {P_ASPC, 0xFF, 0xFF}, {0, 0, 0}},
+#endif
+};
+typedef struct { const char *title; const sound_row_t *rows; uint8_t n; } rl_t;
+#define RLT(t, r) {t, r, (uint8_t)(sizeof(r) / sizeof((r)[0]))}
+static const rl_t LST_TAB[] = {RLT("ENV LIST", LST_ENV), RLT("LFO LIST", LST_LFO), RLT("DELAY LIST", LST_DLY), RLT("REVERB LIST", LST_REV),
+                              RLT("CHORUS LIST", LST_CHO), RLT("SL BUS LIST", LST_SLB), RLT("MASTER LIST", LST_MST), RLT("ARP LIST", LST_ARP), RLT("PUNCH LIST", LST_PUN)};
+#define LST_N (sizeof LST_TAB / sizeof LST_TAB[0])
+static uint8_t rl_cur[LST_N];
+#define LIST_PG(p) ((p)->graph == GR_PLIST || (p)->graph == GR_RLIST)
+static uint32_t rl_idx(const page_t *p)                  /* the page's list (LST_TAB), by its title */
+{
+    uint32_t i;
+    for (i = 0; i < LST_N; i++) {
+        const char *a = p->title, *b = LST_TAB[i].title;
+        while (*a && *a == *b) {
+            a++;
+            b++;
+        }
+        if (*a == *b)
+            return i;
+    }
+    return 0;
+}
+static uint32_t lp_n(const page_t *p) { return p->graph == GR_RLIST ? LST_TAB[rl_idx(p)].n : plist_n(); }
+static const sound_row_t *lp_row(const page_t *p, uint32_t i)
+{
+    const rl_t *r = &LST_TAB[rl_idx(p)];
+    return p->graph == GR_RLIST ? &r->rows[i % r->n] : sound_row(&trk[song.sel], i);
+}
+static uint8_t *lp_cur(const page_t *p) { return p->graph == GR_RLIST ? &rl_cur[rl_idx(p)] : &plist_cur; }
+static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp);
+/* a setting id of list page p: its descriptor (the reverb's model counts) and its value */
+static const param_desc_t *lp_desc(const page_t *p, const track_t *t, uint32_t id)
+{
+    int16_t *vp;
+    page_t q;
+    if (p->scope != SC_GLOBAL)
+        return track_desc(t, id);
+    q = *p;
+    q.id[1] = (uint8_t)id;
+    return page_desc(&q, 1, &vp);
+}
+static int32_t lp_val(const page_t *p, const track_t *t, uint32_t id)
+{
+    return p->scope == SC_GLOBAL ? song.g[id] : plist_val(t, id);
+}
 static const page_t *plist_page(const page_t *p)
 {
     static page_t sh;
-    uint32_t k, n = plist_n();
+    uint32_t k, n = lp_n(p);
     const sound_row_t *rw;
+    uint8_t *cu = lp_cur(p);
     sh = *p;
-    if (plist_cur >= n)
-        plist_cur = (uint8_t)(n - 1u);
-    rw = sound_row(&trk[song.sel], plist_cur);
+    if (*cu >= n)
+        *cu = (uint8_t)(n - 1u);
+    rw = lp_row(p, *cu);
     for (k = 0; k < 3u; k++)
         sh.id[1 + k] = rw->id[k];
     return &sh;

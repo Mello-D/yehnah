@@ -2,12 +2,12 @@
 /* (2026-11-09, held menus) SCL, EDIT and GLO held past HOLD open a list menu (the GLO lists' look: names left, the row's
  * choices or its range right) that STAYS open after the button is let go. Left with OCT- or a tap of the button (any other
  * button's tap closes it and acts). The piano keys play as normal: no key shortcuts here.
- *   SCL   STRUM (the rest is SCL's page's)
+ *   (SCL: its STRUM is ARP LIST's row now (2026-11-12); SCL held does nothing)
  *   EDIT  the sound's named parameters (E1..E8)
  *   GLO   the four GLO lists (MAIN DEVICE CONTROL SYSTEM): KNOB 3 picks the list, the rows are the GLO pages' own
  * KNOB 1 the row, KNOB 2 its value (an action: a turn right asks). A tap of the button is still its page (ui_input.c).
  * Included after ui_menu.c (the list's drawing) and ui_input.c (edit_param). */
-enum { HM_NONE, HM_SCL, HM_EDIT, HM_GLO };
+enum { HM_NONE, HM_SCL /* retired */, HM_EDIT, HM_GLO };
 enum { HR_TRK, HR_ALLTR, HR_GLB };
 typedef struct {
     const char *nm;
@@ -23,9 +23,7 @@ static const char *const HM_LISTS[4] = {"MAIN", "DEVICE", "CONTROL", "SYSTEM"};
 static uint32_t hm_rows(hrow_t *r)
 {
     uint32_t n = 0, k;
-    if (ui.hm == HM_SCL) {
-        r[n].nm = "STRUM"; r[n].id = P_CSTR; r[n++].kind = HR_TRK;     /* (ROOT SCALE QUANT ALL TR are SCL's page's) */
-    } else if (ui.hm == HM_EDIT) {
+    if (ui.hm == HM_EDIT) {
         for (k = 0; k < 8u; k++) {
             const param_desc_t *d = track_desc(TSEL, P_E0 + k);
             if (d && d->label && d->label[0] != '-' && d->max > d->min) {
@@ -126,7 +124,7 @@ static void hm_panel(void)
 }
 static void hm_pagerow(void)
 {
-    const char *mid = ui.hm == HM_SCL ? "SCL" : ui.hm == HM_EDIT ? "EDIT" : HM_LISTS[hm_list & 3u];
+    const char *mid = ui.hm == HM_EDIT ? "EDIT" : HM_LISTS[hm_list & 3u];
     cv_begin(240, TF_PG_H, T_BG);
     cv_rrect(86, 1, PG_MID_W, TF_PG_H - 2, (TF_PG_H - 2) / 2, T_THEME, T_BG);
     cv_text_in(86, 1 + CAP_IN(B, TF_PG_H - 2), PG_MID_W, &AF_B, mid, T_INK, T_THEME);
@@ -184,10 +182,10 @@ static void hm_tick(void)
         hm_close();
 }
 static uint32_t hm_btn_is(uint32_t b) { return ui.hm && b == hm_btn; }
-/* a page button held past HOLD (ui_input.c): SCL, EDIT, GLO open their menu */
+/* a page button held past HOLD (ui_input.c): EDIT, GLO open their menu */
 static void hm_hold(uint32_t b)
 {
-    uint32_t w = b == B_SCL ? HM_SCL : b == B_EDIT ? HM_EDIT : b == B_GLO ? HM_GLO : 0u;
+    uint32_t w = b == B_EDIT ? HM_EDIT : b == B_GLO ? HM_GLO : 0u;
     if (!w || ui.hm || ui.ly || !layer_allowed())
         return;
     ui.hm = (uint8_t)w;

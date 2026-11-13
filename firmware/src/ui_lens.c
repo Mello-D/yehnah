@@ -57,11 +57,8 @@ static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV("PRESETS", 0, 1, SV_SOU
                                NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2)};   /* IDEAS (ideas.c; was Yehnah's GEN) */
 static const nv_t CE_SYN[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-11: SOUND, the PATCH entry of PAGES, replaces EDIT 1 / 2; its rows
                                                          * hold the old FILTER, DRIFT, VOICE, VOICE 2) */
-static const nv_t CE_FM6[] = {NV("PATCH", "SOUND", 0, 0), NV("OPERATOR", "OP 1", 2, 1), NV("OP ENV", 0, 2, 1),
-                              NV("OPERATOR 2", "OP 2", 2, 1)};
-static const nv_t CE_DRM[] = {NV("PATCH", "SOUND", 0, 0), NV("KIT 3", 0, 0, 0),
-                              NV("SOUND", "LANE 1", 1, 2), NV("SOUND 2", "LANE 2", 1, 2), NV("SOUND 3", "LANE 3", 1, 2), NV("SOUND 4", "LANE 4", 1, 2),
-                              NV("LEVELS", 0, 2, 1), NV("LEVELS 2", 0, 2, 1), NV("X-MOD", 0, 3, 1)};
+static const nv_t CE_FM6[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-13: the operators, a kit's lanes, KIT 3, X-MOD, LEVELS are rows of SOUND) */
+static const nv_t CE_DRM[] = {NV("PATCH", "SOUND", 0, 0)};
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };                 /* SEQ's pictures: the bars, the roll, the step large */
 static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR), NV("SPICE", 0, 3, LV_BAR),   /* (2026-11-02:
                                                          * the main page first, the rest in their wrapped order) */
@@ -70,31 +67,14 @@ static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR)
                               NV("TRACK", 0, 1, LV_PAT),
                               NV("BAR", 0, 2, LV_PAT)};
 enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
-static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, FXL_TRACK), NV("AUTO PAN", 0, 0, FXL_TRACK),
-                             NV("PHASER", 0, 0, FXL_TRACK),   /* (chord-harp fork) */
-                             NV("BUSES", 0, 1, FXL_BUSES),
-#if FELUCCA_FXSCENE
-                             NV("SCENE", 0, 1, FXL_BUSES),   /* (2026-11-02: the FX scenes) */
-#endif
-                             NV("DLY", "DELAY", 2, FXL_EFFECT), NV("DLY 2", "DELAY 2", 2, FXL_EFFECT),
-                             NV("DLY 3", "DELAY 3", 2, FXL_EFFECT), NV("REVERB", 0, 3, FXL_EFFECT), NV("REVERB 2", 0, 3, FXL_EFFECT),
-                             NV("CHORUS", 0, 4, FXL_EFFECT), NV("SLICER", 0, 5, FXL_EFFECT), NV("SL BUS", 0, 5, FXL_EFFECT),
-                             NV("SL BUS 2", 0, 5, FXL_EFFECT), NV("SL PITCH", 0, 5, FXL_EFFECT),
-                             NV("MASTER", 0, 6, FXL_EFFECT), NV("PUNCH", 0, 7, FXL_EFFECT)};
-static const nv_t CE_GLO[] = {NV("MAIN", 0, 0, 1), NV("DEVICE", 0, 1, 2), NV("CONTROL", 0, 2, 2), NV("SYSTEM", 0, 3, 2)};   /* (topic C:
-                                                         * four lists; was nine pages) */
-static const nv_t CE_ENV[] = {NV("ENV", 0, 1, 1), NV("ENV DEST", 0, 1, 1), NV("STAGE", 0, 2, 2),   /* (this track's, then
-                                                         * all six tracks') */
+static const nv_t CE_FX[] = {NV("FX ALL", "FX", 0, FXL_TRACK)};   /* (2026-11-13) one page: every effect's rows (ui_fxall.c) */
+static const nv_t CE_GLO[] = {NV("GLO", 0, 0, 1)};   /* (2026-11-13: MAIN DEVICE CONTROL SYSTEM are GLO's rows) */
+static const nv_t CE_ENV[] = {NV("ENV LIST", "ENV", 1, 1),   /* (this track's, then all six tracks'; STAGE is a row of ENV LIST now) */
                               NV("ENV", "ALL ENV", 0, 0), NV("ENV DEST", "ALL DEST", 0, 0)};
-static const nv_t CE_LFO[] = {NV("LFO", 0, 1, 1), NV("LFO DEST", 0, 1, 1), NV("MSEQ", 0, 2, 2), NV("MSEQ 2", 0, 2, 2),
-                              NV("MOD", 0, 0, 0)};
+static const nv_t CE_LFO[] = {NV("LFO LIST", "LFO", 1, 1)};   /* (MSEQ and MOD are rows of LFO LIST now) */
 static const nv_t CE_SCL[] = {NV("SCL", "SCALE", 0, 0), NV("CHORD", 0, 1, 1), NV("HARP", 0, 2, 1), NV("OMNI", 0, 3, 1),
                               NV("PROG", 0, 4, 1), NV("GUITAR", 0, 5, 1), NV("TUNE", 0, 6, 1)};   /* (2026-11-10) GUITAR: guitchordi's chord styles */
-static const nv_t CE_ARP[] = {NV("ARP", 0, 0, 2), NV("ARP 2", 0, 0, 2), NV("ARP 3", 0, 0, 2),
-#if FELUCCA_AMBIENT
-                              NV("AMBIENT", 0, 0, 2),
-#endif
-};
+static const nv_t CE_ARP[] = {NV("ARP LIST", "ARP", 0, 2)};
 static const nv_t CE_SAVE[] = {NV("PROJECT", 0, 2, SV_LIB), NV("ARRANGE", "STRUCT", 1, SV_PROJ),   /* (2026-11-06: TOOLS, ERASE, USER went to the
                                                          * SAVE held layer; PRESETS, MORPH are HOME's) */
                                NV("SONG EDIT", "TRIM", 1, SV_PROJ)};
@@ -106,9 +86,9 @@ static const nv_t CE_SAVE[] = {NV("PROJECT", 0, 2, SV_LIB), NV("ARRANGE", "STRUC
 CH_OK(CE_HOME); CH_OK(CE_SYN); CH_OK(CE_SEQ); CH_OK(CE_FX); CH_OK(CE_GLO); CH_OK(CE_ENV); CH_OK(CE_LFO); CH_OK(CE_SCL);
 CH_OK(CE_ARP); CH_OK(CE_SAVE); CH_OK(CE_FM6); CH_OK(CE_DRM);
 #define NAV_KEYS (SEC_N + 2u)                           /* the sections' memories: EDIT's synth one, then FM6 DRUM */
-static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, 4), CH(CE_SYN, 3), CH(CE_SEQ, 5), CH(CE_FX, 8), CH(CE_GLO, 5),
-                                      CH(CE_ENV, 3), CH(CE_LFO, 3), CH(CE_SCL, 7), CH(CE_ARP, 1), CH(CE_SAVE, 2),
-                                      CH(CE_FM6, 3), CH(CE_DRM, 4)};
+static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, 4), CH(CE_SYN, 3), CH(CE_SEQ, 5), CH(CE_FX, 1), CH(CE_GLO, 1),
+                                      CH(CE_ENV, 3), CH(CE_LFO, 1), CH(CE_SCL, 7), CH(CE_ARP, 1), CH(CE_SAVE, 2),
+                                      CH(CE_FM6, 1), CH(CE_DRM, 1)};
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }
 static uint32_t nav_mem(uint32_t key) { return ui.nmem[key]; }
@@ -260,6 +240,7 @@ static void nav_button(uint32_t sec)
     nav_go(sec, 0, 1);
 }
 /* rule 1: SELECT, s detents along the chain; it wraps (the last page, then the first: the page row) */
+static uint32_t nav_vis_n(void) { uint8_t v[NAV_MAX]; return nav_list(nav_sec(), v); }   /* (the visible pages of the chain: ui_fxall.c) */
 static void nav_select(int32_t s)
 {
     uint8_t v[NAV_MAX];

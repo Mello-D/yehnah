@@ -1385,8 +1385,9 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)wrap_add((int32_t)mod_ui_slot, steps > 0 ? 1 : -1, 4);
         return;
     }
-    if (pg->graph == GR_PLIST && slot == 0u) {          /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (round) */
-        plist_cur = (uint8_t)wrap_add((int32_t)plist_cur, steps > 0 ? 1 : -1, (int32_t)plist_n());
+    if (LIST_PG(pg) && slot == 0u) {                    /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (round) */
+        uint8_t *lc = lp_cur(pg);
+        *lc = (uint8_t)wrap_add((int32_t)*lc, steps > 0 ? 1 : -1, (int32_t)lp_n(pg));
         ui.force = 1;
         return;
     }
@@ -1410,6 +1411,18 @@ static void edit_param(uint32_t slot, int32_t steps)
         }
         if (IS_MROW(pg->id[1]) && pg->id[1] - ID_MENU >= MI_VALUES && steps <= 0)
             return;                                     /* (an action: a turn right asks, left nothing) */
+    }
+    if (pg->fam == FAM_GLO && pg->graph == GR_NONE) {   /* (2026-11-13) GLO's rows: CPU opens its page, an action asks on a turn right only */
+        if (pg->id[slot] == G_INFO) {
+            if (steps > 0) {
+                ui.menu = 3;
+                ui.menu_scroll = 0;
+                ui.force = 1;
+            }
+            return;
+        }
+        if (IS_MROW(pg->id[slot]) && pg->id[slot] - ID_MENU >= MI_VALUES && steps <= 0)
+            return;
     }
     if (pg->fam == FAM_GLO)
         glo_k = (uint8_t)slot;                          /* (GLO: its row lit; SYSTEM: USB's choices or the CPU line) */
@@ -2520,7 +2533,10 @@ static void ui_input_frame(void)
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
     if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
                                                         * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
-        nav_select(s);
+        if (fxall_on())
+            fxa_turn(s);                                /* (2026-11-13) FX ALL: SELECT scrolls its rows (a fast turn: a section) */
+        else
+            nav_select(s);
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();
@@ -2550,7 +2566,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || BAR_PAGE(pg)) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (pg->graph == GR_PLIST && k == 0u)) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (LIST_PG(pg) && k == 0u)) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }

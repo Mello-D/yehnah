@@ -403,10 +403,11 @@ static void scr_shown(void)                            /* after the frame: the r
 }
 
 static const page_t *page_over;   /* a quick layer's own four knobs (ui_layer.c), while it edits or draws them */
+#include "ui_fxall.c"                                  /* (2026-11-13) FX ALL: the FX button's one page, its rows */
 static const page_t *cur_page(void)
 {
     const page_t *p = page_over ? page_over : &PAGES[ui.page];
-    return p->graph == GR_SETS ? sets_page(p) : p->graph == GR_PLIST ? plist_page(p) : p;     /* (GLO's lists, FMINI's PATCH: params.c) */
+    return p->graph == GR_FXALL ? fxa_page(p) : p->graph == GR_SETS ? sets_page(p) : LIST_PG(p) ? plist_page(p) : p;     /* (GLO's lists, FMINI's PATCH: params.c) */
 }
 
 static int lens_on(void);
@@ -424,7 +425,8 @@ static uint32_t card_h(void) { return TF_KN_H; }
 static uint32_t graph_y(void) { return TF_SC_Y; }
 /* (2026-11-09, topic E) GLO's lists have no knob cells (the list and its choices say what the knobs do): the panel runs down to the page row */
 static int sets_full(void);
-static uint32_t graph_h(void) { return sets_full() || ui.hm ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
+static int fxall_on(void);
+static uint32_t graph_h(void) { return fxall_on() ? 240u - TF_SC_Y - 4u : sets_full() || ui.hm ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
 enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_SEQ, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
@@ -437,22 +439,46 @@ static uint32_t layer_btn(void);
 
 /* FM operator pages belong to DIGITAL; they never appear on other instruments (without YEHNAH_FM4: never). LANES /
  * LANES 2 a DRUM track's (its lane levels); SOUND / SOUND 2 a DRUM track's (DRUM-X: ui_dx.c) */
+/* (2026-11-13) the pages that are rows of a list page now (SOUND, ENV LIST, LFO LIST, GLO): kept in PAGES (their indices, the rows' pages) and drawn
+ * where code puts them, but in no chain */
+static int page_in_rows(uint32_t i)
+{
+    return PAGES[i].graph == GR_STAGE || PAGES[i].graph == GR_MOD || PAGES[i].graph == GR_MSEQ || PAGES[i].id[0] == P_MSDIV ||
+           (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV) || PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG ||
+           (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7) || PAGES[i].graph == GR_SETS;
+}
 static int page_visible(uint32_t i)
 {
+    if (PAGES[i].fam == FAM_FX && PAGES[i].graph != GR_FXALL)
+        return 0;                                       /* (2026-11-13) FX ALL: one page holds every effect's rows (kept in PAGES: its indices) */
     if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
         return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
                                                          * was the same page twice; kept in the table: its index) */
     if (sys_load == LOAD_ECO && ((PAGES[i].graph == GR_SLCR || PAGES[i].graph == GR_SLPIT) ||
-                                 (PAGES[i].fam == FAM_FX && PAGES[i].id[0] == G_CRATE)))
+                                 (PAGES[i].fam == FAM_FX && PAGES[i].id[0] == G_CRATE) ||
+                                 (PAGES[i].graph == GR_RLIST && PAGES[i].fam == FAM_FX &&
+                                  (str_eq(PAGES[i].title, "CHORUS LIST") || str_eq(PAGES[i].title, "SL BUS LIST")))))
         return 0;                                       /* (0.6.30) LOAD ECO: no SLICER, no chorus: their pages gone */
+    if (PAGES[i].fam == FAM_ARP && PAGES[i].graph != GR_FXALL)
+        return 0;                                       /* (2026-11-12) ARP, ARP 2, ARP 3, AMBIENT: ARP LIST's rows (kept in PAGES: its indices) */
+    if (PAGES[i].graph == GR_SETS)
+        return 0;                                       /* (2026-11-13) GLO's four lists are GLO's rows (kept for the held menu) */
+    if (PAGES[i].graph == GR_PUNCH)
+        return 0;                                       /* (2026-11-12) PUNCH LIST: its LEN RES; CLEAR is the REC layer's F4 */
+    if (PAGES[i].fam == FAM_FX && PAGES[i].graph != GR_RLIST &&
+        ((PAGES[i].scope == SC_GLOBAL && PAGES[i].graph == GR_NONE && PAGES[i].id[0] < 0xA0u) ||   /* DLY 1..3, REVERB 1..2, CHORUS, MASTER */
+         (PAGES[i].graph == GR_SLCR && PAGES[i].id[0] >= G_SLT1)))   /* SL BUS, SL BUS 2 (SLICER's id[0] is G_SLMODE) */
+        return 0;                                       /* (2026-11-12) the effects' lists (DELAY LIST ..) hold their settings */
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_DRIFT)   /* (chord-harp fork, 2026-10-30: was MORPH, ANALOG PHASE
                                                          * LOFI's waves, gone with Clipper's engines) DRIFT, VINTAGE */
         return 0;                                       /* (2026-11-11) SOUND's DRIFT row */
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].scope == SC_TRACK && PAGES[i].graph == GR_NONE &&
         (PAGES[i].id[0] == P_VOICE || PAGES[i].id[0] == P_ALLOC || PAGES[i].id[0] == P_FTYPE || PAGES[i].id[0] == P_FMODEL))
         return 0;                                       /* (2026-11-11) FILTER, VOICE, VOICE 2: SOUND's rows (kept in PAGES: its indices) */
-    if (PAGES[i].graph == GR_PLIST)                     /* (2026-11-11) SOUND (the PATCH entry): every engine's but a kit's */
-        return 1;
+    if (PAGES[i].graph == GR_PLIST || PAGES[i].graph == GR_RLIST || PAGES[i].graph == GR_FXALL)   /* (2026-11-11) SOUND (the PATCH entry): every engine's but a kit's */
+        return 1;                                       /* (2026-11-12) ENV LIST, LFO LIST */
+    if (PAGES[i].fam == FAM_LFO && (PAGES[i].graph == GR_LFO || PAGES[i].id[0] == P_LD_PIT))
+        return 0;                                       /* (2026-11-12) LFO, LFO DEST: LFO LIST's rows (kept in PAGES: its indices) */
     if (PAGES[i].scope == SC_ENGINE)                    /* EDIT 1 / EDIT 2: retired, every engine's settings are SOUND's rows (a kit's too) */
         return 0;
     if (PAGES[i].graph == GR_CHANCE)   /* (0.6.37) a step's CHANCE: out of the */
@@ -480,7 +506,7 @@ static uint32_t page_first(uint32_t fam)
 {
     uint32_t i;
     for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].fam == fam && page_visible(i) && (fam != FAM_EDIT || PAGES[i].graph == GR_PLIST))   /* (2026-11-11: EDIT's first is SOUND) */
+        if (PAGES[i].fam == fam && page_visible(i) && (fam != FAM_EDIT || PAGES[i].graph == GR_FXALL))   /* (2026-11-11: EDIT's first is SOUND) */
             return i;
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == fam)
@@ -499,8 +525,14 @@ static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam =
 static void page_entered(void);
 #define FX_NMOD 6u
 static const char *const FX_MOD[FX_NMOD] = {"DELAY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};
-static const char *const FX_MHEAD[FX_NMOD] = {"DLY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};   /* its first page */
-static const uint8_t FX_MN[FX_NMOD] = {3, 2, 1, 4, 1, 1};   /* its pages, one after another in PAGES */
+static const char *const FX_MHEAD[FX_NMOD] = {"DELAY LIST", "REVERB LIST", "CHORUS LIST", "SLICER", "MASTER LIST", "PUNCH LIST"};   /* its first page */
+/* (2026-11-12) the effect pages' modules: the lists first (what the chain shows), the old pages after (kept in PAGES: their indices) */
+typedef struct { const char *t; uint8_t m; } fxp_t;
+static const fxp_t FX_PG[] = {
+    {"DELAY LIST", 0}, {"DLY", 0}, {"DLY 2", 0}, {"DLY 3", 0}, {"REVERB LIST", 1}, {"REVERB", 1}, {"REVERB 2", 1},
+    {"CHORUS LIST", 2}, {"CHORUS", 2}, {"SLICER", 3}, {"SL BUS LIST", 3}, {"SL PITCH", 3}, {"SL BUS", 3}, {"SL BUS 2", 3},
+    {"MASTER LIST", 4}, {"MASTER", 4}, {"PUNCH LIST", 5}, {"PUNCH", 5}};
+#define FX_NPG (sizeof FX_PG / sizeof FX_PG[0])
 static int page_visible(uint32_t i);
 static int fx_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_FX; }
 static uint32_t fx_page(const char *title)
@@ -522,16 +554,28 @@ static int32_t fx_trk_k(uint32_t i)                     /* page i's place among 
 }
 static uint32_t fx_mod_of(uint32_t i)                   /* an effect page's module (another page: ui.fxmod) */
 {
-    uint32_t m, f;
-    for (m = 0; m < FX_NMOD; m++) {
-        f = fx_page(FX_MHEAD[m]);
-        if (i >= f && i < f + FX_MN[m])
-            return m;
-    }
+    uint32_t k;
+    for (k = 0; k < FX_NPG; k++)
+        if (PAGES[i].fam == FAM_FX && str_eq(PAGES[i].title, FX_PG[k].t))
+            return FX_PG[k].m;
     return ui.fxmod % FX_NMOD;
 }
-static uint32_t fx_mod_k(uint32_t i) { return i - fx_page(FX_MHEAD[fx_mod_of(i)]); }   /* .. its place in it */
-static uint32_t fx_mod_n(uint32_t m) { return FX_MN[m % FX_NMOD]; }
+static uint32_t fx_mod_k(uint32_t i)                    /* .. its place in it (among the pages shown, in FX_PG's order) */
+{
+    uint32_t k, n = 0, m = fx_mod_of(i);
+    for (k = 0; k < FX_NPG && !str_eq(FX_PG[k].t, PAGES[i].title); k++)
+        if (FX_PG[k].m == m && page_visible(fx_page(FX_PG[k].t)))
+            n++;
+    return n;
+}
+static uint32_t fx_mod_n(uint32_t m)                    /* the pages of module m shown */
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < FX_NPG; k++)
+        if (FX_PG[k].m == m % FX_NMOD && page_visible(fx_page(FX_PG[k].t)))
+            n++;
+    return n;
+}
 static int fx_mod_ok(uint32_t m) { return page_visible(fx_page(FX_MHEAD[m % FX_NMOD])); }   /* (LOAD ECO: no CHORUS, SLICER) */
 
 /* (0.8.5) a lens page shown (every section's, the menu's, a layer's map): the mock-up's layout, its tabs and breadcrumb */
@@ -575,6 +619,8 @@ static int trk_face(void) { return home_nofoot() && !ui.layer && !ui.menu && hom
 static int pg_row(void) { return lz_on() && !ui.menu && !dlg_on() && !name_on(); }
 /* (2026-11-02, step 3) TRACKS' order on every button's page: the panel, the knob cells (ui_draw.c kn_row), the page row */
 static int kn_cells(void) { return trk_face() || pg_row(); }
+/* (2026-11-13) FX ALL shown: its panel runs to the foot (no knob cells, no page row) */
+static int fxall_on(void) { return PAGES[ui.page].graph == GR_FXALL && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
 static int sets_full(void) { return PAGES[ui.page].graph == GR_SETS && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
 
 /* transient message in the top bar, right of the transport and the BPM: a + b */
@@ -641,7 +687,7 @@ static void section_preview_ui(void)                  /* (2026-11-06) SAVE > PRO
 /* parameter locks: a page whose KNOB 1..4 can lock (a track's sound: one of its parameters can be motion; not MOD's
  * slots), the parameter KNOB k locks (ui.plk_src's page, HOME's four), 0xFF = none */
 /* the page whose four ids the locks use (EDIT > PATCH: the page with the row's settings, params.c plist_page) */
-static const page_t *lock_pg(uint32_t i) { return PAGES[i].graph == GR_PLIST ? plist_page(&PAGES[i]) : &PAGES[i]; }
+static const page_t *lock_pg(uint32_t i) { return PAGES[i].graph == GR_FXALL ? fxa_page(&PAGES[i]) : LIST_PG(&PAGES[i]) ? plist_page(&PAGES[i]) : &PAGES[i]; }
 /* a page id as a motion id: FMINI's patch settings (VF) are P_COUNT + k; 0xFF if it cannot lock */
 static uint32_t lock_mid(uint32_t id)
 {
@@ -653,12 +699,13 @@ static int lock_page_ok(uint32_t i)
 {
     uint32_t k;
     const page_t *pg;
-    if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) || PAGES[i].graph == GR_MOD ||
-        PAGES[i].graph == GR_MSEQ)
+    if (i >= NPAGES)
         return 0;
-    if (PAGES[i].graph == GR_PLIST)                     /* (the row changes: any of the page's settings can lock) */
+    pg = lock_pg(i);                                    /* (FX ALL: the row's page, its own scope: the track's sends lock) */
+    if ((pg->scope != SC_TRACK && pg->scope != SC_ENGINE) || pg->graph == GR_MOD || pg->graph == GR_MSEQ)
+        return 0;
+    if (LIST_PG(&PAGES[i]))                             /* (the row changes: any of the page's settings can lock) */
         return 1;
-    pg = lock_pg(i);
     for (k = 0; k < 4u; k++)
         if (pg->id[k] != 0xFFu && motion_param(pg->id[k]))
             return 1;

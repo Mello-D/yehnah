@@ -887,7 +887,7 @@ static void setup(int s)
         static const uint16_t BASE[] = {S_ENV, S_MOTION, S_MOTION_LOCKS, S_COUNT,
                                        S_PATTERN, S_V6_FM6_OP, S_V6_ANALOG};   /* (0.9.6: over the creatures too) */
         int b = BASE[s - S_TOAST_ENV];
-        if (b == S_COUNT) { setup(S_HOME); go_page(GR_PUNCH); }
+        if (b == S_COUNT) { setup(S_HOME); go_fx("PUNCH"); }
         else setup(b);
         ui_message("SAVED A LONG MESSAGE");
         return;
@@ -960,11 +960,11 @@ static void setup(int s)
     }
     case S_DIST_PAGE: TSEL->p[P_DIST] = 70; TSEL->p[P_DTYPE] = 2; TSEL->p[P_DTONE] = 20; go_title("DIST"); break;
     /* (0.5) the technical graphs (ui_tech.c) */
-    case S_DLY2: song.g[G_WIDTH] = 90; song.g[G_DPIT] = 5; song.g[G_DSPRY] = 60; go_title("DLY 2"); break;
-    case S_REVERB2: song.g[G_RMOD] = 80; song.g[G_RWIDE] = 100; go_title("REVERB 2"); break;
-    case S_CHORUS: song.g[G_CDEPTH] = 90; go_title("CHORUS"); break;
-    case S_MASTER: song.g[G_CLIP] = 60; song.g[G_PUNCH] = 50; song.g[G_DUCK] = 40; go_title("MASTER"); break;
-    case S_LFO_DEST: TSEL->p[P_LD_PIT] = 20; TSEL->p[P_LD_FLT] = -40; TSEL->p[P_LD_AMP] = 60; go_title("LFO DEST"); break;
+    case S_DLY2: song.g[G_WIDTH] = 90; song.g[G_DPIT] = 5; song.g[G_DSPRY] = 60; go_fx("DLY 2"); break;
+    case S_REVERB2: song.g[G_RMOD] = 80; song.g[G_RWIDE] = 100; go_fx("REVERB 2"); break;
+    case S_CHORUS: song.g[G_CDEPTH] = 90; go_fx("CHORUS"); break;
+    case S_MASTER: song.g[G_CLIP] = 60; song.g[G_PUNCH] = 50; song.g[G_DUCK] = 40; go_fx("MASTER"); break;
+    case S_LFO_DEST: TSEL->p[P_LD_PIT] = 20; TSEL->p[P_LD_FLT] = -40; TSEL->p[P_LD_AMP] = 60; go_list("LFO LIST", 1); break;
     case S_REC_LAYER_SET: song.rec = 1; go_page(GR_ROLL); ui.cursor = 6; rp_put(RP_CLICK, 1u); rp_put(RP_COUNTIN, 2u);
         rp_put(RP_LEVEL, 2u); ui.layer = LAYER_REC; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_REC_LAYER_SONG: drum(1); track_defaults_steps(TSEL); go_page(GR_SONG); chain.running = 1; ui.layer = LAYER_REC;
@@ -1075,7 +1075,7 @@ static void setup(int s)
         go_title("PROG"); break;                       /* bend (+2) held */
     case S_KEY_ARP: case S_KEY_ARP2:                   /* (0.8.5) SCL . ARP's lens: ARP on (UPDN, 2 octaves), ARP 2 */
         TSEL->p[P_AMODE] = 3; TSEL->p[P_AOCT] = 2; TSEL->p[P_ASWING] = 40; TSEL->p[P_APROB] = 100;
-        go_title(s == S_KEY_ARP ? "ARP" : "ARP 2");
+        go_list("ARP LIST", s == S_KEY_ARP ? 0 : 1);
         break;           /* (0.8.5) LFO . MOD's lens: MSEQ 2 */
     case S_ED_OPERATOR: eng(ENGI_FM6); go_title("OPERATOR"); break;
     case S_GEN_EXPLORE: nav_go(SEC_HOME, HOME_IDEA + IX_FX, 1); break;   /* (chord-harp fork) IDEAS > FX, nothing thrown */
@@ -1088,24 +1088,24 @@ static void setup(int s)
         song.rec = 1u | 8u; ui.hot_col = 3; ui.hot_t = 30;
         song.g[G_DJF] = 63;                      /* (0.9.1) the DJ FILTER just turned: the high-pass's end */
         break;
-    case S_ENV: go_title("ENV"); ui.hot_col = 2; ui.hot_t = 30; break;
-    case S_ENVDEST: go_title("ENV DEST"); break;
-    case S_LFO: go_title("LFO"); break;
+    case S_ENV: go_title("ENV LIST"); ui.hot_col = 2; ui.hot_t = 30; break;
+    case S_ENVDEST: go_list("ENV LIST", 2); break;
+    case S_LFO: go_title("LFO LIST"); break;
     case S_MOD: TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40; TSEL->p[P_M2SRC] = 6;
         TSEL->p[P_M2DST] = 14; TSEL->p[P_M2AMT] = -64; mod_ui_slot = 1; go_title("MOD"); break;
     case S_FX: go_title("FX"); break;
-    case S_SLICER: song.g[G_SLMODE] = 1; go_title("SLICER"); break;   /* (0.6.3: the bus) */
-    case S_SLBUS: song.g[G_SLMODE] = 2; song.g[G_SLT1 + 2] = 0; song.g[G_SLFX] = 0; go_title("SL BUS 2"); break;
+    case S_SLICER: song.g[G_SLMODE] = 1; go_fx("SLICER"); break;   /* (0.6.3: the bus) */
+    case S_SLBUS: song.g[G_SLMODE] = 2; song.g[G_SLT1 + 2] = 0; song.g[G_SLFX] = 0; go_fx("SL BUS 2"); break;
     case S_SLPITCH: {
         static const int8_t PS[16] = {0, 7, 12, -5, 0, 3, 24, -12, 5, 0, -24, 7, 12, 0, 0, 0};
         for (uint32_t k = 0; k < 16u; k++) song.g[G_SLP0 + k] = PS[k];
         song.g[G_SLMODE] = 2; song.g[G_SLPLEN] = 12; sl_ui_step = 2; go_title("SL PITCH");
         break;
     }
-    case S_DLY: go_title("DLY"); break;
+    case S_DLY: go_fx("DLY"); break;
     case S_SCL: TSEL->p[P_SCALE] = 2; go_title("SCL"); break;
     case S_SHIFT: TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
-    case S_ARP: go_title("ARP"); break;
+    case S_ARP: go_list("ARP LIST", 0); break;
     case S_VOICE: go_title("VOICE"); break;
     case S_GLOBAL: go_title("MAIN"); sets_cur[0] = 0; break;
     case S_SYSTEM: go_title("SYSTEM"); break;
@@ -1121,7 +1121,6 @@ static void setup(int s)
     case S_EDIT_FMINI: case S_EDIT_PATCH:                /* (2026-11-11) FMINI: its EDIT 1 and the PATCH list */
         eng(ENGI_MINI);
         apply_preset_to(TSEL, 1);
-        plist_cur = 6;
         go_title(s == S_EDIT_PATCH ? "PATCH" : "EDIT 1"); break;
     case S_EDIT_DIGITAL: eng(E_FM); go_title("EDIT 1"); break;
     case S_OP_ENV: eng(1); go_title("OP1 ENV"); break;
@@ -1228,8 +1227,8 @@ static void setup(int s)
     case S_HM_GLO_SYS: go_home(); ui.hm = HM_GLO; hm_list = 3; sets_cur[3] = 2; break;
     case S_LAYER_FX_GRID: go_home(); ui.layer = LAYER_FX; break;
     case S_LAYER_SAVE_GRID: go_home(); ui.layer = LAYER_SAVE; break;
-    case S_REVERB: go_title("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
-    case S_REVERB_RESO: go_title("REVERB"); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; break;   /* (0.6.5) PITCH, FOLW */
+    case S_REVERB: go_fx("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
+    case S_REVERB_RESO: go_fx("REVERB"); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; break;   /* (0.6.5) PITCH, FOLW */
     /* the REC and SCL layers (ui_layer.c): just opened (a peek), and in use: REC with something to UNDO and KNOB 1
      * turned; playing with CLK EXT (TAP, RESTART dimmed); SCL at D# minor, KNOB 2 turned; the hint after a tap
      * (2026-11-02: GLO's layer gone, these were its) */
@@ -1383,14 +1382,14 @@ static void setup(int s)
      * DEPTH 90, CLIP 30 PUNCH 40 DUCK 20 REL 60 */
     case S_FXL_SENDS: case S_FXL_DIST: case S_FXL_PAN: case S_FXL_BUSES: case S_FXL_DELAY: case S_FXL_DELAY2:
     case S_FXL_REVERB: case S_FXL_SLICER: case S_FXL_MASTER: {
-        static const char *const T[] = {"FX", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "REVERB", "SLICER", "MASTER"};
+        static const char *const T[] = {"FX", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "REVERB", "SLICER", "MASTER"};   /* (2026-11-13: the rows of FX ALL; BUSES is gone: the top) */
         TSEL->p[P_DIST] = 30; TSEL->p[P_CHOR] = 60; TSEL->p[P_DLY] = 40; TSEL->p[P_REV] = 50;
         TSEL->p[P_DTYPE] = 0; TSEL->p[P_APDEP] = 40; TSEL->p[P_APWAVE] = 0;
         song.g[G_DFDBK] = 70; song.g[G_DMIX] = 50; song.g[G_RTYPE] = 0; song.g[G_RSIZE] = 70; song.g[G_CDEPTH] = 64;
         song.g[G_SLMODE] = SL_GATE; song.g[G_SLPAT] = 3; song.g[G_SLDEP] = 90;
         song.g[G_CLIP] = 30; song.g[G_PUNCH] = 40; song.g[G_DUCK] = 20; song.g[G_DREL] = 60;
         ui.fxmod = s == S_FXL_REVERB || s == S_FXL_BUSES ? 1u : s == S_FXL_SLICER ? 3u : s == S_FXL_MASTER ? 4u : 0u;
-        go_title(T[s - S_FXL_SENDS]);
+        go_fx(T[s - S_FXL_SENDS]);
         ui.msg_t = 0;
         if (getenv("FXLIVE")) {                         /* (FXLIVE=1: playing, a hit, then fading: the live pictures) */
             uint32_t f, i;

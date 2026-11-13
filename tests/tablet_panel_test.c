@@ -138,7 +138,7 @@ int main(void)
     check("FX from the tablet: the FX page", fx_on());
     t_press(B_HOME);
     check("HOME from the tablet: HOME", ui.home);
-    t_press(B_FX);
+    t_press(B_SCL);                                     /* (2026-11-13: FX, ENV, LFO, EDIT, ARP are row lists: SELECT scrolls rows; SCL has several pages) */
     p0 = ui.page;
     t_enc(EN_SELECT, 1);
     run_ms(100);

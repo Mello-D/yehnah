@@ -1154,15 +1154,20 @@ static uint32_t graph_signature(void)
         h ^= (mod_ui_slot + 1u) * 40503u;
     if (pg->graph == GR_STAGE)                       /* .. ENV > STAGE: the stage */
         h ^= (ui.stage + 1u) * 3266489917u;
-    if (pg->graph == GR_PLIST) {                     /* (2026-11-11) EDIT > PATCH: the row, every value in the list */
-        uint32_t r, k, pn = sound_n(t);
-        h ^= (plist_cur + 1u) * 2654435761u;
-        h ^= (uint32_t)(uintptr_t)sound_row(t, 0) >> 2;  /* (another engine's rows) */
+    if (LIST_PG(pg)) {                               /* (2026-11-11) EDIT > PATCH: the row, every value in the list */
+        uint32_t r, k, pn = lp_n(pg);
+        h ^= (*lp_cur(pg) + 1u) * 2654435761u;
+        h ^= (uint32_t)(uintptr_t)lp_row(pg, 0) >> 2;  /* (another engine's rows) */
+        if (pg->graph == GR_RLIST) {                     /* (2026-11-12) the picture runs: the LFO's phase, the envelope's voices */
+            h ^= (t->lfo_ph >> 23) * 2654435761u ^ (uint32_t)(t->lfo_val * t->lfo_fade >> 22);
+            for (r = 0; r < NVOICE; r++)
+                h = (h ^ ((uint32_t)t->v[r].stage << 24 | (uint32_t)t->v[r].env >> 16)) * 16777619u;
+        }
         for (r = 0; r < pn; r++) {
-            const sound_row_t *pr = sound_row(t, r);
+            const sound_row_t *pr = lp_row(pg, r);
             for (k = 0; k < 3u; k++)
                 if (pr->id[k] != 0xFFu)
-                    h = (h ^ (uint32_t)(uint16_t)plist_val(t, pr->id[k])) * 16777619u;
+                    h = (h ^ (uint32_t)(uint16_t)lp_val(pg, t, pr->id[k])) * 16777619u;
         }
     }
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
@@ -1528,14 +1533,19 @@ static uint16_t sec_col(uint32_t s)
 #include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
 #include "ui_lzhome.c"                              /* (0.8.5) HOME's lens: ECO, BEING, the critters */
 #include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
-#include "ui_lzlist.c"                               /* (2026-11-11) EDIT > PATCH: FMINI's list */
 #include "ui_lzpage.c"                               /* (0.8.5) ENV's, LFO . MOD's, SCL . ARP's, GLO's */
+#include "ui_lzlist.c"                               /* (2026-11-11) EDIT > PATCH: FMINI's list */
+static void fxall_draw(void);                       /* (2026-11-13) ui_lzfxall.c */
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
     uint16_t c = ACC;
     uint32_t sig;
+    if (fxall_on() && !ui.home) {                    /* (2026-11-13) FX ALL: its own panel, its own signature */
+        fxall_draw();
+        return;
+    }
     if (!ui.home && pg->graph == GR_TRK) {
         draw_tracks();
         return;
@@ -1589,6 +1599,9 @@ static void draw_graph(void)
     } else if (pg->graph == GR_PLIST) {              /* (2026-11-11) EDIT > PATCH (FMINI): the list */
         cv_oy = 0;
         graph_plist(t);
+    } else if (pg->graph == GR_RLIST) {              /* (2026-11-12) ENV LIST, LFO LIST: the picture and three rows */
+        cv_oy = 0;
+        graph_rlist(t, pg);
     } else if (bars_view(pg)) {                      /* (0.8.3) LENTE's PATTERN: PATTERN STRETCH TRACK, the bars */
         cv_oy = 0;
         graph_bars(t, c);

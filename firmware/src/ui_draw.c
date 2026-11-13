@@ -414,6 +414,10 @@ static void draw_head(void)
  * (2026-11-02) every page in TRACKS' order (kn_cells) */
 static void draw_frame(void)
 {
+    if (fxall_on()) {                                   /* (2026-11-13: FX ALL's panel covers these rows: a black bar flashed in it) */
+        lcd_clear(0, TF_SC_Y + graph_h(), 240, 240u - TF_SC_Y - graph_h(), T_BG);   /* (the foot under it: a page row's last rows, from the page before) */
+        return;
+    }
     lcd_clear(0, TF_SC_Y + TF_SC_H, 240, TF_KN_Y - TF_SC_Y - TF_SC_H, T_BG);
     lcd_clear(0, TF_KN_Y + TF_KN_H, 240, TF_PG_Y - TF_KN_Y - TF_KN_H, T_BG);
 }
@@ -1372,9 +1376,10 @@ static void draw_cards(void)
                 draw_column(2, "RATE", N_PRATE[prog_rate % 3u], "", VAL(2u), pick_of(3u, prog_rate % 3u), ICON_RATE);
             continue;
         }
-        if (cur_page()->graph == GR_PLIST && c == 0u) {  /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (its name; n/N) */
-            uint32_t pn = sound_n(TSEL);
-            draw_column(0, "ROW", sound_row(TSEL, plist_cur % pn)->name, "", VAL(0u), pick_of(pn, plist_cur), ICON_NONE);
+        if (LIST_PG(cur_page()) && c == 0u) {            /* (2026-11-11) EDIT > PATCH: KNOB 1 the row (its name; n/N) */
+            const page_t *lp = cur_page();
+            uint32_t pn = lp_n(lp), lc = *lp_cur(lp);
+            draw_column(0, "ROW", lp_row(lp, lc % pn)->name, "", VAL(0u), pick_of(pn, lc), ICON_NONE);
             continue;
         }
         if (cur_page()->graph == GR_SETS && c == 0u) {   /* (topic C) GLO's lists: KNOB 1 the row (its name; n/N) */
@@ -1486,7 +1491,17 @@ static void knobs_of(void (*f)(void))
     f();
     kn_row(kn_buf);
 }
-static void draw_columns(void) { knobs_of(draw_cards); }
+static void draw_columns(void)
+{
+    if (fxall_on()) {                                   /* (2026-11-13) FX ALL: the rows hold the knobs' cells; nothing rolls */
+        uint32_t c;
+        for (c = 0; c < 4u; c++)
+            ui.roll[c].from[0] = 0;
+        return;
+    }
+    knobs_of(draw_cards);
+}
+#include "ui_lzfxall.c"                                 /* (2026-11-13) FX ALL's panel */
 
 
 /* (chord-harp fork) The power-on splash (main.c fm1_main, web/emu yehnah_web.c), was Yehnah's signature and beings,
@@ -1922,7 +1937,7 @@ static void ui_draw_body(uint32_t counting)
         ui.force = 0;
         return;
     }
-    if (pg_row())                                       /* (2026-11-02) a button's page: the page row at the foot */
+    if (pg_row() && !fxall_on())                        /* (2026-11-02) a button's page: the page row at the foot (FX ALL: its panel runs to it) */
         page_row();
     ui.force = 0;
 }
