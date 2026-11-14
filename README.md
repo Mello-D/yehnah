@@ -3,7 +3,7 @@
 <h1 align="center">Yehnah</h1>
 
 <p align="center"><b>A six-track synth, drum machine and song sequencer for the M-VAVE FM-1</b><br>
-25 synthesis engines, chords on one finger, a screen that draws every sound, and an editor and emulator that run in the browser</p>
+25 synthesis engines, chords on one finger, ideas that write for you, and an editor and emulator that run in the browser</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg" alt="License: GPL-3.0-only"></a>
@@ -22,11 +22,12 @@
 
 ![Yehnah on the FM-1's screen: HOME, the sound list, the piano roll, the drum grid, the HARP chord keys and the mixer](docs/img/hero.png)
 
-Yehnah turns the FM-1 into a six-track instrument: twenty-five synthesis engines with about 780 factory sounds, a drum
-machine that morphs between two sides of a kit, a 64-step sequencer with chords and parameter locks, songs made of
-sections and scenes, one-key chords played like an Omnichord or a guitar, a modulation matrix, a punch-in effects
-layer, and a screen that shows what every page does as a small picture. Everything is synthesised in real time: there are
-no samples. It ships with a web installer, a web editor and an emulator that runs the firmware itself in the browser.
+Yehnah turns the FM-1 into a six-track instrument: twenty-five synthesis engines with over 700 factory sounds, drum
+machines that morph between two sides of a kit, a 64-step sequencer with chords and parameter locks, songs made of
+sections and scenes, one-key chords played like an Omnichord or a guitar, a modulation matrix, punch-in effects, and
+IDEAS, which write a pattern, a sound, an LFO, an effect or an ambient texture for the track you are on. Everything is
+synthesised in real time: there are no samples. It comes with a web installer, a web editor and an emulator that runs
+the firmware itself in the browser.
 
 > **Status:** a development release (`v0.1.0`). It is custom firmware: install it at your own risk, and read
 > [Install](#install) first. Your music is backed up before the installer writes anything, and the way back to the
@@ -43,7 +44,7 @@ FM-1 projects: see [Credits](#credits). It is not Felucca or JIANT FM: please re
 2. [Install](#install)
 3. [A tour](#a-tour)
 4. [Engines](#engines)
-5. [The controls](#the-controls)
+5. [The layers](#the-layers)
 6. [MIDI and USB](#midi-and-usb)
 7. [The web editor](#the-web-editor)
 8. [Specifications](#specifications)
@@ -56,7 +57,7 @@ FM-1 projects: see [Credits](#credits). It is not Felucca or JIANT FM: please re
 
 The **[emulator](https://mello-d.github.io/yehnah/emu/)** is the firmware itself, compiled to WebAssembly, drawn as an
 FM-1 you play with the mouse, a touch screen or the computer keyboard. Nothing is installed and nothing leaves your
-computer. It is the quickest way to learn the layers and to hear an engine before you put it on the unit.
+computer. It is the quickest way to learn the pages and to hear an engine before you put it on the unit.
 
 ## Install
 
@@ -81,26 +82,29 @@ RP2040.
 
 ## A tour
 
-### Six tracks, one creature each
+### HOME: the track you are on
 
-HOME shows the six tracks as small beings in a pixel-art city. The four knobs under them are the track's own: the
-engine decides which four. Turn ALGORITHM to move between them; **TRACKS 4** is the default,
-and **TRACKS 6** brings in the last two.
+HOME shows the selected track as a small robot that dances to what the track plays, on a city street at dusk or by night.
+Under it are the track's four knobs (the engine decides which four), and the pages of HOME are tabs along the foot:
+**TRACKS**, **PRESETS**, **MORPH**, **MIXER**, **SENDS** and the five **IDEAS** pages. Turn ALGORITHM to move
+between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the last two.
 
 <table>
 <tr>
-<td align="center"><img src="docs/img/home.png" width="300" alt="HOME: the track's creature and its four knobs"><br><sub>HOME: a track, its four knobs, the pages as tabs</sub></td>
+<td align="center"><img src="docs/img/home.png" width="300" alt="HOME: the selected track's robot on a city street, its four knobs and the tabs"><br><sub>HOME: the track's robot, its four knobs, the tabs</sub></td>
 <td align="center"><img src="docs/img/presets.png" width="300" alt="The sound list: name, type and engine"><br><sub>PRESETS: one list over every engine, by name, type and engine</sub></td>
-<td align="center"><img src="docs/img/macros.png" width="300" alt="The four macros and where they are routed"><br><sub>MACROS: M1–M4 and where they reach</sub></td>
 </tr>
 </table>
 
-- **One sound list.** About 780 factory sounds, browsed with PRESETS: each with a type (bass, lead, pad…) and an
-  engine, with favourites and 32 user preset slots. Switching a track to another engine fades the old one out and the
-  notes you hold go on in the new one: nothing is cut.
-- **Dice.** Hold EDIT and turn SELECT: the sound rolls into a new variation and you hear it at once, with KEEP or
-  CANCEL. HOME's IDEAS pages roll a track, a sound, an LFO, an effect or a texture, and show BEFORE and NOW side by side.
-- **Undo.** GLO held + G4 undoes the last big change; again redoes it.
+- **One sound list.** Over 700 factory sounds, browsed with PRESETS: each has a type (bass, lead, pad…) and an engine.
+  Favourites and 32 user presets sit in the same list. **MORPH** blends two tracks into one part. Switching a track to
+  another engine fades the old one out, and the notes you hold go on in the new one.
+- **IDEAS.** The five IDEAS tabs throw ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
+  genre's progression, voicing and figures, a rhythm cell, a role: bass, chords, melody or arp), **SOUND** picks a preset
+  or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
+  effect (drive, space, movement), and **TEXTURE** makes what the track plays ambient: a pad, choir, hiss, sea or crackle
+  sound, softer and longer notes, a wider space. OCT+ keeps an idea, OCT− puts back what was there before; and UNDO
+  (REC held + D4) brings back the one before.
 
 ### Sequencer
 
@@ -108,19 +112,19 @@ and **TRACKS 6** brings in the last two.
 <tr>
 <td align="center"><img src="docs/img/step.png" width="300" alt="The piano roll with chords"><br><sub>STEP: a piano roll of the pattern, chords and lengths</sub></td>
 <td align="center"><img src="docs/img/pattern.png" width="300" alt="The pattern's bars as thumbnails"><br><sub>PATTERN: the bars, LEN, DIV, SWING, GATE</sub></td>
-<td align="center"><img src="docs/img/arp.png" width="300" alt="The arpeggiator page"><br><sub>ARP: modes, rate, octaves, swing</sub></td>
+<td align="center"><img src="docs/img/arp.png" width="300" alt="The arpeggiator rows"><br><sub>ARP: modes, rate, octaves, feel</sub></td>
 </tr>
 </table>
 
-- **64 steps per track**, each with its own length, division, swing and gate, so patterns of different lengths drift in
-  and out of phase. Notes can be longer than a step (TIEs, up to 16 steps), chords keep all their notes, and a note can
-  be lengthened or shortened afterwards without recording again.
+- **64 steps per track**, each track with its own length, division, swing and gate, so patterns of different lengths
+  drift in and out of phase. Notes can be longer than a step (ties), chords keep all their notes, and a note can be
+  lengthened or shortened afterwards without recording again.
 - **Parameter locks.** Hold a step and turn a knob: that step plays its own value of any parameter.
-- **Ratchets, ghost notes, flams** on the drums; **probability** (CHANCE) and fill-only steps; a step's **micro timing**.
-- **Live recording** with quantise off or on (the timing you played is kept as a nudge), overdub, a count-in and a
-  click that is never recorded.
-- **An arpeggiator** with many modes, a hold, a swing and a probability, and **a separate strum player**
-  for the GUITAR chords with its own pattern, division and sweep.
+- **Per-step control:** ratchets, a step's **probability**, **fill-only** steps and **micro timing**.
+- **Live recording** with quantise off or on (the timing you played is kept as a nudge), overdub, a count-in and an
+  optional click.
+- **An arpeggiator with 27 modes**, a hold, a swing and a probability, and **a separate strum player** for the GUITAR
+  chords with its own pattern, division and sweep.
 - **A motion lane.** Knob moves and incoming MIDI CCs are recorded as automation and played back with the steps.
 
 ### Chords, played with one finger
@@ -139,8 +143,8 @@ and **TRACKS 6** brings in the last two.
 - **Handheld-style playing** after the Omnichord and the Orchid: STRUM spreads the notes low to high like a harp, and
   the **HARP** and **OMNI** tabs draw the chord keys as a strip you play with one finger. **PROG** holds chord
   progressions and can write them onto a track, and **GUITAR** plays 50 chord styles in 14 tunings.
-- **16 scales** with a root that is global for the song, a QUANT mode (snap, white keys walk the scale, or the sequencer
-  snaps too) and **a key stored with each section**, so a song can change key from one section to the next.
+- **16 scales** with a root that is global for the song, a QUANT mode (off, snap, white keys walk the scale, or the
+  sequencer snaps too) and **a key stored with each section**, so a song can change key from one section to the next.
 
 ### Drums
 
@@ -152,12 +156,14 @@ and **TRACKS 6** brings in the last two.
 </table>
 
 - **DRUM-X** is a synthesised kit of eight sounds (BD SD CP CH OH TM RS CB) generated in real time. Every sound has two
-  sides, **A** and **B**, and **MORPH** moves the whole kit between them: the knob to play live. Kits come as
-  presets (909 CLUB, 808 BOOM, LOFI DUST, INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS and more).
+  sides, **A** and **B**, and **MORPH** moves the whole kit between them: the knob to play live. There are twenty kit
+  presets, among them 808 BOOM, LOFI DUST, INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, ROCK KIT, JAZZ KIT, 808 CIRCUIT,
+  909 SWEEP, ARCADE CHIP, RHYTHM BOX and PUNCH KIT.
 - **HORT** is a second drum machine built from [Hortator](https://github.com/deadactive/hortator)'s drum models, with
-  seven kit presets; **LCD-4** is a third. Every sound has its own tune and decay, layers and sends.
+  seven kit presets (808 MODEL, 909 MODEL, DIGITAL KIT, FM KIT, PUNCH KIT, BIG BOOM and BASIC KIT); **LCD-4** is a third.
+  Every sound has its own tune and decay, layers and sends.
 - **Hit modes on the keys:** the octave below plays SHORT, GHOST and FLAM, the octave above ratchets ×2, ×4 and ×8, in
-  time with the step grid.
+  time with the step grid. In the EDIT layer the black keys mute the drum sounds.
 
 ### Songs, sections and scenes
 
@@ -168,71 +174,56 @@ and **TRACKS 6** brings in the last two.
 </tr>
 </table>
 
-- **8 projects, 4 sections each (A–D)**: a section is a full snapshot of the music, every track's sound, steps and
+- **6 projects, each of 4 sections (A–D)**: a section is a full snapshot of the music, every track's sound, steps and
   automation, the drum kit and its mutes, the punch-in lane, the slicer, the macros, the tempo and the global effects.
 - **An arrangement of up to 16 rows**, each a section for 1–64 bars with an optional **scene** (the mutes, the drum group
-  mutes, the macros and the punch-in effects held) and an END rule: stop, ×2 … ×8, or loop.
-- **Play the sections live** from the SAVE layer, hold SAVE and tap several for a **quick chain**, and **record the
-  song** as you play it (the section system after [SLOOP](https://github.com/isod89/sloop-fm1)).
-- **Autosave.** Stop and leave it for a couple of seconds: the work is kept and the unit comes back as you left it.
+  mutes, the macros and the punch-in effects held) and an END rule.
+- **Play the sections live** from the REC layer: tap A–D to switch on the next bar, tap several in one hold for a **quick
+  chain**, and **record the song** as you play it (the section system after [SLOOP](https://github.com/isod89/sloop-fm1)).
+- **Autosave.** The music is kept as you work and put back at power-on (MENU > SYSTEM > RESTORE LAST).
 
 ### Effects and master
 
 <table>
 <tr>
-<td align="center"><img src="docs/img/fx.png" width="300" alt="FX ALL: every effect's rows on one scrollable page"><br><sub>FX ALL: every effect's rows on one scrollable page</sub></td>
-<td align="center"><img src="docs/img/delay.png" width="300" alt="The delay's rows and its echoes"><br><sub>DELAY: its taps and its echoes drawn</sub></td>
+<td align="center"><img src="docs/img/reverb.png" width="300" alt="FX ALL: the reverb's rows, then the chorus"><br><sub>FX ALL: every effect's rows on one scrollable page</sub></td>
+<td align="center"><img src="docs/img/delay.png" width="300" alt="The delay's rows and its echoes"><br><sub>DELAY: its taps, with the reverb below it</sub></td>
 <td align="center"><img src="docs/img/punch.png" width="300" alt="The FX layer: punch-in effects on the keys"><br><sub>The FX layer: punch-in effects, held on the keys</sub></td>
 </tr>
 </table>
 
-- **Per track:** a drive (SOFT, HARD, FOLD, CRUSH, RECT, or a two-stage valve **AMP**) with a tone control, an auto-pan,
-  and sends to the buses.
-- **Buses:** a delay (analog or digital, with ping-pong), **five reverb models**, a chorus and a **slicer** with
-  pitch steps that follow the scale.
+- **Per track:** a drive (SOFT, HARD, FOLD, CRUSH, RECT, FUZZ, or a two-stage valve **AMP**) with a tone control, an
+  auto-pan, a phaser, and sends to the buses.
+- **Buses:** a delay (analog or digital, with ping-pong), **six reverb models** (ROOM, SPRING, SHIMR, RESO, CLOUD, REVRS),
+  a chorus and a **slicer** with pitch steps that follow the scale.
 - **Master:** a clipper, a drum bus and a ducker, and a DJ filter on the mixer.
-- **Punch-in effects** while you hold FX: repeats at 1/8, 1/16 and 1/32, high and low-pass sweeps, octave shifts,
-  half tempo, stutters, short or long decays, random: the note effects are **recorded into a lane** that plays back with
-  the section.
+- **Punch-in effects** while you hold FX: repeats, high and low-pass sweeps, an octave down or up, half tempo, stutters,
+  short or long decays, slow attacks, a fill, random notes. The note effects are **recorded into a lane** that plays back
+  with the section.
 
 ### Modulation
 
-- **A modulation matrix** per track: sources LFO, ENV, VEL, KEY, RAND, mod wheel, aftertouch, expression, the four
-  macros, **MSEQ** (a 16-step modulation sequencer) and a smooth NOISE wander, to the filter, pitch, shape and amplitude.
-- **Macros M1–M4** that move many parameters at once, with a latch so your hands are free.
-- **Envelopes and LFOs** per track, drawn as they run; ALL ENV shows the six tracks' envelopes side by side.
+- **A modulation matrix** per track. Sources: LFO, ENV, VEL, KEY, RAND, mod wheel, aftertouch, expression, the four
+  macros, **STEP** (the MSEQ step modulator) and a smooth NOISE wander. They reach the filter, pitch, shape and amplitude.
+- **Envelopes and LFOs** per track on their own pages; ALL ENV shows the six tracks' envelopes side by side.
 
-### A screen that draws what it does
-
-<table>
-<tr>
-<td align="center"><img src="docs/img/fm6.png" width="220" alt="FM6's algorithm rows"><br><sub>FM6</sub></td>
-<td align="center"><img src="docs/img/fmini.png" width="220" alt="FMINI's oscillator rows"><br><sub>FMINI</sub></td>
-<td align="center"><img src="docs/img/guitar.png" width="220" alt="GUITAR's string rows"><br><sub>GUITAR</sub></td>
-<td align="center"><img src="docs/img/animal.png" width="220" alt="ANIMAL's call rows"><br><sub>ANIMAL</sub></td>
-<td align="center"><img src="docs/img/voice.png" width="220" alt="VOICE's vowel rows"><br><sub>VOICE</sub></td>
-</tr>
-</table>
-
-SOUND is a list of rows: KNOB 1 scrolls, the other knobs set the row's values, and the whole engine fits on one scrollable
-page, in four-knob cells with a picture for every pick. Beyond the pages, the engines have their own creatures (an
-operator colony, a bird, a mouth that forms vowels) and HOME's creatures react to what you play. The screen has four
-skins and many colour themes:
-
-![The same screen in six colour themes](docs/img/themes.png)
-
-### Performance layers
+### A screen made of rows
 
 <table>
 <tr>
-<td align="center"><img src="docs/img/seqtools.png" width="300" alt="The SEQ layer's tools"><br><sub>SEQ held: reverse, shift, clear line, fill</sub></td>
-<td align="center"><img src="docs/img/rec.png" width="300" alt="The REC layer"><br><sub>REC held: loop, undo, restart, play sections</sub></td>
-<td align="center"><img src="docs/img/perform.png" width="300" alt="The FX layer held, with a punch-in effect on"><br><sub>FX held: an effect on, the four knobs shaping it</sub></td>
+<td align="center"><img src="docs/img/fm6.png" width="220" alt="FM6's rows"><br><sub>FM6</sub></td>
+<td align="center"><img src="docs/img/fmini.png" width="220" alt="FMINI's rows"><br><sub>FMINI</sub></td>
+<td align="center"><img src="docs/img/guitar.png" width="220" alt="GUITAR's rows"><br><sub>GUITAR</sub></td>
+<td align="center"><img src="docs/img/animal.png" width="220" alt="ANIMAL's rows"><br><sub>ANIMAL</sub></td>
+<td align="center"><img src="docs/img/voice.png" width="220" alt="VOICE's rows"><br><sub>VOICE</sub></td>
 </tr>
 </table>
 
-Every function button is a **layer**: hold it and the keys and the four knobs change job, and the screen draws a map of
-what they do. Tap it and its pages open. Hold a layer button and tap HOME to **lock** it open, both hands free.
+SOUND is a scrollable list of rows: KNOB 1 scrolls, the other knobs set the row's values, and each value is a cell of four
+with a picture for every pick. The same design carries the effects, the envelopes, the LFOs, the arpeggiator and the
+GLO settings. Five colour themes and several screen skins change the look:
+
+![The same screen in the five colour themes: VAP DK, VAP LT, NOIRE, DUSK and CREAM](docs/img/themes.png)
 
 ## Engines
 
@@ -264,24 +255,31 @@ Any engine can go on any track. **25 engines**, all synthesis:
 | **OMNI** | the Omnichord's voices |
 | **VOICE** | sung vowels and typed words: formant synthesis after Klatt |
 | **ANIMAL** | bird, mammal and insect calls from four physical primitives |
-| **DRUM** | DRUM-X, HORT and LCD-4 drum machines |
+| **DRUM** | the DRUM-X, HORT and LCD-4 drum machines |
 
-The [manual](docs/MANUAL.md#4-engines) lists every engine's pages and knobs.
+The [manual](docs/MANUAL.md#4-engines) lists the engines' pages and knobs.
 
-## The controls
+## The layers
 
-| Control | What it does |
-| --- | --- |
-| **SELECT** (encoder) | walks the pages of a section; on HOME, the tempo |
-| **ALGORITHM** (encoder) | selects the track |
-| **KNOB 1–4** | the page's four values, drawn on the screen |
-| **HOME** | the tracks; held + SELECT: IDEAS |
-| **EDIT / ENV / LFO / SCL / ARP / SEQ / FX / GLO / SAVE** | each opens its pages; held, it is a layer of shortcuts |
-| **REC / PLAY** | record, play; **GLO + PLAY** restarts from the top |
-| **OCT− / OCT+** | keyboard octave; on action pages, the dialogs' answers |
+Hold a button and the keys and the four knobs change job, while the screen draws a map of what they do. Tap the button
+and its pages open. Four buttons have a layer:
 
-The manual's [panel chapter](docs/MANUAL.md#1-the-panel) and the two cheat sheets
-([controls](docs/cheatsheet-controls.png), [sound](docs/cheatsheet-sound.png)) have the full map.
+<table>
+<tr>
+<td align="center"><img src="docs/img/punch.png" width="220" alt="The FX layer"><br><sub><b>FX</b>: punch-in effects</sub></td>
+<td align="center"><img src="docs/img/rec.png" width="220" alt="The REC layer"><br><sub><b>REC</b>: undo, restart, sections, song</sub></td>
+<td align="center"><img src="docs/img/scl.png" width="220" alt="The SCL layer"><br><sub><b>SCL</b>: the root, and STRUM</sub></td>
+<td align="center"><img src="docs/img/edit.png" width="220" alt="The EDIT layer on an FM6 track"><br><sub><b>EDIT</b>: INIT, RECALL, drum mutes</sub></td>
+</tr>
+</table>
+
+- **FX:** the punch-in effects on the white keys, the track mutes while held, and FILTER, CRUSH, THROW and DEPTH on the
+  knobs. Hold FX until its map opens and let go without touching anything: the layer stays open, with both hands free.
+- **REC:** CLEAR the track, CLICK (off, REC, on), COUNT-IN, **UNDO** and redo, RESTART from the top, REVERT ALL, play
+  sections A–D on the next bar (several in one hold: a quick chain), LOOP / SONG, **SONG REC**, and NAME.
+- **SCL:** the twelve keys set the root, and KNOB 1 is STRUM for every chord mode.
+- **EDIT:** INIT puts the track's sound back to its engine's first preset (a drum track's kit to the factory one), RECALL
+  puts it back as the playing section stored it, and on a drum track the black keys mute the drum sounds.
 
 ## MIDI and USB
 
@@ -292,9 +290,10 @@ The manual's [panel chapter](docs/MANUAL.md#1-the-panel) and the two cheat sheet
 - **Controllers:** CC 5, 7, 10, 71–75 and 91–94 (glide, level, pan, resonance, envelope, sends), CC 74 the engine's cutoff,
   **CC 16–23** the engine's own eight values, CC 102–105 the post filter, drive and sustain. Pitch bend, sustain,
   All Sound Off and All Notes Off work, and a CC you move is recorded as automation.
-- **Program Change** loads sounds; channel 16 is the song's.
-- **USB audio:** the master output as a stereo input on the computer, **STEMS** (eight channels: the six tracks, and the effects return in stereo),
-  and **IN+OUT**, which makes the FM-1 an audio output of the computer or phone as well.
+- **Program Change** loads sounds from the PRESETS list; channel 16 is the song's, and picks sections.
+- **USB audio:** the master output as a stereo input on the computer, **STEMS** (eight channels: the six tracks, and the
+  effects return in stereo), **IN+OUT**, which makes the FM-1 an audio output of the computer or phone as well, and a
+  **TABLET** mode.
 
 Not possible: MIDI out on the TRS jack (the jack is an input only) and Bluetooth MIDI. Details in the manual's
 [MIDI and USB chapter](docs/MANUAL.md#14-midi-and-usb).
@@ -309,14 +308,14 @@ restore** keeps the whole unit. The protocol is in [web/EDITOR_PROTOCOL.md](web/
 
 | | |
 | --- | --- |
-| Tracks | 6 (4 by default), 8 voices shared between them |
-| Sounds | 25 engines, about 780 factory presets, 32 user presets, favourites |
-| Drums | DRUM-X, HORT and LCD-4 machines, 8 sounds, A and B sides, kit presets |
+| Tracks | 6 (4 by default), sharing a budget of 8 voices (up to 12 on the FULL load setting) |
+| Sounds | 25 engines, over 700 factory presets, 32 user presets, favourites |
+| Drums | DRUM-X, HORT and LCD-4 machines, 8 sounds, A and B sides, 20 kit presets |
 | Sequencer | 64 steps per track, own length, division, swing and gate, parameter locks, ratchets, probability, micro timing |
-| Songs | 8 projects × 4 sections, an arrangement of 16 rows, scenes, SONG REC |
-| Effects | drive, auto-pan, delay, 5 reverbs, chorus, slicer, master, DJ filter, punch-in effects with a recorded lane |
-| Audio | 44.1 kHz fixed-point DSP, optionally on both of the FM-1's cores; USB audio, stems |
+| Songs | 6 projects × 4 sections, an arrangement of 16 rows, scenes, SONG REC |
+| Effects | drive, auto-pan, phaser, delay, 6 reverbs, chorus, slicer, master, DJ filter, punch-in effects with a recorded lane |
 | MIDI | USB in and out, TRS in, clock in and out, CCs, Program Change |
+| USB | MIDI, stereo audio, 8-channel stems, audio in |
 | Update | from the browser with a backup first, or offline with Python |
 
 ## Building and testing
@@ -373,8 +372,8 @@ Yehnah is made by Mello-D, and stands on a lot of other people's work. Thank you
   `eng_fmini_filter.h`; `tools/gen_fmini_data.py` makes the data files).
 - **[guitchordi](https://github.com/stoogs/guitchordi)** by stoogs (GPL-3.0): SCL > GUITAR's 50 chord styles
   (`tools/gtr/`, `firmware/src/harp_gtr.h`).
-- **[klattsch](https://github.com/tgies/klattsch)** by Tony Gies (MIT): VOICE, with formant data from Klatt (1980) and
-  Hillenbrand et al. (1995).
+- **[klattsch](https://github.com/tgies/klattsch)** by Tony Gies (MIT): VOICE is after it, with formant data from Klatt
+  (1980) and Hillenbrand et al. (1995).
 - **FM6:** msfa from [Dexed](https://github.com/asb2m10/dexed), Google Inc. and Pascal Gauthier
   ([Apache-2.0](LICENSES/Apache-2.0-msfa.txt)).
 - **Both cores:** the way to start the AC79's second core and the guard against its misreads, after

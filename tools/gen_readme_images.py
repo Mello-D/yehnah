@@ -11,7 +11,7 @@ from PIL import Image
 
 PPM = Path(sys.argv[1] if len(sys.argv) > 1 else "build/ui_new/ppm")
 OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "docs/img")
-PAL = "VAP DK"
+PAL = "VAP DK"   # (only the palettes tests/ui_render.c renders today: older runs leave stale PPMs of designs the firmware no longer has)
 OUT.mkdir(parents=True, exist_ok=True)
 
 def shot(name, pal=PAL):
@@ -33,12 +33,11 @@ SINGLE = {   # file: render name
     "splash": "splash", "home": "home", "presets": "presets", "step": "roll_chords", "pattern": "lente_pattern",
     "drum": "drum", "drumx": "drumx", "chord": "key_chord", "harp": "key_harp", "omni": "key_omni",
     "arp": "key_arp", "fm6": "edit_fm6", "fmini": "edit_fmini", "guitar": "edit_guitar", "animal": "vx_bird",
-    "voice": "vx_head_vowel", "mixer": "mixer", "fx": "fx", "delay": "fx_effect_delay", "punch": "layer_fx_grid",
-    "arrange": "save_arrange", "macros": "home_being", "seqtools": "layer_seq_tools", "rec": "layer_rec",
-    "perform": "perform_held",
+    "voice": "vx_head_vowel", "mixer": "mixer", "reverb": "fx_effect_reverb", "delay": "fx_effect_delay", "scl": "layer_scl_active", "edit": "layer_edit_active", "punch": "layer_fx_grid",
+    "arrange": "save_arrange", "rec": "layer_rec",
 }
 for fn, n in SINGLE.items():
     save(shot(n), fn + ".png")
 grid(["home", "presets", "roll_chords", "drum", "key_harp", "mixer"], 3, "hero.png")
-grid(["home"] * 6, 3, "themes.png", pals=["VAP DK", "VAP LT", "NOIRE", "PASTEL DK", "GREEN", "PAPER"])
+grid(["home"] * 5, 5, "themes.png", pals=["VAP DK", "VAP LT", "NOIRE", "DUSK", "CREAM"], scale=1)   # (the five palettes the firmware has: tools/gen_ui_palettes.py)
 print(len(list(OUT.glob("*.png"))), "images in", OUT)
