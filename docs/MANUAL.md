@@ -319,6 +319,12 @@ MAJ7, MIN7, POWER**; and the handheld modes **HARP, OMNI, PROG, GUITAR**. **VOIC
 
 ### HARP, OMNI, PROG, GUITAR, TUNE
 
+**Playing it like a controller.** These modes are made for holding the FM-1 in two hands like a console controller:
+**one thumb plays the chords, the other strums the plate.** In HARP and OMNI the lowest keys (F3–E4) are the chord
+keys, and the white keys above them (from F4) are the **plate**: the notes of the chord you struck last, one string a
+key, so a sweep of the other thumb strums it. The black keys over the plate bend the notes while held (G#4 and A#4 an
+octave down and up, C#5 and D#5 a whole tone), and the top black key, F#5, latches the chord so it keeps sounding.
+
 - **HARP:** a strip of chord keys. **KNOB 2 GENRE** picks a family of chord sets, **KNOB 3 SET** the set within it.
 - **OMNI:** the Omnichord's chord keys and strum plate: **SET**, **AUTO**.
 - **PROG:** chord progressions: **PROG** (1–32), **RATE**; **OCT+** writes the progression onto the track.

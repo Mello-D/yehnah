@@ -140,9 +140,11 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 - **SCL > CHORD.** TRIAD, 7TH, ADD9, SUS2 and SUS4 are always in key; MAJ, MIN, 7, MAJ7, MIN7 and POWER work on any
   key. VOICING: CLOSE, LEAD (voice leading), OPEN or +BASS. Chords record into steps, arpeggiate and light up the keys
   so you can learn them.
-- **Handheld-style playing** after the Omnichord and the Orchid: STRUM spreads the notes low to high like a harp, and
-  the **HARP** and **OMNI** tabs draw the chord keys as a strip you play with one finger. **PROG** holds chord
-  progressions and can write them onto a track, and **GUITAR** plays 50 chord styles in 14 tunings.
+- **Handheld-style playing** after the Omnichord and the Orchid. The idea is to hold the FM-1 like a console controller:
+  **one thumb plays the chords, the other strums the plate**. In **HARP** and **OMNI** the lowest keys are the chord keys
+  and the white keys above them are the plate, the notes of the chord you just played, one string a key, to strum across
+  with the other thumb. STRUM spreads the notes low to high like a harp, and the tabs draw the chord keys as a strip.
+  **PROG** holds chord progressions and can write them onto a track, and **GUITAR** plays 50 chord styles in 14 tunings.
 - **16 scales** with a root that is global for the song, a QUANT mode (off, snap, white keys walk the scale, or the
   sequencer snaps too) and **a key stored with each section**, so a song can change key from one section to the next.
 
