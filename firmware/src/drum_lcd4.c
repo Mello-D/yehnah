@@ -18,7 +18,11 @@
  * DRUM's. In float (the core's FPU; fastmath.h), as LCD-4. */
 #include "fastmath.h"
 
-enum { DXK_DRUMX, DXK_808, DXK_909, DXK_ARC, DXK_BOX, DXK_N };   /* DRUM's MACHINE: DRUM-X (drumx_voice.c), LCD-4's four */
+enum { DXK_DRUMX, DXK_808, DXK_909, DXK_ARC, DXK_BOX,
+#if YEHNAH_HORT
+       DXK_HORT, DXK_HORT1, DXK_HORT2, DXK_HORT3, DXK_HORT4, DXK_HORT5, DXK_HORT6,   /* (drum_hort.c: HT_NKIT kits) */
+#endif
+       DXK_N };   /* DRUM's MACHINE: DRUM-X (drumx_voice.c), LCD-4's four */
 #define LD_SR 44100.0f
 #define LD_NPART 11u
 enum { LT_KICK, LT_SNARE, LT_TOM, LT_RIM, LT_CLAP, LT_HAT, LT_CYM, LT_COWBELL, LT_RIDE, LT_CLAVES, LT_GUIRO, LT_TAMB,
@@ -100,7 +104,11 @@ static const float LD_METAL_F[4][6] = {
     {205.3f, 304.4f, 369.6f, 522.7f, 540.0f, 800.0f},
     {317.0f, 441.0f, 513.0f, 610.0f, 763.0f, 1056.0f},
 };
-static const char *const LD_KIT_NAME[DXK_N] = {"DRUM-X", "808", "909", "ARCADE", "BOX"};
+static const char *const LD_KIT_NAME[DXK_N] = {[DXK_DRUMX] = "DRUM-X", [DXK_808] = "808", [DXK_909] = "909", [DXK_ARC] = "ARCADE", [DXK_BOX] = "BOX",
+#if YEHNAH_HORT
+                                                 [DXK_HORT] = "HORT 808", [DXK_HORT1] = "HORT 909", [DXK_HORT2] = "HORT DIGI", [DXK_HORT3] = "HORT FM", [DXK_HORT4] = "HORT PUNCH", [DXK_HORT5] = "HORT BOOM", [DXK_HORT6] = "HORT BASIC",
+#endif
+};
 
 typedef struct {                       /* a lane's hit (drum_lane_t: in the DRUM-X hit's place) */
     uint8_t on, trig, type, kit;       /* kit 0..3: LCD-4's */

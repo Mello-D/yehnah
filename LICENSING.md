@@ -35,6 +35,7 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 | Felucca: firmware, tools, web pages, tests | GPL-3.0-only | `LICENSE` |
 | The PHASE engine's waveforms: a C port of the oscillator of CrispyZebra (<https://github.com/hugelton/CrispyZebra>) | GPL-3.0 | `firmware/src/eng_phase.c` |
 | The DRUM voices and kit | GPL-3.0-only | `firmware/src/drum_voice.c`, `firmware/src/eng_drum.c` |
+| The HORT drum models, from Hortator by DEADACTIVE (its Plaits / stmlib / DaisySP ports: MIT) | GPL-3.0-only (MIT parts) | `firmware/src/hm_*.c`, `firmware/src/drum_hort.c` |
 | The Hügelton Sample Pack: Felucca's drum sounds, made by `tools/gen_waves.py` (not CC0; JIANT builds none of them in: SLICE, which played its BREAK, is retired) | GPL-3.0-only | `tools/gen_waves.py` |
 | The Fukiai icon font (<https://github.com/hugelton/Fukiai>): the firmware's icons (rasterised at build time by `tools/gen_aa_icons.py`) and the web editor's | MIT | `web/fukiai.ttf`, `LICENSES/MIT-Fukiai.txt`, `web/FUKIAI-LICENSE.txt` |
 | HARP's J-6 chord sets: the Roland J-6's 100 chord sets as its manual voices them, compiled by benbadio in hera-fm1 (<https://github.com/benbadio/hera-fm1>, 76b7ee8 `data/chordsets.json`), packed into the firmware at build time (`tools/gen_j6_chords.py` -> `firmware/src/harp_j6.h`) | GPL-3.0-only | `tools/j6/chordsets.json` |

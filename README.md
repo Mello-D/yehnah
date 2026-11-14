@@ -70,6 +70,8 @@ with a Seeed XIAO RP2040.
   (a port of [CrispyZebra](https://github.com/hugelton/CrispyZebra), GPL-3.0); the DRUM voices and kits; the
   [Fukiai](https://github.com/hugelton/Fukiai) icon font ([MIT](LICENSES/MIT-Fukiai.txt)). And Felucca's
   contributors: keremimo, ChanceTheMaker, andreahaku, spinkham, zednaked, jasonpersinger.
+- **[Hortator](https://github.com/deadactive/hortator)** by DEADACTIVE (GPL-3.0, itself built on Felucca): the drum models of the
+  HORT kits (`firmware/src/hm_*.c`, `drum_hort.c`). Its ports of Plaits, stmlib and DaisySP keep their MIT license.
 - **[SLOOP](https://github.com/isod89/sloop-fm1)** by isod89 (GPL-3.0): the sections, quick chain and SONG REC system
   the song mode is based on.
 - FMINI is the engine of [FMini-1](https://github.com/ruppert/fmini-1) by Guilherme Ruppert (GPL-3.0), ported: its Minimoog ladder

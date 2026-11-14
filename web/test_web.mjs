@@ -394,9 +394,9 @@ function mockTables() {
     ok(ph.name === "-" && ph.presets.length === 0,
        "editor: engine 9 reserved (PHYS retired in TONIC), no presets");
     ok(dr.name === "DRUM" && dr.edit.map((d) => d.label).join() === "MORPH,TUNE,TONE,DECAY,NOISE,FM ENV,FOLD,DRIVE" &&
-       dr.presets.length === 11 && dr.presets.every((p) => p.pat === 12) && dr.presets[1].name === "808 BOOM" &&
-       dr.presets[7].name === "LCD-4 808",
-       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), seven kits and LCD-4's four suggesting BEAT");
+       dr.presets.length === 20 && dr.presets.every((p) => p.pat === 12) && dr.presets[1].name === "808 BOOM" &&
+       dr.presets[9].name === "LCD-4 808" && dr.presets[13].name === "HORT 808",
+       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), nine kits, LCD-4's four and the seven HORT kits suggesting BEAT");
   }
   const dj = DESC;
   if (!existsSync(dj)) { console.log("editor: mock tables == firmware (no build/host/desc.json)        skip"); return; }
@@ -853,7 +853,7 @@ async function editorTracks() {
   const info = E.parse[C.INFO](await rq(E.req.info()));
   const tr = E.parse[C.TRACK](await rq(E.req.track()));
   ok(info.ntrk === 6 && tr.sel === 0 && tr.ntrk === 6 && tr.tracks.map((t) => t.engine).join() === "15,0,0,10,3,12"
-    && tr.tracks[0].preset === 0 && tr.tracks[1].preset === 21 && tr.tracks[2].preset === 26 && tr.tracks[3].preset === 8,
+    && tr.tracks[0].preset === 0 && tr.tracks[1].preset === 21 && tr.tracks[2].preset === 26 && tr.tracks[3].preset === 10,
     "tracks: INFO NTRK, TRACK lists 6 parts (2026-11-02: JUNO 106 PAD, MINI BASS, PROPH LEAD, DRUM LCD-4 909, LOFI, FM6)");
   /* the v1 commands follow the selected track */
   const d0 = E.parse[C.DUMP](await rq(E.req.dump()), info);

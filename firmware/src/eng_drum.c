@@ -37,6 +37,7 @@
  * audio takes it at a block's start (drum_mach_block): the lanes' hits silenced, as their state changes kind */
 #include "drumx_voice.c"
 #include "drum_lcd4.c"           /* (chord-harp fork) LCD-4's drum kits: MACHINE */
+#include "drum_hort.c"           /* (chord-harp fork) Hortator's drum models: MACHINE DXK_HORT */
 
 typedef struct {
     union {
@@ -77,14 +78,18 @@ static void drum_hit_trigger(drum_lane_t *L)
 }
 static void drum_hit_choke(drum_lane_t *L)
 {
-    if (dx_mach)
+    if (HT_IS(dx_mach))
+        ht_choke(&L->lx);
+    else if (dx_mach)
         ld_choke(&L->lx);
     else
         dx_choke(&L->x);
 }
 static void drum_hit_stop(drum_lane_t *L)
 {
-    if (dx_mach) {
+    if (HT_IS(dx_mach)) {
+        ht_stop(&L->lx);
+    } else if (dx_mach) {
         L->lx.on = L->lx.trig = 0;
     } else {
         L->x.live = L->x.trig = 0;
@@ -93,7 +98,7 @@ static void drum_hit_stop(drum_lane_t *L)
 }
 static int32_t drum_hit_env(const drum_lane_t *L)       /* its envelope now, 0..256 (the drawings) */
 {
-    return dx_mach ? ld_env256(&L->lx) : L->x.live ? L->x.ea >> 22 : 0;
+    return HT_IS(dx_mach) ? ht_env256(&L->lx) : dx_mach ? ld_env256(&L->lx) : L->x.live ? L->x.ea >> 22 : 0;
 }
 /* a block's start (fx.c dx_mot_block, before the cores render their parts): LCD-4's clock; MACHINE as asked, every
  * lane's hit silenced when it changes (drum_amp ends their voices) */
@@ -102,6 +107,7 @@ static __attribute__((noinline)) void drum_mach_block(uint32_t n)
     uint32_t k, l;
     ld_t0 = ld_clock;
     ld_clock += n;
+    ht_block();
     if (dx_mach == dx_mach_req || dx_mach_req >= DXK_N)
         return;
     for (k = 0; k < NPART; k++)
@@ -110,6 +116,8 @@ static __attribute__((noinline)) void drum_mach_block(uint32_t n)
             drum_kit[k][l].fl = 0;
         }
     dx_mach = dx_mach_req;
+    ht_reset();
+    ht_select(dx_mach);
 }
 
 /* The group mutes (Yehnah): KICK (the kick), SNARE (snare and clap), HAT (both hats), PERCS (tom, rim, bell), on every
@@ -304,7 +312,11 @@ static void drum_note_on(track_t *t, voice_t *v)
     L = &K[lane];
     L->st = (int8_t)clamp(DRUM_GM[drum_gm_ix(v->note)][1] + t->pfx_rpit / 16 + t->dpit, -60, 60);   /* (pfx.c RANDOM;
                                                           * 0.6.82: the step's components, seq.c) */
-    if (dx_mach) {                                       /* (chord-harp fork) LCD-4's: the part the note picks, the
+    if (HT_IS(dx_mach)) {                                /* (chord-harp fork) HORT's: the variant of the lane's models the note picks */
+        int32_t gm = DRUM_GM[drum_gm_ix(v->note)][1], rest;
+        L->lp = (uint8_t)ht_pick(lane, v->note, gm, &rest);
+        L->st = (int8_t)clamp(L->st - gm + rest, -60, 60);
+    } else if (dx_mach) {                                /* (chord-harp fork) LCD-4's: the part the note picks, the
                                                           * pitch from it */
         int32_t gm = DRUM_GM[drum_gm_ix(v->note)][1], rest;
         L->lp = (uint8_t)ld_part_of(dx_mach - 1u, lane, v->note, gm, &rest);
@@ -544,7 +556,11 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         int32_t d = L->bd - L->bc;
         L->bc = (int16_t)(L->bc + (d > 0 ? (d < L->bs ? d : L->bs) : (-d < L->bs ? d : -L->bs)));
     }
-    if (dx_mach) {                                       /* (chord-harp fork) LCD-4's: its part struck at TUNE, DECAY,
+    if (HT_IS(dx_mach)) {                           /* (chord-harp fork) Hortator's model of the lane */
+        ht_run(&L->lx, (uint32_t)v->s[0] & (DV_NLANE - 1u), L->lp,
+               L->st * 16 + L->rt + L->bc + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
+               p[P_E3] - 64 + DXO_DEC[L->dm & 3u], p[P_E2] - 64 + DXO_TON[L->dm & 3u], y, n);
+    } else if (dx_mach) {                                /* (chord-harp fork) LCD-4's: its part struck at TUNE, DECAY,
                                                           * TONE as they are, then run */
         if (L->lx.trig)
             ld_fire(&L->lx, dx_mach - 1u, L->lp, L->st * 16 + L->rt + L->bc + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
@@ -644,13 +660,28 @@ static const preset_t DRUM_PRESETS[] YEHNAH_RES = {                /* (0.7.2) on
     {"ACOUSTIC", {56, 64, 58, 62, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 34), PAT(12)},
     {"DUB ROOTS", {60, 60, 52, 70, 60, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 18, 36), PAT(12)},
     {"TECHNO RAW", {66, 64, 80, 62, 66, 10, 0, 30}, {0, 100, 127, 100}, 0, 0, FX(10, 0, 0, 14), PAT(12)},
+    {"ROCK KIT", {56, 62, 56, 62, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 30), PAT(12)},
+    {"JAZZ KIT", {60, 64, 60, 62, 66, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 30), PAT(12)},
     /* (chord-harp fork) LCD-4's kits (MACHINE, drum_lcd4.c): TUNE DECAY TONE as built, the rest DRUM-X's (unused) */
     {"LCD-4 808", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), PAT(12)},
     {"LCD-4 909", {64, 64, 64, 64, 64, 0, 0, 10}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 16), PAT(12)},
     {"LCD-4 ARCADE", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 10, 12), PAT(12)},
     {"LCD-4 BOX", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 24), PAT(12)},
+#if YEHNAH_HORT
+    {"HORT 808", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), PAT(12)},   /* (Hortator's models, drum_hort.c) */
+    {"HORT 909", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 16), PAT(12)},
+    {"HORT DIGI", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 18), PAT(12)},
+    {"HORT FM", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 22), PAT(12)},
+    {"HORT PUNCH", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 14), PAT(12)},
+    {"HORT BOOM", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 24), PAT(12)},
+    {"HORT BASIC", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 16), PAT(12)},   /* (kicks, snares, hats, toms: no clap / rim / cowbell) */
+#endif
 };
-static const char DRUM_PT[] = "DDDDDDDDDDD";
+static const char DRUM_PT[] = "DDDDDDDDDDDDD"
+#if YEHNAH_HORT
+                              "DDDDDDD"
+#endif
+    ;
 _Static_assert(sizeof DRUM_PT == NELEM(DRUM_PRESETS) + 1u, "a type a preset");
 _Static_assert(NELEM(DRUM_PRESETS) == NELEM(DX_KITS) + DXK_N - 1u, "a DRUM preset a kit, then LCD-4's MACHINEs");
 /* (0.7.2) a factory kit into the section's: the sounds, their LAYERs, their SENDs (the project saves them); (chord-harp
@@ -662,6 +693,9 @@ static void dx_kit_load(uint32_t k)
     const dx_kit_t *K = &DX_KITS[k % NELEM(DRUM_PRESETS) < DX_NKIT ? k % NELEM(DRUM_PRESETS) : 0u];
     if (k % NELEM(DRUM_PRESETS) >= DX_NKIT) {
         dx_mach_req = (uint8_t)(k % NELEM(DRUM_PRESETS) - DX_NKIT + 1u);
+        memset(dx_snd, 0, sizeof dx_snd);
+        ht_sends(dx_mach_req, dx_snd);                /* (the lanes' SENDs are the section's, whatever MACHINE plays: the last DRUM-X
+                                                          * kit's reverb sends stayed on LCD-4's, HORT's lanes: none of theirs) */
         return;
     }
     dx_mach_req = DXK_DRUMX;

@@ -170,7 +170,8 @@ static const struct { const preset_t *arr; uint16_t n; const char *name; uint8_t
     SC(DRIFT_PRESETS, "OCTAVE CLOUD", 5), SC(DRIFT_PRESETS, "WIND GLASS", 5), SC(DRIFT_PRESETS, "DEEP DRONE", 2),
     SC(DRIFT_PRESETS, "SLOW BLOOM", 2),
     SC(FORMANT_PRESETS, "AIR CHOIR", 2), SC(FORMANT_PRESETS, "CHOIR AAH", 2), SC(FORMANT_PRESETS, "GHOST VOX", 4),
-    SC(GUITAR_PRESETS, "AMBIENT GTR", 4),
+    SC(GUITAR_PRESETS, "AMBIENT GTR", 4), SC(GUITAR_PRESETS, "SURF TWANG", 3), SC(GUITAR_PRESETS, "SHOEGAZE GTR", 2),
+    SC(GUITAR_PRESETS, "TAPE ECHO GTR", 7),
     SC(KALIMBA_PRESETS, "WIND CHIMES", 4), SC(KALIMBA_PRESETS, "GLASS HARP", 4),
     SC(OMNI_PRESETS, "DREAM HARP", 4),
     SC(VECTOR_PRESETS, "SPACE DRONE", 5),
@@ -314,7 +315,7 @@ static const struct {
 #define TRK_PR_JUNO 0u           /* JUNO 106 PAD (eng_juno.c JUNO_PRESETS) */
 #define TRK_PR_ANALOG 21u        /* MINI BASS (eng_analog.c: Clipper's, the MOOG ladder) */
 #define TRK_PR_LEAD 26u          /* PROPH LEAD (eng_analog.c) */
-#define TRK_PR_KIT 8u            /* LCD-4 909 (eng_drum.c DRUM_PRESETS; 909 CLUB dropped 2026-11-05) */
+#define TRK_PR_KIT 10u           /* LCD-4 909 (eng_drum.c DRUM_PRESETS; 909 CLUB dropped 2026-11-05) */
 static const uint8_t TRK_DEF[NPART][3] = {{ENGI_JUNO, TRK_PR_JUNO, 0}, {ENGI_ANALOG, TRK_PR_ANALOG, 0},
                                           {ENGI_ANALOG, TRK_PR_LEAD, 0}, {ENGI_DRUM, TRK_PR_KIT, 0},
                                           {ENGI_LOFI, 0, 0}, {ENGI_FM6, 0, 0}};

@@ -484,6 +484,32 @@ static const dx_kit_t DX_KITS[] YEHNAH_RES = {   /* (chord-harp fork: the resour
         },
         {0, 7, 0, 9, 9, 0, 0, 11}, {0, 204, 202, 0, 0, 140, 146, 0},   /* the layers; the sends (bus << 6 | amount) */
     },
+    {   /* (2026-11-14) ROCK KIT: a beater click and a short body on the kick, a snare with a shell tone and wires, a big floor tom, a crash */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 1), {14, 55, 72, 22, 30}, {18, 80, 64, 30, 60}},   /* KICK */
+            {DX_MODE(DXW_FM, DXF_BP, 0), {42, 24, 58, 88, 80}, {48, 14, 70, 112, 60}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {58, 0, 48, 127, 66}, {52, 0, 60, 127, 58}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {96, 0, 18, 96, 86}, {104, 0, 10, 112, 92}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {96, 0, 66, 96, 82}, {104, 0, 78, 112, 88}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 1), {26, 30, 74, 20, 8}, {32, 50, 84, 30, 28}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {61, 10, 16, 16, 26}, {68, 24, 22, 30, 40}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {66, 0, 100, 70, 70}, {70, 0, 110, 80, 80}},   /* BELL: the crash */
+        },
+        {0, 6, 0, 7, 7, 0, 0, 10}, {0, 214, 210, 198, 200, 206, 202, 206},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* (2026-11-14) JAZZ KIT: a small tuned kick, a soft snare, high ringing toms, a ride */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 1), {20, 40, 52, 10, 0}, {24, 60, 60, 14, 30}},   /* KICK */
+            {DX_MODE(DXW_FM, DXF_BP, 0), {46, 18, 54, 70, 90}, {50, 10, 62, 86, 74}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {58, 0, 40, 127, 66}, {52, 0, 52, 127, 58}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {98, 0, 14, 90, 80}, {106, 0, 8, 104, 86}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {98, 0, 62, 90, 78}, {106, 0, 72, 104, 84}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 1), {34, 22, 68, 14, 8}, {40, 40, 78, 24, 26}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 12, 14, 24}, {70, 22, 18, 28, 38}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {70, 0, 90, 40, 60}, {74, 0, 98, 52, 70}},   /* BELL: the ride */
+        },
+        {0, 4, 0, 6, 6, 0, 0, 8}, {0, 214, 210, 198, 200, 206, 202, 206},   /* the layers; the sends (bus << 6 | amount) */
+    },
 };
 #define DX_NKIT ((uint32_t)(sizeof DX_KITS / sizeof DX_KITS[0]))
 /* a stored kit as the voice takes it: values 0..127, the mode's fields in range (wave 0..3, filter 0..2, snap) */

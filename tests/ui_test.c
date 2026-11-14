@@ -7548,7 +7548,7 @@ static int test_drum_kits(void)
     for (i = 0; i < NTRK; i++)                          /* (0.8.1: this track the only DRUM one: the kit is its to load) */
         if (&trk[i] != TSEL && trk[i].eng_req == ENGI_DRUM) set_engine_of(&trk[i], ENGI_ANALOG);
     set_engine(ENGI_DRUM);
-    ok = kk == 6u && ENG_DRUM.npresets == 7u + DXK_N - 1u && DX_NKIT == 7u && TSEL->preset == 0 &&
+    ok = kk == 6u && ENG_DRUM.npresets == 9u + DXK_N - 1u && DX_NKIT == 9u && TSEL->preset == 0 &&
          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD];
     TSEL->preset = (uint8_t)preset_nth(&ENG_DRUM, preset_rank(&ENG_DRUM, kk) - 1u);   /* (the one shown before it) */
     turn(EN_PRESET, 1);                                 /* browsing (HOME): TECHNO RAW */

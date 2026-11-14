@@ -27,6 +27,9 @@
 #define FELUCCA_AMBIENT 0       /* (chord-harp fork, 2026-11-05) 1: ARP > AMBIENT (amb.c) is in the build: its page, its keys' pool, its
                                  * tick. 0 (now): out; the params P_AMB..P_ASPC stay (numbering stable, all OFF), the code stays in the tree */
 #endif
+#ifndef YEHNAH_HORT
+#define YEHNAH_HORT 1           /* (chord-harp fork, 2026-11-14) 1 (default): DRUM's MACHINE HORT (drum_hort.c: Hortator's drum models, seven kit presets) is in the build. 0: out (flash) */
+#endif
 #define YEHNAH_FM4CONV 0        /* (chord-harp fork, 2026-10-30) no conversion of DIGITAL's sounds to FM6: DIGITAL is back */
 #ifndef YEHNAH_ANIMAL
 #define YEHNAH_ANIMAL 1         /* (chord-harp fork) ANIMAL (eng_animal.c): built again (2026-10-25, ~7.6 KB, room from the

@@ -10,15 +10,15 @@
  * DAMP the fretting hand let go (0: it rings on, an open string).
  * EDIT 1  MODEL PICK PLUCK DECY      EDIT 2  TONE BODY MUTE DAMP
  * A guitar's six strings: GT_POOL lines shared by the parts (v->s[0] its slot + 1; a part's poly 6), 16-bit, in the
- * pool (.pool); a note below D2 (the line's longest) plays an octave up. The string and its body run at half the rate
+ * pool (.pool); a note below E1 (the line's longest) plays an octave up. The string and its body run at half the rate
  * (GT_SR: its top 11 kHz, half the work and half the line), the output interpolated back up. In float (the core's FPU;
  * fastmath.h). Its own envelope (ownenv): the ADSR is not used; the strum is HARP's. */
 #include "fastmath.h"
 
-enum { GT_NYLON, GT_STEEL, GT_ELEC, GT_N };
-static const char *const N_GTMODEL[] = {"NYLON", "STEEL", "ELEC"};
+enum { GT_NYLON, GT_STEEL, GT_ELEC, GT_BASS, GT_N };
+static const char *const N_GTMODEL[] = {"NYLON", "STEEL", "ELEC", "BASS"};
 #define GT_POOL 8u                     /* strings sounding at once, all parts */
-#define GT_LEN 304u                    /* a line's samples: D2 (73.4 Hz) and up */
+#define GT_LEN 544u                    /* a line's samples: E1 (41.2 Hz) and up */
 #define GT_SR 22050.0f                 /* the string's rate: half the output's */
 typedef struct {                       /* a model: its decay, its pluck, its body (two resonances: f, Q, level) */
     float t60, bright, loss;           /* T60 of A2 (s); the pluck's brightness; TONE's averaging at its middle */
@@ -29,6 +29,7 @@ static const gt_model_t GT_MODELS[GT_N] = {
     {4.0f, 0.55f, 0.42f, {98.0f, 205.0f}, {6.0f, 5.0f}, {0.9f, 0.6f}, 0.9f},      /* NYLON: dark, a round body */
     {6.0f, 0.85f, 0.30f, {110.0f, 230.0f}, {7.0f, 6.0f}, {0.7f, 0.5f}, 0.7f},     /* STEEL: bright, longer */
     {7.0f, 0.75f, 0.26f, {2600.0f, 0.0f}, {1.4f, 1.0f}, {0.6f, 0.0f}, 0.4f},      /* ELEC: no body, the pickup's peak */
+    {6.0f, 0.55f, 0.30f, {750.0f, 90.0f}, {1.1f, 1.5f}, {0.55f, 0.5f}, 0.9f},      /* BASS: a long string, a dark pluck, the pickup's mid peak, an amp's low peak (90 Hz), the fundamental lifted */
 };
 typedef struct {
     float ap_c, ap_x1, ap_y1;          /* the tuning allpass: its coefficient, last input, last output */
@@ -73,7 +74,7 @@ GT_NI void gt_tune(const track_t *t, gt_voice_t *s, int32_t cents)
     float f0 = 8.17579892f * fm_exp2f((float)cents * (1.0f / 1200.0f)), p, frac, t60, mute = gt_k(t, 6);
     uint32_t oct = 0;
     while (f0 * fm_exp2f((float)oct) < GT_SR / (float)(GT_LEN - 3u) && oct < 4u)
-        oct++;                                          /* (below D2: an octave up) */
+        oct++;                                          /* (below E1: an octave up) */
     f0 *= fm_exp2f((float)oct);
     s->oct = (uint8_t)oct;
     s->cents = cents;
@@ -260,14 +261,43 @@ static const preset_t GUITAR_PRESETS[] YEHNAH_RES = {
     {"OUD", {GT_NYLON, 20, 80, 45, 60, 90, 0, 45}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 30)},
     {"KOTO", {GT_STEEL, 15, 100, 60, 90, 40, 0, 50}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 10, 40)},
     {"SHAMISEN", {GT_STEEL, 5, 120, 30, 110, 20, 0, 70}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 0, 25)},
-    /* (2026-11-10) a bass and a cello: the models' low strings (notes below D2 fold an octave up: play from D2, or TRANS up) */
+    /* (2026-11-10) a bass and a cello: the models' low strings (notes below E1 fold an octave up) */
     {"PICK BASS", {GT_ELEC, 50, 30, 70, 20, 90, 0, 40}, {0, 64, 127, 40}, 0, 1, FX(10, 0, 0, 6),
      XP(P_TRANS + 1, -12)},
     {"PIZZ CELLO", {GT_NYLON, 70, 40, 75, 30, 100, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 10, 36),
      XP(P_TRANS + 1, -12)},
+    /* (2026-11-14) bass guitar: the BASS model (a long dark string), TRANS -12 (keys from D2 sound E1 and up; the line stops at E1).
+     * Finger = a soft dark pluck near the neck; pick = brighter; muted = palm; DRIVE = AMP; FUZZ = the Big Muff (DIST type 6) */
+    {"FINGER BASS", {GT_BASS, 70, 25, 78, 30, 90, 0, 45}, {0, 64, 127, 40}, 0, 1, FX(0, 0, 0, 5),
+     XP(P_TRANS + 1, -12, P_FCUT + 1, 80)},
+    {"THUMB BASS", {GT_BASS, 72, 12, 74, 15, 100, 10, 55}, {0, 64, 127, 40}, 0, 1, FX(0, 0, 0, 4),
+     XP(P_TRANS + 1, -12, P_FCUT + 1, 70)},
+    {"MUTED BASS", {GT_BASS, 65, 35, 45, 25, 90, 70, 60}, {0, 64, 127, 40}, 0, 1, FX(0, 0, 0, 5),
+     XP(P_TRANS + 1, -12, P_FCUT + 1, 78)},
+    {"PICKED BASS", {GT_BASS, 45, 75, 65, 60, 80, 0, 40}, {0, 64, 127, 40}, 0, 1, FX(10, 0, 0, 5),
+     XP(P_TRANS + 1, -12, P_DTYPE + 1, 5, P_FCUT + 1, 92)},
+    {"DRIVEN BASS", {GT_BASS, 50, 70, 75, 55, 80, 0, 45}, {0, 64, 127, 40}, 0, 1, FX(45, 0, 0, 5),
+     XP(P_TRANS + 1, -12, P_DTYPE + 1, 5, P_FCUT + 1, 88)},
+    {"FUZZ BASS GTR", {GT_BASS, 50, 65, 85, 50, 80, 0, 45}, {0, 64, 127, 40}, 0, 1, FX(85, 0, 0, 4),
+     XP(P_TRANS + 1, -12, P_DTYPE + 1, 6, P_FCUT + 1, 84)},
+    {"UPRIGHT BASS", {GT_NYLON, 65, 45, 60, 35, 110, 0, 75}, {0, 64, 127, 40}, 0, 1, FX(0, 0, 0, 12),
+     XP(P_TRANS + 1, -12)},
+    /* (2026-11-14) electric and acoustic guitars: SURF TWANG (SPRING scene), SHOEGAZE GTR (HALL), TAPE ECHO GTR (TAPE) bring an
+     * FX scene (engines.c PRESET_SCENE_NM) */
+    {"SURF TWANG", {GT_ELEC, 20, 85, 55, 85, 64, 0, 40}, {0, 64, 127, 40}, 0, 0, FX(0, 15, 0, 45),
+     XP(P_FCUT + 1, 108)},
+    {"HIGH GAIN", {GT_ELEC, 14, 88, 90, 65, 64, 0, 30}, {0, 64, 127, 40}, 0, 1, FX(100, 0, 0, 12),
+     XP(P_DTYPE + 1, 5, P_FCUT + 1, 86, P_DTONE + 1, 15)},
+    {"CHORUS CLEAN", {GT_ELEC, 22, 65, 66, 70, 64, 0, 40}, {0, 64, 127, 40}, 0, 0, FX(0, 55, 0, 24),
+     XP(P_FCUT + 1, 100)},
+    {"SHOEGAZE GTR", {GT_ELEC, 30, 70, 100, 62, 64, 0, 20}, {0, 64, 127, 40}, 0, 0, FX(80, 45, 25, 70),
+     XP(P_DTYPE + 1, 6, P_FCUT + 1, 92)},
+    {"TAPE ECHO GTR", {GT_ELEC, 25, 65, 80, 60, 64, 0, 40}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 50, 28),
+     XP(P_FCUT + 1, 98)},
+    {"12 STRING", {GT_STEEL, 35, 70, 80, 75, 100, 0, 30}, {0, 64, 127, 40}, 0, 0, FX(0, 50, 0, 28)},
     {"INIT", {1, 25, 70, 64, 64, 64, 0, 30}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
-static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGGGN";
+static const char GUITAR_PT[] = "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGN";
 _Static_assert(sizeof GUITAR_PT == NELEM(GUITAR_PRESETS) + 1u, "a type a preset");
 /* (engine 19: its favourites in favorites.factory[3]'s upper half, favorites.c favorite_byte: 128 presets at most) */
 _Static_assert(NELEM(GUITAR_PRESETS) <= 128u, "GUITAR's favourites");
