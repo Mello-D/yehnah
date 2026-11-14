@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Yehnah manual
     url: https://github.com/Mello-D/yehnah/blob/main/docs/MANUAL.md
-    about: How Yehnah works, page by page (español en docs/MANUAL.es.md).
+    about: How Yehnah works, page by page.

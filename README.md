@@ -16,7 +16,6 @@
   <a href="https://mello-d.github.io/yehnah/emu/"><b>Try the emulator</b></a> ·
   <a href="https://mello-d.github.io/yehnah/webapp/editor/">Web editor</a> ·
   <a href="docs/MANUAL.md">Manual</a> ·
-  <a href="docs/MANUAL.es.md">Manual (español)</a> ·
   <a href="https://github.com/Mello-D/yehnah/issues">Report a bug</a>
 </p>
 
@@ -72,7 +71,7 @@ This is custom firmware, at your own risk.
    The same page takes the unit back to official V15 (**Return to official V15**).
 4. **Offline, with Python 3:** `python3 tools/fm1_install.py build/yehnah.fwsc` (see [BUILDING.md](BUILDING.md)).
 5. If the FM-1 crashes, freezes or clicks, hold **REC** while switching it on (one core) and note what
-   MENU > ABOUT says.
+   GLO > SYSTEM > ABOUT says.
 6. **Back to the official firmware:** the installer's *Return to official V15*, or M-VAVE's own updater.
 
 If the unit stays black after an interrupted update, check whether the computer sees it as **WL80UBOOT** (USB device
@@ -121,8 +120,7 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   lengthened or shortened afterwards without recording again.
 - **Parameter locks.** Hold a step and turn a knob: that step plays its own value of any parameter.
 - **Per-step control:** ratchets, a step's **probability**, **fill-only** steps and **micro timing**.
-- **Live recording** with quantise off or on (the timing you played is kept as a nudge), overdub, a count-in and an
-  optional click.
+- **Live recording** with quantise off or on (the timing you played is kept as a nudge), a count-in and an optional click.
 - **An arpeggiator with 27 modes**, a hold, a swing and a probability, and **a separate strum player** for the GUITAR
   chords with its own pattern, division and sweep.
 - **A motion lane.** Knob moves and incoming MIDI CCs are recorded as automation and played back with the steps.
@@ -180,7 +178,8 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   mutes, the macros and the punch-in effects held) and an END rule.
 - **Play the sections live** from the REC layer: tap A–D to switch on the next bar, tap several in one hold for a **quick
   chain**, and **record the song** as you play it (the section system after [SLOOP](https://github.com/isod89/sloop-fm1)).
-- **Autosave.** The music is kept as you work and put back at power-on (MENU > SYSTEM > RESTORE LAST).
+- **Autosave.** Set GLO > SYSTEM > RESTORE LAST to ON (it is off by default) and the music is kept as you stop and put back
+  at power-on.
 
 ### Effects and master
 
@@ -221,7 +220,7 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 
 SOUND is a scrollable list of rows: KNOB 1 scrolls, the other knobs set the row's values, and each value is a cell of four
 with a picture for every pick. The same design carries the effects, the envelopes, the LFOs, the arpeggiator and the
-GLO settings. Five colour themes and several screen skins change the look:
+GLO settings. Five colour themes change the look:
 
 ![The same screen in the five colour themes: VAP DK, VAP LT, NOIRE, DUSK and CREAM](docs/img/themes.png)
 
@@ -257,7 +256,7 @@ Any engine can go on any track. **25 engines**, all synthesis:
 | **ANIMAL** | bird, mammal and insect calls from four physical primitives |
 | **DRUM** | the DRUM-X, HORT and LCD-4 drum machines |
 
-The [manual](docs/MANUAL.md#4-engines) lists the engines' pages and knobs.
+The [manual](docs/MANUAL.md#5-engines-and-the-sound-page) lists the engines' pages and knobs.
 
 ## The layers
 
@@ -275,8 +274,8 @@ and its pages open. Four buttons have a layer:
 
 - **FX:** the punch-in effects on the white keys, the track mutes while held, and FILTER, CRUSH, THROW and DEPTH on the
   knobs. Hold FX until its map opens and let go without touching anything: the layer stays open, with both hands free.
-- **REC:** CLEAR the track, CLICK (off, REC, on), COUNT-IN, **UNDO** and redo, RESTART from the top, REVERT ALL, play
-  sections A–D on the next bar (several in one hold: a quick chain), LOOP / SONG, **SONG REC**, and NAME.
+- **REC:** CLEAR the track, the record MODE, TAP tempo, **UNDO** and redo, RESTART from the top, CLR FX, play sections A–D
+  on the next bar (several in one hold: a quick chain), LOOP / SONG, **SONG REC**, NAME and CLEAR ALL.
 - **SCL:** the twelve keys set the root, and KNOB 1 is STRUM for every chord mode.
 - **EDIT:** INIT puts the track's sound back to its engine's first preset (a drum track's kit to the factory one), RECALL
   puts it back as the playing section stored it, and on a drum track the black keys mute the drum sounds.
@@ -337,7 +336,7 @@ the preview installer before it reaches `webapp/installer/`.
 
 | Document | What's in it |
 | --- | --- |
-| [docs/MANUAL.md](docs/MANUAL.md) · [docs/MANUAL.es.md](docs/MANUAL.es.md) | The manual, in English and Spanish |
+| [docs/MANUAL.md](docs/MANUAL.md) | The manual |
 | [BUILDING.md](BUILDING.md) | Toolchain, build, emulator and tests |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to help |
 | [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) | The editor's SysEx protocol |

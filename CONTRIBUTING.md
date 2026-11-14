@@ -8,7 +8,7 @@ theirs to answer.
 |---|---|
 | A bug you can reproduce | this repository's Issues: one issue per bug |
 | A feature idea or request | this repository's Issues with "idea" in the title (no promise it will be added) |
-| How to use it, or how something works | the [manual](docs/MANUAL.md) ([español](docs/MANUAL.es.md)), then an issue if it is still unclear |
+| How to use it, or how something works | the [manual](docs/MANUAL.md), then an issue if it is still unclear |
 | Forks, mods, music, demos | an issue or a message to the author: we love to see them |
 
 ## Reporting a bug
