@@ -36,7 +36,7 @@ Si vas a leer un solo capítulo, leé [12. Guardar y cargar](#12-guardar-y-carga
 
 ### Instalación
 
-1. Abrí el **instalador web** en Chrome o Edge: <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+1. Abrí el **instalador web** en Chrome o Edge: <https://mello-d.github.io/yehnah/webapp/installer/>
 2. Conectá el FM-1 **directamente** a la computadora con un cable USB de datos.
 3. **¿Venís de otro firmware custom (Felucca, baudgirl o cualquier otro)?** Volvé primero al firmware oficial V15
    con el botón **Return to official V15 first** del instalador (que además guarda un backup completo). Escribir
@@ -2083,13 +2083,13 @@ Probe (su prueba 7).
 
 Las tres funcionan en el navegador y se actualizan solas con cada cambio del firmware.
 
-### Emulador — <https://juanjiant-bit.github.io/JIANT/emu/>
+### Emulador — <https://mello-d.github.io/yehnah/emu/>
 
 El mismo código que el FM-1, con sonido, en el navegador. Tocalo con el mouse o con el teclado de la computadora: las
 filas **Z–'** y **Q–O** son las teclas, **1** a **=** los botones de FX a REC, **[ ]** OCT− / OCT+, **↑ ↓** SELECT,
 **← →** ALGORITHM; **Shift-clic** mantiene un botón. Ideal para aprender las capas sin el equipo.
 
-### Instalador — <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+### Instalador — <https://mello-d.github.io/yehnah/webapp/installer/>
 
 Chrome o Edge, con el FM-1 conectado directo a la computadora.
 
@@ -2100,7 +2100,7 @@ Chrome o Edge, con el FM-1 conectado directo a la computadora.
   baudgirl…), y siempre que quieras volver al firmware de fábrica. El V15 oficial no puede abrir música de Yehnah; para
   restaurar el backup más adelante, reinstalá Yehnah y usá el editor.
 
-### Editor — <https://juanjiant-bit.github.io/JIANT/webapp/editor/>
+### Editor — <https://mello-d.github.io/yehnah/webapp/editor/>
 
 Todos los parámetros desde la computadora, por USB. Pestañas: Sound, 6-OP FM, Sequencer, Tracks, Library, Projects,
 Settings.
@@ -2176,6 +2176,3 @@ después instalá Yehnah. Pasar directamente desde otro firmware custom ya brick
 
 **¿Adónde fueron mis samples de Felucca?** Yehnah no tiene samples de usuario; esa flash ahora guarda los temas.
 
----
-
-Si mi trabajo resuena con vos, considerá apoyarme en Ko-fi (https://ko-fi.com/juanjiant) — en Argentina: Cafecito (https://cafecito.app/juanjiant).

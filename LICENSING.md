@@ -58,6 +58,24 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 On the device, HOME held > ABOUT opens the information screen; turning PRESETS scrolls on into
 CREDITS, a short list of these authors, licences and source URLs.
 
+## Other FM-1 firmware this one is built on or ports
+
+Yehnah is built on JIANT FM (GPL-3.0-only), which grew from Felucca. These projects' code or data is also in this tree,
+each with its licence as its source header states it (a file's header names its origin):
+
+| What | Licence | Where |
+| --- | --- | --- |
+| JIANT FM by Juan Jiant (<https://github.com/juanjiant-bit/JIANT>): the firmware Yehnah is built on | GPL-3.0-only | the whole tree |
+| Clipper by isod89 (<https://github.com/isod89/clipper-fm1>): the ANALOG, DIGITAL, PHASE, LOFI, NOISE, JUNO, ACID, VPS, WSEQ, TERRAIN, VECTOR, STRINGS, WHEEL and HYBRID engines, their tables and patches | GPL-3.0 | `firmware/src/eng_*.c`, `*_tables.h`, `hybrid_patches.h` |
+| SLOOP by isod89 (<https://github.com/isod89/sloop-fm1>): the sections, quick chain and SONG REC system | GPL-3.0 | `firmware/src/song_*.c` |
+| FoMni by charlesvestal (<https://github.com/charlesvestal/fm1-fomni>): the OMNI engine and its chord layout; its waves and shimmer after Chordian by Jan125 (CC0 1.0) | GPL-3.0 (CC0 for Chordian's) | `firmware/src/eng_omni.c`, `harp.c`, `fastmath.h` |
+| FiMba-1 by jadamsowers (<https://github.com/jadamsowers/fm1-fimba>): the KALIMBA tine, MODAL's base | GPL-3.0 | `firmware/src/eng_kalimba.c` |
+| Optimist by w0ts (<https://github.com/w0ts/optimist>): the PLAITS port of Mutable Instruments Plaits | MIT | `firmware/src/eng_plaits.c`, `plaits_tables.h` |
+| hera-fm1 by benbadio (<https://github.com/benbadio/hera-fm1>): the J-6 chord sets of HARP | GPL-3.0-only | `tools/j6/`, `firmware/src/harp_j6.h` |
+| FMini-1 by Guilherme Ruppert (<https://github.com/ruppert/fmini-1>): the FMINI engine and its 200 patches | GPL-3.0 | `firmware/src/eng_fmini*.c`, `eng_fmini_data.h` |
+| guitchordi by stoogs (<https://github.com/stoogs/guitchordi>): the 50 chord styles of SCL > GUITAR | GPL-3.0 | `tools/gtr/`, `firmware/src/harp_gtr.h` |
+| Melodee by keremimo and fm1-x0x by charlesvestal: starting the AC79's second core and guarding against its misreads | GPL-3.0 | `firmware/hal/` |
+
 ## JieLi SDK files in the packages (Apache-2.0)
 
 A `.fwsc` package made by `tools/build.py` (with `tools/fm1pkg_make.py`; this is the package the

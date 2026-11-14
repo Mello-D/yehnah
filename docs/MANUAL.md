@@ -36,7 +36,7 @@ If you only read one chapter, read [12. Saving and loading](#12-saving-and-loadi
 
 ### Install
 
-1. Open the **web installer** in Chrome or Edge: <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+1. Open the **web installer** in Chrome or Edge: <https://mello-d.github.io/yehnah/webapp/installer/>
 2. Connect the FM-1 **directly** to the computer with a USB data cable.
 3. **Coming from another custom firmware (Felucca, baudgirl or any other)?** Return to the official V15 firmware
    first, with the installer's **Return to official V15 first** button (it also saves a complete backup). Writing
@@ -1862,13 +1862,13 @@ only some of a USB device's channels to apps). Test version: the app is Yehnah P
 
 All three run in the browser and update themselves with every change to the firmware.
 
-### Emulator — <https://juanjiant-bit.github.io/JIANT/emu/>
+### Emulator — <https://mello-d.github.io/yehnah/emu/>
 
 The same code as the FM-1, with sound, in the browser. Play it with the mouse or the computer keyboard: **Z–'** and
 **Q–O** rows are the keys, **1** to **=** the buttons from FX to REC, **[ ]** OCT− / OCT+, **↑ ↓** SELECT, **← →**
 ALGORITHM; **Shift-click** holds a button. Great for learning the layers without the device.
 
-### Installer — <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+### Installer — <https://mello-d.github.io/yehnah/webapp/installer/>
 
 Chrome or Edge, the FM-1 connected straight to the computer.
 
@@ -1878,7 +1878,7 @@ Chrome or Edge, the FM-1 connected straight to the computer.
   installing Yehnah if your FM-1 runs **another custom firmware** (Felucca, baudgirl…), and whenever you want to go back
   to stock. Official V15 cannot open Yehnah music; to restore the backup later, reinstall Yehnah and use the editor.
 
-### Editor — <https://juanjiant-bit.github.io/JIANT/webapp/editor/>
+### Editor — <https://mello-d.github.io/yehnah/webapp/editor/>
 
 Every parameter from the computer, over USB. Tabs: Sound, 6-OP FM, Sequencer, Tracks, Library, Projects, Settings.
 
@@ -1945,6 +1945,3 @@ install Yehnah. Going straight from another custom firmware has bricked an FM-1.
 
 **Where did my Felucca samples go?** Yehnah has no user samples; that flash now holds the songs.
 
----
-
-If you resonate with my work, consider supporting me on Ko-fi (https://ko-fi.com/juanjiant) — in Argentina: Cafecito (https://cafecito.app/juanjiant).
