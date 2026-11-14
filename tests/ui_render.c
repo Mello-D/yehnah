@@ -1298,7 +1298,7 @@ static void setup(int s)
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
         nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
-                  "STEP" : s == S_LENTE_STEP_COMP2 ? "SPICE" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "SPICE");   /* (0.9.2: NOTE the roll; the
+                  "STEP" : s == S_LENTE_STEP_COMP2 ? "SPICE" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "TRACK" : "SPICE");   /* (0.9.2: NOTE the roll; the
                                                          * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
@@ -1312,7 +1312,7 @@ static void setup(int s)
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "SPICE");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "TRACK" : "SPICE");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name

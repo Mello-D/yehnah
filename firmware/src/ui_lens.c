@@ -64,8 +64,7 @@ static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR)
                                                          * the main page first, the rest in their wrapped order) */
                               NV("AUTOMATION", "AUTO", 4, LV_BAR),
                               NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, LV_PAT),
-                              NV("TRACK", 0, 1, LV_PAT),
-                              NV("BAR", 0, 2, LV_PAT)};
+                              NV("TRACK", 0, 1, LV_PAT)};   /* (2026-11-14: the BAR page is off the chain, the user's call) */
 enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
 static const nv_t CE_FX[] = {NV("FX ALL", "FX", 0, FXL_TRACK)};   /* (2026-11-13) one page: every effect's rows (ui_fxall.c) */
 static const nv_t CE_GLO[] = {NV("GLO", 0, 0, 1)};   /* (2026-11-13: MAIN DEVICE CONTROL SYSTEM are GLO's rows) */

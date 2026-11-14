@@ -5931,23 +5931,23 @@ static int test_save_lens(void)
 static int test_lente(void)
 {
     static const char *const CH[8] = {"STEP", "NOTE", "SPICE", "AUTO", "PATTERN", "STRETCH",
-                                      "TRACK", "BAR"};
+                                      "TRACK"};
     int bad = 0, ok;
     uint32_t q, sig;
     ui_power_on();
     TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
-    ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && lz_tabs() == 6u &&
-         lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 STEP") && lz_count_is("1/8");   /* (6 runs: BAR's group split by the wrap) */
+    ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && lz_tabs() == 5u &&
+         lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 STEP") && lz_count_is("1/7");
     sel_turn( -1); frames(32);
-    ok &= str_eq(cur_page()->title, "BAR") && bars_view(cur_page()) && lz_tab_lit(2) && lz_count_is("8/8");
+    ok &= str_eq(cur_page()->title, "TRACK") && bars_view(cur_page()) && lz_tab_lit(1) && lz_count_is("7/7");
     sel_turn( 2); frames(32);
     ok &= str_eq(cur_page()->title, "NOTE") && roll_view(cur_page()) && !bigstep_view(cur_page());   /* (NOTE: the roll) */
     sel_turn( 1); frames(32);
     ok &= str_eq(cur_page()->title, "SPICE") && roll_view(cur_page()) && !bigstep_view(cur_page());
-    bad += check("SEQ: enters at STEP (1/8, 2026-11-10); BAR 8/8; BAR's bars, NOTE the roll, COMP the step large", ok);
-    bad += check("0.9.2 SEQ: one chain of 8 by SELECT (round, 2026-11-10: TOOLS a layer); a SEQ tap each group's first, round",
-                 chain_walk(B_SEQ, CH, 8));
+    bad += check("SEQ: enters at STEP (1/7); TRACK 7/7 (BAR page removed 2026-11-14); BAR's bars, NOTE the roll, COMP the step large", ok);
+    bad += check("0.9.2 SEQ: one chain of 7 by SELECT (round, 2026-11-10: TOOLS a layer); a SEQ tap each group's first, round",
+                 chain_walk(B_SEQ, CH, 7));
     /* the memory: the section's (not the track's) */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     go_step(); frame();
@@ -5966,34 +5966,6 @@ static int test_lente(void)
     press(B_SEQ); frames(32);
     ok &= ui.home && home_level() == 0u;                                           /* (hidden CHANCE is SEQ's: TRACKS) */
     bad += check("SEQ from elsewhere: STEP, on any track; a page put by code brings its entry", ok);
-    /* BAR: KNOB 1 the bar (wrapping, the cursor at its place), KNOB 2 LEN; STEP's KNOB 1 into the next bar */
-    ui_power_on(); TSEL->p[P_SLEN] = 64;
-    go_step(); frame();
-    sel_turn( -1); frames(32);
-    cursor_set(5);
-    turn(EN_K1, 1);
-    ok = str_eq(cur_page()->title, "BAR") && ui.cursor == 21u && ui.bank == 1u && TSEL->p[P_SLEN] == 64 &&
-         !strncmp(ui.col[0], "BAR|", 4);
-    turn(EN_K1, 1);
-    ok &= ui.cursor == 37u && ui.bank == 2u;
-    turn(EN_K1, 1);
-    ok &= ui.cursor == 53u && ui.bank == 3u;
-    turn(EN_K1, 1);
-    ok &= ui.cursor == 5u && ui.bank == 0u;                                        /* (2026-11-03: it wraps) */
-    turn(EN_K1, -1);
-    ok &= ui.cursor == 53u && ui.bank == 3u;
-    turn(EN_K1, -1); turn(EN_K1, -1); turn(EN_K1, -1);
-    ok &= ui.cursor == 5u && ui.bank == 0u;
-    turn(EN_K2, -1);                                                               /* KNOB 2: LEN */
-    ok &= TSEL->p[P_SLEN] == 63;
-    TSEL->p[P_SLEN] = 32;
-    turn(EN_K1, 3);
-    ok &= ui.bank == 1u && ui.cursor == 21u;                                       /* (LEN 32: two bars) */
-    sel_turn( 1); frames(32);
-    cursor_set(15);
-    turn(EN_K1, 1);
-    ok &= str_eq(cur_page()->title, "STEP") && ui.cursor == 16u && ui.bank == 1u;  /* STEP: the step, into the next bar */
-    bad += check("0.9.2 SEQ > BAR: KNOB 1 the bar (wrapping), KNOB 2 LEN; STEP's KNOB 1 into the next bar", ok);
     {
         char ti[20];
         go_title("STRETCH"); frame();
@@ -6029,13 +6001,9 @@ static int test_lente(void)
     go_step(); frame();
     ok = grid_on() && roll_view(cur_page()) && lens_level() == LV_BAR && song.grid == 1u;
     frames(500);
-    sel_turn( -1); frames(32);
-    ok &= bars_view(cur_page());
-    turn(EN_K1, 1);
-    ok &= ui.bank == 1u;
-    sel_turn( 3); frames(32);
+    sel_turn( 2); frames(32);
     ok &= str_eq(cur_page()->title, "SPICE") && grid_on() && lens_level() == LV_BAR;
-    bad += check("  DRUM: STEP is the grid (its keys); BAR its bars, KNOB 1 the bar; SPICE the grid too", ok);
+    bad += check("  DRUM: STEP is the grid (its keys); SPICE the grid too", ok);
     return bad;
 }
 
@@ -9863,7 +9831,7 @@ static int test_toasts(void)
     ok &= msg_is("REC + PLAY, TURN A KNOB");
     bad += check("  dwelt on (HINT_DWELL_MS): AUTOMATION's", ok);
     for (k = 0, n = 0; k < 3u; k++) {                   /* three more visits: once more (HINT_MAX), then no more */
-        go_title("BAR"); frames(400);
+        go_title("TRACK"); frames(400);
         go_title("AUTOMATION");
         for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("REC + PLAY, TURN A KNOB"); }
         n += seen;
@@ -10275,7 +10243,7 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {4, 7 + XS, 7 + XS, 6, 6, 3, 3, 2, 3, 1, 3, 11, 4, 2};   /* (2026-11-13: FX ALL: the FX tasks 2, 3 by fast turns of SELECT, a section each) */   /* (2026-11-02, held notes a b: a
+    static const uint8_t WANT[14] = {4, 7 + XS, 7 + XS, 6, 3, 3, 3, 2, 3, 1, 2, 11, 4, 2};   /* (2026-11-13: FX ALL: the FX tasks 2, 3 by fast turns of SELECT, a section each) */   /* (2026-11-02, held notes a b: a
                                                          * button its first page, no group taps: SELECT instead; SEQ
                                                          * opens STEP, ENV ENV, SAVE PROJECTS unarmed) */
     uint32_t got[14], t, tot = 0;
@@ -10313,7 +10281,7 @@ static int test_nav_tasks(void)
             ok = str_eq(cur_page()->title, "STEP") && ui.cursor == 4u && note_len(TSEL, 4, 64) == 2u;
             break;
         case 4:                                         /* bar 3, an accent on its first step */
-            tk_start(1); tk_go(EN_SELECT, -1); tk_go(EN_K1, 2); tk_go(EN_SELECT, 2); tk_val(EN_K2, 1);   /* (2026-11-10: NOTE's FLAG 1) */
+            tk_start(1); tk_val(EN_K1, 32); tk_go(EN_SELECT, 1); tk_val(EN_K2, 1);   /* (2026-11-10: NOTE's FLAG 1; 2026-11-14: no BAR page, KNOB 1 steps on) */
             ok = str_eq(cur_page()->title, "NOTE") && ui.cursor == 32u && (TSEL->step[32].flags & SF_ACCENT);
             break;
         case 5:                                         /* the sound into U05 */
@@ -10342,7 +10310,7 @@ static int test_nav_tasks(void)
             break;
         }
         case 10:                                        /* REC Q 0 % (BAR, then TRACK: 2026-11-10) */
-            tk_start(1); tk_go(EN_SELECT, -2); tk_val(EN_K4, -127);
+            tk_start(1); tk_go(EN_SELECT, -1); tk_val(EN_K4, -127);
             ok = str_eq(cur_page()->title, "TRACK") && TSEL->p[P_HRQ] == 0;
             break;
         case 11:                                        /* DRUM-X (track 4): the snare's DECAY */
@@ -10372,7 +10340,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75; 0.9.2: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; task 11 one fewer, TOOLS gone: 67; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 62u + XS);
+    bad += check("the mock-up's 14 tasks on the panel: each goal reached in its actions (2026-11-06: SAVE SOUND is a SAVE held key: 75; 2026-11-10: task 5 on NOTE's FLAG 1: 76; task 13 on SPICE (COMP 2 gone): 68; task 11 one fewer, TOOLS gone: 67; AUTO LIST, PLAYHEADS and MUTATE gone)", okall && tot == 58u + XS);
     ui_power_on();
     return bad;
 }
