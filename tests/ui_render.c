@@ -2061,24 +2061,12 @@ int main(int argc, char **argv)
         fclose(rep);
         return 0;
     }
-    {   /* every FM6 colony (the lint above, fm6_hook, runs on each) */
-        uint32_t a, c0 = fmp_charts;
-        for (a = 1; a <= 32u; a++) {
-            char name[32];
-            snprintf(name, sizeof name, "FM6 ALG %u", a);
-            cur_name = name;
-            state(); pal(UI_DEFAULT_INDEX); eng(ENGI_FM6); TSEL->p[P_E0] = (int16_t)a; go_title("OPERATOR");   /* (0.8.5) */
-            draw(-1);
-            lint();
-        }
-        if (fmp_charts - c0 != 32u) { fprintf(stderr, "ui_render: %u FM6 colonies drawn of 32\n", fmp_charts - c0); return 1; }
-    }
-    {   /* (0.9.6) FM6's operator pages with their colony keep every number they showed: ALG, the operator and its frequency
-         * (OPERATOR, OPERATOR 2), OP ENV's stage with its R and L, the four cards */
+    {   /* FM6's operator pages (rows of SOUND on the device; the colony picture is gone, the pages are drawn here only by this test) keep
+         * their four cards: the operator, its numbers, the stage */
         static const struct { int s; const char *w[6]; } FT[] = {
-            {S_V6_FM6_OP, {"ALG 05 PAT", "OP3 x1.00", "RATIO", "FINE", "LEVEL", "/6"}},
-            {S_V6_FM6_OP2, {"ALG ", "OP2 x", "MODE", "DETUNE", "VEL", "+6"}},
-            {S_V6_FM6_ENV, {"OP1", "DEC  R ", "STAGE", "RATE", "LEVEL", "DEC"}}};
+            {S_V6_FM6_OP, {"RATIO", "FINE", "LEVEL", "/6", "OP", "SOUND"}},
+            {S_V6_FM6_OP2, {"MODE", "DETUNE", "VEL", "+6", "OP", "SOUND"}},
+            {S_V6_FM6_ENV, {"STAGE", "RATE", "LEVEL", "DEC", "OP", "SOUND"}}};
         uint32_t f, w, i, n0 = nfind;
         for (f = 0; f < NELEM(FT); f++) {
             cur_name = S_NAME[FT[f].s];

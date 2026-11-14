@@ -9984,10 +9984,10 @@ static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, 
 static int test_engvis(void)
 {
     static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
-        /* (2026-11-11: the synths' EDIT 1 / 2 pictures went with the pages: SOUND is a list; the kit's and FM6's operator pages keep theirs) */
+        /* (2026-11-11: the synths' EDIT 1 / 2 pictures went with the pages: SOUND is a list; the kit's keeps its picture) */
         {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"},
-        {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
-        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"}};
+        /* (2026-11-14: FM6's colony and operator envelope drawers are gone: those pages are rows of SOUND, drawn as cards) */
+    };
     int bad = 0, ok = 1, mv, st;
     uint32_t c;
     for (c = 0; c < NELEM(C); c++) {
@@ -9995,8 +9995,8 @@ static int test_engvis(void)
         if (!mv || !st) printf("  %s: %s\n", C[c].what, !mv ? "still while it plays" : "moving in silence");
         ok &= mv && st;
     }
-    bad += check("the engines' line drawings (chord-harp fork: VOICE DRUM-X ANALOG FM6 WHEEL PHASE LOFI JUNO OMNI KALIMBA; EDIT, "
-                 "FM6's OPERATOR pages; 2026-11-02: HOME ENGINE gone): move with the sound, still in silence", ok);
+    bad += check("the engines' line drawings (chord-harp fork: VOICE DRUM-X ANALOG FM6 WHEEL PHASE LOFI JUNO OMNI KALIMBA; EDIT; "
+                 "2026-11-02: HOME ENGINE gone): move with the sound, still in silence", ok);
     {   /* (chord-harp fork, the user's bug) two tracks on one engine: each picture (2026-10-28: robot) its own track's state: a
          * note played on T4 moves T4's VOICE, not T2's (the state was the engine's: they shared it) */
         uint32_t i;

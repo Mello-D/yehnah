@@ -169,65 +169,6 @@ static const char *menu_short(uint32_t row)          /* a card's label: the row'
             return SH[k].s;
     return MI_NAME[row];
 }
-/* a row's values as chips, 3 across, 20 apart from y0 down to y1 (the set holding the value now; COLOR: each palette's
- * colours) */
-static void menu_chips(uint32_t row, int32_t y0, int32_t y1)
-{
-    uint32_t nv = menu_n(row), cur = menu_get(row), per = (uint32_t)((y1 - y0 + 2) / 20) * 3u, k0, k;
-    if (!per)
-        return;
-    for (k0 = cur / per * per, k = k0; k < nv && k < k0 + per; k++) {
-        int32_t x = 8 + (int32_t)((k - k0) % 3u) * 75, y = y0 + (int32_t)((k - k0) / 3u) * 20;
-        uint16_t bg = k == cur ? T_TINT : T_RAISE;
-        cv_rect(x, y, 72, 18, bg);
-        if (k == cur) {
-            cv_rect(x, y, 72, 1, T_ACCENT); cv_rect(x, y + 17, 72, 1, T_ACCENT);
-            cv_rect(x, y, 1, 18, T_ACCENT); cv_rect(x + 71, y, 1, 18, T_ACCENT);
-        }
-        cv_clip_text(x + 5, y + 6 - AF_X_CAP_Y, &AF_X, row == MI_HOLD ? HOLD_N[k % 4u] : menu_vname(row, k),
-                     k == cur ? T_TEXT : T_MID, bg, row == MI_COLOR ? 44 : 62);
-        if (row == MI_COLOR) {                     /* (the palette's THEME and ACCENT) */
-            uint32_t q;
-            for (q = 0; q < 2u; q++) {
-                uint16_t col = q ? UI_PALETTES[k % NPALETTES].accent : UI_PALETTES[k % NPALETTES].theme;
-                cv_rect(x + 50 + (int32_t)q * 10, y + 5, 8, 8, col);
-            }
-        }
-    }
-}
-/* (2026-11-02, the redesign step 5) a GLO page with MENU rows: its knobs as rows (the knob's number, the name, the value;
- * the one last turned lit), under them that one's values as chips */
-static void graph_glo(const page_t *pg)
-{
-    uint32_t c, id = pg->id[glo_k % 4u];
-    for (c = 0; c < 4u; c++) {
-        int32_t y = 4 + (int32_t)c * 17;
-        uint16_t bg = c == glo_k % 4u ? T_TINT : T_RAISE;
-        const param_desc_t *d = 0;
-        const char *nm, *unit = "";
-        char v[24], kn[2] = {(char)('1' + c), 0};
-        int16_t *vp;
-        if (IS_MROW(pg->id[c]))
-            nm = MI_NAME[pg->id[c] - ID_MENU], menu_val(pg->id[c] - ID_MENU, v);
-        else if ((d = page_desc(pg, c, &vp)) != 0 && pg->id[c] == G_INFO)   /* (SYSTEM's CPU: the load now) */
-            nm = d->label, fmt_int(v, (int32_t)(song.cpu_q8 * 100u / 256u)), unit = "%";
-        else if (d && vp)
-            nm = d->label, param_format(d, *vp, v, &unit);
-        else
-            continue;
-        if (unit[0]) {
-            str_cpy(v + str_len(v), " ", 2);
-            str_cpy(v + str_len(v), unit, 24 - str_len(v));
-        }
-        cv_rect(8, y, 224, 15, bg);
-        cv_text(13, y + 4 - AF_X_CAP_Y, &AF_X, kn, T_THEME);
-        GFX_HOOK_ALIGN(0, y, 0, y + 15, AL_V, "GLO row name centred up/down");
-        cv_text_on(24, y + CAP_IN(S, 15), &AF_S, nm, T_TEXT, bg);
-        cv_text_r(226, y + CAP_IN(S, 15), &AF_S, v, T_TEXT, bg);
-    }
-    if (IS_MROW(id) && id - ID_MENU < MI_VALUES)
-        menu_chips(id - ID_MENU, 74, (int32_t)graph_h() - 2);
-}
 /* (topic C) a list row's name and its value as it reads (a MENU row as the MENU, the CPU row the load now) */
 static const char *sets_label(uint32_t id)
 {
@@ -332,21 +273,6 @@ static void sets_detail(uint32_t id)
         cv_text_on(SETS_RX + 10, 104 - AF_X_CAP_Y, &AF_X, lo, T_MID, T_SURF);
         cv_text_r(SETS_RX + SETS_RW - 10, 104 - AF_X_CAP_Y, &AF_X, hi, T_MID, T_SURF);
     }
-}
-static void graph_sets(void)
-{
-    uint32_t ls = sets_of(&PAGES[ui.page]) & 3u, n = sets_n(ls), k;
-    for (k = 0; k < n; k++) {
-        int32_t y = 5 + (int32_t)k * 23;
-        int on = k == sets_cur[ls];
-        uint16_t bg = on ? T_SEL : T_SURF;
-        if (on)
-            cv_rrect(8, y, 112, 22, 4, T_SEL, T_SURF);
-        GFX_HOOK_ALIGN(0, y, 0, y + 22, AL_V, "GLO row name centred up/down");
-        cv_text_on(15, y + CAP_IN(S, 22), &AF_S, sets_label(SETS[ls][k]), on ? T_INK : T_TEXT, bg);
-    }
-    cv_rect(SETS_RX - 4, 8, 1, (int32_t)graph_h() - 16, T_LINE);
-    sets_detail(SETS[ls][sets_cur[ls] % (n ? n : 1u)]);
 }
 /* (2026-11-09) GLO > SYSTEM > CPU opens this (ui.menu 3): the load as a graph over the last ~15 s, the percentage, and the audio load
  * figures that were on ABOUT (voice.c load_diag, fx.c mc_status). The history is sampled all the time (cpu_sample, every input pass) */

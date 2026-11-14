@@ -105,8 +105,6 @@ static const uint8_t FM6_CELL[32][6];                    /* (ui_graph.c) */
 static void fm6_routes(uint32_t a, uint8_t *m);
 static uint32_t fm6_fb_op(uint32_t a);
 static uint32_t fm6_car_ops(uint32_t a);
-static uint32_t fm6_alg_of(const track_t *t);
-static void fop_freq(const uint8_t *op, char *s);
 typedef struct {
     const uint8_t *p;                                    /* the patch as it plays (the macros on it) */
     int32_t env[6], amp[6], rat[6], rad[6], x[6], y[6];  /* per operator 1..6: its envelope now, level x envelope (0..256),
@@ -114,38 +112,6 @@ typedef struct {
     uint32_t alg, car, fbo, st[6];                       /* the algorithm, its carriers, the feedback operator; each stage */
     uint8_t m[6];
 } vxfm_t;
-/* the operators of track t now: the sounding notes' envelopes (the loudest), each one's level, ratio, size, place */
-static void vx_fm_ops(const track_t *t, vxfm_t *o)
-{
-    uint32_t tr = (uint32_t)(t - trk) % NTRK, k, v, hi = 0, top = 0;
-    o->p = fm6_eff[tr].ok ? fm6_eff[tr].p : fm6_patch[tr];
-    o->alg = fm6_alg_of(t);
-    o->car = fm6_car_ops(o->alg);
-    o->fbo = fm6_fb_op(o->alg);
-    fm6_routes(o->alg, o->m);
-    for (k = 0; k < 6u; k++) {
-        const uint8_t *op = o->p + (5u - k) * FP_OP;
-        int32_t e = 0, ol = op[FP_OL] % 100u, a = ol * 256 / 99, c = op[FP_FC] & 31;
-        o->st[k] = 4;
-        for (v = 0; v < FM6_POLY; v++) {                 /* (msfa's level: scaleout units 0..127, the stage's L 0..99) */
-            const fm6_env_t *n = &fm6_note[tr][v].env[5u - k];
-            int32_t s = (((n->level >> 16) - n->outlevel + 4256) / 32 - 28) * 256 / 99;
-            if (!fm6_note[tr][v].live || !t->v[v].active) continue;
-            if (s > e || o->st[k] == 4u) { o->st[k] = n->ix | (n->down ? 0u : 8u); }
-            e = s > e ? s : e;
-        }
-        o->env[k] = clamp(e, 0, 256);
-        o->amp[k] = ol ? (a * ((a * 154 >> 8) + 102) / 256) * o->env[k] / 256 : 0;   /* ((ol / 99) ^ 1.6) x env */
-        o->rat[k] = op[FP_MODE] ? 256 : (c ? c * 256 : 128) * (100 + op[FP_FF] % 100u) / 100;
-        o->rad[k] = 120 * (141 + 141 * ol / 99) / 256 * (200 + (o->env[k] * 82 >> 8)) / 256;
-        hi = (FM6_CELL[o->alg][k] & 7u) > hi ? FM6_CELL[o->alg][k] & 7u : hi;
-        top = (uint32_t)(FM6_CELL[o->alg][k] >> 4) > top ? (uint32_t)FM6_CELL[o->alg][k] >> 4 : top;
-    }
-    for (k = 0; k < 6u; k++) {                           /* (fmPos: columns 26 apart, the carriers on the floor 38) */
-        o->x[k] = ((int32_t)(FM6_CELL[o->alg][k] & 7u) * 2 - (int32_t)hi) * 13 * 16;
-        o->y[k] = 28 * 16 - (int32_t)(FM6_CELL[o->alg][k] >> 4) * (top >= 3u ? 324 : 352);
-    }
-}
 
 /* (0.9.7) HOME's beings (ui_lzhome.c): as the beings (bg_col) */
 static uint16_t vk_heat(int32_t h) { return bg_col(clamp(h, 0, 255)); }
@@ -258,43 +224,4 @@ static void vx_kit_page(const track_t *t, int32_t lane)
     str_cpy(b + str_len(b), drum_lane_name(t, l), sizeof b - str_len(b));
     cv_text(8, 6 - AF_X_CAP_Y, &AF_X, "KIT", T_THEME);
     cv_text_r(232, 6 - AF_X_CAP_Y, &AF_X, b, lane < 0 ? T_TEXT : T_THEME, T_SURF);
-}
-/* OPERATOR / OPERATOR 2: the operators on the whole panel, the one picked lit; "ALG 05" on the left, its frequency on
- * the right ("OP3 x1.50") */
-static VX_CODE void vx_fm6_page(const track_t *t, uint32_t sel, int op2)
-{
-    static const int32_t A[4] = {6, 20, 228, 116};
-    const uint8_t *pt = fm6_patch[(t - trk) % NTRK];
-    uint32_t alg = fm6_alg_of(t);
-    uint32_t hot = ui.hot_t ? (uint32_t)cur_page()->id[ui.hot_col & 3u] : 0u;
-    char b[16] = {'A', 'L', 'G', ' ', (char)('0' + (alg + 1u) / 10u), (char)('0' + (alg + 1u) % 10u), 0};
-    char fq[16] = {'O', 'P', (char)('1' + sel), ' ', 0};
-    (void)op2;
-    cv_oy = 0;
-    px_fm6ops(t, A, sel);                                /* (chord-harp fork: pixel art, was el_fm6's lines) */
-    if (!t->p[P_E0])
-        str_cpy(b + 6, " PAT", 5);
-    cv_text(10, 4, &AF_S, b, hot == P_E0 || hot == P_E7 ? T_ACCENT : T_MID);
-    fop_freq(pt + (5u - sel) * FP_OP, fq + 4);
-    cv_text_r(228, 4, &AF_S, fq, T_TEXT, T_SURF);
-}
-/* OP ENV: the picked operator's envelope as the patch has it (from L4 to L1 at R1, L2 at R2, L3 at R3, held while the key
- * is down, back to L4 at R4; a stage as wide as its rate is slow), the stage KNOB 3 / 4 edit in the accent, a dot where
- * the operator is now (its level); "OP3" top left, the stage's R and L right */
-static VX_CODE void vx_fm6env(const track_t *t)
-{
-    static const char *const STG[4] = {"ATK", "DEC", "SUS", "REL"};
-    static const int32_t A[4] = {6, 20, 228, 114};
-    const uint8_t *op = fop_bytes((uint32_t)(t - trk));
-    uint32_t ko = fop_op % 6u, sg = fop_stg & 3u;
-    char b[24] = {'O', 'P', (char)('1' + ko), 0};
-    cv_oy = 0;
-    px_fm6env(t, A, op, ko, sg);                         /* (chord-harp fork: pixel art, was line drawings) */
-    cv_text(10, 4, &AF_S, b, T_MID);
-    str_cpy(b, STG[sg], sizeof b);
-    str_cpy(b + str_len(b), "  R ", 5);
-    fmt_int(b + str_len(b), op[FP_R1 + sg]);
-    str_cpy(b + str_len(b), "  L ", 5);
-    fmt_int(b + str_len(b), op[FP_L1 + sg]);
-    cv_text_r(228, 4, &AF_S, b, T_TEXT, T_SURF);
 }

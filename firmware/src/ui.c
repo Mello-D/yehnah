@@ -536,14 +536,6 @@ static const fxp_t FX_PG[] = {
 #define FX_NPG (sizeof FX_PG / sizeof FX_PG[0])
 static int page_visible(uint32_t i);
 static int fx_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_FX; }
-static uint32_t fx_page(const char *title)
-{
-    uint32_t i;
-    for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].fam == FAM_FX && str_eq(PAGES[i].title, title))
-            return i;
-    return 0;
-}
 static int32_t fx_trk_k(uint32_t i)                     /* page i's place among TRACK's pages, -1 none */
 {
     static const char *const FX_TRK[4] = {"FX", "DIST", "AUTO PAN", "PHASER"};   /* (chord-harp fork: PHASER) */
@@ -561,23 +553,6 @@ static uint32_t fx_mod_of(uint32_t i)                   /* an effect page's modu
             return FX_PG[k].m;
     return ui.fxmod % FX_NMOD;
 }
-static uint32_t fx_mod_k(uint32_t i)                    /* .. its place in it (among the pages shown, in FX_PG's order) */
-{
-    uint32_t k, n = 0, m = fx_mod_of(i);
-    for (k = 0; k < FX_NPG && !str_eq(FX_PG[k].t, PAGES[i].title); k++)
-        if (FX_PG[k].m == m && page_visible(fx_page(FX_PG[k].t)))
-            n++;
-    return n;
-}
-static uint32_t fx_mod_n(uint32_t m)                    /* the pages of module m shown */
-{
-    uint32_t k, n = 0;
-    for (k = 0; k < FX_NPG; k++)
-        if (FX_PG[k].m == m % FX_NMOD && page_visible(fx_page(FX_PG[k].t)))
-            n++;
-    return n;
-}
-static int fx_mod_ok(uint32_t m) { return page_visible(fx_page(FX_MHEAD[m % FX_NMOD])); }   /* (LOAD ECO: no CHORUS, SLICER) */
 
 /* (0.8.5) a lens page shown (every section's, the menu's, a layer's map): the mock-up's layout, its tabs and breadcrumb */
 static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */

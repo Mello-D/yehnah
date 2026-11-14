@@ -25,8 +25,6 @@ static void lcd_clear(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c
 /* a strip cleared to BG */
 static uint8_t glo_k, about_glo;                        /* (2026-11-02) GLO: the knob last turned on a MENU row's page (its
                                                          * values the panel's chips); ABOUT opened from GLO > TOOLS */
-static void graph_glo(const page_t *pg);                /* (ui_menu.c) */
-static void graph_sets(void);
 static void lz_begin(uint32_t w, uint32_t h, uint32_t x, uint32_t y)
 {
     (void)x;
@@ -38,17 +36,6 @@ static void lz_blit(uint32_t x, uint32_t y)
     cv_halo = 0;
     cv_blit(x, y);
 }
-/* (0.8.9) a tile in a lens's panel (FX's modules, ENV's tracks, MOD's slots): a rounded RAISE box (r 4), the one
- * picked framed in fc (the mock-up's card and its stroke). What lies under its words: lz_tile_bg */
-static uint16_t lz_tile_bg(void) { return T_RAISE; }
-static void lz_tile(int32_t x, int32_t y, int32_t w, int32_t h, int sel, uint16_t fc)
-{
-    if (sel) {
-        cv_rrect(x, y, w, h, 4, fc, cv_bg);
-        cv_rrect(x + 1, y + 1, w - 2, h - 2, 3, T_RAISE, fc);
-    } else
-        cv_rrect(x, y, w, h, 4, T_RAISE, cv_bg);
-}
 
 static const int32_t graph_ht = 100;                 /* the height ADSR and LFO are drawn on */
 #include "ui_organic.c"                              /* Yehnah's organic line art (drawn by code) */
@@ -57,81 +44,7 @@ static uint16_t heat_col(int32_t v);
 #include "ui_being.c"                                /* (0.5) the beings' helpers left: the level, the sine, heat */
 #include "ui_engline.c"                              /* (chord-harp fork) the engines' line drawings (was ui_engvis.c's creatures) */
 
-/* Matches voice.c: attack is linear, decay and release are exponential
- * (env += (target - env) * k each tick, ~99 % after the set time). Time
- * axis is the parameter value (the times themselves are exponential). */
-static void graph_adsr(const track_t *t, uint16_t c)
-{
-    const page_t *pg = cur_page();
-    int32_t a = 4 + t->p[pg->id[0]] * 50 / 127, d = 6 + t->p[pg->id[1]] * 50 / 127, r = 6 + t->p[pg->id[3]] * 60 / 127;
-    int32_t top = 6 * graph_ht / 100, bot = 88 * graph_ht / 100, sus = t->p[pg->id[2]] * 1000 / 127;   /* 0..1000 */
-    int32_t x0 = 12, x1 = x0 + a, x3 = 226 - r, i, px, py;
-    int32_t e = 32768;                                                  /* exp(-4.6 u), Q15 */
-#define EGY(lvl) (bot - (lvl) * (bot - top) / 1000)
-    cv_rect(PANEL_X0, bot + 2, PANEL_W, 1, T_RAISE);
-    cv_line_t(x0, bot, x1, top, c, 2);                                  /* attack: linear */
-    px = x1;
-    py = top;
-    for (i = 1; i <= d; i++) {                                          /* decay: exponential to SUS */
-        int32_t lvl;
-        e = (e * (32768 - 150733 / d)) >> 15;           /* k^d = exp(-4.6) */
-        lvl = sus + ((1000 - sus) * e >> 15);
-        cv_line_t(px, py, x1 + i, EGY(lvl), c, 2);
-        px = x1 + i;
-        py = EGY(lvl);
-    }
-    cv_line_t(px, py, x3, EGY(sus), c, 2);                               /* sustain */
-    px = x3;
-    py = EGY(sus);
-    e = 32768;
-    for (i = 1; i <= r; i++) {                                          /* release: exponential to 0 */
-        e = (e * (32768 - 150733 / r)) >> 15;
-        cv_line_t(px, py, x3 + i, EGY(sus * e >> 15), c, 2);
-        px = x3 + i;
-        py = EGY(sus * e >> 15);
-    }
-    if (pg->id[0] == P_ATK) {                           /* (0.5) the track's envelope now: the loudest voice's */
-        const voice_t *bv = 0;                          /* level as a dot on the curve, a line down to the axis */
-        int32_t lvl, x;
-        for (i = 0; i < NVOICE; i++)
-            if (t->v[i].stage && t->v[i].stage < 4u && (!bv || t->v[i].env > bv->env))
-                bv = &t->v[i];
-        if (bv) {
-            lvl = (int32_t)(((int64_t)bv->env * 1000) >> 24);
-            if (bv->stage == 1u)
-                x = x0 + a * lvl / 1000;
-            else if (bv->stage == 2u)
-                x = x1 + (sus < 1000 ? clamp((1000 - lvl) * d / (1000 - sus), 0, d) : 0);
-            else
-                x = x3 + (sus > 0 ? clamp((sus - lvl) * r / sus, 0, r) : r);
-            cv_rect(x, EGY(lvl), 1, bot + 2 - EGY(lvl), T_MID);
-            cv_rrect(x - 3, EGY(lvl) - 3, 7, 7, 3, T_TEXT, T_SURF);
-        }
-    }
-#undef EGY
-}
 
-/* LFO: the wave as it runs (0.5): the phase now at the playhead (a quarter in), two cycles across, scrolling
- * at the LFO's own rate; behind the playhead dimmer (what it played), the level now a dot, its depth after FADE */
-static void graph_lfo(const track_t *t, uint16_t c)
-{
-    int32_t x, cy = graph_ht / 2, a = 38 * graph_ht / 100, py = cy, xp = PANEL_W / 4;
-    uint32_t span = 0xFFFFFFFFu / (PANEL_W / 2u), ph = t->lfo_ph - (uint32_t)xp * span;
-    int32_t now = cy - mulq15(t->lfo_val, t->lfo_fade) * a / 32768;
-    cv_rect(PANEL_X0, cy, PANEL_W, 1, T_RAISE);
-    for (x = 0; x < PANEL_W; x++) {                  /* (lfo_wave only reads the track) */
-        uint32_t px = ph + (uint32_t)x * span;
-        int32_t y = cy - lfo_wave((track_t *)t, px) * a / 32768;
-        if (t->p[P_LWAVE] == 4)                      /* S&H: a value per cycle part, held */
-            y = cy - ((int32_t)((((px >> 29) + 1u) * 2654435761u) >> 16) - 32768) * a / 32768;
-        if (x)
-            cv_line_t(PANEL_X0 + x - 1, py, PANEL_X0 + x, y,
-                      x < xp ? ux_mix(T_SURF, c, 45) : c, 2);
-        py = y;
-    }
-    cv_rect(PANEL_X0 + xp, cy - a - 4, 1, 2 * a + 8, T_MID);   /* the playhead */
-    cv_rrect(PANEL_X0 + xp - 3, now - 3, 7, 7, 3, T_TEXT, T_SURF);
-}
 
 
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
@@ -627,11 +540,6 @@ static uint32_t fm6_car_ops(uint32_t a)
     for (k = 0; k < 6u; k++)
         r |= (c >> (5u - k) & 1u) << k;
     return r;
-}
-/* the algorithm FM6 plays on track t (0..31): ALG, or the patch's at PAT */
-static uint32_t fm6_alg_of(const track_t *t)
-{
-    return t->p[P_E0] >= 1 && t->p[P_E0] <= 32 ? (uint32_t)t->p[P_E0] - 1u : fm6_patch[(t - trk) % NTRK][FP_ALG] & 31u;
 }
 #if YEHNAH_FM4
 /* DIGITAL's eight algorithms as FM charts, read from src/eng_digital.c's switch (alg) (ui_test.c checks
@@ -1198,8 +1106,6 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (DX_KIT3(pg))                                 /* (0.8.8) KIT 3's colony lives every frame, as KIT's (was still) */
         h ^= ui.frame * 2654435761u;
-    if (pg->graph >= GR_FMOP && pg->graph <= GR_FMENV)   /* (0.9.6) FM6's operators: the colony lives, as the beings */
-        h ^= ui.frame / 2u * 2246822519u;
     if (pg->graph == GR_BLEND) {                     /* (chord-harp fork) the two tracks' sounds, the blend (MOVE's live) */
         uint32_t k;
         for (k = 0; k < NTRK; k++)
@@ -1498,26 +1404,6 @@ static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c)
     }
 }
 
-/* SONG: the rows, each a section (the saved project A..D, sounds and steps) and its bars (song_chain.c) */
-/* (Yehnah) MSEQ: the 16 levels as bars (past LEN dim), the step KNOB 1 picked framed, the one playing in the accent, and
- * the level the matrix reads now (STEP, slewed) as a line */
-static void graph_mseq(const track_t *t, uint16_t c)
-{
-    uint32_t i, len = t->p[P_MSLEN] > 0 ? (uint32_t)t->p[P_MSLEN] : 1u;
-    uint32_t per = div_samples((uint32_t)t->p[P_MSDIV]), now = song.playing && per ? ms_clock / per % len : 0xFFu;
-    int32_t y0 = 92, hmax = 80;
-    for (i = 0; i < 16u; i++) {
-        int32_t x = 13 + (int32_t)i * 13, h = t->p[P_MS0 + i] * hmax / 127;
-        uint16_t col = i >= len ? T_RAISE : i == now ? T_ACCENT : c;
-        cv_rrect(x, y0 - hmax, 10, hmax, 2, T_RAISE, T_SURF);
-        if (h > 0)
-            cv_rrect(x, y0 - (h < 3 ? 3 : h), 10, h < 3 ? 3 : h, 2, col, T_RAISE);
-        if (i == ms_ui_step)
-            cv_rect(x, y0 + 3, 10, 2, T_TEXT);
-    }
-    if (song.playing)
-        cv_rect(13, y0 - t->ms_v * hmax / 32767, 205, 1, T_TEXT);
-}
 /* (0.6.22) ARRANGE / SEQ > SONG, after SLOOP's arranger in Yehnah's colours: the song as a column of rows, each a section
  * chip (A..D, each its own heat), its bars as blocks (one a bar, up to 16; past 16 each a 16th of it) filling as they
  * play, the bars' count, a dot for its scene; under them + ADD (the rows used of CHAIN_ROWS) and the song's END (STOP,
@@ -1564,22 +1450,6 @@ static void draw_graph(void)
         gr_ms = fm1_ms;
     }
     ui.graph_sig = sig;
-    if (sets_full() && lz_on() && lz_fam() == LZ_GLO && pg->graph == GR_SETS) {   /* (2026-11-09, topic E) a list page: the panel is taller
-                                                         * than the canvas (164 rows): two bands */
-        uint32_t pass, h0 = graph_h() / 2u;
-        for (pass = 0; pass < 2u; pass++) {
-            cv_begin(240, pass ? graph_h() - h0 : h0, T_BG);
-            cv_oy = pass ? -(int32_t)h0 : 0;
-            cv_scroll = 1;
-            cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);
-            cv_bg = T_SURF;
-            graph_sets();
-            cv_scroll = 0;
-            cv_oy = 0;
-            cv_blit(0, graph_y() + pass * h0);
-        }
-        return;
-    }
     cv_begin(240, graph_h(), T_BG);
     if (lz_on())                                /* (0.8.5) a lens page: the mock-up's panel, 4 .. 236 (0.8.9 COLORS: */
         cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);   /* rounded, as the 0.6's) */
@@ -1611,28 +1481,13 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_SAVE) {     /* (0.8.5) SAVE's lens */
         cv_oy = 0;
         graph_save_lz(pg);
-    } else if (lz_on() && lz_fam() == LZ_FX) {       /* (0.8.5) FX's lens */
+    } else if (lz_on() && lz_fam() == LZ_FX) {       /* (FX's lens: its only page is FX ALL, drawn by fxall_draw above) */
         cv_oy = 0;
-        graph_fx_lz(t, pg);
-    } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
     } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
-    } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
     } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
-    } else if (lz_on() && lz_fam() == LZ_GLO && pg->graph == GR_SETS) {              /* .. GLO's lists (topic C) */
-        cv_oy = 0;
-        graph_sets();
-    } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
-        cv_oy = 0;
-        graph_system();
-    } else if (lz_on() && lz_fam() == LZ_GLO && (IS_MROW(pg->id[0]) || IS_MROW(pg->id[2]))) {   /* .. its MENU rows' */
-        cv_oy = 0;
-        graph_glo(pg);
     } else {
         cv_oy = GOY;
         switch (pg->graph) {
-        case GR_ADSR:
-            graph_adsr(t, c);
-            break;
         case GR_BLEND:
             graph_blend();
             break;
@@ -1648,13 +1503,6 @@ static void draw_graph(void)
                 graph_grid(t, c);
             else
                 graph_roll(t, c);
-            break;
-        case GR_FMOP:                                /* (0.6.10) FM6's operators: (0.9.6) the colony (ui_engvis.c), the operator */
-        case GR_FMOP2:                               /* picked lit */
-            if (fop_ok()) vx_fm6_page(t, fop_op % 6u, pg->graph == GR_FMOP2);
-            break;
-        case GR_FMENV:                               /* .. its envelope, its bicho riding it */
-            if (fop_ok()) vx_fm6env(t);
             break;
         case GR_DXSND:                               /* EDIT > SOUND: the kit's lanes, the sound edited singled out */
             cv_oy = 0;

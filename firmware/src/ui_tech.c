@@ -27,30 +27,6 @@ static int32_t tk_amt(uint32_t c)
     return d && d->min >= 0 ? tk(c) / 2 : tk(c) - 500;
 }
 
-/* DIST: in -> out of dist_shape's maths (the input's full scale +-131072 as the track's mix sees it) */
-static int32_t tk_dist_y(uint32_t type, int32_t x, int32_t g, int32_t d)
-{
-    int32_t v = ((x >> 2) * g) >> 10, a;
-    switch (type) {
-    case DT_HARD: return clamp(v, -22000, 22000) * 32767 / 26000;
-    case DT_FOLD:
-        v = clamp(v, -110000, 110000);
-        for (a = 0; a < 3; a++)
-            v = v > 22000 ? 44000 - v : v < -22000 ? -44000 - v : v;
-        return v * 32767 / 26000;
-    case DT_CRUSH: {
-        uint32_t sh = 4u + (uint32_t)d / 12u;
-        x = (int32_t)((uint32_t)(clamp(x, -131072, 131068) >> sh) << sh);
-        return clamp(((x >> 2) * g) >> 10, -26000, 26000) * 32767 / 26000;
-    }
-    case DT_RECT: a = x < 0 ? -x : x; return softclip((((a - 65536) >> 2) * g) >> 10);
-    case DT_AMP:                                        /* (0.7.8) the two stages, without the coupling's drift */
-        a = softclip(clamp(v + (v >> 1), -400000, 400000) + AMP_B1) - softclip(AMP_B1);
-        return softclip(((a * (24 + d)) >> 4) + AMP_B2) - softclip(AMP_B2);
-    case DT_FUZZ: a = softclip(v + 2400) - softclip(2400); return softclip(a * 3);
-    default: return softclip(v + 2400) - softclip(2400);
-    }
-}
 /* ENV DEST: the source now into four bipolar columns, one under each card (0.9.7: LFO DEST, VOICE and MSEQ 2 have
  * their lenses' pictures: ui_lzpage.c, ui_lzedit.c) */
 static void tech_dest(const track_t *t)
