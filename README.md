@@ -98,6 +98,8 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 - **One sound list.** Over 700 factory sounds, browsed with PRESETS: each has a type (bass, lead, pad…) and an engine.
   Favourites and 32 user presets sit in the same list. **MORPH** blends two tracks into one part. Switching a track to
   another engine fades the old one out, and the notes you hold go on in the new one.
+- **An INIT sound for every engine.** Each engine starts its list with a plain INIT sound to build from (a drum track's is the
+  plain DRUM-X kit): filter the list by type INIT, load one, shape it, and save it as a user sound.
 - **IDEAS.** The five IDEAS tabs throw ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
   genre's progression, voicing and figures, a rhythm cell, a role: bass, chords, melody or arp), **SOUND** picks a preset
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
@@ -161,14 +163,14 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   seven kit presets (808 MODEL, 909 MODEL, DIGITAL KIT, FM KIT, PUNCH KIT, BIG BOOM and BASIC KIT); **LCD-4** is a third.
   Every sound has its own tune and decay, layers and sends.
 - **Hit modes on the keys:** the octave below plays SHORT, GHOST and FLAM, the octave above ratchets ×2, ×4 and ×8, in
-  time with the step grid. In the EDIT layer the black keys mute the drum sounds.
+  time with the step grid.
 
 ### Songs, sections and scenes
 
 <table>
 <tr>
 <td align="center"><img src="docs/img/arrange.png" width="300" alt="ARRANGE: the song's rows"><br><sub>ARRANGE: rows of sections, bars and scenes</sub></td>
-<td align="center"><img src="docs/img/mixer.png" width="300" alt="The mixer"><br><sub>MIXER: six strips, level, pan, mute, DJ filter</sub></td>
+<td align="center"><img src="docs/img/trim.png" width="300" alt="TRIM: per-track cuts across the song"><br><sub>TRIM: each track's cuts in each part of the song</sub></td>
 </tr>
 </table>
 
@@ -176,6 +178,10 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   automation, the drum kit and its mutes, the punch-in lane, the slicer, the macros, the tempo and the global effects.
 - **An arrangement of up to 16 rows**, each a section for 1–64 bars with an optional **scene** (the mutes, the drum group
   mutes, the macros and the punch-in effects held) and an END rule.
+- **TRIM: per-track adjustment across the song.** For every track and every part of the arrangement, set how many bars it
+  sits out from the part's start and from its end: the bass comes in late, the lead drops out for the last bars, the
+  drums rest through a verse. The same section plays differently each time round, and you can change the cuts while the
+  song plays.
 - **Play the sections live** from the REC layer: tap A–D to switch on the next bar, tap several in one hold for a **quick
   chain**, and **record the song** as you play it (the section system after [SLOOP](https://github.com/isod89/sloop-fm1)).
 - **Autosave.** Set GLO > SYSTEM > RESTORE LAST to ON (it is off by default) and the music is kept as you stop and put back
@@ -218,8 +224,8 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 </tr>
 </table>
 
-SOUND is a scrollable list of rows: KNOB 1 scrolls, the other knobs set the row's values, and each value is a cell of four
-with a picture for every pick. The same design carries the effects, the envelopes, the LFOs, the arpeggiator and the
+SOUND is a scrollable list of rows: SELECT scrolls, KNOB 1–4 set the four values of the row you are on, and each value
+is a cell with a picture for every pick. The same design carries the effects, the envelopes, the LFOs, the arpeggiator and the
 GLO settings. Five colour themes change the look:
 
 ![The same screen in the five colour themes: VAP DK, VAP LT, NOIRE, DUSK and CREAM](docs/img/themes.png)
@@ -267,8 +273,8 @@ and its pages open. Four buttons have a layer:
 <tr>
 <td align="center"><img src="docs/img/punch.png" width="220" alt="The FX layer"><br><sub><b>FX</b>: punch-in effects</sub></td>
 <td align="center"><img src="docs/img/rec.png" width="220" alt="The REC layer"><br><sub><b>REC</b>: undo, restart, sections, song</sub></td>
-<td align="center"><img src="docs/img/scl.png" width="220" alt="The SCL layer"><br><sub><b>SCL</b>: the root, and STRUM</sub></td>
-<td align="center"><img src="docs/img/edit.png" width="220" alt="The EDIT layer on an FM6 track"><br><sub><b>EDIT</b>: INIT, RECALL, drum mutes</sub></td>
+<td align="center"><img src="docs/img/save_layer.png" width="220" alt="The SAVE layer"><br><sub><b>SAVE</b>: clear, erase, new, save sound</sub></td>
+<td align="center"><img src="docs/img/seq_layer.png" width="220" alt="The SEQ layer"><br><sub><b>SEQ</b>: pattern tools</sub></td>
 </tr>
 </table>
 
@@ -276,9 +282,12 @@ and its pages open. Four buttons have a layer:
   knobs. Hold FX until its map opens and let go without touching anything: the layer stays open, with both hands free.
 - **REC:** CLEAR the track, the record MODE, TAP tempo, **UNDO** and redo, RESTART from the top, CLR FX, play sections A–D
   on the next bar (several in one hold: a quick chain), LOOP / SONG, **SONG REC**, NAME and CLEAR ALL.
-- **SCL:** the twelve keys set the root, and KNOB 1 is STRUM for every chord mode.
-- **EDIT:** INIT puts the track's sound back to its engine's first preset (a drum track's kit to the factory one), RECALL
-  puts it back as the playing section stored it, and on a drum track the black keys mute the drum sounds.
+- **SAVE:** CLEAR the pattern or the song, DELETE a song row, ERASE a section or a project, start a NEW project, and SAVE
+  or ERASE the track's user sound. Each asks first.
+- **SEQ:** REVERSE and SHIFT the pattern, CLR STEP, and on a drum track BEAT and the lane tools (clear, reverse, fill).
+
+Hold **EDIT** or **GLO** and a list menu opens and stays open: EDIT's is the sound's named parameters, GLO's the four
+settings lists.
 
 ## MIDI and USB
 

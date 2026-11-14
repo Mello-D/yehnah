@@ -75,10 +75,10 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | Walks the pages of the section you are in, one page a detent, round: after the last page comes the first. |
+| **SELECT** (encoder) | Walks the pages of the section you are in, one page a detent, round: after the last page comes the first. On a **page of rows** (SOUND, FX, ENV, LFO, ARP, GLO) it scrolls the rows instead: a slow turn one row, a fast turn a whole group; past the last row it goes on to the section's next page. |
 | **ALGORITHM** (encoder) | Selects the track (T1–T4, or T1–T6 with TRACKS 6), from any page. |
 | **PRESETS** (encoder) | Loads sounds into the selected track, from any page: the next or previous sound of the PRESETS list. It never changes page, track or row. |
-| **KNOB 1–4** | The four cells on screen. A page that picks something (the step, the bar, the slot, the kit's sound, the row) picks it with **KNOB 1**. |
+| **KNOB 1–4** | The four cells on screen. On a page of rows they set the four values of the row the cursor is on. On a page that picks something (the step, the bar, the slot, the kit's sound, the row) **KNOB 1** picks it. |
 | **MASTER** | The output volume. |
 
 ### Buttons
@@ -86,15 +86,15 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 | Button | Tap | Hold |
 | --- | --- | --- |
 | **HOME** | HOME's first page, TRACKS. | nothing |
-| **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, or the **EDIT layer** (see [12](#12-the-layers)) |
+| **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, as a menu that stays open (see [12](#12-the-layers)) |
 | **ENV** | The envelopes: **ENV**, then **ALL ENV** and **ALL DEST**. | nothing |
 | **LFO** | The **LFO** page: the LFO, the step modulator, the modulation matrix. | nothing |
 | **FX** | The **FX** page: every effect's rows. | the **FX layer**: punch-in effects |
-| **SCL** | The scale, then the chord pages. | the **SCL layer**: set the root with the keys |
+| **SCL** | The scale, then the chord pages. | nothing |
 | **ARP** | The **ARP** page. | nothing |
-| **SEQ** | The sequencer pages, starting at **STEP**, the piano roll. | nothing |
+| **SEQ** | The sequencer pages, starting at **STEP**, the piano roll. | the **SEQ layer**: pattern tools |
 | **GLO** | The **GLO** page: tempo, tracks and the settings. | the GLO lists, as a menu that stays open |
-| **SAVE** | **PROJECT**, **ARRANGE**, **TRIM**. | nothing |
+| **SAVE** | **PROJECT**, **ARRANGE**, **TRIM**. | the **SAVE layer**: clear, erase, new, save sound |
 | **PLAY** | Start / stop. | |
 | **REC** | Arms recording on the selected track; while it is lit, turns recording off. | the **REC layer** |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | |
@@ -130,8 +130,10 @@ the page you are on lit. The rules are the same everywhere:
 5. A button **held** is its layer.
 6. The screen says where you are: the page row at the foot, the page's picture in the middle.
 
-Most pages are **lists of rows**: **KNOB 1** scrolls the rows, the other knobs set the row's values. Each value is a cell
-with its name, a small picture and its value; a choice between names is drawn as a grid with the picked one lit.
+Most pages are **lists of rows**: **SELECT** scrolls the rows, and **KNOB 1–4** set the values of the row you are on
+(up to four of them). Each value is a cell with its name, a small picture and its value; a choice between names is
+drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pages of rows. Pages that pick something
+(the step on STEP, the slot on PROJECT, the part on TRIM) are not lists: **KNOB 1** picks.
 
 ### The chains
 
@@ -164,6 +166,10 @@ One list over every engine's factory sounds, then your user presets. The columns
 lead, pad…) and **ENGINE**. The knobs filter it: **KNOB 1 TYPE**, **KNOB 2 ENG** (an engine, or ALL), **KNOB 3 FAV**
 (favourites only) and **KNOB 4 LIST**. Turning the PRESETS encoder loads the next sound into the track on any page.
 Switching a track to another engine fades the old one out, and the notes you hold go on in the new one.
+
+**Every engine has an INIT sound**, its plain starting point, first in its list (a drum track's is the plain DRUM-X
+kit). To build a sound from scratch, set **KNOB 1 TYPE** to **INIT** and **KNOB 2 ENG** to an engine, load it, and shape
+it on the SOUND page; then save it as a user sound with **SAVE SND** on the SAVE layer.
 
 ### MORPH
 
@@ -267,7 +273,6 @@ section** and in user presets; the editor shows them as lists too.
   keeps its own level and ratchet.
 - **Hit modes on the keys.** The octave below plays **SHORT** (half the decay), **GHOST** (short, softer, darker) and
   **FLAM**; the octave above plays **RATCHET ×2, ×4, ×8**, in time with the step grid. They are recorded with the step.
-- **EDIT layer:** on a drum track the black keys mute the drum sounds.
 
 ---
 
@@ -346,7 +351,17 @@ STRUM).
 | --- | --- | --- |
 | **PROJECT** | PROJECT · SECT · LOAD · SAVE | The project (1–6) and the section (A–D) you are on, drawn as four squares: **USED**, **EMPTY** or **NOW** (the one playing). **LOAD** and **SAVE** act on the section picked. |
 | **ARRANGE** (STRUCT) | PROJECT · SECT · TIMES · ROW | The song's rows as chips (the section and its bars; a scene is a dot) and the song as a strip with its length and END. **SECT** and **TIMES** (bars) are what **OCT+** inserts as a new row; **ROW** picks the row you are on (past the last row: **END**, set with **KNOB 2**: STOP, ×2 … ×8 or LOOP); **TIMES** turned below ×1 asks to delete the row. |
-| **TRIM** | TRACK · PART · CUT START · CUT END | Cut a track's part of the song. |
+| **TRIM** | TRACK · PART · CUT START · CUT END | Per-track adjustment across the song: see below. |
+
+**TRIM: per-track adjustment across the song.** The song is a list of parts (the ARRANGE rows). On TRIM, **KNOB 1**
+picks a track, **KNOB 2** a part (A 3/6: the third of six), and **KNOB 3 CUT START** and **KNOB 4 CUT END** set how many
+bars of that part the track sits out: from its start and from its end. Do it for every track and part and the same
+sections play differently each time round: the bass comes in after four bars, the lead drops out for the last two, a
+drum track rests through a verse. The picture is the song as one lane per track, with the picked part framed and its
+cut shown, and a line under it spells it out (PART 3 · CUT 8 / 4). The cuts belong to the song, not to the section, so
+a section reused in two parts can be trimmed differently in each. At least one bar of a part always plays, and you
+can set cuts while the song plays: they take effect from the next bar. **DEL ROW** on the SAVE layer deletes the part
+TRIM is on.
 
 **To save:** stopped or playing, turn **KNOB 4 (SAVE)** right until its card says **OCT+**, press **OCT+**, name it with
 the keys or keep the name offered, and press **OCT+** again. **To load:** the same with **KNOB 3 (LOAD)**.
@@ -356,6 +371,7 @@ the keys or keep the name offered, and press **OCT+** again. **To load:** the sa
 - A row that points to an empty section stops the song and the screen says which.
 - **Scenes:** a scene stored on a row recalls the track mutes, the drum group mutes, the macros and the punch-in effects
   held, when the row starts.
+- **The SAVE layer** (hold **SAVE**) holds the clear and erase tools for projects, see [12](#12-the-layers).
 - **Live sections** (REC layer): tap **A–D** to jump to a section on the next bar; tap several in one hold for a **quick
   chain**; **LOOP / SONG** and **SONG REC** record the song as you play it.
 - **Autosave.** With **GLO > SYSTEM > RESTORE LAST** set to ON, the music is kept as you stop and put back at power-on.
@@ -422,7 +438,8 @@ eight values (E1–E8), CLIP, PUNCH and the delay and reverb settings.
 
 Hold a button past the hold time and the keys and the four knobs change job, while the screen draws a map of what they
 do. Press a key or turn a knob while holding for the map at once. Keys pressed under a layer are the layer's: silent,
-never recorded. Four buttons have a layer.
+never recorded. Four buttons have a layer: **FX**, **REC**, **SAVE** and **SEQ**. Every other button, held, does
+nothing (EDIT and GLO open menus, below). Only one layer is open at a time.
 
 ### FX: punch-in effects
 
@@ -433,21 +450,48 @@ without touching anything: the layer stays open (**[FX] LOCKED**), with both han
 
 ### REC
 
-The white keys from F3: **CLEAR** (F3: the selected track's steps and automation), **LOOP** (A3: the record mode, also
-on the **MODE** knob), **TAP** (B3: tap tempo), **UNDO** (D4: the last big change; again: redo), **RESTART** (E4: from the
-top, playing on), **CLR FX** (F4), **PLAY A–D** (G4–C5: the section on the next bar; two or more in one hold: a quick
-chain), **LOOP** (D5: loop or song), **SONG REC** (E5), **NAME** (F5) and **CLEAR ALL** (G5).
+White keys from F3: **CLEAR** (F3: the selected track's steps and automation), **CLICK** (G3: OFF, REC, ON, each press
+the next), **MODE** (A3: what a REC tap records, one pass or loop; also **KNOB 2**), **TAP** (B3: tap tempo),
+**COUNT-IN** (C4: OFF, 1 BAR, 2 BARS), **UNDO** (D4: the last big change; again: redo), **RESTART** (E4: from the top,
+playing on), **CLR FX** (F4: the punch-in lane; it asks first), **PLAY A–D** (G4–C5: the section on the next bar; two
+or more in one hold: a quick chain), **LOOP / SONG** (D5: what PLAY plays), **SONG REC** (E5), **NAME** (F5: the
+project or section on the PROJECT page, or the user sound slot) and **CLEAR ALL** (G5: every track and the lane; it asks
+first).
 
-### SCL
+### SAVE: clear, erase, new
 
-The twelve keys C4–B4 set the **root**: the root lit, the scale's notes breathing. **KNOB 1** is **STRUM** for every chord
-mode.
+White keys from F3. Each tool asks first, and the keys that would do nothing right now stay dim. Several refuse while
+the arrangement or the transport is running (the screen says STOP TO EDIT).
 
-### EDIT
+| Key | Tool | What it does |
+| --- | --- | --- |
+| **F3** | **CLEAR PAT** | Empties the selected track's pattern and automation. |
+| **G3** | **CLEAR SONG** | Empties the project's arrangement (the ARRANGE rows). |
+| **A3** | **DEL ROW** | Deletes the arrangement row ARRANGE or TRIM is on. |
+| **C4** | **ERASE SECT** | Erases the section the PROJECT page is on (not while playing). |
+| **D4** | **ERASE PROJ** | Erases the whole project: its four sections and its song. No undo. |
+| **E4** | **NEW PROJ** | Everything back as at power-on. Undo: REC layer, D4. |
+| **G4** | **SAVE SND** | Saves the selected track's sound: over the user slot it came from, or into the first free slot (you name it). |
+| **A4** | **ERASE SND** | Erases that user sound slot. |
 
-**INIT** (F3) puts the track's sound back to its engine's first preset (a drum track's kit to the factory one); **RECALL**
-(G3) puts it back as the section playing stored it. Each asks first. **KNOB 1–4** are the first four of the SOUND page.
-On a drum track the black keys mute each drum sound.
+The four knobs do nothing on this layer.
+
+### SEQ: pattern tools
+
+Tools for the selected track's pattern. Each works at once, with a message, and none has an undo of its own (the REC
+layer's UNDO covers big changes).
+
+| Key | Tool | What it does |
+| --- | --- | --- |
+| **F3** | **REVERSE** | Plays the pattern backwards. |
+| **G3 / A3** | **SHIFT <  /  SHIFT >** | Moves the pattern one step earlier or later. |
+| **B3** | **BEAT** | (drum track) replaces the pattern with a basic beat: kick on the beat, snare on the backbeat, closed hats on the eighths. |
+| **G4** | **CLR LN** | (drum track) empties the lane. |
+| **A4** | **REV LN** | (drum track) reverses the lane. |
+| **B4** | **FILL LN** | (drum track) fills the lane. |
+| **G5** | **CLR STP** | Clears the step under the cursor and its parameter locks, and moves on to the next. |
+
+On a drum track the **black keys** pick the lane (1–8) the lane tools act on. The tools refuse while the arrangement plays.
 
 ### Held menus: EDIT and GLO
 
@@ -459,7 +503,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 
 ## 13. GLO: tempo, tracks and settings
 
-**GLO** is one page of four lists. **KNOB 1** scrolls, the other knobs set the row.
+**GLO** is one page of four lists (MAIN, DEVICE, CONTROL, SYSTEM). **SELECT** scrolls the rows, and **KNOB 1–4** set the row's values.
 
 | List | Rows |
 | --- | --- |

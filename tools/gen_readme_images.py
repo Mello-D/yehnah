@@ -33,7 +33,7 @@ SINGLE = {   # file: render name
     "splash": "splash", "home": "home", "presets": "presets", "step": "roll_chords", "pattern": "lente_pattern",
     "drum": "drum", "drumx": "drumx", "chord": "key_chord", "harp": "key_harp", "omni": "key_omni",
     "arp": "key_arp", "fm6": "edit_fm6", "fmini": "edit_fmini", "guitar": "edit_guitar", "animal": "vx_bird",
-    "voice": "vx_head_vowel", "mixer": "mixer", "reverb": "fx_effect_reverb", "delay": "fx_effect_delay", "scl": "layer_scl_active", "edit": "layer_edit_active", "punch": "layer_fx_grid",
+    "voice": "vx_head_vowel", "mixer": "mixer", "reverb": "fx_effect_reverb", "delay": "fx_effect_delay", "save_layer": "layer_save_grid", "seq_layer": "layer_seq_tools", "trim": "save_tools", "punch": "layer_fx_grid",
     "arrange": "save_arrange", "rec": "layer_rec",
 }
 for fn, n in SINGLE.items():
