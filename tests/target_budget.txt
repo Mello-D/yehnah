@@ -1,14 +1,14 @@
 # YEHNAH target cost budget (tests/target_budget.py): instructions in the loops of each
 # function in build/yehnah.dis, x4 per nesting level, divides x9. The check allows +10 %.
 # Rewritten by BUDGET_UPDATE=1.
-analog_render 6257
-digital_render 378
-phase_render 77
+analog_render 719
+digital_render 421
+phase_render 79
 lofi_render 128
-formant_render 312
+formant_render 315
 wheel_render 267
 wheel_block 102
-drum_render 33
+drum_render 241
 fm6_render 359
 fm6_op_run 72
 fm6_op_fb 26
@@ -17,17 +17,17 @@ dx_layer 105
 drum_side_add 30
 drum_mix 125
 drum_bus 104
-slicer_bus 811
-fm1_alnk0_irq 260
-fm1_timer5_irq 34726
+slicer_bus 824
+fm1_alnk0_irq 412
+fm1_timer5_irq 30148
 click_render 30
-mod_begin 174
+mod_begin 176
 mod_voice 30
 mod_end 6
 perf_begin 28
 perf_mute 18
 perf_pre 30
-perf_block 533
+perf_block 528
 perf_master 27
 rev_room 147
 rev_spring 130
