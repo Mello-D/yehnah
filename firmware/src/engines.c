@@ -310,16 +310,16 @@ static const struct {
 
 /* (0.9.9) the parts at power-on, INIT SYSTEM and NEW PROJECT (engine, preset, PATTERNS[n - 1] in the sequencer,
  * 0 = empty: all are). (chord-harp fork, 2026-11-02, the user's) T1 JUNO's pad for the chords, T2 ANALOG's bass, T3
- * ANALOG's lead, T4 DRUM's 909 kit (not DRUM-X; LCD-4 909 since 2026-11-05), T5 LOFI's game lead, T6 FM6's electric piano. Each its preset's sound,
+ * ANALOG's lead, T4 DRUM's 909 kit (not DRUM-X; 909 SWEEP since 2026-11-05), T5 LOFI's game lead, T6 FM6's electric piano. Each its preset's sound,
  * dry (ui.c power_sound_of: no DIST CHOR DLY REV send, the effects are the player's to add) */
 #define TRK_PR_JUNO 0u           /* JUNO 106 PAD (eng_juno.c JUNO_PRESETS) */
 #define TRK_PR_ANALOG 21u        /* MINI BASS (eng_analog.c: Clipper's, the MOOG ladder) */
 #define TRK_PR_LEAD 26u          /* PROPH LEAD (eng_analog.c) */
-#define TRK_PR_KIT 10u           /* LCD-4 909 (eng_drum.c DRUM_PRESETS; 909 CLUB dropped 2026-11-05) */
+#define TRK_PR_KIT 10u           /* 909 SWEEP (eng_drum.c DRUM_PRESETS; 909 CLUB dropped 2026-11-05) */
 static const uint8_t TRK_DEF[NPART][3] = {{ENGI_JUNO, TRK_PR_JUNO, 0}, {ENGI_ANALOG, TRK_PR_ANALOG, 0},
                                           {ENGI_ANALOG, TRK_PR_LEAD, 0}, {ENGI_DRUM, TRK_PR_KIT, 0},
                                           {ENGI_LOFI, 0, 0}, {ENGI_FM6, 0, 0}};
-/* JUNO 106 PAD, MINI BASS, PROPH LEAD, LCD-4 909, GAME LEAD, TINE EP */
+/* JUNO 106 PAD, MINI BASS, PROPH LEAD, 909 SWEEP, GAME LEAD, TINE EP */
 /* the parts at power-on through 0.9.8 (the same columns): what an old project's tracks it had no room for load as
  * (project.c proj_new_tracks, PROJ_DEF_SOUND: format 1's tracks 2..4, a 4-track format's T5 / T6): never change it.
  * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (0.6) PHASE's first, WHEEL's first */

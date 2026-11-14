@@ -14,15 +14,15 @@
 /* the kits (DRUM's presets "HORT ..."): a model a lane (KICK SNARE CLAP HATCL HATOP TOM RIM BELL) at the model's own knobs.
  * Only models hm_models.c switches on may be named (a missing one is a compile error). */
 static const uint8_t HT_KITS[HT_NKIT][HM_NL] = {
-    {DM_K808, DM_S808, DM_C808, DM_HATC, DM_HATO, DM_TOM, DM_RIM, DM_CYMB},                 /* HORT 808 */
-    {DM_K909, DM_S909, DM_C909, DM_HATC, DM_HATO, DM_TOM, DM_RIM, DM_CYMB},                 /* HORT 909 */
-    {DM_KTRX, DM_SDTRX, DM_C909, DM_HATC, DM_HATO, DM_TOM, DM_RIM, DM_CYMB},                /* HORT DIGI: the measured digital kick and snare */
-    {DM_BDEFM, DM_SDEFM, DM_CPEFM, DM_HATC, DM_HATO, DM_XTEFM, DM_CLAVE, DM_FM},            /* HORT FM */
-    {DM_KPUNC, DM_SSNAP, DM_C808, DM_HATC, DM_HATO, DM_CONGA, DM_RIM, DM_CYMB},             /* HORT PUNCH */
-    {DM_KBOOM, DM_S808, DM_C909, DM_HATC, DM_HATO, DM_TOM, DM_CLAVE, DM_CYMB},              /* HORT BOOM */
-    {DM_K909, DM_S909, DM_SSNAP, DM_HATC, DM_HATO, DM_TOM, DM_KBOOM, DM_CYMB},              /* HORT BASIC: see HT_ALT */
+    {DM_K808, DM_S808, DM_C808, DM_HATC, DM_HATO, DM_TOM, DM_RIM, DM_CYMB},                 /* 808 MODEL */
+    {DM_K909, DM_S909, DM_C909, DM_HATC, DM_HATO, DM_TOM, DM_RIM, DM_CYMB},                 /* 909 MODEL */
+    {DM_KTRX, DM_SDTRX, DM_C909, DM_HATC, DM_HATO, DM_TOM, DM_RIM, DM_CYMB},                /* DIGITAL KIT: the measured digital kick and snare */
+    {DM_BDEFM, DM_SDEFM, DM_CPEFM, DM_HATC, DM_HATO, DM_XTEFM, DM_CLAVE, DM_FM},            /* FM KIT */
+    {DM_KPUNC, DM_SSNAP, DM_C808, DM_HATC, DM_HATO, DM_CONGA, DM_RIM, DM_CYMB},             /* PUNCH KIT */
+    {DM_KBOOM, DM_S808, DM_C909, DM_HATC, DM_HATO, DM_TOM, DM_CLAVE, DM_CYMB},              /* BIG BOOM */
+    {DM_K909, DM_S909, DM_SSNAP, DM_HATC, DM_HATO, DM_TOM, DM_KBOOM, DM_CYMB},              /* BASIC KIT: see HT_ALT */
 };
-/* HORT BASIC has no clap, rim or cowbell: its lanes play SEVERAL models, the one the note picks (ht_pick, a lane's variant 0 is
+/* BASIC KIT has no clap, rim or cowbell: its lanes play SEVERAL models, the one the note picks (ht_pick, a lane's variant 0 is
  * the kit's model above, 1 and 2 these, +1; 0 none): KICK 36 K909, 35 K808; SNARE 38 S909, 40 S808; the CLAP lane (39) the
  * third snare SNAP; HAT CL 42 HATC, 44 METAL; HAT OP 46 HATO; TOM low XTEFM (the FM tom), mid TOM, high CONGA; the RIM lane
  * (37 ..) a third kick, BOOM; BELL (the cymbals, the cowbell ..) CYMB */
@@ -33,8 +33,8 @@ static const uint8_t HT_ALT[HM_NL][2] = {
  * the kick's first-sample click: the user), so the presets that want an echo send only the snare (and the tom) to it */
 static const uint8_t HT_SND[HT_NKIT][HM_NL] = {
     {0}, {0}, {0},
-    {0, 138, 138, 0, 0, 0, 0, 0},                       /* HORT FM: the snare and the clap, 10 */
-    {0}, {0, 138, 0, 0, 0, 138, 0, 0},                  /* HORT BOOM: the snare and the tom */
+    {0, 138, 138, 0, 0, 0, 0, 0},                       /* FM KIT: the snare and the clap, 10 */
+    {0}, {0, 138, 0, 0, 0, 138, 0, 0},                  /* BIG BOOM: the snare and the tom */
     {0},
 };
 static void ht_sends(uint32_t mach, uint8_t *snd)       /* the kit's lane sends into dx_snd (a machine preset clears them first) */

@@ -7595,7 +7595,7 @@ static int test_drum_kits(void)
         uint32_t k, n = 0, l;
         int32_t peak = 0;
         uint32_t mq = song.master_q12, mu = (uint32_t)TSEL->p[P_MUTE];
-        apply_preset(DX_NKIT + 1u);                     /* LCD-4 909 */
+        apply_preset(DX_NKIT + 1u);                     /* 909 SWEEP */
         frame();
         ok = dx_mach_req == DXK_909;
         for (k = 0; k < NPAGES; k++)
@@ -7618,7 +7618,7 @@ static int test_drum_kits(void)
         song.master_q12 = mq;
         TSEL->p[P_MUTE] = (int16_t)mu;
         ok &= peak > 1000;
-        bad += check("  LCD-4 909 browsed: MACHINE taken by the audio, SOUND pages gone, MORPH '-', a snare sounds", ok);
+        bad += check("  909 SWEEP browsed: MACHINE taken by the audio, SOUND pages gone, MORPH '-', a snare sounds", ok);
         project_capture(&q);
         ok = q.dx_mach == DXK_909 && proj_pack(&st, &q) && proj_import(&r, &st, sizeof st) && r.dx_mach == DXK_909;
         for (k = 68u, n = 0; k + 2u < PROJ_STORE_SIZE; k++)
@@ -10469,7 +10469,7 @@ static void ui_power_on_099(void)
 static int test_power_on_099(void)
 {
     static const char *const ENG[NPART] = {"JUNO", "ANALOG", "ANALOG", "DRUM", "LOFI", "FM6"};   /* (2026-11-02, the user's: */
-    static const char *const PRE[NPART] = {"JUNO 106 PAD", "MINI BASS", "PROPH LEAD", "LCD-4 909", "GAME LEAD", "TINE EP"};   /* a
+    static const char *const PRE[NPART] = {"JUNO 106 PAD", "MINI BASS", "PROPH LEAD", "909 SWEEP", "GAME LEAD", "TINE EP"};   /* a
                                                          * pad, a bass, a lead, a kit) */
     int bad = 0, ok = 1;
     uint32_t i, k, b, drums = 0, live;
@@ -10486,9 +10486,9 @@ static int test_power_on_099(void)
         drums += drum_track(&trk[i]);
     }
     ok &= load_depth == 0 && song.sel == 0u && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
-    bad += check("power-on (2026-11-02): T1 JUNO 106 PAD, T2 MINI BASS, T3 PROPH LEAD, T4 DRUM LCD-4 909, T5 LOFI GAME LEAD, T6 FM6 TINE EP", ok);
+    bad += check("power-on (2026-11-02): T1 JUNO 106 PAD, T2 MINI BASS, T3 PROPH LEAD, T4 DRUM 909 SWEEP, T5 LOFI GAME LEAD, T6 FM6 TINE EP", ok);
     ok = drums == 1u && drum_track(&trk[3]) && drum_elsewhere(&trk[0]) == 4u && !drum_elsewhere(&trk[3]) && trk[3].preset == TRK_DEF[3][1];
-    bad += check("  .. DRUM on T4 alone (LCD-4 909)", ok);   /* (chord-harp fork: no longer
+    bad += check("  .. DRUM on T4 alone (909 SWEEP)", ok);   /* (chord-harp fork: no longer
                                                          * the display order's first six: that is A to Z) */
     for (i = 0; i < NTRK; i++) memcpy(p0[i], trk[i].p, sizeof p0[i]);
     trk[0].p[P_REV] = 90; trk[4].p[P_E0] = 3; set_engine_of(&trk[2], ENGI_PHASE);

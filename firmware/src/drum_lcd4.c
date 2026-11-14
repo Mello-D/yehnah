@@ -106,7 +106,7 @@ static const float LD_METAL_F[4][6] = {
 };
 static const char *const LD_KIT_NAME[DXK_N] = {[DXK_DRUMX] = "DRUM-X", [DXK_808] = "808", [DXK_909] = "909", [DXK_ARC] = "ARCADE", [DXK_BOX] = "BOX",
 #if YEHNAH_HORT
-                                                 [DXK_HORT] = "HORT 808", [DXK_HORT1] = "HORT 909", [DXK_HORT2] = "HORT DIGI", [DXK_HORT3] = "HORT FM", [DXK_HORT4] = "HORT PUNCH", [DXK_HORT5] = "HORT BOOM", [DXK_HORT6] = "HORT BASIC",
+                                                 [DXK_HORT] = "808 MODEL", [DXK_HORT1] = "909 MODEL", [DXK_HORT2] = "DIGITAL KIT", [DXK_HORT3] = "FM KIT", [DXK_HORT4] = "PUNCH KIT", [DXK_HORT5] = "BIG BOOM", [DXK_HORT6] = "BASIC KIT",
 #endif
 };
 

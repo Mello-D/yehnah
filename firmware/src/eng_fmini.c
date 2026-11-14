@@ -16,7 +16,7 @@
  * EDIT 1  CUT EMPH CNTR F.ATK    EDIT 2  F.DEC F.SUS MOD KBD
  * Voice state: s[0..3] the ladder (Q8), s[4] the feedback's lag pole (Q8), s[5] s[6] the oscillators' drift (cents * 256),
  * s[7] the contour (stage << 24 | level, Q23). Per part (in .pool): the noise, the smoothed CUT / EMPH / CNTR. */
-#define FMINI_NFACTORY 200u
+#define FMINI_NFACTORY 201u
 #define FGP(r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl, d2l, d2h, d3l, d3h, bl, bh) \
     {r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl, d2l, d2h, d3l, d3h, bl, bh}
 #define FG_SIZE 32u

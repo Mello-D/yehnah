@@ -24,7 +24,7 @@ static const hy_patch_t HY_FACTORY[] = {
      .lfo = {HLFO(TRI, 30, 0, 0), HLFO(SINE, 87, HL_KEY, 70)},
      .mod = {HMOD(M1, NONE, CUT, 50), HMOD(M2, NONE, SH1, 50), HMOD(M2, NONE, SH2, 50), HMOD(LFO2, MW, PITCH, 7),
              HMOD(LFO2, NONE, CUT, 4), HMOD(VEL, NONE, CUT, 12), HMOD(AT, NONE, CUT, 20)},
-     .bend = 2, .level = 96, .name = "CLIPPER"},
+     .bend = 2, .level = 96, .name = "DUAL SAWS"},
     /* 1 a warm 80s poly pad: two saws a few cents apart, slow filter, LFO 2 on the width of a pulse */
     {.osc = {HOSC(SAW, 0, -6, 100, 0, 0), HOSC(PULSE, 0, 6, 90, 30, 0), HOSC(SAW, -12, 0, 50, 0, 0)},
      .drift = 50, .route = HR_SER,
@@ -418,13 +418,13 @@ static const hy_patch_t HY_FACTORY[] = {
 };
 #define HY_INIT 23u              /* the INIT patch (a start for your own) */
 #define HY_NFACTORY ((uint32_t)NELEM(HY_FACTORY))
-static const char *const N_HY_PATCH[] = {"CLIPPER", "POLY PAD", "STRINGS", "ACID", "SYNC LEAD", "FM BELL", "FM KEYS",
+static const char *const N_HY_PATCH[] = {"DUAL SAWS", "POLY PAD", "STRINGS", "ACID", "SYNC LEAD", "FM BELL", "FM KEYS",
                                          "WOBBLE", "REESE", "HOOVER", "BRASS", "VOX", "PLUCK", "RISER", "METAL",
                                          "FOLD BASS", "CHIP LEAD", "GLASS PAD", "DRONE", "808 SUB", "TRANCE",
                                          "SAW PLUCK", "SPACE BEL", "INIT", "MOOG BASS", "MOOG LEAD", "LADDER PAD",
-                                         "BRASS", "STRING", "SYNC SWP", "POLYMOD", "CLAV", "BASS",
+                                         "BRASS 2", "STRING", "SYNC SWP", "POLYMOD", "CLAV", "BASS",
                                          "UNI LEAD", "PAD", "KEYS", "HARPSI", "ORGAN", "FLUTE", "BELL",
-                                         "GHOST PAD", "SYNC SOLO", "PLUCK", "FUNK BASS", "SWEEP PAD", "CHOIR",
+                                         "GHOST PAD", "SYNC SOLO", "PLUCK 2", "FUNK BASS", "SWEEP PAD", "CHOIR",
                                          "STAB", "ZAP"};
 _Static_assert(NELEM(N_HY_PATCH) == NELEM(HY_FACTORY), "a name per factory patch");
 
@@ -434,7 +434,7 @@ _Static_assert(NELEM(N_HY_PATCH) == NELEM(HY_FACTORY), "a name per factory patch
 /* (chord-harp fork, 2026-11-04) in the app's flash, not the resource region (its 836 B free could not take the P5
  * presets) */
 static const preset_t HY_PRESETS[] = {
-    HYP("CLIPPER", 0, 70, 50, 2, 90, 110, 70, 0, FX(0, 20, 18, 30)),
+    HYP("DUAL SAWS", 0, 70, 50, 2, 90, 110, 70, 0, FX(0, 20, 18, 30)),
     HYP("POLY PAD", 1, 64, 0, 70, 100, 110, 92, 0, FX(0, 40, 10, 50)),
     HYP("STRINGS", 2, 64, 0, 80, 100, 120, 90, 0, FX(0, 60, 0, 55)),
     HYP("ACID", 3, 60, 30, 0, 70, 90, 30, 1, FX(10, 0, 24, 8), XP(P_GLIDE + 1, 30, P_GLMODE + 1, 1, P_TRANS + 1, -12)),
@@ -462,14 +462,14 @@ static const preset_t HY_PRESETS[] = {
     HYP("MOOG LEAD", 25, 50, 40, 2, 80, 110, 50, 1, FX(0, 10, 28, 26), XP(P_GLIDE + 1, 36)),
     HYP("LADDER PAD", 26, 50, 30, 80, 100, 115, 95, 0, FX(0, 40, 10, 60)),
     /* Clipper 0.3: the factory patches played another way (their macros, the filter, the voice) */
-    HYP("CLIP WIDE", 0, 80, 127, 4, 90, 115, 80, 0, FX(0, 30, 20, 40), XP(P_VOICE + 1, V_PUNI2, P_DETUNE + 1, 40)),
+    HYP("WIDE SAWS", 0, 80, 127, 4, 90, 115, 80, 0, FX(0, 30, 20, 40), XP(P_VOICE + 1, V_PUNI2, P_DETUNE + 1, 40)),
     HYP("DARK PAD", 1, 20, 0, 90, 100, 115, 100, 0, FX(0, 40, 10, 60)),
     HYP("ACID HARD", 3, 100, 90, 0, 70, 90, 30, 1, FX(20, 0, 24, 8), XP(P_GLIDE + 1, 30, P_GLMODE + 1, 1, P_TRANS + 1, -12)),
     HYP("BRIGHT BEL", 22, 80, 0, 0, 110, 0, 104, 0, FX(0, 30, 30, 70)),
     HYP("SOFT SYNC", 4, 70, 0, 10, 80, 110, 60, 1, FX(0, 20, 26, 30), XP(P_GLIDE + 1, 40)),
     /* (chord-harp fork, 2026-11-04) the Prophet-5-style patches (ours), one preset each */
-    HYP("BRASS", 27, 40, 0, 30, 80, 110, 60, 0, FX(0, 20, 0, 30)),
-    HYP("STRINGS", 28, 40, 0, 80, 100, 120, 92, 0, FX(0, 50, 0, 55)),
+    HYP("BRASS 2", 27, 40, 0, 30, 80, 110, 60, 0, FX(0, 20, 0, 30)),
+    HYP("STRINGS 2", 28, 40, 0, 80, 100, 120, 92, 0, FX(0, 50, 0, 55)),
     HYP("SYNC SWEEP", 29, 40, 0, 2, 84, 100, 60, 0, FX(0, 20, 20, 30)),
     HYP("POLYMOD KEYS", 30, 40, 0, 0, 96, 40, 76, 0, FX(0, 20, 10, 30)),
     HYP("CLAV", 31, 40, 0, 0, 74, 40, 50, 0, FX(0, 0, 10, 16)),
@@ -483,7 +483,7 @@ static const preset_t HY_PRESETS[] = {
     HYP("BELL", 39, 40, 0, 0, 108, 0, 104, 0, FX(0, 20, 20, 60)),
     HYP("GHOST PAD", 40, 40, 30, 100, 100, 127, 104, 0, FX(0, 40, 20, 80)),
     HYP("SYNC SOLO", 41, 40, 0, 2, 80, 110, 50, 1, FX(0, 0, 28, 24), XP(P_GLIDE + 1, 34)),
-    HYP("PLUCK", 42, 40, 0, 0, 82, 20, 64, 0, FX(0, 10, 30, 30)),
+    HYP("PLUCK 2", 42, 40, 0, 0, 82, 20, 64, 0, FX(0, 10, 30, 30)),
     HYP("FUNK BASS", 43, 40, 30, 0, 68, 60, 30, 1, FX(0, 0, 0, 6), XP(P_TRANS + 1, -12)),
     HYP("SWEEP PAD", 44, 40, 30, 80, 100, 120, 100, 0, FX(0, 40, 20, 70)),
     HYP("CHOIR", 45, 40, 20, 90, 100, 120, 96, 0, FX(0, 50, 0, 70)),

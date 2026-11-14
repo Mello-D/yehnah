@@ -202,8 +202,9 @@ static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
     FGP(1, 3, 3, 1, 2, 2, 64, 64, 100, 0, 0, 90, 9, 0, 64, 0, 0, 0, 0, 0, 0, 0, 120, 0),   /* 197 GLITCH FX */
     FGP(3, 3, 3, 2, 2, 2, 64, 64, 90, 90, 0, 0, 3, 0, 64, 0, 0, 0, 0, 0, 0, 0, 120, 0),   /* 198 TAPE STOP */
     FGP(2, 3, 3, 3, 2, 2, 64, 64, 110, 0, 0, 0, 1, 0, 64, 0, 0, 0, 0, 0, 0, 0, 120, 0),   /* 199 SUB DROP */
+    FGP(3, 2, 2, 2, 2, 3, 65, 64, 90, 0, 0, 0, 1, 0, 64, 0, 64, 0, 0, 0, 0, 0, 120, 0),   /* 200 INIT (the EDIT defaults, one saw; chord-harp fork: not FMini-1's) */
 };
-#define FMINI_CATS "LBUPLPLPPXLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPXXXXXXXXXXLPUBKLLULKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPXXXXXXXXXX"
+#define FMINI_CATS "LBUPLPLPPXLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPXXXXXXXXXXLPUBKLLULKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPXXXXXXXXXXN"
 /* {CUT, EMPH, CNTR, F.ATK, F.DEC, F.SUS, MOD, (E7: set from the patch)}, {ATK DEC SUS REL}, MONO, the sends */
 static const preset_t FMINI_PRESETS[] = {
     {"MINI LEAD", {61, 44, 51, 0, 79, 100, 30, 0}, {15, 81, 110, 70}, 0, 1, FX(30, 0, 55, 40)},
@@ -406,6 +407,7 @@ static const preset_t FMINI_PRESETS[] = {
     {"GLITCH FX", {68, 53, 76, 0, 59, 0, 0, 197}, {0, 65, 0, 61}, 0, 1, FX(40, 0, 40, 50)},
     {"TAPE STOP", {71, 42, 61, 0, 96, 0, 0, 198}, {0, 99, 0, 92}, 0, 1, FX(20, 0, 40, 60)},
     {"SUB DROP", {51, 25, 51, 0, 99, 0, 0, 199}, {0, 103, 0, 96}, 0, 1, FX(15, 0, 0, 50)},
+    {"INIT", {64, 40, 64, 0, 64, 40, 0, 200}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
 };
 /* per patch: the LFO {RATE WAVE FADE}, the LEVEL, the modulation {LFO>PITCH LFO>AMP CONTOUR>PITCH} */
 typedef struct { uint8_t arp[6], lfo[3], level; int8_t mod[3]; } fmini_x_t;   /* arp: MODE (0 = the patch has none) RATE OCT GATE SWING PROB */
@@ -610,4 +612,5 @@ static const fmini_x_t FMINI_X[FMINI_NFACTORY] = {
     {{4, 3, 4, 64, 0, 90}, {87, 0, 0}, 104, {0, 0, 0}},   /* 197 */
     {{0, 2, 1, 64, 0, 127}, {87, 0, 0}, 104, {0, 0, -53}},   /* 198 */
     {{0, 2, 1, 64, 0, 127}, {87, 0, 0}, 104, {0, 0, -64}},   /* 199 */
+    {{0, 2, 1, 64, 0, 127}, {87, 0, 0}, 104, {0, 0, 0}},   /* 200 INIT */
 };
