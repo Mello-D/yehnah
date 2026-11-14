@@ -148,6 +148,25 @@ static void shed_voice(void)
     }
 }
 
+#ifndef YEHNAH_BOOT_FADE
+#define YEHNAH_BOOT_FADE 1                     /* power-on pop candidate A: the first ~0.4 s of audio fades in from silence */
+#endif
+#if YEHNAH_BOOT_FADE
+static uint32_t boot_fade_n;                   /* frames played since the audio started */
+#define BOOT_FADE_HOLD (FS / 20u)              /* 50 ms silent */
+#define BOOT_FADE_LEN (FS / 4u)                /* then 250 ms of ramp */
+static void boot_fade(int32_t *o, uint32_t frames)
+{
+    uint32_t i, n = boot_fade_n;
+    for (i = 0; i < frames && n < BOOT_FADE_HOLD + BOOT_FADE_LEN; i++, n++) {
+        int32_t g = n < BOOT_FADE_HOLD ? 0 : (int32_t)(((n - BOOT_FADE_HOLD) << 12) / BOOT_FADE_LEN);
+        o[2u * i] = (int32_t)(((int64_t)o[2u * i] * g) >> 12);
+        o[2u * i + 1u] = (int32_t)(((int64_t)o[2u * i + 1u] * g) >> 12);
+    }
+    boot_fade_n = n < BOOT_FADE_HOLD + BOOT_FADE_LEN ? n : BOOT_FADE_HOLD + BOOT_FADE_LEN;
+}
+#endif
+
 void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) */
 {
     uint8_t p;
@@ -176,6 +195,10 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
             kb_out_tick = t0 + (HALF_FRAMES + b) * DAC_TICKS;   /* when this block plays (seq.c kb_lat) */
 #endif
             audio_block(o + 2u * b, CTL);
+#if YEHNAH_BOOT_FADE
+            if (boot_fade_n < BOOT_FADE_HOLD + BOOT_FADE_LEN)
+                boot_fade(o + 2u * b, CTL);
+#endif
         }
 #if YEHNAH_UAC
         uac_render_end();                               /* (0.8.9) the half's 48 kHz resampling: to core 1, off the render */
