@@ -980,6 +980,10 @@ static void draw_cards(void)
         dx_kit3_cards();
         return;
     }
+    if (cur_page()->graph == GR_SWARM) {                /* (2026-11-15) the dots' row */
+        swarm_cards();
+        return;
+    }
     if (cur_page()->graph == GR_SEDIT) {                /* (2026-11-06) TRACK, PART, CUT START, CUT END */
         uint32_t n = chain_config.count, r = ui.song_row < n ? ui.song_row : 0u, t = ui.sed_trk < trk_live ? ui.sed_trk : 0u, a = 0, b = 0;
         if (n) row_trims(&chain_config, song_cur, r, t, &a, &b);

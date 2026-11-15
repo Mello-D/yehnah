@@ -366,6 +366,7 @@ static void graph_save_lz(const page_t *pg)
     if (pg->graph == GR_TOOLS) graph_lz_tools();
     else if (pg->graph == GR_SONG) graph_song();
     else if (pg->graph == GR_SEDIT) graph_sedit();
+    else if (pg->graph == GR_SWARM) swarm_graph();
     else if (pg->graph == GR_ERASE) graph_proj(0);
     else if (pg->graph == GR_SLOTS) graph_lib();
     else if (pg->graph == GR_USER) graph_sound();

@@ -313,6 +313,7 @@ static void fm1_main(void)
         settings_poll();                              /* queued settings save: only while stopped */
         autosave_poll();                              /* (1.2) the music, stopped and idle: project.c */
         song_poll();                                  /* the song: the next section staged, the music back after it */
+        swarm_tick();                                 /* (2026-11-15) SWARM's dots, on any page */
         yehnah_dbg.stage = 2;
         ui_leds();
         ui_draw();

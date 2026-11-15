@@ -629,7 +629,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL, GR_SWARM };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -866,6 +866,7 @@ static const page_t PAGES[] = {
     {"GLO", FAM_GLO, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) GLO's four lists as one page of rows (ui_fxall.c); the four GR_SETS
                                                          * pages stay for the held GLO menu (ui_hmenu.c) */
     {"FX ALL", FAM_FX, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) every effect's rows on one scrollable page (ui_fxall.c) */
+    {"SWARM", FAM_SAVE, SC_GLOBAL, GR_SWARM, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) HOME's four moving dots (swarm.c, ui_swarm.c): K1..K4 the dots, SELECT the row */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)

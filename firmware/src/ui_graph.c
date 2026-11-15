@@ -924,7 +924,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP &&   /* (0.8.3: LENTE's step, the heads) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS &&
-           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE;
+           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_SWARM;
 }
 static void graph_drift(void)
 {
@@ -1127,6 +1127,8 @@ static uint32_t graph_signature(void)
         h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
         if (pg->graph == GR_USER)
             h ^= bg_energy() > 2 ? ui.frame * 2654435761u : 0u;   /* (the being moves with the sound) */
+        if (pg->graph == GR_SWARM)                       /* (SWARM: the dots move every frame) */
+            h ^= ui.frame * 2654435761u;
         if (pg->graph == GR_SEDIT) {                     /* (SONG EDIT: the rows, their trims, the bar highlighted) */
             for (i = 0; i < CHAIN_ROWS; i++) {
                 uint32_t q;
@@ -1430,6 +1432,10 @@ static void draw_graph(void)
     uint32_t sig;
     if (fxall_on() && !ui.home) {                    /* (2026-11-13) FX ALL: its own panel, its own signature */
         fxall_draw();
+        return;
+    }
+    if (SWARM_FULL && swarm_page_on()) {             /* (2026-11-15) SWARM: the panel down to the page row, in two passes as FX ALL's */
+        swarm_draw();
         return;
     }
     if (!ui.home && pg->graph == GR_TRK) {

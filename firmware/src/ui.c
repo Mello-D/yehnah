@@ -424,12 +424,15 @@ static uint32_t card_y(void) { return TF_KN_Y; }
 static uint32_t card_h(void) { return TF_KN_H; }
 static uint32_t graph_y(void) { return TF_SC_Y; }
 /* (2026-11-09, topic E) GLO's lists have no knob cells (the list and its choices say what the knobs do): the panel runs down to the page row */
+#ifndef SWARM_FULL
+#define SWARM_FULL 1                                    /* (2026-11-15) SWARM's panel runs to the page row (no knob cells); 0: the first layout */
+#endif
 static int sets_full(void);
 static int fxall_on(void);
 static uint32_t graph_h(void) { return fxall_on() ? 240u - TF_SC_Y - 4u : sets_full() || ui.hm ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
-enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_SEQ, LAYER_N };   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
+enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_SEQ, LAYER_HOME, LAYER_N };   /* (2026-11-15: HOME held: SWARM's keys) */   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
                                                          * NAV-LAYOUT.md; 2026-11-03: SEQ's TOOLS and SAVE's song too: held,
                                                          * the other buttons do nothing) */
 static void draw_layer(void);
@@ -524,6 +527,7 @@ static uint32_t page_first(uint32_t fam)
 static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
 static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SAVE; }
 static void page_entered(void);
+static void swarm_enter(void);                   /* (swarm.c) */
 #define FX_NMOD 6u
 static const char *const FX_MOD[FX_NMOD] = {"DELAY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};
 static const char *const FX_MHEAD[FX_NMOD] = {"DELAY LIST", "REVERB LIST", "CHORUS LIST", "SLICER", "MASTER LIST", "PUNCH LIST"};   /* its first page */
@@ -597,7 +601,7 @@ static int pg_row(void) { return lz_on() && !ui.menu && !dlg_on() && !name_on();
 static int kn_cells(void) { return trk_face() || pg_row(); }
 /* (2026-11-13) FX ALL shown: its panel runs to the foot (no knob cells, no page row) */
 static int fxall_on(void) { return PAGES[ui.page].graph == GR_FXALL && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
-static int sets_full(void) { return PAGES[ui.page].graph == GR_SETS && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
+static int sets_full(void) { return (PAGES[ui.page].graph == GR_SETS || (SWARM_FULL && PAGES[ui.page].graph == GR_SWARM)) && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
 
 /* transient message in the top bar, right of the transport and the BPM: a + b */
 static void ui_say(const char *a, const char *b)
@@ -745,6 +749,8 @@ static void page_entered(void)
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* clear the previous page's emphasis */
     ui.act = pg->graph == GR_USER ? 4u : 0u;     /* the save screen is ready for OCT+ */
+    if (!ui.home && pg->graph == GR_SWARM)
+        swarm_enter();                           /* (2026-11-15) SWARM starts, or follows the track */
     ui.force = 1;
 }
 

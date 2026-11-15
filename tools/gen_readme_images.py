@@ -34,7 +34,7 @@ SINGLE = {   # file: render name
     "drum": "drum", "drumx": "drumx", "chord": "key_chord", "harp": "key_harp", "omni": "key_omni",
     "arp": "key_arp", "fm6": "edit_fm6", "fmini": "edit_fmini", "guitar": "edit_guitar", "animal": "vx_bird",
     "voice": "vx_head_vowel", "mixer": "mixer", "reverb": "fx_effect_reverb", "delay": "fx_effect_delay", "save_layer": "layer_save_grid", "seq_layer": "layer_seq_tools", "trim": "save_tools", "punch": "layer_fx_grid",
-    "arrange": "save_arrange", "rec": "layer_rec",
+    "arrange": "save_arrange", "rec": "layer_rec", "swarm": "swarm", "home_layer": "swarm_layer",
 }
 for fn, n in SINGLE.items():
     save(shot(n), fn + ".png")

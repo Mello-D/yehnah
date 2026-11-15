@@ -153,12 +153,14 @@ static void lcd_init(void) {}
 #include "../../firmware/src/gfx.c"
 #include "../../firmware/src/panel.c"
 #include "../../firmware/src/ui.c"
+#include "../../firmware/src/swarm.c"
 #include "../../firmware/src/menu_items.c"
 #include "../../firmware/src/icons.c"
 #include "../../firmware/src/ui_graph.c"
 #include "../../firmware/src/ui_draw.c"
 #include "../../firmware/src/ui_menu.c"
 #include "../../firmware/src/ui_input.c"
+#include "../../firmware/src/ui_swarm.c"
 #include "../../firmware/src/ui_hmenu.c"
 #include "../../firmware/src/ui_layer.c"
 
@@ -289,6 +291,7 @@ static void web_frame(void)
     settings_poll();
     autosave_poll();
     song_poll();
+    swarm_tick();
     ui_leds();
     ui_draw();
 }

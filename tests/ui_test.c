@@ -122,12 +122,14 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/panel.c"
 #include "../firmware/src/ui.c"
+#include "../firmware/src/swarm.c"
 #include "../firmware/src/menu_items.c"
 #include "../firmware/src/icons.c"
 #include "../firmware/src/ui_graph.c"
 #include "../firmware/src/ui_draw.c"
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
+#include "../firmware/src/ui_swarm.c"
 #include "../firmware/src/ui_hmenu.c"
 #include "../firmware/src/ui_layer.c"
 #include "../firmware/src/upreset.c"
@@ -305,9 +307,9 @@ static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC
     frame();
 }
 #if FELUCCA_MACROPAGE
-#define HCNT(n) #n "/11"
+#define HCNT(n) #n "/12"
 #else
-#define HCNT(n) #n "/10"
+#define HCNT(n) #n "/11"
 #endif
 static void ideas_open(void) { nav_go(SEC_HOME, HOME_IDEA + gen_page(), 1); frame(); }   /* (2026-11-02: HOME + SELECT gone) */
 static void stop_transport(void) { transport_req = 0; song.playing = 0; }
@@ -5980,13 +5982,13 @@ static int test_lente(void)
     /* (2026-11-03) held past HOLD, a button does nothing when let go (but FX SCL REC: their layers) */
     ok = 1;
     for (q = 0; q < 2u; q++) {
-        static const uint8_t BT[2] = {B_EDIT, B_HOME};   /* (SAVE, SEQ: their layers) */
+        static const uint8_t BT[2] = {B_EDIT, B_HOME};   /* (SAVE, SEQ, HOME: their layers) */
         uint32_t pg;
         ui_power_on();
         go_title("TRACK"); frame();
         pg = ui.page;
         btn_down(BT[q]); frames(500);
-        ok &= !ui.layer && ui.page == pg && !ui.home;
+        ok &= (BT[q] == B_HOME ? ui.layer == LAYER_HOME : !ui.layer) && ui.page == pg && !ui.home;   /* (2026-11-15: HOME held: SWARM's layer) */
         btn_up(BT[q]); frame();
         ok &= !ui.layer && ui.page == pg && !ui.home;
         if (ui.hm) { ok &= BT[q] == B_EDIT; oct_back(); }   /* (EDIT held: its menu, 2026-11-09) */
@@ -9357,7 +9359,7 @@ static int test_lz_home(void)
     ok &= str_eq(cur_page()->title, "MIXER") && lz_tab_lit(2) && lz_crumb_is("HOME \xB7 MIXER") && lz_count_is(HCNT(4));
 #if FELUCCA_MACROPAGE
     sel_turn( 2); frame();                                    /* SENDS, MACRO */
-    ok &= ui.home && home_macros() && lz_crumb_is("HOME \xB7 MACRO") && lz_count_is("6/11");
+    ok &= ui.home && home_macros() && lz_crumb_is("HOME \xB7 MACRO") && lz_count_is("6/12");
     k = macro_v[0];
     turn(EN_K1, 3); frame();
     ok &= macro_v[0] == (uint8_t)(k + 3u) && !strncmp(ui.col[0], "M1|", 3);
@@ -9366,9 +9368,12 @@ static int test_lz_home(void)
 #else
     sel_turn( 1); frame();                                    /* SENDS (2026-11-06: no MACRO page) */
     ok &= !home_macros();
+    sel_turn( 1); frame();                                    /* (2026-11-15) SWARM, after SENDS */
+    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is("6/11");
+    sw.row = 0;                                               /* (SELECT scrolls SWARM's rows first, then goes on) */
     k = macro_v[0] - 3u;                                            /* (the check below adds the 3 the MACRO page turned) */
     c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
-    sel_turn( -4); frame();                                   /* TRACKS: the HOME knobs */
+    sel_turn( -5); frame();                                   /* TRACKS: the HOME knobs */
 #endif
     turn(EN_K1, 1); frame();
     ok &= ui.home && !home_set() && home_level() == 0u && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c &&
@@ -9384,35 +9389,36 @@ static int test_lz_home(void)
     fm1_ms += 1000u;
     sel_turn( 1); frame();                                    /* IDEAS: TRACK */
 #else
-    sel_turn( 5); frame();                                    /* IDEAS: TRACK (SENDS was the last page before) */
+    sel_turn( 6); frame();                                    /* IDEAS: TRACK (SWARM was the last page before) */
     ok = 1;
     fm1_ms += 1000u;
 #endif
     ok &= gen_on() && gen_page() == IX_TRACK && home_level() == 2u && lz_on() && lz_tab_lit(3) &&
-          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is(FELUCCA_MACROPAGE ? "7/11" : "6/10");
+          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is(FELUCCA_MACROPAGE ? "8/12" : "7/11");
     k = ix.genre;
     turn(EN_PRESET, 1); frame();
     ok &= ix.genre == (k + 1u) % (NDSTYLE + 1u);                    /* PRESETS: the GENRE */
     sel_turn( 1); frame();
-    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(FELUCCA_MACROPAGE ? "8/11" : "7/10");
+    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(FELUCCA_MACROPAGE ? "9/12" : "8/11");
     sel_turn( -2); frame();                                   /* back: MACRO (else TRACKS-side SENDS), IDEAS shut */
 #if FELUCCA_MACROPAGE
     ok &= !ui.confirm && ui.home && home_macros();
 #else
-    ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "SENDS");
+    ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "SWARM");
+    sw.row = SWR_N - 1u;                                      /* (its last row: SELECT goes on to the chain's next page) */
 #endif
     sel_turn( 1); frame();
     ok &= gen_on() && gen_page() == 0u;
     press(B_HOME); frame();                                         /* a HOME tap on IDEAS: round to TRACKS */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     bad += check("HOME: MACRO, then IDEAS TRACK SOUND .. (PRESETS its GENRE); SELECT back out; a HOME tap on IDEAS: TRACKS", ok);
-    sel_turn( FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
+    sel_turn( FELUCCA_MACROPAGE ? 8 : 7); frame();               /* IDEAS 2 */
     ok = gen_on() && gen_page() == 1u;
     press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV LIST");
     press(B_HOME); frame();                                         /* HOME: TRACKS (IDEAS shut) */
     ok &= !gen_on() && ui.home && home_level() == 0u;
-    sel_turn( FELUCCA_MACROPAGE ? 7 : 6); frame();               /* IDEAS 2 */
+    sel_turn( FELUCCA_MACROPAGE ? 8 : 7); frame();               /* IDEAS 2 */
     turn(EN_ALGO, 1); frame();
     ok &= song.sel == 1u && gen_on() && gen_page() == 1u;           /* (ALGORITHM the track there too) */
     turn(EN_ALGO, -1); frame();
@@ -10348,6 +10354,179 @@ static int test_nav_tasks(void)
  * REC + F5 NAME (EDIT always EDIT); GEN not modal (a section's button leaves it, ALGORITHM works, the keys play);
  * HOME + SELECT GEN, EDIT / SEQ / LFO / FX + SELECT their dice, GLO + SELECT the tempo, ENV / SCL / ARP / SAVE + SELECT
  * their chain; a button held + PRESETS nothing; the layers' maps name G5 and C5 */
+/* (2026-11-15) SWARM (swarm.c, ui_swarm.c): the page, the centre's mapping, the parameters' base + offset, every engine in range,
+ * OFF and CAPTURE, a parameter the user changes, REVERSE */
+static void sw_run(uint32_t n) { while (n--) { fm1_ms += 50u; swarm_tick(); } }
+static int test_swarm(void)
+{
+    int bad = 0, in_range = 1, back = 1, zero = 1;
+    uint32_t e, i, a, k;
+    track_t *t;
+    float cx, cy;
+    ui_power_on();
+    memset(&sw, 0, sizeof sw);
+    bad += check("SWARM: HOME's chain has the page, SWARM starts on it, on the selected track",
+                 nav_put(SEC_HOME, "SWARM") != 0 && PAGES[ui.page].graph == GR_SWARM && sw.on && sw.trk == song.sel);
+    sw.d[0].pos = 50; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: POSITION 50 % is the middle of the box", cx > 0.249f && cx < 0.251f && cy > 0.249f && cy < 0.251f);
+    sw.d[0].pos = 0; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: POSITION 0 % and 100 % are the middle too",
+                 cx > 0.249f && cx < 0.251f && cy > 0.249f && cy < 0.251f);
+    sw.d[0].pos = 100; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: 100 % likewise", cx > 0.249f && cx < 0.251f && cy > 0.249f && cy < 0.251f);
+    sw.d[0].pos = 24; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: below 50 % the centre slides down (24 %: the bottom of the box)", cx > 0.249f && cx < 0.251f && cy > 0.48f);
+    sw.d[0].pos = 26; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: at 25 % it pops to the top and comes down (26 %: the top)", cy < 0.02f);
+    sw.d[0].pos = 74; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: above 50 % it slides left to right (74 %: the right)", cx > 0.48f && cy > 0.249f && cy < 0.251f);
+    sw.d[0].pos = 76; sw_centre(&sw.d[0], 0, &cx, &cy);
+    bad += check("SWARM: at 75 % it pops to the left (76 %: the left)", cx < 0.02f);
+    sw.d[3].pos = 50; sw_centre(&sw.d[3], 3, &cx, &cy);
+    bad += check("SWARM: dot 4's box is the bottom right", cx > 0.749f && cx < 0.751f && cy > 0.749f && cy < 0.751f);
+    /* every engine: the parameters stay in range, OFF puts the sound back, size 0 changes nothing */
+    for (e = 0; e < NENGINES; e++) {
+        int16_t orig[8];
+        swarm_off(0);
+        set_engine_of(TSEL, e);
+        t = TSEL;
+        for (k = 0; k < 8u; k++) { uint32_t id = sw_pid(t, k >> 1, k & 1u); orig[k] = id == 0xFFFFu ? 0 : t->p[id]; }
+        swarm_defaults();
+        swarm_start();
+        for (i = 0; i < SW_N; i++) sw.d[i].size = 0;
+        sw_run(40);
+        for (k = 0; k < 8u; k++) { uint32_t id = sw_pid(t, k >> 1, k & 1u); if (id != 0xFFFFu && t->p[id] != orig[k]) zero = 0; }
+        for (i = 0; i < SW_N; i++) { sw.d[i].size = 100; sw.d[i].gain = 100; sw.d[i].speed = 100; }
+        for (a = 0; a < 400u; a++) {
+            sw_run(1);
+            for (k = 0; k < 8u; k++) {
+                uint32_t id = sw_pid(t, k >> 1, k & 1u);
+                const param_desc_t *pd;
+                if (id == 0xFFFFu) continue;
+                pd = sw_desc(t, id);
+                if (t->p[id] < pd->min || t->p[id] > pd->max) in_range = 0;
+                if (!pd->label || pd->label[0] == '-') in_range = 0;
+            }
+        }
+        swarm_off(1);
+        for (k = 0; k < 8u; k++) { uint32_t id = sw_pid(t, k >> 1, k & 1u); if (id != 0xFFFFu && t->p[id] != orig[k]) back = 0; }
+    }
+    bad += check("SWARM: size 0 changes no parameter, on every engine", zero);
+    bad += check("SWARM: every parameter stays inside its range, on every engine, at full size and gain", in_range);
+    bad += check("SWARM: OFF puts every parameter back, on every engine", back);
+    bad += check("SWARM: a soft limit is the offset up to half the room, never more than the room, and rises", sw_soft(0.2f, 1.0f) == 0.2f &&
+                 sw_soft(0.5f, 1.0f) == 0.5f && sw_soft(5.0f, 1.0f) < 1.0f && sw_soft(1.0f, 1.0f) > 0.5f && sw_soft(2.0f, 1.0f) > sw_soft(1.0f, 1.0f));
+    bad += check("SWARM: a parameter already at its limit does not move that way", sw_soft(1.0f, 0.0f) == 0.0f);
+    {   /* a parameter the user sets is the new base; CAPTURE keeps what sounds and stops */
+        int16_t v;
+        swarm_off(0);
+        set_engine_of(TSEL, ENGI_DRIFT);
+        t = TSEL;
+        swarm_defaults();
+        swarm_start();
+        sw_run(20);
+        {
+            int16_t pre = t->p[P_E1], b0 = sw.d[0].base[0], want;
+            t->p[P_E1] = (int16_t)(pre > 60 ? pre - 7 : pre + 7);   /* TILT, dot 1's X: nudged by hand */
+            sw_run(1);
+            swarm_off(1);
+            want = (int16_t)(b0 + (pre > 60 ? -7 : 7));
+            bad += check("SWARM: a parameter changed by hand shifts its base (OFF returns to that)", t->p[P_E1] == want);
+        }
+        swarm_start();
+        sw_run(20);
+        sw.frozen = 1;
+        sw_run(2);
+        v = t->p[P_E1];
+        t->p[P_E1] = (int16_t)(v > 60 ? v - 9 : v + 9);   /* a parameter edited while it is frozen is exactly what was set */
+        sw_run(5);
+        bad += check("SWARM: frozen, a parameter can be edited on the track's page", t->p[P_E1] == (int16_t)(v > 60 ? v - 9 : v + 9));
+        swarm_off(1);
+        swarm_start();
+        sw_run(30);
+        v = t->p[P_E2];
+        swarm_capture();
+        sw_run(10);
+        bad += check("SWARM: CAPTURE keeps the sound as it is and stops", !sw.on && t->p[P_E2] == v);
+    }
+    {   /* REVERSE: back through the history, then forward, then live */
+        float x0, y0, xa, ya;
+        uint32_t live = 0;
+        swarm_defaults();
+        swarm_start();
+        sw_run(120);                                    /* 6 s of history */
+        bad += check("SWARM: the history fills at ten a second", sw.hn >= 55u && sw.hn <= 65u);
+        x0 = sw.d[0].x; y0 = sw.d[0].y;
+        sw.rev = 1; sw.dir = 1; sw.age = 0.0f;
+        sw_run(20);                                     /* 1 s back */
+        sw_hist(0, sw.age, &xa, &ya);
+        bad += check("SWARM: REVERSE shows the path it took", sw.rev && sw.d[0].x > xa - 0.02f && sw.d[0].x < xa + 0.02f);
+        {   /* stopped part way, it goes on from there (not back to where it was turned on) */
+            float bx = sw.d[0].x, by = sw.d[0].y, dx, dy;
+            swarm_rev_stop();
+            sw_run(1);
+            dx = sw.d[0].x - bx; dy = sw.d[0].y - by;
+            bad += check("SWARM: REVERSE switched off goes on from where it is", !sw.rev && dx * dx + dy * dy < 0.01f && sw.hn < 120u);
+            sw.rev = 1; sw.dir = 1; sw.age = 0.0f;
+        }
+        sw_run(400);
+        live = !sw.rev && sw.age == 0.0f;
+        bad += check("SWARM: REVERSE goes back, then forward, then live again", live);
+        (void)x0; (void)y0;
+    }
+    swarm_off(0);
+    return bad;
+}
+
+/* (2026-11-15) a latched arp: a key it already plays stops it, any other key is a new chord */
+/* (2026-11-15) the HOME layer: HOME held, the keys are SWARM's actions on any page (a tap is still HOME) */
+static int test_home_layer(void)
+{
+    int bad = 0, ok;
+    ui_power_on();
+    memset(&sw, 0, sizeof sw);
+    go_title("TRACK"); frame();
+    swarm_defaults();
+    swarm_start();
+    btn_down(B_HOME); frames(500);
+    ok = ui.layer == LAYER_HOME && str_eq(layer_head(), "[HOME] SET");
+    key_down(white(SWA_FREEZE)); frame(); key_up(white(SWA_FREEZE)); frame();         /* F3: FREEZE */
+    ok &= sw.frozen == 1u;
+    key_down(white(SWA_FREEZE)); frame(); key_up(white(SWA_FREEZE)); frame();
+    ok &= sw.frozen == 0u;
+    key_down(white(SWA_ONOFF)); frame(); key_up(white(SWA_ONOFF)); frame();         /* C4: SWARM off */
+    ok &= sw.on == 0u;
+    btn_up(B_HOME); frame();
+    ok &= !ui.layer && !ui.home;                        /* (the layer's keys were not notes, and HOME was no tap) */
+    bad += check("HOME layer: held on any page, F3 FREEZE and C4 SWARM act, no HOME tap after them", ok);
+    press(B_HOME); frame();
+    bad += check("HOME layer: a tap is still HOME", ui.home);
+    return bad;
+}
+
+static int test_arp_cancel(void)
+{
+    int bad = 0;
+    track_t *t;
+    ui_power_on();
+    t = TSEL;
+    t->p[P_AMODE] = AM_UP;
+    t->p[P_AHOLD] = 1;
+    t->nheld = 0; t->arp_phys = 0;
+    arp_add(t, 60); arp_add(t, 64); arp_add(t, 67);
+    arp_remove(t, 60); arp_remove(t, 64); arp_remove(t, 67);
+    bad += check("ARP HOLD: the chord keeps playing when the keys are let go", t->nheld == 3u && t->arp_phys == 0u);
+    arp_add(t, 62);
+    arp_remove(t, 62);
+    bad += check("ARP HOLD: a key that is not in it is a new chord", t->nheld == 1u && t->held[0] == 62u);
+    arp_add(t, 64);
+    arp_remove(t, 64);
+    arp_add(t, 64);
+    arp_remove(t, 64);
+    bad += check("ARP HOLD: a key the latched arp already plays stops it", t->nheld == 0u && t->arp_phys == 0u);
+    return bad;
+}
+
 static int test_nav_rules(void)
 {
     int bad = 0, ok;
@@ -10764,6 +10943,9 @@ int main(void)
     bad += test_engvis();
     bad += test_lz_reach();
     bad += test_nav_tasks();
+    bad += test_swarm();
+    bad += test_arp_cancel();
+    bad += test_home_layer();
     bad += test_nav_rules();
     bad += test_sound_loads();
     bad += test_init_system();

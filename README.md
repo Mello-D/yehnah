@@ -85,13 +85,16 @@ RP2040.
 
 HOME shows the selected track as a small robot that dances to what the track plays, on a city street at dusk or by night.
 Under it are the track's four knobs (the engine decides which four), and the pages of HOME are tabs along the foot:
-**TRACKS**, **PRESETS**, **MORPH**, **MIXER**, **SENDS** and the five **IDEAS** pages. Turn ALGORITHM to move
+**TRACKS**, **PRESETS**, **MORPH**, **MIXER**, **SENDS**, **SWARM** and the five **IDEAS** pages. Turn ALGORITHM to move
 between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the last two.
 
 <table>
 <tr>
 <td align="center"><img src="docs/img/home.png" width="300" alt="HOME: the selected track's robot on a city street, its four knobs and the tabs"><br><sub>HOME: the track's robot, its four knobs, the tabs</sub></td>
 <td align="center"><img src="docs/img/presets.png" width="300" alt="The sound list: name, type and engine"><br><sub>PRESETS: one list over every engine, by name, type and engine</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/swarm.png" width="300" alt="SWARM: four boxes with a moving dot in each"><br><sub>SWARM: four dots wander, each moving two parameters of the engine</sub></td>
 </tr>
 </table>
 
@@ -100,6 +103,9 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   another engine fades the old one out, and the notes you hold go on in the new one.
 - **An INIT sound for every engine.** Each engine starts its list with a plain INIT sound to build from (a drum track's is the
   plain DRUM-X kit): filter the list by type INIT, load one, shape it, and save it as a user sound.
+- **SWARM.** Four dots wander by themselves across four boxes of the screen, in orbits, drifts, chaotic paths or thrown
+  like pucks, and each moves two of the engine's livelier parameters by where it is. Start from an INIT sound, listen,
+  and when something sounds good press CAPTURE to keep it, or REVERSE to retrace the last half minute.
 - **IDEAS.** The five IDEAS tabs throw ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
   genre's progression, voicing and figures, a rhythm cell, a role: bass, chords, melody or arp), **SOUND** picks a preset
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
@@ -269,7 +275,7 @@ The [manual](docs/MANUAL.md#5-engines-and-the-sound-page) lists the engines' pag
 ## The layers
 
 Hold a button and the keys and the four knobs change job, while the screen draws a map of what they do. Tap the button
-and its pages open. Four buttons have a layer:
+and its pages open. Five buttons have a layer:
 
 <table>
 <tr>
@@ -277,6 +283,7 @@ and its pages open. Four buttons have a layer:
 <td align="center"><img src="docs/img/rec.png" width="220" alt="The REC layer"><br><sub><b>REC</b>: undo, restart, sections, song</sub></td>
 <td align="center"><img src="docs/img/save_layer.png" width="220" alt="The SAVE layer"><br><sub><b>SAVE</b>: clear, erase, new, save sound</sub></td>
 <td align="center"><img src="docs/img/seq_layer.png" width="220" alt="The SEQ layer"><br><sub><b>SEQ</b>: pattern tools</sub></td>
+<td align="center"><img src="docs/img/home_layer.png" width="220" alt="The HOME layer"><br><sub><b>HOME</b>: SWARM's actions</sub></td>
 </tr>
 </table>
 
@@ -287,6 +294,7 @@ and its pages open. Four buttons have a layer:
 - **SAVE:** CLEAR the pattern or the song, DELETE a song row, ERASE a section or a project, start a NEW project, and SAVE
   or ERASE the track's user sound. Each asks first.
 - **SEQ:** REVERSE and SHIFT the pattern, CLR STEP, and on a drum track BEAT and the lane tools (clear, reverse, fill).
+- **HOME:** SWARM's actions on any page: FREEZE, REVERSE, THROW, CAPTURE and SWARM on / off.
 
 Hold **EDIT** or **GLO** and a list menu opens and stays open: EDIT's is the sound's named parameters, GLO's the four
 settings lists.

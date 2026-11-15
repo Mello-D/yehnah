@@ -44,12 +44,12 @@ enum { SV_LIB, SV_PROJ, SV_SOUND };
 /* (2026-11-02, NAV-LAYOUT.md) HOME: TRACKS, PRESETS MORPH (from SAVE), MIXER SENDS (from GLO), MACRO (ROUTES' screen;
  * the old MACRO and ENGINE gone), the IDEAS; TRACKS, MACRO and IDEAS are HOME's own (t 0), the others real pages */
 #if FELUCCA_MACROPAGE
-enum { HOME_MACRO = 5, HOME_IDEA = 6 };
+enum { HOME_MACRO = 6, HOME_IDEA = 7 };
 #else
-enum { HOME_MACRO = 99, HOME_IDEA = 5 };               /* (2026-11-06) MACRO hidden: never an entry */
+enum { HOME_MACRO = 99, HOME_IDEA = 6 };               /* (2026-11-06) MACRO hidden: never an entry */
 #endif
 static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV("PRESETS", 0, 1, SV_SOUND), NV("MORPH", 0, 1, SV_SOUND),
-                               NV("MIXER", 0, 2, 0), NV("SENDS", 0, 2, 0),
+                               NV("MIXER", 0, 2, 0), NV("SENDS", 0, 2, 0), NV("SWARM", 0, 2, 0),
 #if FELUCCA_MACROPAGE
                                NV(0, "MACRO", 2, 1),
 #endif

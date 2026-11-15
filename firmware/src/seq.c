@@ -579,8 +579,15 @@ static uint32_t chord_gap(const track_t *t) { return (uint32_t)clamp(t->p[P_CSTR
 static void arp_add(track_t *t, uint32_t note)
 {
     uint32_t i;
-    if (t->p[P_AHOLD] && t->arp_phys == 0u)
+    if (t->p[P_AHOLD] && t->arp_phys == 0u) {
+        for (i = 0; i < t->nheld && t->held[i] != note; i++) {}
+        if (i < t->nheld) {                         /* (2026-11-15, the user's) a key the latched arp already plays: the arp stops */
+            t->nheld = 0;                           /* (arp_tick ends its note); the key's own key-up is counted as any */
+            t->arp_phys++;
+            return;
+        }
         t->nheld = 0;                               /* new chord replaces the latched one */
+    }
     t->arp_phys++;                                  /* every key-down: arp_remove counts every key-up */
     for (i = 0; i < t->nheld; i++)
         if (t->held[i] == note)

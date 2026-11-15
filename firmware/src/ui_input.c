@@ -1251,6 +1251,10 @@ static void edit_param(uint32_t slot, int32_t steps)
         else if (slot == 3u) ui.act = steps > 0 ? 4u : 0u;
         return;
     }
+    if (pg->graph == GR_SWARM) {                        /* (2026-11-15) SWARM: K1..K4 the dots, the row SELECT picked */
+        swarm_knob(slot, steps);
+        return;
+    }
     if (pg->graph == GR_SEDIT) {                        /* (2026-11-06) SONG EDIT: the tracks run down the screen, each broken into the song's parts
                                                          * (the rows). K1 the track, K2 the part (on to the next, to the song's end), K3 / K4 the bars the
                                                          * track sits out of that part, from its start / its end */
@@ -2238,13 +2242,15 @@ static void ui_input_frame(void)
         notes = 0;                                      /* (the keys are the layer's, not the grid's or a step's) */
         if (pressed & (1u << panel.btn[B_SAVE]))       /* no UNDO, no page */
             ui.save_t0 |= 2u;
-        if (pressed & (1u << panel.btn[B_HOME]))       /* no menu, no HOME */
+        if ((pressed & (1u << panel.btn[B_HOME])) && ui.ly != LAYER_HOME)   /* no menu, no HOME (HOME's own layer: its tap is HOME's) */
             ui.home_t0 |= 2u;
         if (pressed & (1u << panel.btn[B_SEQ]))
             ui.seq_t0 |= 2u;
         for (k = 0; k < 4u; k++)                        /* KNOB 1..4: the layer's (ui_layer.c layer_knob) */
             if ((ks[k] = panel_enc(EN_K1 + k)) != 0)
                 combo = 1;
+        if (combo && ui.ly == LAYER_HOME)               /* (HOME is a layer's button too: a combo is no HOME tap) */
+            ui.home_t0 |= 2u;
         panel_enc(EN_PRESET);                           /* (a stray turn would load another sound) */
         {   /* (0.8.5) ALGORITHM: the layer's lens, MAP <-> STATE (2026-11-02; no wrap; was dropped: another track there,
              * OCT- put back the layer's track only) */
@@ -2535,6 +2541,8 @@ static void ui_input_frame(void)
                                                         * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
         if (fxall_on())
             fxa_turn(s);                                /* (2026-11-13) FX ALL: SELECT scrolls its rows (a fast turn: a section) */
+        else if (swarm_page_on())
+            swarm_select(s);                            /* (2026-11-15) SWARM: SELECT scrolls its rows */
         else
             nav_select(s);
     }
@@ -2566,7 +2574,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || BAR_PAGE(pg)) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (LIST_PG(pg) && k == 0u)) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_SWARM || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (LIST_PG(pg) && k == 0u)) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }

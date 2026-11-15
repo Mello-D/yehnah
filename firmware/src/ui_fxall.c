@@ -52,8 +52,8 @@ static const arow_t A_LFO[] = {
     {0, 0, {P_M4SRC, P_M4DST, P_M4AMT, 0xFF}},
 };
 static const arow_t A_ARP[] = {
-    {"ARP", SK_NONE, {P_AMODE, P_ARATE, P_AOCT, P_AORDER}},
-    {"FEEL", SK_NONE, {P_AGATE, P_ASWING, P_APROB, P_AHOLD}},
+    {"ARP", SK_NONE, {P_AMODE, P_ARATE, P_AOCT, P_AHOLD}},   /* (2026-11-15, the user's: HOLD in the first row, ORDER in FEEL) */
+    {"FEEL", SK_NONE, {P_AGATE, P_ASWING, P_APROB, P_AORDER}},
     {"SPICE", SK_NONE, {P_SPICE, P_SLOOP, P_CSTR, 0xFF}},
 #if FELUCCA_AMBIENT
     {"AMBIENT", SK_NONE, {P_AMB, P_ADEN, P_AMOT, P_ASPC}},

@@ -54,7 +54,7 @@ Yehnah has no user samples: it synthesises everything.
 
 ### Your first idea and your first save
 
-1. On HOME turn **SELECT** past SENDS to the **IDEAS** pages (**I-TRK**, **I-SND**, **I-LFO**, **I-FX**, **I-TEX**). On
+1. On HOME turn **SELECT** past SENDS and SWARM to the **IDEAS** pages (**I-TRK**, **I-SND**, **I-LFO**, **I-FX**, **I-TEX**). On
    **I-TRK**, turn **KNOB 4** (IDEA): a new sequence for the selected track, heard at once. Turn it again for
    another. **OCT+** keeps what you hear, **OCT−** puts back what was there.
 2. Press **PLAY**. To record what you play, arm **REC** and play the keys while it runs.
@@ -85,7 +85,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 
 | Button | Tap | Hold |
 | --- | --- | --- |
-| **HOME** | HOME's first page, TRACKS. | nothing |
+| **HOME** | HOME's first page, TRACKS. | the **HOME layer**: SWARM's actions, on any page |
 | **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, as a menu that stays open (see [12](#12-the-layers)) |
 | **ENV** | The envelopes: **ENV**, then **ALL ENV** and **ALL DEST**. | nothing |
 | **LFO** | The **LFO** page: the LFO, the step modulator, the modulation matrix. | nothing |
@@ -139,7 +139,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 | Section (button) | Pages |
 | --- | --- |
-| **HOME** | TRACKS · PRESETS · MORPH · MIXER · SENDS · I-TRK · I-SND · I-LFO · I-FX · I-TEX |
+| **HOME** | TRACKS · PRESETS · MORPH · MIXER · SENDS · SWARM · I-TRK · I-SND · I-LFO · I-FX · I-TEX |
 | **EDIT** | SOUND (the selected engine's rows; a drum track has its own, see [6](#6-drums)) |
 | **SEQ** | STEP · NOTE · SPICE · AUTO · PATTERN · STRETCH · TRACK |
 | **FX** | FX (one page, every effect's rows) |
@@ -180,6 +180,33 @@ Blends two tracks into one part: **TRACK A**, **TRACK B**, **BLEND** and **MOVE*
 **MIXER:** six strips, one per track. **KNOB 1 LEVEL**, **KNOB 2 PAN**, **KNOB 3 MUTE**, **KNOB 4 DJ FILT** (a DJ
 filter: low-pass to the left of the middle, high-pass to the right). **SENDS:** the same strips with each track's sends
 to the distortion, chorus, delay and reverb (**DIST**, **CHORUS**, **DELAY**, **REVERB**).
+
+### SWARM
+
+Four dots that wander by themselves and move the sound for you: a way to find a sound, best begun from an engine's INIT
+sound (see PRESETS above). The screen is four boxes (dot 1 top left, 2 top right, 3 bottom left, 4 bottom right) with a
+dot in each. Every dot moves **two** parameters of the selected track's engine, one with its position across the screen
+(X) and one with its position down it (Y); their names and values are in the corner of its box. They are the engine's livelier
+ones, chosen per engine (DRIFT: TILT and DRIFT, SPEED and FLICK, DETUNE and BLOOM, BREATH and PARTS). A few of an engine's
+parameters step instead of gliding (a waveform, a ratio, an algorithm), and a dot there jumps between the settings.
+
+A parameter is its own value plus how far its dot is from the middle of its box, so the sound plays as loaded until a
+dot moves. Nudge a parameter by hand and its starting point moves with it; load another sound and that sound is the new starting point.
+
+**KNOB 1–4 are always dots 1–4.** **SELECT** scrolls the row they set (past the first or last row it goes on to the
+next page):
+
+| Row | What the four knobs set |
+| --- | --- |
+| **POSITION** | The dot's centre in its box, 0–100 %. 50 % is the middle. Below 50 % the centre slides down the box (25 % is the bottom, where it pops back to the top and slides down to the middle at 50 %); above 50 % it slides left to right (75 % is the right, where it pops to the left and slides to the middle at 100 %). A quick turn throws a THROW dot. |
+| **SHAPE** | How the dot moves round its centre: **ORBIT** (a loop), **DRIFT** (a wandering point), **CHAOS** (a path that never repeats and never leaves the screen), **THROW** (a puck that bounces and slows, and is thrown again when it stops). |
+| **SIZE** | How far it moves. At 100 % any shape roams the whole screen, not only its box. |
+| **SPEED** | How fast it moves. |
+| **GAIN** | How much its distance from the middle of its box adds to a parameter: at 50 % the edge of the box is ±50 % of the parameter's range, at 100 % ±100 % (a new SWARM starts at 25 %). Towards either end of a range the movement slows, so a dot seldom pins a parameter at its minimum or maximum. |
+
+**FREEZE, REVERSE, THROW, CAPTURE** and turning SWARM off are keys on the **HOME layer** (hold HOME, [12](#12-the-layers)), so they work on any page. While frozen the parameters stay where they are, so you can still edit them on their own pages. SWARM starts the first time you open its page and keeps running on every page until you turn it off. It drives the track
+that was selected when it started; opening its page on another track moves it there. Save a sound you like with
+**CAPTURE** first: SWARM is not saved in a project, and a project saved while it runs keeps the parameters as they sound.
 
 ### IDEAS
 
@@ -333,8 +360,9 @@ octave down and up, C#5 and D#5 a whole tone), and the top black key, F#5, latch
 
 ### ARP
 
-One page of rows: **ARP** (MODE, RATE, OCT, ORDER), **FEEL** (GATE, SWING, PROB, HOLD) and **SPICE** (SPICE, LOOP,
-STRUM).
+One page of rows: **ARP** (MODE, RATE, OCT, HOLD), **FEEL** (GATE, SWING, PROB, ORDER) and **SPICE** (SPICE, LOOP,
+STRUM). With **HOLD** on, the arp keeps playing when you let the keys go; the next chord replaces it, and hitting a key
+the arp is already playing stops it.
 
 - **MODE** has 27 values: UP, DN, UPDN, RND, ORD, REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD, TRNS, SKIP,
   HOLD, TURNG, STRDN, STRUP, STRALT, BLOCK, BS+CH, SHUF, HALF, 2/3 and FAST. **ORDER** says how the held notes are
@@ -444,7 +472,7 @@ eight values (E1–E8), CLIP, PUNCH and the delay and reverb settings.
 
 Hold a button past the hold time and the keys and the four knobs change job, while the screen draws a map of what they
 do. Press a key or turn a knob while holding for the map at once. Keys pressed under a layer are the layer's: silent,
-never recorded. Four buttons have a layer: **FX**, **REC**, **SAVE** and **SEQ**. Every other button, held, does
+never recorded. Five buttons have a layer: **FX**, **REC**, **SAVE**, **SEQ** and **HOME**. Every other button, held, does
 nothing (EDIT and GLO open menus, below). Only one layer is open at a time.
 
 ### FX: punch-in effects
@@ -498,6 +526,21 @@ layer's UNDO covers big changes).
 | **G5** | **CLR STP** | Clears the step under the cursor and its parameter locks, and moves on to the next. |
 
 On a drum track the **black keys** pick the lane (1–8) the lane tools act on. The tools refuse while the arrangement plays.
+
+### HOME: SWARM's actions
+
+Hold **HOME** on any page (a tap is still HOME) and the keys run **SWARM** (see [4](#swarm)), whatever page you are on.
+The key is lit while the action is on, and breathes when it can be used.
+
+| Key | Action | What it does |
+| --- | --- | --- |
+| **F3** | **FREEZE** | The dots hold, and the parameters stay where they are. Press again to let them move. |
+| **G3** | **REVERSE** | The dots retrace their last 30 seconds backwards, then forwards, then carry on live. Press again to stop where they are: they go on from there. |
+| **A3** | **THROW** | Throws every THROW dot at once. |
+| **B3** | **CAPTURE** | The sound as it is now becomes the track's own, and SWARM stops. |
+| **C4** | **SWARM** | Turns SWARM on; off puts the sound back as it was. |
+
+The four knobs do nothing on this layer.
 
 ### Held menus: EDIT and GLO
 

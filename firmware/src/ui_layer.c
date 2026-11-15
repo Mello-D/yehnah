@@ -52,6 +52,7 @@ static const layer_t LAYERS[LAYER_N] = {
     {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
     {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SET", {{KC_KEYS, "CLEAR ERASE NEW"}, {0, 0}, {0, 0}}},   /* (2026-11-06) the generic save tools */
     {B_SEQ, LK_SET, FAM_HOME, "[SEQ] SET", {{KC_KEYS, "PATTERN TOOLS"}, {0, 0}, {0, 0}}},   /* (2026-11-10) the pattern tools */
+    {B_HOME, LK_SET, FAM_HOME, "[HOME] SET", {{KC_KEYS, "SWARM"}, {0, 0}, {0, 0}}},   /* (2026-11-15) SWARM's actions, on any page */
 };
 #define LY_OPEN 2u                     /* ui.ly_t0: the map opened (no tap any more) */
 #define LY_COMBO 4u                    /* .. by a combo */
@@ -645,6 +646,9 @@ static void layer_key(uint32_t l, uint32_t k)
             sv_key(p);
     } else if (l == LAYER_SEQ) {
         sq_key(k);
+    } else if (l == LAYER_HOME) {                       /* SWARM: F3 FREEZE, G3 REVERSE, A3 THROW, B3 CAPTURE, C4 SWARM on / off */
+        if (!key_black(k) && p < SWA_N)
+            swarm_act(p);
     }
 }
 /* each pass: the keys the layer got now; the solo: HOME > MIXER's (perform.c) */
@@ -722,6 +726,9 @@ static uint32_t layer_leds(uint32_t *br)
         } else if (l == LAYER_SEQ) {                    /* the tools that would do something breathe; the lane picked lit */
             can = sq_ok(k);
             on = b && drum_track(TSEL) && p < NLANE && ui.lane % NLANE == p;
+        } else if (l == LAYER_HOME && !b && p < SWA_N) {   /* SWARM's keys: on lit, what can be done breathes */
+            on = (uint32_t)swarm_act_on(p);
+            can = (uint32_t)swarm_act_ok(p);
         } else if (l == LAYER_REC && !b && p == RK_ALL) {
             can = !chain_busy();
         } else if (l == LAYER_REC && !b && p >= RK_PLAY && p <= RK_NAME) {   /* the section playing lit, the saved
@@ -786,6 +793,13 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     }
     if (l == LAYER_SEQ)
         return sq_keyname(blk, p, nm);
+    if (l == LAYER_HOME) {                              /* SWARM */
+        static const char *const SN[SWA_N] = {"FREEZE", "REVERSE", "THROW", "CAPTURE", "SWARM"};
+        if (blk || p >= SWA_N)
+            return LS_OFF;
+        str_cpy(nm, SN[p], 12);
+        return swarm_act_on(p) ? LS_SEL : swarm_act_ok(p) ? LS_OFF : LS_DIM;
+    }
     if (l == LAYER_REC) {
         if (blk || p > RK_ALL)
             return LS_OFF;
@@ -912,7 +926,7 @@ static void ly_own_cards(void)                          /* FX REC: their own fou
                     perf_k[2] * 10, ICON_DELAY);
         fmt_int(val, 100 - perf_k[3]);
         draw_column(3, "DEPTH", val, "%", VAL(3u), (100 - perf_k[3]) * 10, ICON_MIX);
-    } else if (l == LAYER_SAVE || l == LAYER_SEQ) {     /* (no knobs: four empty cells) */
+    } else if (l == LAYER_SAVE || l == LAYER_SEQ || l == LAYER_HOME) {   /* (no knobs: four empty cells) */
         for (c = 0; c < 4u; c++)
             draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
     } else if (l == LAYER_REC) {                        /* MODE (the others are GLO > MAIN's) */
@@ -960,7 +974,7 @@ static void lst_chip(const char *a, const char *v, int on)
 }
 static void layer_state(uint32_t l)
 {
-    static const char *const LN[LAYER_N] = {"", "FX", "REC", "SAVE", "SEQ"};
+    static const char *const LN[LAYER_N] = {"", "FX", "REC", "SAVE", "SEQ", "HOME"};
     const khint_t *ft = layer_foot(l);
     uint32_t k, e;
     char b[48], v[8];
@@ -1006,6 +1020,19 @@ static void layer_state(uint32_t l)
             lst_chip("ROW", v, 1);
             fmt_int(v, chain.remaining);
             lst_chip("BARS LEFT", v, 1);
+        }
+    } else if (l == LAYER_HOME) {                       /* SWARM: what is going on */
+        lst_chip("SWARM", sw.on ? "ON" : "OFF", sw.on);
+        if (sw.on) {
+            b[0] = 'T'; b[1] = (char)('1' + sw.trk); b[2] = 0;
+            lst_chip("TRACK", b, 1);
+            lst_chip("FROZEN", 0, sw.frozen);
+            if (sw.rev) {
+                fmt_int(v, (int32_t)(sw.age * 0.1f + 0.5f));
+                lst_chip("REVERSE S", v, 1);
+            } else
+                lst_chip("REVERSE", 0, 0);
+            lst_chip("ROW", SW_ROW[sw.row], 1);
         }
     } else if (l == LAYER_SEQ) {                        /* what the keys would act on */
         b[0] = 'T'; b[1] = (char)('1' + song.sel); b[2] = 0;
@@ -1053,6 +1080,9 @@ static void draw_layer(void)
     else if (l == LAYER_SEQ)
         sig += (uint32_t)chain_busy() * 3u + (uint32_t)drum_track(TSEL) * 5u + ui.lane * 7u + ui.cursor * 11u + tl_len(TSEL) * 13u +
                (uint32_t)seq_is_empty(TSEL) * 17u + song.sel * 977u;
+    else if (l == LAYER_HOME)
+        sig += (uint32_t)sw.on * 3u + (uint32_t)sw.frozen * 5u + (uint32_t)sw.rev * 7u + (uint32_t)(sw.hn > 1u) * 11u + sw.trk * 13u + sw.row * 17u +
+               (sw.rev ? (uint32_t)(sw.age * 0.1f) * 19u : 0u);
     else if (l == LAYER_SAVE)
         sig += (uint32_t)chain_busy() * 3u + song.playing * 5u + chain_config.count * 7u + ui.song_row * 11u + (uint32_t)rec_clearable() * 13u +
                (uint32_t)song.g[G_SLOT] * 17u + (user_of(TSEL) < UP_SLOTS) * 19u + up_gen * 37u + (uint32_t)project_used((uint32_t)song.g[G_SLOT] - 1u) * 23u;
