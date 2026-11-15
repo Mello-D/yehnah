@@ -402,7 +402,7 @@ thumb strumming the plate**, with the octave and bend keys under the strumming t
 | Mode | What the chord keys play | Chord sets | From |
 | --- | --- | --- | --- |
 | **CHORD** | The chord on each scale degree, built by the mode you pick (TRIAD, 7TH, ADD9, SUS2, SUS4 in key; MAJ, MIN, 7, MAJ7, MIN7, POWER on any key) | one set: the scale's degrees I–VII, then I an octave up | built in |
-| **HARP** | Whole chords from a set of twelve | 116 sets: HARP's own **MAJ1–MAJ8** and **MIN1–MIN8**, then the **J-6's 100 sets** in 16 genres (POP, JAZZ, BOSSA, BLUES, FUNK, R&B, NEOSOUL, TRAD, CLASSIC, CINEMA, SYNTH, HOUSE, EDM, MODERN, STACKS, UTILITY) | HARP's own sets; the J-6 sets after benbadio's hera-fm1 |
+| **HARP** | Whole chords from a set of twelve | 116 sets: HARP's own **MAJ1–MAJ8** and **MIN1–MIN8**, then the **J-6's 100 sets** in 16 genres (POP, JAZZ, BOSSA, BLUES, FUNK, R&B, NEOSOUL, TRAD, CLASSIC, CINEMA, SYNTH, HOUSE, EDM, MODERN, STACKS, UTILITY) | HARP's own sets come from Native Instruments' chord sets; the J-6 sets after benbadio's hera-fm1 |
 | **OMNI** | The Omnichord's chord keys: major, minor and seventh chords | 5 sets: **FOMNI** (the Omnichord's own layout), **MAJ**, **MIN**, **7**, **M7** | FoMni by Charles Vestal |
 | **PROG** | The chords of a progression, in order, one a key | 32 progressions (I V vi IV, vi IV I V, I vi IV V and so on) | built in |
 | **GUITAR** | Chords as a guitar plays them, up to six strings | 50 chord styles in 9 families (GT ORIG, JAZZ, LOFI, ROCK, BLUES, POP, SOUL, FOLK, AMB), in 14 tunings and 6 shapes | guitchordi by stoogs |

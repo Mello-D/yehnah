@@ -397,6 +397,8 @@ Yehnah is made by Mello-D, and stands on a lot of other people's work. Thank you
   resonators build on.
 - **[Optimist](https://github.com/w0ts/optimist)** by w0ts: PLAITS, a fixed-point port of Mutable Instruments Plaits
   (Emilie Gillet, MIT).
+- **Native Instruments**: HARP's own sixteen chord sets (MAJ1 to MAJ8 and MIN1 to MIN8) come from its chord sets. Yehnah is
+  not affiliated with or endorsed by Native Instruments.
 - **[hera-fm1](https://github.com/benbadio/hera-fm1)** by benbadio (GPL-3.0): the J-6 chord sets of HARP.
 - **[FMini-1](https://github.com/ruppert/fmini-1)** by Guilherme Ruppert (GPL-3.0): FMINI, the Minimoog engine: its ladder
   filter, oscillators, mixer and its 200 factory patches (`firmware/src/eng_fmini.c`, `eng_fmini_data.h`,

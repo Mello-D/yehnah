@@ -39,6 +39,7 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 | The Hügelton Sample Pack: Felucca's drum sounds, made by `tools/gen_waves.py` (not CC0; JIANT builds none of them in: SLICE, which played its BREAK, is retired) | GPL-3.0-only | `tools/gen_waves.py` |
 | The Fukiai icon font (<https://github.com/hugelton/Fukiai>): the firmware's icons (rasterised at build time by `tools/gen_aa_icons.py`) and the web editor's | MIT | `web/fukiai.ttf`, `LICENSES/MIT-Fukiai.txt`, `web/FUKIAI-LICENSE.txt` |
 | HARP's J-6 chord sets: the Roland J-6's 100 chord sets as its manual voices them, compiled by benbadio in hera-fm1 (<https://github.com/benbadio/hera-fm1>, 76b7ee8 `data/chordsets.json`), packed into the firmware at build time (`tools/gen_j6_chords.py` -> `firmware/src/harp_j6.h`) | GPL-3.0-only | `tools/j6/chordsets.json` |
+| HARP's own sixteen chord sets (MAJ1 to MAJ8, MIN1 to MIN8; `HARP_SETS` in `firmware/src/harp.c`): chord sets that come from Native Instruments' chord sets (per the author); a list of chords, no code | credit only | `firmware/src/harp.c` |
 
 ## Third-party material
 
