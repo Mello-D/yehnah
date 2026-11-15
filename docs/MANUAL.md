@@ -45,12 +45,13 @@ Yehnah has no user samples: it synthesises everything.
 
 ### Your first sound
 
-1. Power on. The name draws itself, then you land on **HOME**: the selected track as a small robot on a city street, its
-   four knobs under it.
+1. Power on. The name draws itself, then you land on your **home page**. There are two to choose from, **DANCE** (the
+   selected track as a small robot on a city street, its four knobs under it; the default) and **TRACKS** (every track's
+   sound, length, key and pattern at a glance). You pick which is yours in **GLO > DEVICE > HOME PAGE**.
 2. Turn **ALGORITHM** to pick a track. With the default **TRACKS 4** you can reach T1–T4; T5 and T6 appear with
    **TRACKS 6** (GLO > MAIN).
 3. Turn **PRESETS** to load a sound into the track, and play the keys.
-4. Turn **KNOB 1–4**: on HOME they are the four most useful controls of the track's engine.
+4. Turn **KNOB 1–4**: on DANCE they are the four most useful controls of the track's engine.
 
 ### Your first idea and your first save
 
@@ -85,7 +86,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 
 | Button | Tap | Hold |
 | --- | --- | --- |
-| **HOME** | HOME's first page, DANCE. | the **HOME layer**: SWARM's and TRACE's actions, on any page |
+| **HOME** | Your home page: **DANCE** or **TRACKS**, whichever you have chosen (**HOME PAGE**; DANCE by default). | the **HOME layer**: SWARM's and TRACE's actions, on any page |
 | **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, as a menu that stays open (see [12](#12-the-layers)) |
 | **ENV** | The envelopes: **ENV** (one page of rows). | nothing |
 | **LFO** | The **LFO** page: the LFO, the step modulator, the modulation matrix. | nothing |
@@ -100,7 +101,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | |
 
 A section's button opens the page of that section you were last on (its first page after power-on, until you have been on another). Pressed again while you are inside it, it goes back to
-**HOME > DANCE**. A button held past the hold time (**GLO > CONTROL > HOLD**) is its layer instead.
+your home page (**DANCE** or **TRACKS**, as you have chosen). A button held past the hold time (**GLO > CONTROL > HOLD**) is its layer instead.
 
 ### The keys
 
@@ -124,7 +125,7 @@ Yehnah has **no tabs**. Each section's pages are one chain, shown as a **row of 
 the page you are on lit. The rules are the same everywhere:
 
 1. **SELECT** walks the section's pages, round.
-2. A section's **button** opens the page you were last on in that section (its first page at power-on); pressed again inside it, it goes to HOME's first page, DANCE. The **HOME** button always goes to DANCE.
+2. A section's **button** opens the page you were last on in that section (its first page at power-on); pressed again inside it, it goes to your home page (DANCE or TRACKS, your choice: **HOME PAGE**). The **HOME** button always goes to it, and a second tap stays there.
 3. **PRESETS** loads a sound: in every section, never a page or track.
 4. A page that picks something picks it with **KNOB 1**; the track is **ALGORITHM**'s.
 5. A button **held** is its layer.
@@ -154,15 +155,22 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 ## 4. HOME, sounds and IDEAS
 
+HOME is a row of pages: **DANCE**, **TRACKS**, **PRESETS**, the **IDEAS**, **MORPH**, **SWARM**, **TRACE**, **SENDS** and **MIXER**.
+Two of them, **DANCE** and **TRACKS**, are the ones you can make your own **home page**: the page the unit opens at power-on
+and the **HOME** button (and a section's button pressed again inside it) returns to. **You choose which is your home
+screen** in **GLO > DEVICE > HOME PAGE** (**DANCE**, the default, or **TRACKS**); the choice is saved with the settings.
+A second tap of HOME never flips between the two.
+
 ### DANCE
 
-HOME's first page. The selected track is drawn as a robot on a city street, at dusk or by night. It walks, and dances to the notes the
+One of the two home pages (the default). The selected track is drawn as a robot on a city street, at dusk or by night. It walks, and dances to the notes the
 track plays. The four knobs under it are the track's own: the engine chooses which four (for ANALOG: CUTOFF, RESO,
 ATTACK, RELEASE). The scene moves with the tempo whether the song plays or not.
 
 ### TRACKS
 
-One row per track, to see the whole song at a glance: its **sound** and **engine**, its **length** in steps, its **key**
+The other home page: choose it in **HOME PAGE** if you would rather see the whole song than the robot. One row per track,
+to see the whole song at a glance: its **sound** and **engine**, its **length** in steps, its **key**
 (root and scale; a kit has none), the **pattern** written to it drawn as a small roll of its steps (a kit's hits in three
 lanes; EMPTY when nothing is written) with the playhead running along it, **ARP** or **REC** after the length, **MUTE**
 in place of the key, and the **level** in dB. The selected track's row is framed, and a muted track's is dimmed. Only the
@@ -384,25 +392,54 @@ LOC, MEL, BLUES, WHOLE, DIMHW, DIMWH). **ROOT** and **SCALE** are global: one ke
 own key**, so a song can change key between sections. **QUANT:** OFF, SNAP (the keys snap to the scale), WHITE (the white
 keys walk the scale), SEQ (the sequencer snaps too). **ALL TR** moves every sequence up or down the scale.
 
-### CHORD
+### The chord modes
 
-A key plays a chord on the track. **CHORD:** OFF; in key: **TRIAD, 7TH, ADD9, SUS2, SUS4**; on any key: **MAJ, MIN, 7,
-MAJ7, MIN7, POWER**; and the handheld modes **HARP, OMNI, PROG, GUITAR**. **VOICING:** CLOSE, LEAD (voice leading), OPEN,
-+BASS. **PLATE** is the strum plate. The chords record into steps, arpeggiate, and light the keys.
+SCL has six chord pages, **CHORD**, **HARP**, **OMNI**, **PROG**, **GUITAR** and **TUNE**. They are one idea in five
+flavours: a key plays a whole chord, and every flavour uses the **same layout**, so what you learn on one carries to the
+others. They suit holding the FM-1 in two hands like a console controller, **one thumb on the chord keys, the other
+thumb strumming the plate**, with the octave and bend keys under the strumming thumb.
 
-### HARP, OMNI, PROG, GUITAR, TUNE
+| Mode | What the chord keys play | Chord sets | From |
+| --- | --- | --- | --- |
+| **CHORD** | The chord on each scale degree, built by the mode you pick (TRIAD, 7TH, ADD9, SUS2, SUS4 in key; MAJ, MIN, 7, MAJ7, MIN7, POWER on any key) | one set: the scale's degrees I–VII, then I an octave up | built in |
+| **HARP** | Whole chords from a set of twelve | 116 sets: HARP's own **MAJ1–MAJ8** and **MIN1–MIN8**, then the **J-6's 100 sets** in 16 genres (POP, JAZZ, BOSSA, BLUES, FUNK, R&B, NEOSOUL, TRAD, CLASSIC, CINEMA, SYNTH, HOUSE, EDM, MODERN, STACKS, UTILITY) | HARP's own sets; the J-6 sets after benbadio's hera-fm1 |
+| **OMNI** | The Omnichord's chord keys: major, minor and seventh chords | 5 sets: **FOMNI** (the Omnichord's own layout), **MAJ**, **MIN**, **7**, **M7** | FoMni by Charles Vestal |
+| **PROG** | The chords of a progression, in order, one a key | 32 progressions (I V vi IV, vi IV I V, I vi IV V and so on) | built in |
+| **GUITAR** | Chords as a guitar plays them, up to six strings | 50 chord styles in 9 families (GT ORIG, JAZZ, LOFI, ROCK, BLUES, POP, SOUL, FOLK, AMB), in 14 tunings and 6 shapes | guitchordi by stoogs |
 
-**Playing it like a controller.** These modes are made for holding the FM-1 in two hands like a console controller:
-**one thumb plays the chords, the other strums the plate.** In HARP and OMNI the lowest keys (F3–E4) are the chord
-keys, and the white keys above them (from F4) are the **plate**: the notes of the chord you struck last, one string a
-key, so a sweep of the other thumb strums it. The black keys over the plate bend the notes while held (G#4 and A#4 an
-octave down and up, C#5 and D#5 a whole tone), and the top black key, F#5, latches the chord so it keeps sounding.
+**The layout.** The 27 keys, F3 to G5, are the same in every mode (CHORD uses fewer chord keys, see below):
 
-- **HARP:** a strip of chord keys. **KNOB 2 GENRE** picks a family of chord sets, **KNOB 3 SET** the set within it.
-- **OMNI:** the Omnichord's chord keys and strum plate: **SET**, **AUTO**.
-- **PROG:** chord progressions: **PROG** (1–32), **RATE**; **OCT+** writes the progression onto the track.
-- **GUITAR:** 50 chord styles: **GENRE**, **STYLE**. **TUNE** sets the tuning (14) and the chord shape.
-- **STRUM** spreads the notes of any chord mode low to high; it is a row of the **ARP** page.
+| Keys | Job |
+| --- | --- |
+| **F3 – E4** (the lowest twelve, black keys included) | The **chord keys**: chord 1 on F3 up to chord 12 on E4 |
+| **F4, G4, A4, B4, C5, D5, E5, F5, G5** (the nine white keys above) | The **plate**: the notes of the chord you struck last, one string a key. A sweep of the other thumb strums it. If the chord has more notes than keys it goes round again an octave up |
+| **G#4** and **A#4** | **Octave bend** down and up, while held |
+| **C#5** and **D#5** | **Whole-tone bend** down and up, while held |
+| **F#5** (the top black key) | **Latch**: the chord keeps sounding after you let go (with the ARP off; with the ARP on it is the arp's HOLD). The plate's notes never latch |
+| **F#4** | Silent, except on PROG, where it picks **WRITE** |
+
+In **CHORD** the chord keys are the lowest eight (F3 to C4: the scale's degrees I to VII and I an octave up), and the plate is
+the eleven white keys from D4. The keys light to show what they are, and a chord struck records into the sequencer.
+
+**Octave and bends.** There are four ways to move the notes while you play:
+
+- **OCT− / OCT+** moves the whole keyboard, chords and plate together, up or down by octaves (−3 to +3).
+- **PLATE** (KNOB 4 on every chord page; **STRINGS** on OMNI's page) sets the plate an octave down (**−1**), at the chord (**0**) or an octave up (**+1**), so the strumming thumb can sit above or below the chord.
+- **G#4 / A#4** bend the whole track an octave down or up for as long as you hold them, gliding there and back; **C#5 / D#5** do the same by a whole tone. Hold two and they add.
+- **ROOT** (KNOB 1) moves every set to another key, so a set built on C plays in any key. On a MONO, LEGATO or UNISON voice a chord plays its root alone.
+
+**The pages.** KNOB 1 is always ROOT and KNOB 4 PLATE.
+
+- **CHORD:** KNOB 2 CHORD (the mode: OFF, the in-key and any-key chords, or HARP, OMNI, PROG, GUITAR), KNOB 3 **VOICING** (CLOSE, LEAD for voice leading, OPEN, +BASS).
+- **HARP:** KNOB 2 **GENRE** picks a family of sets, KNOB 3 **SET** the set within it.
+- **OMNI:** KNOB 2 **SET**, KNOB 3 **AUTO**, how loud the chord voice is under the strings.
+- **PROG:** KNOB 2 **PROG** (1–32) picks the progression, KNOB 3 **RATE** (2 BAR, 1 BAR, 1/2 BAR) how long each chord lasts when written. **OCT+** (or F#4 then OCT+) **writes the progression onto the track** as chord steps; it says TOO LONG if it would not fit in 64 steps.
+- **GUITAR:** KNOB 2 **GENRE** picks a family of styles, KNOB 3 **SET** the style. The voicings are a guitar's in standard tuning; **TUNE** changes that.
+- **TUNE:** KNOB 1 **TUNING** (STD, DROP D, DBL DD, OPEN D, OPEN G, OPEN E, OPEN A, DADGAD, OPN Dm, OPN Gm, OPEN C, OPN D6, −1/2, −1), KNOB 2 **SHAPE** (1–6: other ways to finger the same chord in that tuning, found by a search of the fretboard).
+
+**Strumming.** The ARP's **STRDN, STRUP, STRALT, BLOCK, BS+CH, SHUF, HALF, 2/3** and **FAST** modes strum the notes of any chord mode low to high (or the reverse, together, or a random half), and the **STRUM** row of the ARP page sets how long a stroke takes. They are modelled on guitchordi's strums, with a small human variation in timing and strength.
+
+**Recording.** A chord you play records into the steps and plays back, and arpeggiates. HARP, OMNI and PROG record the chord itself, so a recorded step can show its name; the J-6 sets, GUITAR and CHORD record the notes. Chord modes do not apply to a drum kit.
 
 ### ARP
 
@@ -413,7 +450,7 @@ the arp is already playing stops it.
 - **MODE** has 27 values: UP, DN, UPDN, RND, ORD, REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD, TRNS, SKIP,
   HOLD, TURNG, STRDN, STRUP, STRALT, BLOCK, BS+CH, SHUF, HALF, 2/3 and FAST. **ORDER** says how the held notes are
   ordered.
-- In GUITAR chord mode a separate **strum player** has its own pattern, division and sweep.
+- The **STR…** modes strum a chord's notes like a guitar (see [The chord modes](#the-chord-modes)).
 
 ---
 
@@ -607,7 +644,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 | List | Rows |
 | --- | --- |
 | **MAIN** | **BPM**, **SWING**, **TRACKS** (1–6), **USB LEVEL** (MASTER: follows the MASTER knob; FIXED; or −6 to −24 dB, for a phone or computer whose input clips) · **CLICK** (OFF, REC, ON), **CLICK LEVEL**, **COUNT-IN** (OFF, 1 BAR, 2 BARS) |
-| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE, DUSK or CREAM), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (DANCE, the default, or TRACKS: the page power-on and the HOME button open; a second tap never flips between them) |
+| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE, DUSK or CREAM), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on and the HOME button open; a second tap never flips between them) |
 | **CONTROL** | **HOLD** (the layer threshold), **KNOB ACCEL**, **FX LATCH**, **CLOCK** (INT, USB, TRS) · **ROUTE** (CH1-6, SEL), **MIDI OUT** (KEYS, CLOCK, ALL, OFF), **SPEAKER EQ** (FLAT, LOWCUT, BASS+), **TUNE** |
 | **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT** |
 

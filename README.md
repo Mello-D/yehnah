@@ -81,11 +81,13 @@ RP2040.
 
 ## A tour
 
-### HOME: the track you are on
+### HOME: your home screen, DANCE or TRACKS
 
-HOME shows the selected track as a small robot that dances to what the track plays, on a city street at dusk or by night.
-Under it are the track's four knobs (the engine decides which four), and the pages of HOME are tabs along the foot:
-**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, the three **MORPH** pages, **SWARM**, **TRACE**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
+HOME is a row of pages, and you choose which one is **your home screen**: **DANCE** (the default) or **TRACKS**, in
+GLO > DEVICE > HOME PAGE. The unit opens on it at power-on and the HOME button returns to it. **DANCE** shows the selected
+track as a small robot that dances to what the track plays, on a city street at dusk or by night, with the track's four
+knobs under it (the engine decides which four). The pages of HOME are tabs along the foot:
+**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, **MORPH** (three morphs on one page), **SWARM**, **TRACE**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
 between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the last two.
 
 <table>
@@ -135,8 +137,8 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 - **Parameter locks.** Hold a step and turn a knob: that step plays its own value of any parameter.
 - **Per-step control:** ratchets, a step's **probability**, **fill-only** steps and **micro timing**.
 - **Live recording** with quantise off or on (the timing you played is kept as a nudge), a count-in and an optional click.
-- **An arpeggiator with 27 modes**, a hold, a swing and a probability, and **a separate strum player** for the GUITAR
-  chords with its own pattern, division and sweep.
+- **An arpeggiator with 27 modes**, a hold, a swing and a probability, including nine **strum** modes (down, up, alternate,
+  block, bass-and-chord, shuffled, half, two-thirds and fast) that play a chord like a guitarist's hand.
 - **A motion lane.** Knob moves and incoming MIDI CCs are recorded as automation and played back with the steps.
 
 ### Chords, played with one finger
@@ -153,10 +155,15 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   key. VOICING: CLOSE, LEAD (voice leading), OPEN or +BASS. Chords record into steps, arpeggiate and light up the keys
   so you can learn them.
 - **Handheld-style playing** after the Omnichord and the Orchid. The idea is to hold the FM-1 like a console controller:
-  **one thumb plays the chords, the other strums the plate**. In **HARP** and **OMNI** the lowest keys are the chord keys
-  and the white keys above them are the plate, the notes of the chord you just played, one string a key, to strum across
-  with the other thumb. STRUM spreads the notes low to high like a harp, and the tabs draw the chord keys as a strip.
-  **PROG** holds chord progressions and can write them onto a track, and **GUITAR** plays 50 chord styles in 14 tunings.
+  **one thumb plays the chords, the other strums the plate**, and every chord mode shares **one layout**: the twelve lowest
+  keys (F3 to E4) are the chord keys, the nine white keys above them are the plate (the notes of the chord you just played,
+  one string a key), and the black keys between the plate keys bend the track while held (an octave down or up, a whole tone
+  down or up) with the top black key latching the chord. **PLATE** moves the strings an octave down or up and OCT− / OCT+
+  moves everything. The tabs draw the chord keys as a strip.
+- **Five chord flavours on that layout:** **HARP** (116 sets: its own MAJ1-8 and MIN1-8, then the Roland J-6's 100 sets in 16
+  genres), **OMNI** (the Omnichord's chords: FOMNI, MAJ, MIN, 7, M7), **PROG** (32 chord progressions, which can be written
+  onto a track), **GUITAR** (guitchordi's 50 chord styles in 9 families, 14 tunings and 6 shapes) and **CHORD** (the chord on each
+  scale degree). The strum modes of the arpeggiator play any of them like a guitarist's hand.
 - **16 scales** with a root that is global for the song, a QUANT mode (off, snap, white keys walk the scale, or the
   sequencer snaps too) and **a key stored with each section**, so a song can change key from one section to the next.
 
