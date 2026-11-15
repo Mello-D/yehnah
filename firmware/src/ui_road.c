@@ -618,7 +618,7 @@ static void rb_home(int32_t en_home)
     bp = song.playing && fm1_ms - rbs.bms < 300u ? 1.0f - (float)(fm1_ms - rbs.bms) / 300.0f : 0.0f;
     rd_draw(t, way, now, bp, dy, sh);
     {                                                   /* the robot (a blend's: both, the same slide: kept apart) */
-        uint32_t me = song.sel % NTRK + 1u, other = bl_a == me ? bl_b : bl_b == me ? bl_a : 0u;
+        uint32_t me = song.sel % NTRK + 1u, ln = (uint32_t)(bl_lane_of(me) < 0 ? 0 : bl_lane_of(me)), other = bl_a[ln] == me ? bl_b[ln] : bl_b[ln] == me ? bl_a[ln] : 0u;
         static const int8_t RD_SLIDE[5] = {-48, -24, 0, 24, 48};
         uint32_t e = fm1_ms - rd.mms, k = VX_K(t), nn = vxs.nn[k], i;   /* (2026-11-03, the moonwalk, the user's: a dance
                                                          * move, a note in 10 of the track's at random: a quick slide to
@@ -637,12 +637,12 @@ static void rb_home(int32_t en_home)
             mo = clamp(mo, -24, 24);
         if (!other)
             rd_robot(t, ri, 120 + mo, dy + RD_FY, sh, way, en_home);
-        else if (bl_now >= 64u) {                       /* (B's the bigger share: in front) */
-            rd_robot(&trk[bl_a - 1u], rb_of(trk_eng(&trk[bl_a - 1u])), 72 + mo, dy + RD_FY, sh, way, en_home);
-            rd_robot(&trk[bl_b - 1u], rb_of(trk_eng(&trk[bl_b - 1u])), 168 + mo, dy + RD_FY, sh, way, en_home);
+        else if (bl_now[ln] >= 64u) {                   /* (B's the bigger share: in front) */
+            rd_robot(&trk[bl_a[ln] - 1u], rb_of(trk_eng(&trk[bl_a[ln] - 1u])), 72 + mo, dy + RD_FY, sh, way, en_home);
+            rd_robot(&trk[bl_b[ln] - 1u], rb_of(trk_eng(&trk[bl_b[ln] - 1u])), 168 + mo, dy + RD_FY, sh, way, en_home);
         } else {
-            rd_robot(&trk[bl_b - 1u], rb_of(trk_eng(&trk[bl_b - 1u])), 168 + mo, dy + RD_FY, sh, way, en_home);
-            rd_robot(&trk[bl_a - 1u], rb_of(trk_eng(&trk[bl_a - 1u])), 72 + mo, dy + RD_FY, sh, way, en_home);
+            rd_robot(&trk[bl_b[ln] - 1u], rb_of(trk_eng(&trk[bl_b[ln] - 1u])), 168 + mo, dy + RD_FY, sh, way, en_home);
+            rd_robot(&trk[bl_a[ln] - 1u], rb_of(trk_eng(&trk[bl_a[ln] - 1u])), 72 + mo, dy + RD_FY, sh, way, en_home);
         }
         rd.back = 0;
     }

@@ -620,10 +620,34 @@ static int32_t trk_trans(const track_t *t)
  * its own sound: a note to A goes to both, B's own steps stay silent while blended (its keys and MIDI play A: seq.c
  * input_on); BLEND shares the sound between them by their LEVELs (fx.c bl_block, mix_part). bl_a, bl_b: the pair the
  * audio plays (track + 1, 0 none); bl_g: each track's share, Q12 (4096 not in a blend); bl_now: where it is (0..127) */
-static uint8_t bl_a, bl_b, bl_now;
+#define NBL 3u                                          /* (2026-11-15) three morphs: three pairs of tracks (a track in one at most) */
+static uint8_t bl_a[NBL], bl_b[NBL], bl_now[NBL], bl_any;   /* (each pair: its A, B, where it is; bl_any: some pair is on) */
 static uint16_t bl_g[NTRK] = {4096, 4096, 4096, 4096, 4096, 4096};
-static track_t *bl_twin(const track_t *t) { return bl_b && (uint32_t)(t - trk) + 1u == bl_a ? &trk[bl_b - 1u] : 0; }
-static int bl_is_b(const track_t *t) { return bl_b && (uint32_t)(t - trk) + 1u == bl_b; }
+static int bl_lane_of(uint32_t id1)                     /* the pair (0..2) track id1 (1..6) is in, or -1 */
+{
+    uint32_t k;
+    for (k = 0; k < NBL; k++)
+        if (bl_a[k] && (bl_a[k] == id1 || bl_b[k] == id1))
+            return (int)k;
+    return -1;
+}
+static track_t *bl_twin(const track_t *t)               /* an A's B */
+{
+    uint32_t id = (uint32_t)(t - trk) + 1u;
+    int k = bl_lane_of(id);
+    return k >= 0 && bl_a[k] == id ? &trk[bl_b[k] - 1u] : 0;
+}
+static int bl_is_b(const track_t *t)
+{
+    uint32_t id = (uint32_t)(t - trk) + 1u;
+    int k = bl_lane_of(id);
+    return k >= 0 && bl_b[k] == id;
+}
+static track_t *bl_main(const track_t *t)               /* a B's A (else the track itself) */
+{
+    int k = bl_lane_of((uint32_t)(t - trk) + 1u);
+    return bl_is_b(t) ? &trk[bl_a[k] - 1u] : (track_t *)t;
+}
 
 static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int glide)
 {

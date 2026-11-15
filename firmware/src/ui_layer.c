@@ -795,9 +795,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         return sq_keyname(blk, p, nm);
     if (l == LAYER_HOME) {                              /* SWARM */
         static const char *const SN[SWA_N] = {"FREEZE", "REVERSE", "THROW", "CAPTURE", "SWARM"};
+        static const char *const TN[SWA_N] = {"FREEZE", "RANDOM", "REROLL", "CAPTURE", "TRACE"};   /* (TRACE: the shapes) */
         if (blk || p >= SWA_N)
             return LS_OFF;
-        str_cpy(nm, SN[p], 12);
+        str_cpy(nm, sw.mode ? TN[p] : SN[p], 12);
         return swarm_act_on(p) ? LS_SEL : swarm_act_ok(p) ? LS_OFF : LS_DIM;
     }
     if (l == LAYER_REC) {
@@ -1022,7 +1023,7 @@ static void layer_state(uint32_t l)
             lst_chip("BARS LEFT", v, 1);
         }
     } else if (l == LAYER_HOME) {                       /* SWARM: what is going on */
-        lst_chip("SWARM", sw.on ? "ON" : "OFF", sw.on);
+        lst_chip(sw.mode ? "TRACE" : "SWARM", sw.on ? "ON" : "OFF", sw.on);
         if (sw.on) {
             b[0] = 'T'; b[1] = (char)('1' + sw.trk); b[2] = 0;
             lst_chip("TRACK", b, 1);
@@ -1032,7 +1033,7 @@ static void layer_state(uint32_t l)
                 lst_chip("REVERSE S", v, 1);
             } else
                 lst_chip("REVERSE", 0, 0);
-            lst_chip("ROW", SW_ROW[sw.row], 1);
+            lst_chip("ROW", sw_rowname(), 1);
         }
     } else if (l == LAYER_SEQ) {                        /* what the keys would act on */
         b[0] = 'T'; b[1] = (char)('1' + song.sel); b[2] = 0;

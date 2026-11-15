@@ -674,47 +674,58 @@ static void bl_name(char *o, uint32_t k)                /* "T1 SAW LEAD": track 
     o[2] = ' ';
     str_cpy(o + 3, t->user ? "USER" : t->preset < ENG_NP(e) ? e->presets[t->preset].name : "-", 18);
 }
+/* (2026-11-15) three morphs on three pages (MORPH, MORPH 2, MORPH 3: the page's own lane is framed, its four knobs edit it): each lane a
+ * row, its two tracks named over it, the bar and the divider as before. A morph naming a track an earlier one has is off ("IN USE"):
+ * fx.c bl_block's rule */
 static void graph_blend(void)
 {
-    int32_t a = clamp(song.g[G_BLA], 0, NTRK), b = clamp(song.g[G_BLB], 0, NTRK), on = a && b && a != b;
-    int32_t x = on && bl_a && song.g[G_BMOVE] ? bl_now : clamp(song.g[G_BLEND], 0, 127), H = (int32_t)graph_h();
-    int32_t y0 = 42, y1 = H - 10, dx = BL_X0 + (on ? 127 - x : 127) * BL_W / 127, pa = on ? (127 - x) * 100 / 127 : 100;
-    uint16_t ca = on ? ux_mix(T_SURF, ux.k[0], 40) : T_BG, cb = on ? ux_mix(T_SURF, ux.k[1], 22) : T_BG;   /* (B paler) */
+    int32_t H = (int32_t)graph_h(), LH = (H - 3) / 3, cur = (cur_page()->id[0] - G_BLA) / 4, p0 = clamp(cur, 0, 2);
+    uint32_t k, used = 0;
     char p[24];
-    cv_text(BL_X0, 6 - AF_X_CAP_Y, &AF_X, "TRACK A", a ? ux.k[0] : T_DIM);
-    cv_text_r(BL_X0 + BL_W, 6 - AF_X_CAP_Y, &AF_X, "TRACK B", b ? ux.k[1] : T_DIM, T_SURF);
-    if (a)
-        bl_name(p, (uint32_t)a);
-    cv_clip_text(BL_X0, 18, &AF_M, a ? p : "OFF", on && pa >= 50 ? T_TEXT : T_MID, T_SURF, 110);
-    if (b)
-        bl_name(p, (uint32_t)b);
-    if (!b || text_w(&AF_M, p) <= 110)                  /* (right-aligned, as it fits) */
-        cv_text_r(BL_X0 + BL_W, 18, &AF_M, b ? p : "OFF", on && pa < 50 ? T_TEXT : T_MID, T_SURF);
-    else
-        cv_clip_text(BL_X0 + BL_W - 110, 18, &AF_M, p, on && pa < 50 ? T_TEXT : T_MID, T_SURF, 110);
-    if (!on) {
-        cv_rect(BL_X0, y0, BL_W, y1 - y0, T_BG);
-        cv_text_in(BL_X0, (y0 + y1) / 2 - 6, BL_W, &AF_M, a && a == b ? "TWO TRACKS, NOT ONE" : "PICK TWO TRACKS", T_MID, T_BG);
-        return;
-    }
-    cv_rect(BL_X0, y0, dx - BL_X0, y1 - y0, ca);
-    cv_rect(dx, y0, BL_X0 + BL_W - dx, y1 - y0, cb);
-    if (dx - BL_X0 >= 40) {                             /* the shares, where they fit */
-        fmt_int(p, pa);
-        str_cpy(p + str_len(p), "%", sizeof p - str_len(p));
-        cv_text_in(BL_X0, (y0 + y1) / 2 - 6, dx - BL_X0, &AF_M, p, T_TEXT, ca);
-    }
-    if (BL_X0 + BL_W - dx >= 40) {
-        fmt_int(p, 100 - pa);
-        str_cpy(p + str_len(p), "%", sizeof p - str_len(p));
-        cv_text_in(dx, (y0 + y1) / 2 - 6, BL_X0 + BL_W - dx, &AF_M, p, T_TEXT, cb);
-    }
-    {                                                   /* the divider, a grip on it */
-        int32_t gx = clamp(dx - 1, BL_X0, BL_X0 + BL_W - 2);
-        cv_rect(gx, y0 - 4, 2, y1 - y0 + 8, T_TEXT);
-        cv_rect(gx - 3, (y0 + y1) / 2 - 8, 8, 16, T_TEXT);
-        cv_rect(gx - 1, (y0 + y1) / 2 - 5, 1, 10, T_SURF);
-        cv_rect(gx + 2, (y0 + y1) / 2 - 5, 1, 10, T_SURF);
+    for (k = 0; k < NBL; k++) {
+        int32_t a = clamp(song.g[G_BLA + 4u * k], 0, NTRK), b = clamp(song.g[G_BLB + 4u * k], 0, NTRK);
+        int32_t clash = a && b && a != b && (((used >> a) & 1u) || ((used >> b) & 1u)), on = a && b && a != b && !clash;
+        int32_t x = on && bl_a[k] && song.g[G_BMOVE + 4u * k] ? bl_now[k] : clamp(song.g[G_BLEND + 4u * k], 0, 127);
+        int32_t ly = 2 + (int32_t)k * LH, y0 = ly + 11, y1 = ly + LH - 3, dx = BL_X0 + (on ? 127 - x : 127) * BL_W / 127, pa = on ? (127 - x) * 100 / 127 : 100;
+        uint16_t ca = on ? ux_mix(T_SURF, ux.k[0], 40) : T_BG, cb = on ? ux_mix(T_SURF, ux.k[1], 22) : T_BG;   /* (B paler) */
+        uint16_t hi = (int32_t)k == p0 ? T_TEXT : T_MID;
+        if (on)
+            used |= 1u << a | 1u << b;
+        if ((int32_t)k == p0)                           /* this page's morph */
+            cv_frame(BL_X0 - 3, ly - 1, BL_W + 6, LH - 1, T_ACCENT);
+        if (a)
+            bl_name(p, (uint32_t)a);
+        cv_clip_text(BL_X0, ly + 1 - AF_X_CAP_Y, &AF_X, a ? p : "OFF", a ? ux.k[0] : T_DIM, T_SURF, 108);
+        if (b)
+            bl_name(p, (uint32_t)b);
+        if (!b || text_w(&AF_X, p) <= 108)
+            cv_text_r(BL_X0 + BL_W, ly + 1 - AF_X_CAP_Y, &AF_X, b ? p : "OFF", b ? ux.k[1] : T_DIM, T_SURF);
+        else
+            cv_clip_text(BL_X0 + BL_W - 108, ly + 1 - AF_X_CAP_Y, &AF_X, p, ux.k[1], T_SURF, 108);
+        if (!on) {
+            cv_rect(BL_X0, y0, BL_W, y1 - y0, T_BG);
+            cv_text_in(BL_X0, (y0 + y1) / 2 - 5, BL_W, &AF_X, clash ? "A TRACK IS IN AN EARLIER MORPH" : a && a == b ? "TWO TRACKS, NOT ONE" : "PICK TWO TRACKS", T_MID, T_BG);
+            continue;
+        }
+        cv_rect(BL_X0, y0, dx - BL_X0, y1 - y0, ca);
+        cv_rect(dx, y0, BL_X0 + BL_W - dx, y1 - y0, cb);
+        if (dx - BL_X0 >= 40) {                         /* the shares, where they fit */
+            fmt_int(p, pa);
+            str_cpy(p + str_len(p), "%", sizeof p - str_len(p));
+            cv_text_in(BL_X0, (y0 + y1) / 2 - 6, dx - BL_X0, &AF_M, p, hi, ca);
+        }
+        if (BL_X0 + BL_W - dx >= 40) {
+            fmt_int(p, 100 - pa);
+            str_cpy(p + str_len(p), "%", sizeof p - str_len(p));
+            cv_text_in(dx, (y0 + y1) / 2 - 6, BL_X0 + BL_W - dx, &AF_M, p, hi, cb);
+        }
+        {                                               /* the divider, a grip on it */
+            int32_t gx = clamp(dx - 1, BL_X0, BL_X0 + BL_W - 2), my = (y0 + y1) / 2;
+            cv_rect(gx, y0 - 2, 2, y1 - y0 + 4, T_TEXT);
+            cv_rect(gx - 3, my - 6, 8, 12, T_TEXT);
+            cv_rect(gx - 1, my - 3, 1, 6, T_SURF);
+            cv_rect(gx + 2, my - 3, 1, 6, T_SURF);
+        }
     }
 }
 #undef BL_X0
@@ -924,7 +935,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP &&   /* (0.8.3: LENTE's step, the heads) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS &&
-           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && g != GR_SWARM;
+           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && !GR_IS_SWARM(g) && g != GR_SUMMARY;
 }
 static void graph_drift(void)
 {
@@ -1110,7 +1121,8 @@ static uint32_t graph_signature(void)
         uint32_t k;
         for (k = 0; k < NTRK; k++)
             h = (h ^ (trk[k].preset | (uint32_t)trk[k].user << 8 | (uint32_t)trk[k].eng_req << 9)) * 16777619u;
-        h = (h ^ ((uint32_t)bl_now << 16 | (uint32_t)song.g[G_BLEND] << 8)) * 16777619u;
+        for (k = 0; k < NBL; k++)
+            h = (h ^ ((uint32_t)bl_now[k] << 16 | (uint32_t)song.g[G_BLEND + 4u * k] << 8 | (uint32_t)song.g[G_BLA + 4u * k] << 4 ^ (uint32_t)song.g[G_BLB + 4u * k])) * 16777619u;
     }
     if (pg->scope == SC_ENGINE && (trk_engp(t) == &ENG_WHEEL || trk_eng(t) == ENGI_FM6 ||
                                    (YEHNAH_FM4 && trk_eng(t) == ENGI_DIGITAL)))
@@ -1127,7 +1139,7 @@ static uint32_t graph_signature(void)
         h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
         if (pg->graph == GR_USER)
             h ^= bg_energy() > 2 ? ui.frame * 2654435761u : 0u;   /* (the being moves with the sound) */
-        if (pg->graph == GR_SWARM)                       /* (SWARM: the dots move every frame) */
+        if (GR_IS_SWARM(pg->graph))                  /* (SWARM: the dots move every frame) */
             h ^= ui.frame * 2654435761u;
         if (pg->graph == GR_SEDIT) {                     /* (SONG EDIT: the rows, their trims, the bar highlighted) */
             for (i = 0; i < CHAIN_ROWS; i++) {
@@ -1436,6 +1448,10 @@ static void draw_graph(void)
     }
     if (SWARM_FULL && swarm_page_on()) {             /* (2026-11-15) SWARM: the panel down to the page row, in two passes as FX ALL's */
         swarm_draw();
+        return;
+    }
+    if (summary_page_on()) {                         /* (2026-11-15) TRACKS: the same, one row a track */
+        summary_draw();
         return;
     }
     if (!ui.home && pg->graph == GR_TRK) {

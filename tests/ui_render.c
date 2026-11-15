@@ -577,7 +577,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
        S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_WHEEL, S_V6_WHEEL_FAST, S_V6_WHEEL_HOME, S_V6_WHEEL_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_V6_ANIMAL_FULL, S_HOME_FACES,
-       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_HM_GLO, S_HM_GLO_SYS, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
+       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_HM_GLO, S_HM_GLO_SYS, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
        S_TOAST_ENV, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH,
        S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
@@ -613,7 +613,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
     "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_wheel", "v6_wheel_fast", "v6_wheel_home", "v6_wheel_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full", "v6_voice_full", "v6_animal_full", "home_faces",
-    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "hm_glo", "hm_glo_sys", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
+    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "hm_glo", "hm_glo_sys", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
     "toast_env", "toast_motion", "toast_motion_locks", "toast_punch",
     "toast_pattern", "toast_fm6_op", "toast_analog"};
 
@@ -1417,6 +1417,59 @@ static void setup(int s)
             ui.layer = LAYER_HOME;
             ui.lylv = 0;
         }
+        ui.msg_t = 0;
+        break;
+    }
+    case S_TRACE: case S_TRACE_ACT: {                   /* (2026-11-15) HOME > TRACE: four dots on four shapes, turned along them */
+        uint32_t n;
+        eng(ENGI_DRIFT);
+        memset(&sw, 0, sizeof sw);
+        nav_scene(SEC_HOME, "TRACE");
+        sw.tph[0] = 0.30f; sw.tph[1] = 0.85f; sw.tph[2] = 0.25f; sw.tph[3] = 0.60f;
+        sw.sel = 1;
+        for (n = 0; n < 40u; n++) {
+            fm1_ms += 50u;
+            swarm_tick();
+        }
+        if (s == S_TRACE_ACT) {
+            ui.layer = LAYER_HOME;
+            ui.lylv = 0;
+        }
+        ui.msg_t = 0;
+        break;
+    }
+    case S_TRACKS: case S_MORPH3: {                     /* (2026-11-15) HOME > TRACKS: a row a track; MORPH's three lanes */
+        static const uint8_t ENGS[6] = {ENGI_JUNO, ENGI_ANALOG, ENGI_NOISE, ENGI_DRUM, ENGI_OMNI, ENGI_STRINGS};
+        static const uint8_t LENS[6] = {16, 16, 32, 16, 12, 16};
+        uint32_t c, i;
+        ui_power_on();
+        for (c = 0; c < NTRK; c++) {
+            track_t *t = &trk[c];
+            set_engine_of(t, ENGS[c]);
+            t->engine = t->eng_req;
+            t->p[P_SLEN] = LENS[c];
+            memset(t->step, 0, sizeof t->step);
+            for (i = 0; i < NSTEP; i++)
+                t->step[i].time = ST_REST;
+            for (i = 0; i < LENS[c] && c != 5u; i++) {
+                step_t *st = &t->step[i];
+                if (c == 3u) {
+                    st->time = ST_NOTE; st->n = 0; st->hit = (uint8_t)((i % 4u == 0u ? 1u : 0u) | (i % 8u == 4u ? 2u : 0u) | (i % 2u == 0u ? 4u : 0u));
+                } else if (c == 0u ? i % 8u == 0u : c == 1u ? (i % 4u == 0u || i % 8u == 6u) : c == 2u ? (i * 7u) % 5u < 3u : 1) {
+                    st->time = ST_NOTE; st->n = 1;
+                    st->note[0] = (uint8_t)(48u + (c == 0u ? 12u : c == 1u ? (i / 4u % 3u) * 3u : c == 2u ? (i * 5u) % 12u : (uint32_t)(i % 4u) * 3u));
+                    st->vel = 100;
+                }
+            }
+            t->p[P_LEVEL] = (int16_t)(100 + c * 3u);
+        }
+        trk[2].p[P_MUTE] = 1;
+        trk[4].p[P_AMODE] = 1;
+        song.sel = 1;
+        song.g[G_BLA] = 1; song.g[G_BLB] = 2; song.g[G_BLEND] = 40;
+        song.g[G_BL2A] = 3; song.g[G_BL2B] = 4; song.g[G_BL2BLEND] = 90;
+        song.g[G_BL3A] = 5; song.g[G_BL3B] = 5;
+        nav_scene(SEC_HOME, s == S_TRACKS ? "TRACKS" : "MORPH 2");
         ui.msg_t = 0;
         break;
     }

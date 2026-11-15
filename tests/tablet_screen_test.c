@@ -329,7 +329,7 @@ int main(int argc, char **argv)
         printf(" A2: HOME > MIXER and SENDS idle, the tablet's repaints (the trickle's, twice a second)\n");
         press(B_HOME);
         for (k = 0; k < 8u && !(!ui.home && cur_page()->graph == GR_TRK); k++)
-            turn(EN_SELECT, 1, 1);
+            turn(EN_SELECT, -1, 1);                       /* (2026-11-15: MIXER is the chain's last page, one turn left of HOME; SENDS before it) */
         check("HOME > MIXER reached", !ui.home && cur_page()->graph == GR_TRK);
         for (k = 0; k < 2u; k++) {
             run_ms(300);
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
             printf("       %s: %u pieces drawn over in 2 s (a flash), %u ms wrong\n", k ? "SENDS" : "MIXER", flashes - f0, wrong);
             check(k ? "SENDS: no clear under the repaints (no flash on the tablet), the canvas right" :
                       "MIXER: no clear under the repaints (no flash on the tablet), the canvas right", flashes == f0 && !wrong);
-            turn(EN_SELECT, 1, 1);
+            turn(EN_SELECT, -1, 1);
         }
     }
 

@@ -107,7 +107,8 @@ static void tab_scr_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_
 #include "ui_draw.c"
 #include "ui_menu.c"
 #include "ui_input.c"
-#include "ui_swarm.c"           /* (2026-11-15) SWARM's page: its panel, cards, knobs */
+#include "ui_swarm.c"
+#include "ui_summary.c"            /* (2026-11-15) HOME > TRACKS: the summary of the tracks */           /* (2026-11-15) SWARM's page: its panel, cards, knobs */
 #include "ui_hmenu.c"             /* SCL / EDIT / GLO held: a list menu that stays open */
 #include "ui_layer.c"              /* the quick layers (FX GLO SCL EDIT REC held; SEQ TOOLS: ui_tools.c) */
 

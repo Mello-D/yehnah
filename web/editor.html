@@ -1568,6 +1568,8 @@ function makeMockDevice(opt = {}) {
     E("TRACK A", ["OFF", "T1", "T2", "T3", "T4", "T5", "T6"], 0), E("TRACK B", ["OFF", "T1", "T2", "T3", "T4", "T5", "T6"], 0),
     D("BLEND", F.PCT, 0, 127, 64), E("MOVE", ["OFF", "VEL", "WHEEL", "LFO 1", "LFO 2", "LFO 4", "LFO 8", "LFO 16"], 0),   /* (chord-harp
        fork, 2026-10-29) G_BLA 71 .. G_BMOVE 74: SAVE > MORPH, two tracks playing one part */
+    ...Array.from({ length: 2 }, () => [E("TRACK A", ["OFF", "T1", "T2", "T3", "T4", "T5", "T6"], 0), E("TRACK B", ["OFF", "T1", "T2", "T3", "T4", "T5", "T6"], 0),
+      D("BLEND", F.PCT, 0, 127, 64), E("MOVE", ["OFF", "VEL", "WHEEL", "LFO 1", "LFO 2", "LFO 4", "LFO 8", "LFO 16"], 0)]).flat(),   /* (2026-11-15) G_BL2A 75 .. G_BL3MOVE 82: MORPH 2 and 3 */
   ];
   const NONE = D("-", F.INT, 0, 0, 0);
   const RATIO = [".5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "14", "16"];
@@ -2160,7 +2162,7 @@ function makeMockDevice(opt = {}) {
   /* 129..132 (chord-harp fork, 2026-11-05): ARP > AMBIENT (seq.c amb.c), the track's */
   TP.push(E("AMBNT", ["OFF", "HOLD", "LATCH"], 0), D("DENS", F.PCT, 0, 127, 40), D("MOTN", F.PCT, 0, 127, 30),
     D("SPACE", F.PCT, 0, 127, 64));
-  const P_COUNT = 141, G_COUNT = 75, NSTEP = 64, P_E0 = 133, G_ENGSEL = 20, P_SLCR = 45;
+  const P_COUNT = 141, G_COUNT = 83, NSTEP = 64, P_E0 = 133, G_ENGSEL = 20, P_SLCR = 45;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const enumOrig = (d, v) => d.fmt === F.ENUM && d.names ? aliasOf(d.names, v - d.min) + d.min : v;   /* params.c enum_orig */
   /* tracks (firmware v3): four synth parts (1.0), six (0.6); engine / preset / p / step below are the selected track's */

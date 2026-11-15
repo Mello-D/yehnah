@@ -1434,7 +1434,7 @@ static uint8_t in_norec;                            /* (0.6.84) input_on plays w
 static void input_on(track_t *t, uint32_t note, uint32_t vel)
 {
     if (bl_is_b(t))                                 /* (chord-harp fork) a blend's B: its keys and MIDI play A (both) */
-        t = &trk[bl_a - 1u];
+        t = bl_main(t);
     last_note = (uint8_t)note;
     if (cin_left)
         cin_keep(t, note, vel);
@@ -1456,7 +1456,7 @@ static int midi_local_held(const track_t *t, uint32_t note);
 static void input_off(track_t *t, uint32_t note)
 {
     if (bl_is_b(t))
-        t = &trk[bl_a - 1u];
+        t = bl_main(t);
     if (midi_note_held(t, note))
         return;
     if (cin_left) {                                 /* a kept note let go before step 1: recorded, then let go */
@@ -1943,7 +1943,7 @@ static void keyboard_block(void)
         if (!((ch >> k) & 1u))
             continue;
         if ((cur >> k) & 1u) {                    /* the selected track; the key-up goes to the same one */
-            kb_trk[k] = bl_is_b(&trk[song.sel]) ? bl_a - 1u : song.sel;   /* (chord-harp fork) a blend's B: A's keys
+            kb_trk[k] = bl_is_b(&trk[song.sel]) ? (uint32_t)(bl_main(&trk[song.sel]) - trk) : song.sel;   /* (chord-harp fork) a blend's B: A's keys
                                                      * (its harp, chords, bend), so both tracks sound alike */
             if (kb_asleep) {                      /* (SCREEN OFF: the wake press is swallowed) */
                 kb_note[k] = KB_SILENT;

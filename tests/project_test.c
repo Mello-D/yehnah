@@ -850,6 +850,17 @@ int main(void)
             ok = proj_packed_size(&b1) == n0 + 6u && proj_pack(&fs, &b1) && proj_import(&b2, &fs, sizeof fs) &&
                  !memcmp(b2.g, b1.g, sizeof b1.g) && !memcmp(b2.t, b1.t, sizeof b1.t) && !memcmp(b2.name, "SIX", 3);
             bad += check("chord-harp: the track BLEND (T2 T5 100 LFO 2) round trips in its block, none at the defaults", ok);
+            b1 = f;                                     /* (2026-11-15) MORPH 2 and 3: a 'B2' block (10 bytes), none at their defaults */
+            for (i = G_BLA; i <= G_BL3MOVE; i++) b1.g[i] = GP[i].def;
+            n0 = proj_packed_size(&b1);
+            b1.g[G_BL2A] = 3; b1.g[G_BL2B] = 4; b1.g[G_BL2BLEND] = 20; b1.g[G_BL3A] = 5; b1.g[G_BL3B] = 6; b1.g[G_BL3MOVE] = 3;
+            b1.sum = proj_sum(&b1);
+            ok = proj_packed_size(&b1) == n0 + 10u && proj_pack(&fs, &b1) && proj_import(&b2, &fs, sizeof fs) &&
+                 !memcmp(b2.g, b1.g, sizeof b1.g) && !memcmp(b2.t, b1.t, sizeof b1.t);
+            b1.g[G_BLA] = 1; b1.g[G_BLB] = 2; b1.sum = proj_sum(&b1);                   /* (with the first morph too) */
+            ok &= proj_packed_size(&b1) == n0 + 16u && proj_pack(&fs, &b1) && proj_import(&b2, &fs, sizeof fs) &&
+                  !memcmp(b2.g, b1.g, sizeof b1.g);
+            bad += check("MORPH 2 and 3 (T3 T4, T5 T6) round trip in their own block (with or without the first morph)", ok);
         }
         ok = proj_pack_vb(&gs, &f) && proj_import(&h, &gs, sizeof gs) && !memcmp(h.t, f.t, PROJ_LT * sizeof f.t[0]) &&
              h.t[4].engine == trk_old_engine(4u) && h.t[5].engine == trk_old_engine(5u) && h.t[5].step[0].time == ST_REST;

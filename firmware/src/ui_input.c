@@ -1251,7 +1251,11 @@ static void edit_param(uint32_t slot, int32_t steps)
         else if (slot == 3u) ui.act = steps > 0 ? 4u : 0u;
         return;
     }
-    if (pg->graph == GR_SWARM) {                        /* (2026-11-15) SWARM: K1..K4 the dots, the row SELECT picked */
+    if (pg->graph == GR_SUMMARY) {                  /* (2026-11-15) TRACKS: K1 picks the track */
+        summary_knob(slot, steps);
+        return;
+    }
+    if (GR_IS_SWARM(pg->graph)) {                   /* (2026-11-15) SWARM, TRACE: K1..K4 the dots, the row SELECT picked */
         swarm_knob(slot, steps);
         return;
     }
@@ -2574,7 +2578,7 @@ static void ui_input_frame(void)
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || BAR_PAGE(pg)) &&
              k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || pg->graph == GR_SWARM || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (LIST_PG(pg) && k == 0u)) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_SEDIT || GR_IS_SWARM(pg->graph) || pg->graph == GR_SUMMARY || pg->graph == GR_DXSND || pg->graph == GR_STAGE || (LIST_PG(pg) && k == 0u)) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }

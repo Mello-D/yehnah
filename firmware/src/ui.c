@@ -73,6 +73,8 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define usb_lvl (favorites.factory[15][22])   /* (0.7.0) MENU > USB LEVEL past FIXED: 0 FULL, 1..4 = -6 -12 -18 -24 dB
                                                  * (with PREF_USB_FIXED; a byte no engine uses, 0 in older settings) */
 static const int16_t USB_GAIN[5] = {4096, 2048, 1024, 512, 256};   /* Q12: 0 -6 -12 -18 -24 dB */
+#define PREF_HOME_TRACKS 32u                   /* (2026-11-15, the user's) MENU > HOME PAGE: TRACKS; clear (the default): DANCE (the page power-on and
+                                                * the HOME button open; bit 5 was LARGE, gone 2026-11-02) */
 #define PREF_SNAKE 16u                         /* (2026-11-02, the user's held note c) GLO > SCREEN FILL SNAKE: the knob
                                                 * cells fill down the first column, up the next .. (ui_draw.c kn_px) */
 /* (32u: MENU > LARGE / GLO > BIG VIEW, gone 2026-11-02: the redesign's knob cells for every page) */
@@ -601,7 +603,7 @@ static int pg_row(void) { return lz_on() && !ui.menu && !dlg_on() && !name_on();
 static int kn_cells(void) { return trk_face() || pg_row(); }
 /* (2026-11-13) FX ALL shown: its panel runs to the foot (no knob cells, no page row) */
 static int fxall_on(void) { return PAGES[ui.page].graph == GR_FXALL && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
-static int sets_full(void) { return (PAGES[ui.page].graph == GR_SETS || (SWARM_FULL && PAGES[ui.page].graph == GR_SWARM)) && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
+static int sets_full(void) { return (PAGES[ui.page].graph == GR_SETS || (SWARM_FULL && GR_IS_SWARM(PAGES[ui.page].graph)) || PAGES[ui.page].graph == GR_SUMMARY) && !page_over && !ui.layer && !ui.menu && !ui.home && kn_cells(); }
 
 /* transient message in the top bar, right of the transport and the BPM: a + b */
 static void ui_say(const char *a, const char *b)
@@ -749,7 +751,7 @@ static void page_entered(void)
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* clear the previous page's emphasis */
     ui.act = pg->graph == GR_USER ? 4u : 0u;     /* the save screen is ready for OCT+ */
-    if (!ui.home && pg->graph == GR_SWARM)
+    if (!ui.home && GR_IS_SWARM(pg->graph))
         swarm_enter();                           /* (2026-11-15) SWARM starts, or follows the track */
     ui.force = 1;
 }

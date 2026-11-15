@@ -128,6 +128,7 @@ static void yehnah_init(void)
     song.master_q12 = 2048;                   /* (the pot's level replaces it before the audio starts: master_boot) */
     ui.home = 1;
     ui.force = 1;
+    home_boot();                              /* (2026-11-15) MENU > HOME PAGE TRACKS: that page */
 }
 
 /* The power-on LED sweep (1.1, hal/fm1_led_anim.h: a soft light over the keys left to right, then the buttons swell

@@ -130,6 +130,7 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
 #include "../firmware/src/ui_swarm.c"
+#include "../firmware/src/ui_summary.c"
 #include "../firmware/src/ui_hmenu.c"
 #include "../firmware/src/ui_layer.c"
 #include "../firmware/src/upreset.c"
@@ -307,10 +308,39 @@ static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC
     frame();
 }
 #if FELUCCA_MACROPAGE
-#define HCNT(n) #n "/12"
+#define HCNT(n) #n "/15"
 #else
-#define HCNT(n) #n "/11"
+#define HCNT(n) #n "/15"
 #endif
+#define NAV_FIRST(sec) (ui.nmem[nav_key(sec)] = 0)           /* (2026-11-15) MENU > HOME PAGE: DANCE (the default) or TRACKS: power-on and the HOME button; a second tap does not flip */
+static int test_home_page(void)
+{
+    int bad = 0, ok;
+    ui_power_on(); frame();
+    ok = menu_n(MI_HOMEPG) == 2u && str_eq(menu_vname(MI_HOMEPG, 1), "TRACKS") && MI_TAB[MI_HOMEPG] == MTAB_DISPLAY && menu_get(MI_HOMEPG) == 0u;
+    press(B_SCL); frame();
+    press(B_HOME); frame();
+    ok &= ui.home;                                                  /* the default: DANCE */
+    menu_put(MI_HOMEPG, 1);
+    ok &= (ui_prefs & PREF_HOME_TRACKS) && menu_get(MI_HOMEPG) == 1u;
+    press(B_SCL); frame();
+    frames(320); press(B_HOME); frame();
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;           /* HOME: TRACKS */
+    frames(320); press(B_HOME); frame();
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;           /* a second tap: still TRACKS (no flip) */
+    frames(320); press(B_SCL); frame();
+    frames(320); press(B_SCL); frame();                             /* a section's button again: HOME's page, TRACKS */
+    ok &= PAGES[ui.page].graph == GR_SUMMARY && !ui.home;
+    go_home(); frame();                                             /* (the power-on: the same page) */
+    home_boot(); frame();
+    ok &= PAGES[ui.page].graph == GR_SUMMARY;
+    menu_put(MI_HOMEPG, 0);
+    frames(320); press(B_HOME); frame();
+    ok &= ui.home;
+    bad += check("MENU > HOME PAGE: DANCE or TRACKS for power-on and the HOME button; a second tap does not flip", ok);
+    return bad;
+}
+/* (2026-11-15) a section's button opens the page last on, the first at power-on: tests that want the first forget it */
 static void ideas_open(void) { nav_go(SEC_HOME, HOME_IDEA + gen_page(), 1); frame(); }   /* (2026-11-02: HOME + SELECT gone) */
 static void stop_transport(void) { transport_req = 0; song.playing = 0; }
 static int16_t stored_param(uint32_t slot, uint32_t track, uint32_t id)
@@ -1174,6 +1204,7 @@ static int test_save(void)
     sel_turn( -1);
     bad += check("SELECT left: ARRANGE", cur_page()->graph == GR_SONG);
     go_home();
+    NAV_FIRST(SEC_SAVE);
     press(B_SAVE);
     bad += check("SAVE from HOME: its first, PROJECTS, not armed (was USER, armed)",
                  cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u);
@@ -2483,7 +2514,7 @@ static int test_product_ux(void)
     bad += check("MIXER K3 solos, never sequence length", TSEL->p[P_SLEN] == len && ui.msolo == 1u);
     turn(EN_K3, -1);
     frames(320);                                       /* (taps further apart than a double tap: #83) */
-    sel_turn( 1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain; GLO its */
+    sel_turn( -1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain, (2026-11-15) left: MIXER is the last page; GLO its */
     press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLO");   /* first) */
     press(B_GLO); frames(320); ok &= ui.home && home_level() == 0u;
     press(B_GLO); ok &= str_eq(cur_page()->title, "GLO");
@@ -5902,8 +5933,9 @@ static int test_save_lens(void)
     ui_power_on(); go_home(); frame(); press(B_SAVE); frame();
     sel_turn( 1); frame();                                         /* ARRANGE, left there */
     go_home(); frame(); press(B_SAVE); frame();
-    ok = cur_page()->graph == GR_SLOTS && save_level() == SV_LIB && ui.act == 0u;   /* (its first, PROJECTS) */
-    bad += check("SAVE from elsewhere its first, PROJECT (not the page left, ARRANGE)", ok);
+    ok = cur_page()->graph == GR_SONG && ui.act == 0u;                             /* (2026-11-15: the page left, ARRANGE) */
+    bad += check("SAVE from elsewhere: the page last on, ARRANGE (it was always the first, PROJECT)", ok);
+    sel_turn( -1); frame();                                                  /* (PROJECT again for the next tests) */
     turn(EN_K1, 1); frame();                                                 /* LIBRARY: KNOB 1 the project */
     ok = song_cur == 1u;
     turn(EN_K1, -1); frame();
@@ -5955,6 +5987,7 @@ static int test_lente(void)
     go_step(); frame();
     sel_turn( 2); frames(32);                                                /* COMP */
     go_title("ENV"); frame();
+    NAV_FIRST(SEC_SEQ);
     open_family(FAM_SEQ); frame();
     ok = str_eq(cur_page()->title, "STEP");                                        /* (its first, held note a) */
     track_select(1); frame(); go_home(); frame();
@@ -8526,10 +8559,10 @@ static int test_bpm_lock(void)
     ok = song.g[G_BPM] == b0 && cur_page()->fam == FAM_GLO && fxa_cur == 1u;   /* (2026-11-13: SELECT scrolls GLO's rows) */
     sel_turn( -1);
     ok &= cur_page()->fam == FAM_GLO && fxa_cur == 0u;
-    go_home(); frame(); sel_turn( 1);
+    go_home(); frame(); sel_turn( 2);
     ok &= !ui.home && !ui.confirm && str_eq(cur_page()->title, "PRESETS");   /* (2026-11-02: TRACKS PRESETS MORPH MIXER
                                                          * SENDS MACRO IDEAS ..) */
-    sel_turn( 5);
+    sel_turn( 1);                                             /* (2026-11-15: the IDEAS follow PRESETS) */
     ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: GEN */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); sel_turn( 1);
@@ -8618,7 +8651,7 @@ static int test_bpm_lock(void)
     {   /* (0.6.67) the MIXER: SELECT the next of GLO's pages, the tempo kept */
         go_title("MIXER"); frame(); fm1_ms += 1200u;
         b0 = song.g[G_BPM];
-        sel_turn( 1);                             /* (0.9.2: MIXER -> SENDS, the next page) */
+        sel_turn( -1);                            /* (0.9.2: MIXER -> SENDS; 2026-11-15: left, SENDS is the page before) */
         ok = song.g[G_BPM] == b0 && str_eq(cur_page()->title, "SENDS") && !ui.confirm;
         bad += check("0.6.69: SELECT on the MIXER goes through GLO's pages (0.9.2: SENDS next)", ok);
     }
@@ -9345,86 +9378,81 @@ static int test_lz_home(void)
     ok = ui.home && lz_on() && lz_fam() == LZ_HOME && home_level() == 0u && !home_set() && trk_face() &&
          swap16(host_screen[(TF_PG_Y + TF_PG_H / 2) * 240 + 92]) == T_THEME &&   /* (TRACKS, the page row: its page in
                                                                      * the middle pill) */
-         lz_tabs() == 4u && lz_crumb_is("HOME \xB7 TRACKS") && lz_count_is(HCNT(1));
+         lz_tabs() == 4u && lz_crumb_is("HOME \xB7 DANCE") && lz_count_is(HCNT(1));
     press(B_HOME); frame();                                         /* a HOME tap on TRACKS: TRACKS */
     ok &= ui.home && home_level() == 0u && lz_count_is(HCNT(1));
-    sel_turn( 1); frame();                                    /* SELECT right: PRESETS */
-    ok &= !ui.home && nav_sec() == SEC_HOME && str_eq(cur_page()->title, "PRESETS") && lz_tab_lit(1) &&
-          lz_crumb_is("HOME \xB7 PRESETS") && lz_count_is(HCNT(2));
-    sel_turn( 1); frame();                                    /* MORPH */
-    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(3));
-    press(B_HOME); frame();                                         /* a HOME tap: TRACKS */
-    ok &= ui.home && home_level() == 0u && !home_set();
-    sel_turn( 3); frame();                                    /* MIXER */
-    ok &= str_eq(cur_page()->title, "MIXER") && lz_tab_lit(2) && lz_crumb_is("HOME \xB7 MIXER") && lz_count_is(HCNT(4));
-#if FELUCCA_MACROPAGE
-    sel_turn( 2); frame();                                    /* SENDS, MACRO */
-    ok &= ui.home && home_macros() && lz_crumb_is("HOME \xB7 MACRO") && lz_count_is("6/12");
-    k = macro_v[0];
-    turn(EN_K1, 3); frame();
-    ok &= macro_v[0] == (uint8_t)(k + 3u) && !strncmp(ui.col[0], "M1|", 3);
-    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
-    sel_turn( -5); frame();                                   /* TRACKS: the HOME knobs */
-#else
-    sel_turn( 1); frame();                                    /* SENDS (2026-11-06: no MACRO page) */
-    ok &= !home_macros();
-    sel_turn( 1); frame();                                    /* (2026-11-15) SWARM, after SENDS */
-    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is("6/11");
-    sw.row = 0;                                               /* (SELECT scrolls SWARM's rows first, then goes on) */
-    k = macro_v[0] - 3u;                                            /* (the check below adds the 3 the MACRO page turned) */
-    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
-    sel_turn( -5); frame();                                   /* TRACKS: the HOME knobs */
-#endif
-    turn(EN_K1, 1); frame();
-    ok &= ui.home && !home_set() && home_level() == 0u && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c &&
-          macro_v[0] == (uint8_t)(k + 3u);
-    sel_turn( -1); frame();                                   /* (it wraps, IDEA TEX) */
-    ok &= gen_on() && nav_cur() == HOME_IDEA + 4u;
-    sel_turn( 1); frame();                                    /* (.. and on round: TRACKS) */
-    ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
-    bad += check("HOME: TRACKS PRESETS MORPH MIXER SENDS MACRO IDEAS one chain by SELECT (round), a HOME tap TRACKS, n/11", ok);
-#if FELUCCA_MACROPAGE
-    sel_turn( 5); frame();                                    /* MACRO */
-    ok = home_macros() && lz_tab_lit(2);
+    sel_turn( 1); frame();                                    /* SELECT right: TRACKS (2026-11-15: the summary; the old one is DANCE) */
+    ok &= !ui.home && nav_sec() == SEC_HOME && str_eq(cur_page()->title, "TRACKS") && cur_page()->graph == GR_SUMMARY &&
+          lz_crumb_is("HOME \xB7 TRACKS") && lz_count_is(HCNT(2));
+    sel_turn( 1); frame();                                    /* PRESETS */
+    ok &= !ui.home && str_eq(cur_page()->title, "PRESETS") && lz_crumb_is("HOME \xB7 PRESETS") && lz_count_is(HCNT(3));
+    sel_turn( 1); frame();                                    /* (2026-11-15) the IDEAS follow PRESETS: TRACK */
     fm1_ms += 1000u;
-    sel_turn( 1); frame();                                    /* IDEAS: TRACK */
-#else
-    sel_turn( 6); frame();                                    /* IDEAS: TRACK (SWARM was the last page before) */
-    ok = 1;
-    fm1_ms += 1000u;
-#endif
-    ok &= gen_on() && gen_page() == IX_TRACK && home_level() == 2u && lz_on() && lz_tab_lit(3) &&
-          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is(FELUCCA_MACROPAGE ? "8/12" : "7/11");
+    ok &= gen_on() && gen_page() == IX_TRACK && home_level() == 2u && lz_on() &&
+          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is(HCNT(4));
     k = ix.genre;
     turn(EN_PRESET, 1); frame();
     ok &= ix.genre == (k + 1u) % (NDSTYLE + 1u);                    /* PRESETS: the GENRE */
     sel_turn( 1); frame();
-    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(FELUCCA_MACROPAGE ? "9/12" : "8/11");
-    sel_turn( -2); frame();                                   /* back: MACRO (else TRACKS-side SENDS), IDEAS shut */
-#if FELUCCA_MACROPAGE
-    ok &= !ui.confirm && ui.home && home_macros();
-#else
-    ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "SWARM");
-    sw.row = SWR_N - 1u;                                      /* (its last row: SELECT goes on to the chain's next page) */
-#endif
-    sel_turn( 1); frame();
-    ok &= gen_on() && gen_page() == 0u;
-    press(B_HOME); frame();                                         /* a HOME tap on IDEAS: round to TRACKS */
+    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(HCNT(5));
+    sel_turn( -2); frame();                                   /* back out of the IDEAS: PRESETS */
+    ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "PRESETS");
+    sel_turn( -2); frame();                                   /* TRACKS, then DANCE */
+    ok &= ui.home && home_level() == 0u && !home_set() && lz_count_is(HCNT(1)) && lz_crumb_is("HOME \xB7 DANCE");
+    ok &= !home_macros();
+    bad += check("HOME: DANCE TRACKS PRESETS then the IDEAS (TRACK, SOUND ..): SELECT in, PRESETS its GENRE, and back out", ok);
+    sw.row = 0; sw.trow = 0;
+    sel_turn( -1); frame();                                   /* it wraps: the chain's last, MIXER */
+    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(15));
+    sel_turn( -1); frame();
+    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(14));
+    sel_turn( -1); frame();                                   /* (SWARM's and TRACE's rows: SELECT goes on at the first going left) */
+    sw.row = 0; sw.trow = 0;
+    ok &= str_eq(cur_page()->title, "TRACE") && lz_count_is(HCNT(13));
+    sel_turn( -1); frame();
+    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is(HCNT(12));
+    sel_turn( -1); frame();
+    ok &= str_eq(cur_page()->title, "MORPH 3") && lz_count_is(HCNT(11));
+    sel_turn( -1); frame();
+    ok &= str_eq(cur_page()->title, "MORPH 2") && lz_count_is(HCNT(10));
+    sel_turn( -1); frame();
+    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(9));
+    sel_turn( -1); frame();                                   /* the IDEAS' last: TEXTURE */
+    ok &= gen_on() && gen_page() == IX_TEX && nav_cur() == HOME_IDEA + 4u && lz_count_is(HCNT(8));
+    press(B_HOME); frame();                                         /* a HOME tap on IDEAS: round to DANCE */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
-    bad += check("HOME: MACRO, then IDEAS TRACK SOUND .. (PRESETS its GENRE); SELECT back out; a HOME tap on IDEAS: TRACKS", ok);
-    sel_turn( FELUCCA_MACROPAGE ? 8 : 7); frame();               /* IDEAS 2 */
+    sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
+    sel_turn( 8); frame();                                    /* MORPH .. TRACE hand on going right (rows last) */
+    ok &= str_eq(cur_page()->title, "MORPH");
+    sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "MORPH 2");
+    sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "MORPH 3");
+    sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "SWARM");
+    sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "TRACE");
+    sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "SENDS");
+    sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "MIXER");
+    sel_turn( 1); frame();                                    /* .. and on round: DANCE */
+    ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
+    bad += check("HOME: MORPH 1..3 SWARM TRACE SENDS MIXER are the chain's last seven (MIXER one turn left of DANCE), SELECT round", ok);
+    turn(EN_K1, 1); frame();                                  /* (DANCE: the HOME knobs) */
+    sel_turn( 4); frame();                                    /* IDEAS 2 */
     ok = gen_on() && gen_page() == 1u;
     press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV LIST");
-    press(B_HOME); frame();                                         /* HOME: TRACKS (IDEAS shut) */
+    press(B_HOME); frame();                                         /* HOME: DANCE (IDEAS shut) */
     ok &= !gen_on() && ui.home && home_level() == 0u;
-    sel_turn( FELUCCA_MACROPAGE ? 8 : 7); frame();               /* IDEAS 2 */
+    sel_turn( 4); frame();                                    /* IDEAS 2 */
     turn(EN_ALGO, 1); frame();
     ok &= song.sel == 1u && gen_on() && gen_page() == 1u;           /* (ALGORITHM the track there too) */
     turn(EN_ALGO, -1); frame();
-    press(B_OCTDN); frame();                                        /* OCT-: TRACKS */
+    press(B_OCTDN); frame();                                        /* OCT-: DANCE */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
-    bad += check("HOME: IDEAS are HOME's pages, not modal (ENV leaves them, HOME then TRACKS, ALGORITHM works); OCT- TRACKS", ok);
+    bad += check("HOME: IDEAS are HOME's pages, not modal (ENV leaves them, HOME then DANCE, ALGORITHM works); OCT- DANCE", ok);
     sel_turn( 3); frame();                                    /* MIXER */
     open_family(FAM_ENV); frame();
     ok = !ui.home;
@@ -9513,6 +9541,8 @@ static int test_lz_env(void)
     frames(320); press(B_ENV); frame();
     ok &= ui.home && home_level() == 0u;                            /* (ENV on ENV: TRACKS) */
     frames(320); press(B_ENV); frame();
+    ok &= pd_level() == 0u && lz_crumb_is("ENV \xB7 ALL DEST");           /* (2026-11-15: the page last on) */
+    sel_turn( -2); frame();                                         /* (ENV LIST again) */
     ok &= pd_level() == 1u && lz_crumb_is("ENV \xB7 ENV");
     bad += check("ENV: opens on ENV LIST (2026-11-12: ENV + ENV DEST as a picture and rows); ENV LIST, ALL ENV, ALL DEST (2026-11-13: STAGE is gone, its rows are ENV LIST's); the taps", ok);
     sel_turn( -2); frame();                                   /* ALL ENV (round) */
@@ -9615,6 +9645,7 @@ static int test_lz_key(void)
     ok &= str_eq(cur_page()->title, "TUNE") && lz_tab_lit(6) && TSEL->p[P_CHRD] == CD_GTR;   /* (GUITAR's tunings and shapes: its mode stays on) */
     frames(320); press(B_SCL); frame();
     ok &= ui.home && home_level() == 0u;                            /* (SCL on SCL: TRACKS) */
+    NAV_FIRST(SEC_SCL);
     frames(320); press(B_SCL); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
     sel_turn( 5); frame();
@@ -9630,8 +9661,9 @@ static int test_lz_key(void)
     ok &= ui.home && home_level() == 0u;                            /* (ARP on ARP: TRACKS) */
     frames(320); press(B_ARP); frame();
     sel_turn( 1); frame();
+    NAV_FIRST(SEC_SCL);
     press(B_SCL); frame();
-    ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL from ARP: SCL's first) */
+    ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL from ARP: SCL's first, here forgotten) */
     press(B_ARP); frame();
     ok &= str_eq(cur_page()->title, "ARP LIST");                    /* (ARP from SCL: ARP's first) */
     bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD . HARP . OMNI . PROG . GUITAR . TUNE, ARP one list (ARP LIST); taps, SELECT, each its first page", ok);
@@ -10110,6 +10142,7 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
         uint8_t v[NAV_MAX];
         rv_add();
         at = nav_cur();
+        sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;     /* (SWARM's and TRACE's rows: SELECT goes on at the last) */
         sel_turn( 1); frames(2);
         if (nav_cur() == at || (nav_list(nav_sec(), v) && v[0] == nav_cur()))   /* (round: it wraps) */
             break;
@@ -10191,9 +10224,10 @@ static int test_lz_reach(void)
                 sel_first();
                 for (k = 0; k < NELEM(CE_HOME); k++) {
                     n += nav_sec() == SEC_HOME && nav_cur() == k &&
-                         (k >= HOME_IDEA ? gen_on() && gen_page() == k - HOME_IDEA :
+                         (k >= HOME_IDEA && k < HOME_IDEA + HOME_NIDEA ? gen_on() && gen_page() == k - HOME_IDEA :
                           CE_HOME[k].t ? !ui.home && str_eq(cur_page()->title, CE_HOME[k].t) :
                           ui.home && home_macros() == (k == HOME_MACRO));
+                    sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
                     sel_turn( 1); frames(2);
                 }
                 okh &= n == NELEM(CE_HOME);
@@ -10357,6 +10391,178 @@ static int test_nav_tasks(void)
 /* (2026-11-15) SWARM (swarm.c, ui_swarm.c): the page, the centre's mapping, the parameters' base + offset, every engine in range,
  * OFF and CAPTURE, a parameter the user changes, REVERSE */
 static void sw_run(uint32_t n) { while (n--) { fm1_ms += 50u; swarm_tick(); } }
+/* (2026-11-15) a section's button opens the page last on (the first at power-on); on it: DANCE; HOME's own: DANCE */
+static int test_nav_memory(void)
+{
+    int bad = 0, ok;
+    ui_power_on(); frame();
+    press(B_SCL); frame();
+    ok = str_eq(cur_page()->title, "SCL");                          /* power-on: the first */
+    sel_turn( 2); frame();
+    ok &= str_eq(cur_page()->title, "HARP");
+    press(B_SEQ); frame();                                          /* another section, then back */
+    ok &= !ui.home && PAGES[ui.page].fam == FAM_SEQ;
+    press(B_SCL); frame();
+    ok &= str_eq(cur_page()->title, "HARP");                        /* the page left, not the first */
+    frames(320); press(B_SCL); frame();
+    ok &= ui.home;                                                  /* on it: DANCE, as ever */
+    frames(320); press(B_SCL); frame();
+    ok &= str_eq(cur_page()->title, "HARP");                        /* and the memory kept */
+    frames(320); press(B_HOME); frame();
+    ok &= ui.home && home_level() == 0u;                            /* HOME: DANCE, not a page it was on */
+    press(B_ARP); frame();
+    ok &= str_eq(cur_page()->title, "ARP LIST");                    /* a section not visited: its first */
+    ui_power_on(); frame();
+    press(B_SCL); frame();
+    ok &= str_eq(cur_page()->title, "SCL");                         /* a fresh power-on forgets */
+    bad += check("A section's button: the page last on (the first at power-on); again: DANCE; HOME: DANCE", ok);
+    return bad;
+}
+/* (2026-11-15) HOME > TRACKS: the summary page (ui_summary.c) */
+static int test_summary(void)
+{
+    int bad = 0, ok;
+    uint32_t sg0, s0, i;
+    ui_power_on();
+    ok = nav_put(SEC_HOME, "TRACKS") != 0 && PAGES[ui.page].graph == GR_SUMMARY && summary_page_on() && sets_full();
+    frame(); frame();
+    sg0 = summary_sig();
+    s0 = song.sel;
+    turn(EN_K1, 1); frame();
+    ok &= song.sel == (s0 + 1u) % trk_live && summary_sig() != sg0;          /* K1 picks the next track, the rows redraw */
+    turn(EN_K1, -1); frame();
+    ok &= song.sel == s0;
+    sg0 = summary_sig();
+    trk[0].step[3].time = ST_NOTE; trk[0].step[3].n = 1; trk[0].step[3].note[0] = 64;
+    ok &= summary_sig() != sg0;                                              /* a step written changes what it shows */
+    sg0 = summary_sig();
+    trk[0].p[P_MUTE] = (int16_t)!trk[0].p[P_MUTE];
+    ok &= summary_sig() != sg0;
+    trk[0].p[P_MUTE] = 0;
+    for (i = 0; i < 6u; i++) frame();
+    bad += check("HOME > TRACKS: the summary page (full height); K1 picks the track; the rows follow a step or a mute", ok);
+    ok = nav_put(SEC_HOME, "DANCE") != 0 || (go_home(), ui.home);
+    bad += check("HOME > DANCE: the old TRACKS page is HOME itself", ok && ui.home);
+    return bad;
+}
+/* (2026-11-15) TRACE: the dots walk shapes the knobs steer */
+static int test_trace(void)
+{
+    int bad = 0, ok, range = 1, closed = 1;
+    uint32_t i, k, sh, before[SW_N], c0 = 0;
+    float x, y, x0, y0, x1, y1, len[64], mn, mx;
+    track_t *t;
+    ui_power_on();
+    memset(&sw, 0, sizeof sw);
+    bad += check("TRACE: HOME's chain has the page; it starts in TRACE mode on the selected track",
+                 nav_put(SEC_HOME, "TRACE") != 0 && PAGES[ui.page].graph == GR_TRACE && sw.on && sw.mode == 1u && sw.trk == song.sel);
+    for (sh = 0; sh < TR_N; sh++) {                     /* every shape stays on the screen and is a closed path */
+        uint32_t laps;
+        tr_shape_set(0, sh);
+        laps = tr_laps(0);
+        for (k = 0; k < 64u; k++) {
+            tr_eval(0, (float)k * (float)laps / 64.0f, &x, &y);
+            if (x < -1.2f || x > 1.2f || y < -1.2f || y > 1.2f)
+                range = 0, printf("  %s out of range (%f %f)\n", TR_NAME[sh], x, y);
+        }
+        tr_eval(0, 0.0f, &x0, &y0);
+        tr_eval(0, (float)laps - 0.0005f, &x1, &y1);
+        if ((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) > 0.0025f)
+            closed = 0, printf("  %s not closed (%f %f / %f %f)\n", TR_NAME[sh], x0, y0, x1, y1);
+    }
+    bad += check("TRACE: all shapes (33, constellations and the Mobius strip too) stay on the screen", range && TR_N >= 30u);
+    bad += check("TRACE: every shape is a closed path (the end of the lap is its start)", closed);
+    for (sh = 0; sh < TR_N && !str_eq(TR_NAME[sh], "CIRCLE"); sh++)
+        ;
+    tr_shape_set(0, sh);                                /* a constant speed: equal steps of the path are equal lengths */
+    mn = 9.0f; mx = 0.0f;
+    for (k = 0; k < 64u; k++) {
+        tr_eval(0, (float)k / 64.0f, &x0, &y0);
+        tr_eval(0, (float)(k + 1u) / 64.0f, &x1, &y1);
+        len[k] = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
+        mn = len[k] < mn ? len[k] : mn;
+        mx = len[k] > mx ? len[k] : mx;
+    }
+    bad += check("TRACE: the dot goes round at a constant speed", mx < mn * 1.2f);
+    for (sh = 0; sh < TR_N && !str_eq(TR_NAME[sh], "MOBIUS"); sh++)
+        ;
+    tr_shape_set(0, sh);                                /* the Mobius strip: two laps, the band's side flips on the second, back after two */
+    tr_eval(0, 0.3f, &x0, &y0);
+    tr_eval(0, 1.3f, &x1, &y1);
+    ok = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) > 0.04f && tr_laps(0) == 2u;
+    tr_eval(0, 2.3f, &x1, &y1);
+    ok &= (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) < 0.0001f;
+    bad += check("TRACE: MOBIUS takes two laps (the second on the other side of the band) to come back", ok);
+    {   /* the knob moves the dot along the path, the sound follows */
+        swarm_defaults();
+        swarm_start();
+        for (i = 0; i < SW_N; i++) sw.d[i].size = 100, sw.d[i].gain = 100;
+        sw.trow = 0;
+        t = &trk[sw.trk];
+        sw_run(10);
+        k = (uint32_t)(sw.d[0].x * 1000.0f);
+        for (i = 0; i < 40u; i++) turn(EN_K1, 3);
+        sw_run(30);
+        bad += check("TRACE: turning K1 along TRAVEL moves dot 1 along its shape", sw.tph[0] > 0.1f && (uint32_t)(sw.d[0].x * 1000.0f) != k);
+        sw_run(10);
+        x0 = sw.d[1].x; y0 = sw.d[1].y;
+        sw_run(20);
+        bad += check("TRACE: a dot nobody touches stays where it is", sw.d[1].x == x0 && sw.d[1].y == y0);
+        range = 1;
+        for (i = 0; i < 200u; i++) {
+            uint32_t d = i & 3u;
+            tr_travel(d, 37);
+            sw_run(1);
+            for (k = 0; k < 8u; k++) {
+                uint32_t id = sw_pid(t, k >> 1, k & 1u);
+                if (id != 0xFFFFu) {
+                    const param_desc_t *pd = sw_desc(t, id);
+                    if (t->p[id] < pd->min || t->p[id] > pd->max) range = 0;
+                }
+            }
+        }
+        bad += check("TRACE: the parameters stay in range at SIZE 100 and GAIN 100", range);
+        range = 1;
+        for (i = 0; i < SW_N; i++) sw.d[i].pos = 50 + (uint8_t)(i * 12u), sw.d[i].size = 100;
+        for (k = 0; k < 120u; k++) {
+            tr_travel(k & 3u, 31);
+            sw_run(1);
+            for (i = 0; i < SW_N; i++) {
+                float bx = (float)(i & 1u) * 0.5f, by = (float)(i >> 1) * 0.5f;
+                if (sw.d[i].x < bx - 0.001f || sw.d[i].x > bx + 0.501f || sw.d[i].y < by - 0.001f || sw.d[i].y > by + 0.501f) range = 0;
+            }
+        }
+        bad += check("TRACE: a shape stays inside its own box (SIZE 100, any POSITION)", range);
+    }
+    {   /* RANDOM and REROLL (the HOME layer's G3 and A3 in TRACE) */
+        for (i = 0; i < SW_N; i++) before[i] = sw.tshape[i];
+        sw.sel = 2;
+        swarm_act(SWA_THROW);
+        ok = sw.tshape[2] != before[2] && sw.tshape[0] == before[0] && sw.tshape[1] == before[1] && sw.tshape[3] == before[3];
+        bad += check("TRACE: REROLL gives the dot last turned another shape and leaves the rest", ok);
+        for (i = 0; i < SW_N; i++) before[i] = sw.tshape[i];
+        swarm_act(SWA_REVERSE);
+        ok = 1;
+        for (i = 0; i < SW_N; i++) ok &= sw.tshape[i] != before[i] && sw.tshape[i] < TR_N;
+        bad += check("TRACE: RANDOM gives all four dots another shape", ok);
+        for (i = 0; i < 40u; i++) { swarm_act(SWA_REVERSE); for (k = 0; k < SW_N; k++) if (sw.tshape[k] > c0) c0 = sw.tshape[k]; }
+        bad += check("TRACE: RANDOM picks from any shape (the constellations too)", c0 >= TR_N - 8u);
+    }
+    {   /* ROTATE wraps, SHAPE goes round, the two pages share the sound and the dots */
+        sw.trow = 3;                                    /* ROTATE */
+        sw.trot[0] = 98;
+        turn(EN_K1, 5);
+        ok = sw.trot[0] < 98u && sw_rowid() == SWR_ROT;
+        sw.trow = 1;                                    /* SHAPE */
+        sw.tshape[0] = 0;
+        turn(EN_K1, -1);
+        bad += check("TRACE: ROTATE wraps round, SHAPE steps round the whole list", ok && sw.tshape[0] == TR_N - 1u);
+        ok = nav_put(SEC_HOME, "SWARM") != 0 && sw.mode == 0u && sw.on;
+        ok &= nav_put(SEC_HOME, "TRACE") != 0 && sw.mode == 1u && sw.on;
+        bad += check("TRACE: SWARM and TRACE hand over the running sound (one mode at a time)", ok);
+    }
+    return bad;
+}
 static int test_swarm(void)
 {
     int bad = 0, in_range = 1, back = 1, zero = 1;
@@ -10944,6 +11150,10 @@ int main(void)
     bad += test_lz_reach();
     bad += test_nav_tasks();
     bad += test_swarm();
+    bad += test_trace();
+    bad += test_summary();
+    bad += test_nav_memory();
+    bad += test_home_page();
     bad += test_arp_cancel();
     bad += test_home_layer();
     bad += test_nav_rules();
@@ -11064,7 +11274,7 @@ static int test_blend(void)
     track_t *a = &trk[0], *b = &trk[1];
     int32_t o[2u * CTL], ga, gb;
     uint32_t k, pg, vis = 0;
-    int ok = 1, okg, okm, okp = 1;
+    int ok = 1, okg, okm, okp = 1, bad_t = 0;
     ui_power_on();
     for (k = 2; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
     set_engine_of(a, ENGI_ANALOG);
@@ -11072,7 +11282,7 @@ static int test_blend(void)
     for (k = 0; k < 300u; k++) mix_block(o, CTL);       /* (the loads done) */
     song.g[G_BLA] = 1; song.g[G_BLB] = 2; song.g[G_BLEND] = 0; song.g[G_BMOVE] = 0;
     mix_block(o, CTL);
-    ok &= bl_a == 1u && bl_b == 2u;
+    ok &= bl_a[0] == 1u && bl_b[0] == 2u;
     trk_note_on(a, 60, 100);                            /* A's note: both */
     trk_note_on(b, 64, 100);                            /* B's own step: neither */
     input_on(b, 67, 100);                               /* B's key: A's, both */
@@ -11084,26 +11294,26 @@ static int test_blend(void)
     okg = bl_g[0] == 4096 && bl_g[1] == 0 && bl_g[2] == 4096;
     song.g[G_BLEND] = 64; mix_block(o, CTL);
     ga = bl_g[0]; gb = bl_g[1];
-    okg &= ga > 2850 && ga < 2950 && gb > 2850 && gb < 2950 && bl_now == 64u;
+    okg &= ga > 2850 && ga < 2950 && gb > 2850 && gb < 2950 && bl_now[0] == 64u;
     okg &= (ga * ga + gb * gb) / 4096 > 4000 && (ga * ga + gb * gb) / 4096 < 4190;   /* (equal power: no dip) */
     song.g[G_BLEND] = 127; mix_block(o, CTL);
     okg &= bl_g[0] < 40 && bl_g[1] == 4096;
     song.g[G_BMOVE] = 1;                                /* VEL: up to BLEND by the last note's velocity */
     trk_note_on(a, 60, 127); mix_block(o, CTL);
-    okg &= bl_now == 127u;
+    okg &= bl_now[0] == 127u;
     trk_note_on(a, 62, 32); mix_block(o, CTL);
-    okg &= bl_now == 32u;
+    okg &= bl_now[0] == 32u;
     song.g[G_BMOVE] = 0;
     trk_note_on(b, 72, 100); mix_block(o, CTL);         /* (held across the pair's end: let go) */
     song.g[G_BLB] = 0; mix_block(o, CTL);
-    okg &= !bl_a && !bl_b && bl_g[0] == 4096 && bl_g[1] == 4096 && !bl_held(a, 60) && !bl_held(b, 60);
+    okg &= !bl_a[0] && !bl_b[0] && bl_g[0] == 4096 && bl_g[1] == 4096 && !bl_held(a, 60) && !bl_held(b, 60);
     trk_note_on(b, 64, 100);                            /* B its own again */
     okg &= bl_held(b, 64) && !bl_held(a, 64);
     trk_all_off(b);
     song.g[G_BLB] = 1; mix_block(o, CTL);               /* (A and B the same: no blend) */
-    okg &= !bl_a;
+    okg &= !bl_a[0];
     for (pg = 0; pg < NPAGES; pg++)
-        if (PAGES[pg].graph == GR_BLEND)
+        if (PAGES[pg].graph == GR_BLEND && PAGES[pg].id[0] == G_BLA)
             vis = pg;
     okm = vis && PAGES[vis].scope == SC_GLOBAL && PAGES[vis].id[0] == G_BLA && PAGES[vis].id[1] == G_BLB &&
           PAGES[vis].id[2] == G_BLEND && PAGES[vis].id[3] == G_BMOVE;
@@ -11118,14 +11328,52 @@ static int test_blend(void)
     turn(EN_K3, -10); frame();
     okp &= cur_page()->graph == GR_BLEND && song.g[G_BLB] == 2 && song.g[G_BLEND] < 64 && song.g[G_BLA] == 1;
     mix_block(o, CTL);
-    okp &= bl_a == 1u && bl_b == 2u;
+    okp &= bl_a[0] == 1u && bl_b[0] == 2u;
     go_home(); frame();
     song.g[G_BLA] = 0; song.g[G_BLB] = 0; song.g[G_BLEND] = 64;
     mix_block(o, CTL);
     for (k = 2; k < NTRK; k++) trk[k].p[P_MUTE] = 0;
-    return check("chord-harp: the track BLEND: A's notes on both, B's own steps silent, B's keys play A, note offs both", ok) +
+    {   /* (2026-11-15) three morphs: three pairs, a track in one at most (the earlier wins), B's keys play its own A */
+        int okt = 1;
+        for (k = 2; k < NTRK; k++) trk[k].p[P_MUTE] = 0;
+        song.g[G_BLA] = 1; song.g[G_BLB] = 2; song.g[G_BLEND] = 64; song.g[G_BMOVE] = 0;
+        song.g[G_BL2A] = 3; song.g[G_BL2B] = 4; song.g[G_BL2BLEND] = 0; song.g[G_BL2MOVE] = 0;
+        song.g[G_BL3A] = 5; song.g[G_BL3B] = 6; song.g[G_BL3BLEND] = 127; song.g[G_BL3MOVE] = 0;
+        mix_block(o, CTL);
+        okt &= bl_a[0] == 1u && bl_b[0] == 2u && bl_a[1] == 3u && bl_b[1] == 4u && bl_a[2] == 5u && bl_b[2] == 6u && bl_any;
+        okt &= bl_g[2] == 4096 && bl_g[3] == 0 && bl_g[4] < 40 && bl_g[5] == 4096 && bl_g[0] > 2850 && bl_g[0] < 2950;   /* (each pair its own share) */
+        trk_note_on(&trk[0], 60, 100); trk_note_on(&trk[2], 62, 100); mix_block(o, CTL);   /* A's note: its B only */
+        okt &= bl_held(&trk[1], 60) && !bl_held(&trk[3], 60) && bl_held(&trk[3], 62) && !bl_held(&trk[1], 62);
+        input_on(&trk[3], 71, 100); mix_block(o, CTL);                                      /* a B's key: its own A (T3) and B */
+        okt &= bl_held(&trk[2], 71) && bl_held(&trk[3], 71) && !bl_held(&trk[0], 71);
+        input_off(&trk[3], 71);
+        song.g[G_BL2A] = 2; mix_block(o, CTL);                                              /* T2 is MORPH 1's: MORPH 2 is off */
+        okt &= bl_a[0] == 1u && !bl_a[1] && bl_a[2] == 5u && bl_g[2] == 4096 && bl_g[3] == 4096 && bl_g[4] < 40;
+        song.g[G_BL2A] = 3;
+        song.g[G_BL3A] = 0; mix_block(o, CTL);
+        okt &= !bl_a[2] && bl_a[1] == 3u;
+        song.g[G_BL2A] = 0; song.g[G_BL2B] = 0; song.g[G_BL3B] = 0; song.g[G_BL3A] = 0; song.g[G_BLA] = 0; song.g[G_BLB] = 0;
+        mix_block(o, CTL);
+        okt &= !bl_any;
+        trk_all_off(&trk[0]); trk_all_off(&trk[2]);
+        {   /* the pages: MORPH 2 and 3 are chain entries with their own four globals */
+            uint32_t q, p2 = 0, p3 = 0;
+            for (q = 0; q < NPAGES; q++) {
+                if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL2A && PAGES[q].id[3] == G_BL2MOVE) p2 = q;
+                if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL3A && PAGES[q].id[3] == G_BL3MOVE) p3 = q;
+            }
+            okt &= p2 && p3 && nav_put(SEC_HOME, "MORPH 2") != 0 && ui.page == p2;
+                turn(EN_K2, 3); frame();                    /* its KNOB 2 is ITS TRACK B */
+            okt &= song.g[G_BL2B] == 3 && song.g[G_BLB] == 0;
+            okt &= nav_put(SEC_HOME, "MORPH 3") != 0 && ui.page == p3;
+            song.g[G_BL2B] = 0;
+        }
+        bad_t = !okt;
+    }
+    return bad_t * 0 + check("chord-harp: the track BLEND: A's notes on both, B's own steps silent, B's keys play A, note offs both", ok) +
            check("  the shares equal power (A, ~71 % each, B), MOVE VEL, the pair let go: B its own; one track: none", okg) +
-           check("  HOME > MORPH: the four globals, every engine's; KNOB 2 TRACK B, KNOB 3 BLEND", okm & okp);
+           check("  HOME > MORPH: the four globals, every engine's; KNOB 2 TRACK B, KNOB 3 BLEND", okm & okp) +
+           check("  three morphs: three pairs (each its own share, A's notes to its B, a B's keys its A), a track in one at most, MORPH 2 / 3 pages", !bad_t);
 }
 
 /* (0.9.5 .. 2026-11-02) Yehnah's cards each in its value's heat: retired with the cards on the button pages (step 3: the

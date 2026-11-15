@@ -226,6 +226,8 @@ enum {                          /* global parameters */
                                  * (pfx.c; project.c: block 'PX') */
     G_BLA, G_BLB, G_BLEND, G_BMOVE,   /* (chord-harp fork, 2026-10-29) SAVE > MORPH: TRACK A, TRACK B (0 OFF, 1..6), BLEND
                                  * A .. B, MOVE (what moves it: voice.c bl_*, fx.c bl_block; project.c: block 'BL') */
+    G_BL2A, G_BL2B, G_BL2BLEND, G_BL2MOVE, G_BL3A, G_BL3B, G_BL3BLEND, G_BL3MOVE,   /* (2026-11-15) MORPH 2 and 3: the same four each
+                                 * (G_BLA + 4 * morph + 0..3: contiguous); project.c: block 'B2' */
     G_COUNT
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */

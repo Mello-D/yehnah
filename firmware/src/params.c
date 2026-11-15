@@ -245,6 +245,14 @@ static const param_desc_t GP[G_COUNT] = {
     [G_BLB] = {"TRACK B", F_ENUM, 0, NTRK, 0, N_BLTRK, 0},   /* playing one part (voice.c bl_*) */
     [G_BLEND] = PD("BLEND", F_PCT, 0, 127, 64),           /* .. A only (0) .. B only (127), equal power */
     [G_BMOVE] = {"MOVE", F_ENUM, 0, 7, 0, N_BMOVE, 0},    /* .. moved from A up to BLEND (fx.c bl_block) */
+    [G_BL2A] = {"TRACK A", F_ENUM, 0, NTRK, 0, N_BLTRK, 0},   /* (2026-11-15) MORPH 2 and 3: the same four */
+    [G_BL2B] = {"TRACK B", F_ENUM, 0, NTRK, 0, N_BLTRK, 0},
+    [G_BL2BLEND] = PD("BLEND", F_PCT, 0, 127, 64),
+    [G_BL2MOVE] = {"MOVE", F_ENUM, 0, 7, 0, N_BMOVE, 0},
+    [G_BL3A] = {"TRACK A", F_ENUM, 0, NTRK, 0, N_BLTRK, 0},
+    [G_BL3B] = {"TRACK B", F_ENUM, 0, NTRK, 0, N_BLTRK, 0},
+    [G_BL3BLEND] = PD("BLEND", F_PCT, 0, 127, 64),
+    [G_BL3MOVE] = {"MOVE", F_ENUM, 0, 7, 0, N_BMOVE, 0},
     [G_DMOD] = PD("MOD", F_PCT, 0, 127, 0),      /* (0.6.89: 0, the repeats exact copies, by default) */     /* (0.6.86) the delay's drift: WOW + FLUTTER (fx.c dly_wow_adv) */
     [G_RMOD] = PD("MOD", F_PCT, 0, 127, 0),      /* the reverb's modulation depth (ROOM: the combs, SPRING: its wobble) */
     [G_RRATE] = PD("RATE", F_LFOHZ, 0, 127, 30), /* .. its rate */
@@ -629,7 +637,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL, GR_SWARM };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL, GR_SWARM, GR_TRACE, GR_SUMMARY };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -652,7 +660,7 @@ static int16_t trks_ui;
 /* the MENU's rows (menu_items.c: their names, values, the editor's MENU_DESC). (2026-11-02, the redesign step 5) GLO's
  * pages name them: a knob MROW(MI_*) is that row, drawn and turned as the MENU does (ui_draw.c, ui_input.c); page_desc
  * gives none */
-enum { MI_COLOR, MI_LEDS, MI_SCROFF, MI_FILL, MI_HOLD, MI_ACCEL, MI_LATCH, MI_SCLLED, MI_MIDIOUT,   /* (2026-11-02: SKIN STYLE
+enum { MI_COLOR, MI_LEDS, MI_SCROFF, MI_FILL, MI_HOMEPG, MI_HOLD, MI_ACCEL, MI_LATCH, MI_SCLLED, MI_MIDIOUT,   /* (2026-11-02: SKIN STYLE
        * ANIM BPM LOCK SCOPE BIG VIEW gone) */
        MI_LOWCUT, MI_USB,
        MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_SERIAL, MI_RESTORE, MI_LOAD, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the metronome's rows in
@@ -867,7 +875,12 @@ static const page_t PAGES[] = {
                                                          * pages stay for the held GLO menu (ui_hmenu.c) */
     {"FX ALL", FAM_FX, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) every effect's rows on one scrollable page (ui_fxall.c) */
     {"SWARM", FAM_SAVE, SC_GLOBAL, GR_SWARM, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) HOME's four moving dots (swarm.c, ui_swarm.c): K1..K4 the dots, SELECT the row */
+    {"TRACE", FAM_SAVE, SC_GLOBAL, GR_TRACE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) SWARM's second page: the dots walk shapes the knobs steer (swarm.c) */
+    {"TRACKS", FAM_SAVE, SC_GLOBAL, GR_SUMMARY, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) HOME's summary of the tracks (ui_summary.c); the old TRACKS page is DANCE */
+    {"MORPH 3", FAM_SAVE, SC_GLOBAL, GR_BLEND, {G_BL3A, G_BL3B, G_BL3BLEND, G_BL3MOVE}},   /* (2026-11-15) the 2nd and 3rd morph (the same page, their lane) */
+    {"MORPH 2", FAM_SAVE, SC_GLOBAL, GR_BLEND, {G_BL2A, G_BL2B, G_BL2BLEND, G_BL2MOVE}},
 };
+#define GR_IS_SWARM(g) ((g) == GR_SWARM || (g) == GR_TRACE)   /* (SWARM's two pages) */
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)
 #define GTU_PAGE(pg) ((pg)->id[0] == P_GTUN)          /* (2026-11-10) SCL > TUNE */          /* (2026-11-10) SCL > GUITAR: KNOB 2 GENRE, KNOB 3 STYLE */
@@ -1052,7 +1065,7 @@ static uint8_t sl_ui_step;       /* (0.6.3) the SL PITCH page: the step KNOB 2 e
 #define SETS_MAX 8u
 static const uint8_t SETS[4][SETS_MAX] = {
     {G_BPM, G_SWING, G_TRKS, MROW(MI_USB), MROW(MI_CLICK), MROW(MI_CLKLVL), MROW(MI_COUNTIN), 0xFF},
-    {MROW(MI_COLOR), MROW(MI_SCROFF), MROW(MI_FILL), MROW(MI_LEDS), MROW(MI_SCLLED), 0xFF, 0xFF, 0xFF},
+    {MROW(MI_COLOR), MROW(MI_SCROFF), MROW(MI_FILL), MROW(MI_LEDS), MROW(MI_SCLLED), MROW(MI_HOMEPG), 0xFF, 0xFF},
     {MROW(MI_HOLD), MROW(MI_ACCEL), MROW(MI_LATCH), G_CLOCK, G_ROUTE, MROW(MI_MIDIOUT), MROW(MI_LOWCUT), G_TUNE},
     {G_LOADP, G_INFO, MROW(MI_SERIAL), MROW(MI_RESTORE), MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT), 0xFF}};
 static uint8_t sets_cur[4];      /* each list's row KNOB 1 is on */

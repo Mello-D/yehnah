@@ -8,7 +8,7 @@
  * value (MI_VALUES: the rows before them hold one). 1.0.5: in four tabs (MI_TAB). */
 /* (the rows' enum MI_*: params.c, GLO's pages name them) */
 #define MI_VALUES MI_PANEL
-static const char *const MI_NAME[MI_COUNT] = {"THEME", "LEDS", "SCREEN OFF", "FILL", "HOLD", "KNOB ACCEL", "FX LATCH",
+static const char *const MI_NAME[MI_COUNT] = {"THEME", "LEDS", "SCREEN OFF", "FILL", "HOME PAGE", "HOLD", "KNOB ACCEL", "FX LATCH",
                                               "SCALE LEDS", "MIDI OUT",
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS",
                                               "USB",
@@ -25,6 +25,7 @@ static const uint8_t MI_TAB[MI_COUNT] = {
     MTAB_DISPLAY,                                                           /* LEDS */
     MTAB_DISPLAY,                                                           /* SCREEN OFF (1.1.5) */
     MTAB_DISPLAY,                                                           /* FILL (2026-11-02) */
+    MTAB_DISPLAY,                                                           /* HOME PAGE (2026-11-15) */
     MTAB_CONTROL, MTAB_CONTROL, MTAB_CONTROL,                               /* HOLD KNOB ACCEL FX LATCH */
     MTAB_CONTROL,                                                           /* SCALE LEDS (1.2) */
     MTAB_CONTROL,                                                           /* MIDI OUT (0.6.72) */
@@ -43,6 +44,7 @@ typedef struct { uint8_t row; uint16_t bit; const char *name[2]; } menu_flag_t;
 static const menu_flag_t MENU_FLAGS[] = {
     {MI_ACCEL, PREF_ACCEL_OFF, {"ON", "OFF"}},        /* #52: ui_input.c accel (Yehnah: ON by default) */
     {MI_LATCH, PREF_LATCH, {"OFF", "ON"}},
+    {MI_HOMEPG, PREF_HOME_TRACKS, {"DANCE", "TRACKS"}},   /* (2026-11-15) the page power-on and the HOME button open (ui_lens.c home_entry) */
     {MI_FILL, PREF_SNAKE, {"RANDOM", "SNAKE"}},       /* (2026-11-02) the knob cells' pixels (ui_draw.c kn_px) */
     {MI_RESTORE, PREF_RESTORE_ON, {"OFF", "ON"}},      /* 1.2, #130; 0.6.40: OFF (the default), no autosave, power-on as
                                                         * INIT SYSTEM; ON, the last session back (project.c) */

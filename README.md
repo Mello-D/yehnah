@@ -85,7 +85,7 @@ RP2040.
 
 HOME shows the selected track as a small robot that dances to what the track plays, on a city street at dusk or by night.
 Under it are the track's four knobs (the engine decides which four), and the pages of HOME are tabs along the foot:
-**TRACKS**, **PRESETS**, **MORPH**, **MIXER**, **SENDS**, **SWARM** and the five **IDEAS** pages. Turn ALGORITHM to move
+**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, the three **MORPH** pages, **SWARM**, **TRACE**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
 between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the last two.
 
 <table>
@@ -94,18 +94,23 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 <td align="center"><img src="docs/img/presets.png" width="300" alt="The sound list: name, type and engine"><br><sub>PRESETS: one list over every engine, by name, type and engine</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/img/swarm.png" width="300" alt="SWARM: four boxes with a moving dot in each"><br><sub>SWARM: four dots wander, each moving two parameters of the engine</sub></td>
+<td align="center"><img src="docs/img/swarm.png" width="300" alt="SWARM: four coloured dots moving across the screen"><br><sub>SWARM: four dots wander, each moving two parameters of the engine</sub></td>
+<td align="center"><img src="docs/img/trace.png" width="300" alt="TRACE: four dots on four shapes"><br><sub>TRACE: turn a knob to walk a dot round its shape</sub></td>
+<td align="center"><img src="docs/img/tracks.png" width="300" alt="TRACKS: a row for every track"><br><sub>TRACKS: every track's sound, length, key and pattern at a glance</sub></td>
 </tr>
 </table>
 
 - **One sound list.** Over 700 factory sounds, browsed with PRESETS: each has a type (bass, lead, pad…) and an engine.
-  Favourites and 32 user presets sit in the same list. **MORPH** blends two tracks into one part. Switching a track to
+  Favourites and 32 user presets sit in the same list. **MORPH** blends two tracks into one part (three morphs at once, on three pages). Switching a track to
   another engine fades the old one out, and the notes you hold go on in the new one.
 - **An INIT sound for every engine.** Each engine starts its list with a plain INIT sound to build from (a drum track's is the
   plain DRUM-X kit): filter the list by type INIT, load one, shape it, and save it as a user sound.
-- **SWARM.** Four dots wander by themselves across four boxes of the screen, in orbits, drifts, chaotic paths or thrown
+- **SWARM.** Four dots wander by themselves across the screen, each in its knob's colour, in orbits, drifts, chaotic paths or thrown
   like pucks, and each moves two of the engine's livelier parameters by where it is. Start from an INIT sound, listen,
   and when something sounds good press CAPTURE to keep it, or REVERSE to retrace the last half minute.
+- **TRACE.** SWARM's hands-on twin: each dot rides a shape (33 of them: polygons, stars, a lemniscate, a triquetra, a Mobius
+  strip that takes two laps to come back, eight constellations as stick figures; each dot stays in its own quarter of the screen) and you turn its knob to walk the sound
+  round it. A held-HOME key shuffles every shape, or just the one you last turned.
 - **IDEAS.** The five IDEAS tabs throw ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
   genre's progression, voicing and figures, a rhythm cell, a role: bass, chords, melody or arp), **SOUND** picks a preset
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
@@ -294,7 +299,7 @@ and its pages open. Five buttons have a layer:
 - **SAVE:** CLEAR the pattern or the song, DELETE a song row, ERASE a section or a project, start a NEW project, and SAVE
   or ERASE the track's user sound. Each asks first.
 - **SEQ:** REVERSE and SHIFT the pattern, CLR STEP, and on a drum track BEAT and the lane tools (clear, reverse, fill).
-- **HOME:** SWARM's actions on any page: FREEZE, REVERSE, THROW, CAPTURE and SWARM on / off.
+- **HOME:** SWARM's and TRACE's actions on any page: FREEZE, REVERSE (TRACE: RANDOM), THROW (TRACE: REROLL), CAPTURE and on / off.
 
 Hold **EDIT** or **GLO** and a list menu opens and stays open: EDIT's is the sound's named parameters, GLO's the four
 settings lists.

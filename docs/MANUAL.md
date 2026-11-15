@@ -54,11 +54,11 @@ Yehnah has no user samples: it synthesises everything.
 
 ### Your first idea and your first save
 
-1. On HOME turn **SELECT** past SENDS and SWARM to the **IDEAS** pages (**I-TRK**, **I-SND**, **I-LFO**, **I-FX**, **I-TEX**). On
+1. On HOME turn **SELECT** right of PRESETS to the **IDEAS** pages (**I-TRK**, **I-SND**, **I-LFO**, **I-FX**, **I-TEX**). On
    **I-TRK**, turn **KNOB 4** (IDEA): a new sequence for the selected track, heard at once. Turn it again for
    another. **OCT+** keeps what you hear, **OCT−** puts back what was there.
 2. Press **PLAY**. To record what you play, arm **REC** and play the keys while it runs.
-3. Like it? Press **SAVE**: its first page is **PROJECT** (project number, section **A–D**, **LOAD**, **SAVE**). Turn
+3. Like it? Press **SAVE**: at power-on it opens on **PROJECT** (later, on the SAVE page you were last on; SELECT goes back to PROJECT) (project number, section **A–D**, **LOAD**, **SAVE**). Turn
    **KNOB 4** (SAVE) to the right until its card says **OCT+**, then press **OCT+**. Choose another section with
    **KNOB 2** and save a variation into it.
 4. Turn **SELECT** to **ARRANGE** (the song's rows): set **SECT** (KNOB 2) and **TIMES** (KNOB 3, the bars), then press
@@ -85,7 +85,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 
 | Button | Tap | Hold |
 | --- | --- | --- |
-| **HOME** | HOME's first page, TRACKS. | the **HOME layer**: SWARM's actions, on any page |
+| **HOME** | HOME's first page, DANCE. | the **HOME layer**: SWARM's and TRACE's actions, on any page |
 | **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, as a menu that stays open (see [12](#12-the-layers)) |
 | **ENV** | The envelopes: **ENV**, then **ALL ENV** and **ALL DEST**. | nothing |
 | **LFO** | The **LFO** page: the LFO, the step modulator, the modulation matrix. | nothing |
@@ -99,8 +99,8 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 | **REC** | Arms recording on the selected track; while it is lit, turns recording off. | the **REC layer** |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | |
 
-A section's button always opens that section's first page. Pressed again while you are inside it, it goes back to
-**HOME > TRACKS**. A button held past the hold time (**GLO > CONTROL > HOLD**) is its layer instead.
+A section's button opens the page of that section you were last on (its first page after power-on, until you have been on another). Pressed again while you are inside it, it goes back to
+**HOME > DANCE**. A button held past the hold time (**GLO > CONTROL > HOLD**) is its layer instead.
 
 ### The keys
 
@@ -124,7 +124,7 @@ Yehnah has **no tabs**. Each section's pages are one chain, shown as a **row of 
 the page you are on lit. The rules are the same everywhere:
 
 1. **SELECT** walks the section's pages, round.
-2. A section's **button** opens its first page; pressed again inside it, it goes to HOME's first page, TRACKS.
+2. A section's **button** opens the page you were last on in that section (its first page at power-on); pressed again inside it, it goes to HOME's first page, DANCE. The **HOME** button always goes to DANCE.
 3. **PRESETS** loads a sound: in every section, never a page or track.
 4. A page that picks something picks it with **KNOB 1**; the track is **ALGORITHM**'s.
 5. A button **held** is its layer.
@@ -139,7 +139,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 | Section (button) | Pages |
 | --- | --- |
-| **HOME** | TRACKS · PRESETS · MORPH · MIXER · SENDS · SWARM · I-TRK · I-SND · I-LFO · I-FX · I-TEX |
+| **HOME** | DANCE · TRACKS · PRESETS · I-TRK · I-SND · I-LFO · I-FX · I-TEX · MORPH · MORPH 2 · MORPH 3 · SWARM · TRACE · SENDS · MIXER |
 | **EDIT** | SOUND (the selected engine's rows; a drum track has its own, see [6](#6-drums)) |
 | **SEQ** | STEP · NOTE · SPICE · AUTO · PATTERN · STRETCH · TRACK |
 | **FX** | FX (one page, every effect's rows) |
@@ -154,11 +154,19 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 ## 4. HOME, sounds and IDEAS
 
-### TRACKS
+### DANCE
 
-The selected track is drawn as a robot on a city street, at dusk or by night. It walks, and dances to the notes the
+HOME's first page. The selected track is drawn as a robot on a city street, at dusk or by night. It walks, and dances to the notes the
 track plays. The four knobs under it are the track's own: the engine chooses which four (for ANALOG: CUTOFF, RESO,
 ATTACK, RELEASE). The scene moves with the tempo whether the song plays or not.
+
+### TRACKS
+
+One row per track, to see the whole song at a glance: its **sound** and **engine**, its **length** in steps, its **key**
+(root and scale; a kit has none), the **pattern** written to it drawn as a small roll of its steps (a kit's hits in three
+lanes; EMPTY when nothing is written) with the playhead running along it, **ARP** or **REC** after the length, **MUTE**
+in place of the key, and the **level** in dB. The selected track's row is framed, and a muted track's is dimmed. Only the
+tracks that play show: four with **TRACKS 4**, six with **TRACKS 6**. **KNOB 1** picks the track.
 
 ### PRESETS
 
@@ -173,7 +181,11 @@ it on the SOUND page; then save it as a user sound with **SAVE SND** on the SAVE
 
 ### MORPH
 
-Blends two tracks into one part: **TRACK A**, **TRACK B**, **BLEND** and **MOVE**.
+Blends two tracks into one part: **TRACK A**, **TRACK B**, **BLEND** and **MOVE**. There are three morphs on three pages,
+**MORPH**, **MORPH 2** and **MORPH 3**, so up to three pairs can be blended at once (three pairs use all six tracks; two
+pairs and two single tracks, or any other grouping, work too). Each page shows all three morphs as rows and frames its own,
+which its four knobs set. A track can be in one morph only: a morph that names a track an earlier morph has is off (the
+page says so). A note played on a morph's B plays its A (and so both), as before.
 
 ### MIXER and SENDS
 
@@ -184,9 +196,9 @@ to the distortion, chorus, delay and reverb (**DIST**, **CHORUS**, **DELAY**, **
 ### SWARM
 
 Four dots that wander by themselves and move the sound for you: a way to find a sound, best begun from an engine's INIT
-sound (see PRESETS above). The screen is four boxes (dot 1 top left, 2 top right, 3 bottom left, 4 bottom right) with a
-dot in each. Every dot moves **two** parameters of the selected track's engine, one with its position across the screen
-(X) and one with its position down it (Y); their names and values are in the corner of its box. They are the engine's livelier
+sound (see PRESETS above). Each dot has a quarter of the screen as its home (dot 1 top left, 2 top right, 3 bottom left, 4 bottom right) but, with SIZE up, roams all of it. Each dot has its own
+colour (the colour of the same-numbered knob on the other pages) and an icon for how it moves: a ring (ORBIT), a dot with a wavy tail (DRIFT), a bow-tie (CHAOS), a puck with a tick along its path (THROW). Every dot moves **two** parameters of the selected track's engine, one with its position across the screen
+(X) and one with its position down it (Y); their names and values, in the dot's colour, are in its corner of the screen. They are the engine's livelier
 ones, chosen per engine (DRIFT: TILT and DRIFT, SPEED and FLICK, DETUNE and BLOOM, BREATH and PARTS). A few of an engine's
 parameters step instead of gliding (a waveform, a ratio, an algorithm), and a dot there jumps between the settings.
 
@@ -207,6 +219,40 @@ next page):
 **FREEZE, REVERSE, THROW, CAPTURE** and turning SWARM off are keys on the **HOME layer** (hold HOME, [12](#12-the-layers)), so they work on any page. While frozen the parameters stay where they are, so you can still edit them on their own pages. SWARM starts the first time you open its page and keeps running on every page until you turn it off. It drives the track
 that was selected when it started; opening its page on another track moves it there. Save a sound you like with
 **CAPTURE** first: SWARM is not saved in a project, and a project saved while it runs keeps the parameters as they sound.
+
+### TRACE
+
+SWARM's second page, for playing by hand. The same four dots drive the same two parameters each (SWARM's pairings for the
+engine, as the corner text shows), but nothing moves by itself: each dot rides a **shape**, and you turn its knob to take
+it round. Every position on the shape is a different pair of values, so turning a knob walks the sound along the shape's
+outline. The shape is drawn faintly where the dot walks, in the dot's colour, and stays inside the dot's own quarter of the
+screen (so the shape itself shows where the dot is; there is no centre mark). The dot goes round at a constant speed, so
+equal turns are equal distances (about seven detents round), and it follows the knob with a short glide (no zipper noise).
+The row's name is in the bar at the foot, as on the rows pages.
+
+**KNOB 1–4** are dots 1–4. **SELECT** scrolls the rows (TRAVEL first):
+
+| Row | What the knob sets |
+| --- | --- |
+| **TRAVEL** | How far round its shape the dot is, 0–100 % (it wraps; a MOBIUS strip's two laps are one round). |
+| **SHAPE** | One of 33 shapes, stepping round the whole list. |
+| **SIZE** | How big the shape is (at 100 % it fills its quarter of the screen). Shared with SWARM. |
+| **ROTATE** | Turns the shape, 0–100 % of a turn (it wraps). |
+| **POSITION** | The shape's centre, as in SWARM. Shared with SWARM. |
+| **GAIN** | How much the dot's distance from the middle of its quarter adds to a parameter, as in SWARM. Shared with SWARM. |
+
+The shapes: TRIANGLE, SQUARE, TRAPEZOID, DIAMOND, PENTAGON, HEXAGON; the stars PENTAGRAM, HEXAGRAM, HEPT 7/2, HEPT 7/3 and
+OCTAGRAM; CIRCLE, LEMNISCATE, CARDIOID, ROSE 3, ROSE 4, LISSAJOUS, SPIRO, WAVE, SPIRAL and HEART; the knots TRIQUETRA and
+**MOBIUS** (a lemniscate the dot walks twice: the second lap is on the other side of the band, so the sound comes back to
+where it began only after two laps); CROSS and BOLT; and eight constellations, drawn with the stars marked: CASSIOPEIA, BIG DIPPER,
+CRUX, ORION, SCORPIUS, LEO, CYGNUS and LYRA. Each is one trail through its stars, and after the last star the dot goes straight
+back to the first (a shape is never walked back over itself), so the corners of a figure are sudden changes of direction, and
+so of sound. The constellations' positions are approximate.
+
+On the HOME layer TRACE's keys are **F3 FREEZE**, **G3 RANDOM** (all four dots get another shape, any of the 33, at a random
+rotation), **A3 REROLL** (only the dot whose knob you turned last, shown in white), **B3 CAPTURE** and **C4 TRACE** (on / off).
+SWARM and TRACE share the running sound: the page you open takes over (the dots go on from where they are), and CAPTURE or
+off acts on whichever is running. TRACE is not saved in a project either.
 
 ### IDEAS
 
@@ -508,6 +554,9 @@ the arrangement or the transport is running (the screen says STOP TO EDIT).
 | **G4** | **SAVE SND** | Saves the selected track's sound: over the user slot it came from, or into the first free slot (you name it). |
 | **A4** | **ERASE SND** | Erases that user sound slot. |
 
+On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
+turned last), **B3** CAPTURE, **C4** TRACE (on / off).
+
 The four knobs do nothing on this layer.
 
 ### SEQ: pattern tools
@@ -527,9 +576,9 @@ layer's UNDO covers big changes).
 
 On a drum track the **black keys** pick the lane (1–8) the lane tools act on. The tools refuse while the arrangement plays.
 
-### HOME: SWARM's actions
+### HOME: SWARM's and TRACE's actions
 
-Hold **HOME** on any page (a tap is still HOME) and the keys run **SWARM** (see [4](#swarm)), whatever page you are on.
+Hold **HOME** on any page (a tap is still HOME) and the keys run **SWARM** (see [4](#swarm)), or **TRACE** (see [TRACE](#trace)) if that was the last of the two you opened, whatever page you are on.
 The key is lit while the action is on, and breathes when it can be used.
 
 | Key | Action | What it does |
@@ -557,7 +606,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 | List | Rows |
 | --- | --- |
 | **MAIN** | **BPM**, **SWING**, **TRACKS** (1–6), **USB LEVEL** (MASTER: follows the MASTER knob; FIXED; or −6 to −24 dB, for a phone or computer whose input clips) · **CLICK** (OFF, REC, ON), **CLICK LEVEL**, **COUNT-IN** (OFF, 1 BAR, 2 BARS) |
-| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE, DUSK or CREAM), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** |
+| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE, DUSK or CREAM), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (DANCE, the default, or TRACKS: the page power-on and the HOME button open; a second tap never flips between them) |
 | **CONTROL** | **HOLD** (the layer threshold), **KNOB ACCEL**, **FX LATCH**, **CLOCK** (INT, USB, TRS) · **ROUTE** (CH1-6, SEL), **MIDI OUT** (KEYS, CLOCK, ALL, OFF), **SPEAKER EQ** (FLAT, LOWCUT, BASS+), **TUNE** |
 | **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT** |
 

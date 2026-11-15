@@ -418,6 +418,11 @@ static void draw_frame(void)
         lcd_clear(0, TF_SC_Y + graph_h(), 240, 240u - TF_SC_Y - graph_h(), T_BG);   /* (the foot under it: a page row's last rows, from the page before) */
         return;
     }
+    if (sets_full()) {                                  /* (2026-11-15: a full-height panel (SWARM, TRACE): only the gap under it; the bars
+                                                         * between the strips are inside it, and flashed black on every redraw) */
+        lcd_clear(0, TF_SC_Y + graph_h(), 240, TF_PG_Y - TF_SC_Y - graph_h(), T_BG);
+        return;
+    }
     lcd_clear(0, TF_SC_Y + TF_SC_H, 240, TF_KN_Y - TF_SC_Y - TF_SC_H, T_BG);
     lcd_clear(0, TF_KN_Y + TF_KN_H, 240, TF_PG_Y - TF_KN_Y - TF_KN_H, T_BG);
 }
@@ -980,7 +985,7 @@ static void draw_cards(void)
         dx_kit3_cards();
         return;
     }
-    if (cur_page()->graph == GR_SWARM) {                /* (2026-11-15) the dots' row */
+    if (GR_IS_SWARM(cur_page()->graph)) {                /* (2026-11-15) the dots' row */
         swarm_cards();
         return;
     }

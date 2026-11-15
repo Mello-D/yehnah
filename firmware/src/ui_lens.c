@@ -44,17 +44,21 @@ enum { SV_LIB, SV_PROJ, SV_SOUND };
 /* (2026-11-02, NAV-LAYOUT.md) HOME: TRACKS, PRESETS MORPH (from SAVE), MIXER SENDS (from GLO), MACRO (ROUTES' screen;
  * the old MACRO and ENGINE gone), the IDEAS; TRACKS, MACRO and IDEAS are HOME's own (t 0), the others real pages */
 #if FELUCCA_MACROPAGE
-enum { HOME_MACRO = 6, HOME_IDEA = 7 };
+enum { HOME_MACRO = 3, HOME_IDEA = 4 };
 #else
-enum { HOME_MACRO = 99, HOME_IDEA = 6 };               /* (2026-11-06) MACRO hidden: never an entry */
+enum { HOME_MACRO = 99, HOME_IDEA = 3 };               /* (2026-11-06) MACRO hidden: never an entry */
 #endif
-static const nv_t CE_HOME[] = {NV(0, "TRACKS", 0, 0), NV("PRESETS", 0, 1, SV_SOUND), NV("MORPH", 0, 1, SV_SOUND),
-                               NV("MIXER", 0, 2, 0), NV("SENDS", 0, 2, 0), NV("SWARM", 0, 2, 0),
+#define HOME_NIDEA 5u                                   /* IDEAS: five pages, in the middle of the chain (2026-11-15; they were the last) */
+/* (2026-11-15, the user's order: what SELECT turned left from TRACKS reaches first is the last) TRACKS, PRESETS, the IDEAS, then MORPH,
+ * SWARM, TRACE, SENDS and MIXER (MIXER one turn left of TRACKS) */
+static const nv_t CE_HOME[] = {NV(0, "DANCE", 0, 0), NV("TRACKS", 0, 0, 0), NV("PRESETS", 0, 1, SV_SOUND),
 #if FELUCCA_MACROPAGE
                                NV(0, "MACRO", 2, 1),
 #endif
                                NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
-                               NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2)};   /* IDEAS (ideas.c; was Yehnah's GEN) */
+                               NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2),   /* IDEAS (ideas.c; was Yehnah's GEN) */
+                               NV("MORPH", 0, 2, SV_SOUND), NV("MORPH 2", 0, 2, SV_SOUND), NV("MORPH 3", 0, 2, SV_SOUND), NV("SWARM", 0, 2, 0), NV("TRACE", 0, 2, 0),
+                               NV("SENDS", 0, 2, 0), NV("MIXER", 0, 2, 0)};
 static const nv_t CE_SYN[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-11: SOUND, the PATCH entry of PAGES, replaces EDIT 1 / 2; its rows
                                                          * hold the old FILTER, DRIFT, VOICE, VOICE 2) */
 static const nv_t CE_FM6[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-13: the operators, a kit's lanes, KIT 3, X-MOD, LEVELS are rows of SOUND) */
@@ -202,7 +206,7 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     e = k;
     nav_mem_put(key, e);
     if (sec == SEC_HOME && !c->e[e].t) {
-        if (e >= HOME_IDEA) {                           /* IDEAS (ideas.c): HOME's last group */
+        if (e >= HOME_IDEA && e < HOME_IDEA + HOME_NIDEA) {   /* IDEAS (ideas.c) */
             if (!gen_on()) {
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
@@ -231,12 +235,19 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
     if (PAGES[i].graph == GR_SONG)                       /* (2026-11-05) ARRANGE opens on its NEW row: pick, OCT+ */
         ui.song_row = (uint8_t)(chain_config.count ? chain_config.count - 1u : 0u);
 }
-/* rule 2: a section's button: its chain's first page; already inside, HOME's first (TRACKS) */
+/* HOME's page the HOME button and power-on open (MENU > HOME PAGE): DANCE (entry 0), or TRACKS (entry 1) */
+static uint32_t home_entry(void) { return (ui_prefs & PREF_HOME_TRACKS) ? 1u : 0u; }
+static void home_boot(void) { if (home_entry()) nav_go(SEC_HOME, home_entry(), 0); }
+/* rule 2: a section's button: the page of it you were last on (the first, until you have been on another: at power-on);
+ * already inside it, HOME's first page, DANCE (2026-11-15, the user's: it was always the section's first page) */
 static void nav_button(uint32_t sec)
 {
-    if (nav_sec() == sec && (sec == SEC_HOME || !ui.home))
+    uint32_t e = sec == SEC_HOME ? home_entry() : nav_mem(nav_key(sec));
+    if (nav_sec() == sec && (sec == SEC_HOME || !ui.home)) {
         sec = SEC_HOME;
-    nav_go(sec, 0, 1);
+        e = home_entry();
+    }
+    nav_go(sec, e, 1);
 }
 /* rule 1: SELECT, s detents along the chain; it wraps (the last page, then the first: the page row) */
 static uint32_t nav_vis_n(void) { uint8_t v[NAV_MAX]; return nav_list(nav_sec(), v); }   /* (the visible pages of the chain: ui_fxall.c) */

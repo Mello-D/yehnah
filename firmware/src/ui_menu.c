@@ -161,7 +161,7 @@ static void menu_val(uint32_t row, char *b)          /* the row's value as it re
 static const char *menu_short(uint32_t row)          /* a card's label: the row's name, or its short form */
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
-        {MI_SCROFF, "SCR OFF"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
+        {MI_SCROFF, "SCR OFF"}, {MI_HOMEPG, "HOME PG"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
         {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)

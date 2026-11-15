@@ -26,7 +26,10 @@
 #define SW_N 4u
 #define SW_HN 300u                                      /* history: 10 samples a second, 30 s */
 enum { SWS_ORBIT, SWS_DRIFT, SWS_CHAOS, SWS_THROW, SWS_N };
-enum { SWR_POS, SWR_SHAPE, SWR_SIZE, SWR_SPEED, SWR_GAIN, SWR_N };
+enum { SWR_POS, SWR_SHAPE, SWR_SIZE, SWR_SPEED, SWR_GAIN, SWR_N, SWR_TRAVEL = SWR_N, SWR_ROT };   /* (TRACE's rows: ROTATE is SPEED's slot) */
+#include "trace_data.h"                                 /* TRACE: the shapes (tools/gen_trace_shapes.py) */
+#define TR_ROWS 6u
+static const uint8_t TR_ROW[TR_ROWS] = {SWR_TRAVEL, SWR_SHAPE, SWR_SIZE, SWR_ROT, SWR_POS, SWR_GAIN};
 enum { SWA_FREEZE, SWA_REVERSE, SWA_THROW, SWA_CAPTURE, SWA_ONOFF, SWA_N };   /* the HOME layer's keys (F3 ..): ui_swarm.c swarm_act */
 static const char *const SW_ROW[SWR_N] = {"POSITION", "SHAPE", "SIZE", "SPEED", "GAIN"};
 static const char *const SW_SHAPE[SWS_N] = {"ORBIT", "DRIFT", "CHAOS", "THROW"};
@@ -82,6 +85,10 @@ typedef struct {
 } sw_dot_t;
 static struct {
     uint8_t inited, on, frozen, rev, row, trk, eng, manual_off;
+    uint8_t mode, trow, sel;                            /* 0 SWARM, 1 TRACE; TRACE's row (TR_ROW); the dot last turned */
+    uint8_t tshape[SW_N], trot[SW_N];                   /* TRACE: each dot's shape, its rotation 0..100 (a turn) */
+    float tph[SW_N], tcur[SW_N];                        /* TRACE: where on the path the knob put it, and where the dot is (laps) */
+    float tcum[SW_N][TR_MAXP + 1u];                     /* TRACE: the path's length up to each point */
     int8_t dir;                                         /* REVERSE: +1 back in time, -1 forward again */
     uint16_t head, hn;                                  /* the history's next sample, how many it holds */
     uint32_t last_ms, rec_ms, sig;                      /* sig: the track's sound (a preset loaded: a new base) */
@@ -90,6 +97,13 @@ static struct {
     sw_dot_t d[SW_N];
 } sw __attribute__((section(".pool")));
 
+/* the row SELECT picked (SWARM's own, or TRACE's: TRAVEL first) and its name */
+static uint32_t sw_rowid(void) { return sw.mode ? TR_ROW[sw.trow % TR_ROWS] : sw.row; }
+static const char *sw_rowname(void)
+{
+    uint32_t r = sw_rowid();
+    return r == SWR_TRAVEL ? "TRAVEL" : r == SWR_ROT ? "ROTATE" : SW_ROW[r];
+}
 /* the page (ui_swarm.c), reached from the lens, the cards and the knobs */
 static void swarm_graph(void);
 static void swarm_cards(void);
@@ -97,6 +111,10 @@ static void swarm_knob(uint32_t slot, int32_t steps);
 static void swarm_select(int32_t s);
 static int swarm_page_on(void);
 static void swarm_draw(void);
+static int summary_page_on(void);                       /* (ui_summary.c: HOME > TRACKS) */
+static void summary_draw(void);
+static void summary_graph(void);
+static void summary_knob(uint32_t slot, int32_t steps);
 
 static float sw_rnd(void) { return (float)((int32_t)(rng() & 0xFFFFu) - 32768) * (1.0f / 65536.0f); }   /* -0.5 .. 0.5 */
 static float sw_fold(float u)                           /* reflected at 0 and 1: any distance stays on the screen */
@@ -117,6 +135,89 @@ static void sw_seed(sw_dot_t *d)
     d->ly = 1.0f;
     d->lz = 20.0f;
 }
+/* TRACE: a dot walks a closed shape (TR_PTS, y down) at a constant speed: the knob moves it along the path, 0..1 a lap (the
+ * MOBIUS strip is two laps: the band's side flips each lap, cos(pi s) of the way). tr_prep works the path's lengths out */
+static void tr_prep(uint32_t i)
+{
+    uint32_t sh = sw.tshape[i], n = TR_OFF[sh + 1u] - TR_OFF[sh], k, m;
+    const int8_t *p = &TR_PTS[TR_OFF[sh] * 2u];
+    float c = 0.0f;
+    for (k = 0; k < n; k++) {
+        float dx, dy;
+        m = k + 1u < n ? k + 1u : 0u;
+        dx = (float)(p[m * 2u] - p[k * 2u]);
+        dy = (float)(p[m * 2u + 1u] - p[k * 2u + 1u]);
+        sw.tcum[i][k] = c;
+        c += dx * dx + dy * dy > 0.0f ? (dx * dx + dy * dy) * fm_rsqrtf(dx * dx + dy * dy) : 0.0f;
+    }
+    sw.tcum[i][n] = c > 0.0f ? c : 1.0f;
+}
+static uint32_t tr_laps(uint32_t i) { return (TR_FLAG[sw.tshape[i]] & TRF_MOBIUS) ? 2u : 1u; }
+/* the point s laps along dot i's shape, -1..1 each way, turned by its ROTATE */
+static void tr_eval(uint32_t i, float s, float *x, float *y)
+{
+    uint32_t sh = sw.tshape[i], n = TR_OFF[sh + 1u] - TR_OFF[sh], k = 0, m, laps = tr_laps(i);
+    const int8_t *p = &TR_PTS[TR_OFF[sh] * 2u];
+    float u, f, px, py, ang, c, sn, tot = sw.tcum[i][n];
+    while (s < 0.0f)
+        s += (float)laps;
+    while (s >= (float)laps)
+        s -= (float)laps;
+    u = (laps > 1u && s >= 1.0f ? s - 1.0f : s) * tot;
+    while (k + 1u < n && sw.tcum[i][k + 1u] <= u)
+        k++;
+    m = k + 1u < n ? k + 1u : 0u;
+    f = sw.tcum[i][k + 1u] > sw.tcum[i][k] ? (u - sw.tcum[i][k]) / (sw.tcum[i][k + 1u] - sw.tcum[i][k]) : 0.0f;
+    f = f > 1.0f ? 1.0f : f;
+    px = (float)p[k * 2u] + (float)(p[m * 2u] - p[k * 2u]) * f;
+    py = (float)p[k * 2u + 1u] + (float)(p[m * 2u + 1u] - p[k * 2u + 1u]) * f;
+    if (laps > 1u) {                                    /* the strip: offset along the path's normal (smooth: the tangents at the two ends of
+                                                         * the segment, blended), to the other side on the next lap */
+        uint32_t kp = k ? k - 1u : n - 1u, mn = m + 1u < n ? m + 1u : 0u;
+        float ax = (float)(p[m * 2u] - p[kp * 2u]), ay = (float)(p[m * 2u + 1u] - p[kp * 2u + 1u]);
+        float bx = (float)(p[mn * 2u] - p[k * 2u]), by = (float)(p[mn * 2u + 1u] - p[k * 2u + 1u]);
+        float qa = ax * ax + ay * ay, qb = bx * bx + by * by, tx, ty, q;
+        float w = 0.25f * 127.0f * fm_cosf(3.1415927f * s);
+        qa = qa > 0.0f ? fm_rsqrtf(qa) : 0.0f;
+        qb = qb > 0.0f ? fm_rsqrtf(qb) : 0.0f;
+        tx = ax * qa + (bx * qb - ax * qa) * f;
+        ty = ay * qa + (by * qb - ay * qa) * f;
+        q = tx * tx + ty * ty;
+        px *= 0.75f;                                    /* (the strip's middle line a little smaller: the band stays on the screen) */
+        py *= 0.75f;
+        if (q > 0.0f) {
+            q = fm_rsqrtf(q);
+            px += -ty * q * w;
+            py += tx * q * w;
+        }
+    }
+    ang = (float)sw.trot[i] * 0.0628319f;
+    c = fm_cosf(ang);
+    sn = fm_sinf(ang);
+    *x = (px * c - py * sn) * (1.0f / 127.0f);
+    *y = (px * sn + py * c) * (1.0f / 127.0f);
+}
+static void tr_shape_set(uint32_t i, uint32_t sh)
+{
+    sw.tshape[i] = (uint8_t)(sh % TR_N);
+    sw.tph[i] = sw.tcur[i] = 0.0f;
+    tr_prep(i);
+}
+/* REROLL / RANDOM: another shape, any of them, turned any way */
+static void tr_random(uint32_t i)
+{
+    uint32_t sh = (rng() >> 4) % TR_N;
+    if (sh == sw.tshape[i])
+        sh = (sh + 1u + ((rng() >> 6) % (TR_N - 1u))) % TR_N;
+    tr_shape_set(i, sh);
+    sw.trot[i] = (uint8_t)((rng() >> 5) % 100u);
+}
+static void tr_travel(uint32_t i, int32_t steps)
+{
+    sw.tph[i] += (float)steps * 0.015f;
+    while (sw.tph[i] >= 2.0f) { sw.tph[i] -= 2.0f; sw.tcur[i] -= 2.0f; }   /* (2 is a whole number of laps for every shape) */
+    while (sw.tph[i] < 0.0f) { sw.tph[i] += 2.0f; sw.tcur[i] += 2.0f; }
+}
 static void swarm_defaults(void)
 {
     uint32_t i;
@@ -132,6 +233,10 @@ static void swarm_defaults(void)
         sw_seed(d);
         d->x = (float)(i & 1u) * 0.5f + 0.25f;
         d->y = (float)(i >> 1) * 0.5f + 0.25f;
+        sw.tshape[i] = TR_DEF[i];
+        sw.trot[i] = 0;
+        sw.tph[i] = sw.tcur[i] = 0.0f;
+        tr_prep(i);
     }
 }
 /* the parameter id of dot i's axis a (0 X, 1 Y) on the track's engine, or 0xFFFF */
@@ -192,10 +297,12 @@ static void swarm_follow(void)
     }
 }
 /* the page is shown: it starts on its first visit (not again once the user has turned it off), and follows the selected track */
+static void swarm_set_mode(uint32_t m);
 static void swarm_enter(void)
 {
     if (!sw.inited)
         swarm_defaults();
+    swarm_set_mode(PAGES[ui.page].graph == GR_TRACE ? 1u : 0u);   /* (the page shown says which of the two moves the sound) */
     if (sw.on)
         swarm_follow();
     else if (!sw.manual_off)
@@ -238,15 +345,22 @@ static void sw_step(sw_dot_t *d, float dt)              /* one dot's shape, dt s
         d->ox = fm_sinf(d->fa * d->t + d->pa);
         d->oy = fm_sinf(d->fb * d->t + d->fp);
         break;
-    case SWS_DRIFT:
-        d->vx += (sw_rnd() * 44.0f * sp - d->ox * 2.5f) * dt;
-        d->vy += (sw_rnd() * 44.0f * sp - d->oy * 2.5f) * dt;
-        r = 1.0f - 3.5f * dt;
-        r = r < 0.0f ? 0.0f : r;
-        d->vx *= r;
-        d->vy *= r;
-        d->ox += d->vx * dt;
-        d->oy += d->vy * dt;
+    case SWS_DRIFT:                                     /* a random walk on a spring, in its own time T (SPEED scales it like the others; 15 % = 1 s per s)
+                                                         * the kick goes with the root of T (a walk, not a tremble), so it reaches about +-0.5 of the size */
+        {
+            float T = dt * sp * 3.3f;
+            if (T > 0.0f) {
+                float kick = 7.5f * T * fm_rsqrtf(T);
+                d->vx += sw_rnd() * kick - d->ox * 2.5f * T;
+                d->vy += sw_rnd() * kick - d->oy * 2.5f * T;
+                r = 1.0f - 3.5f * T;
+                r = r < 0.0f ? 0.0f : r;
+                d->vx *= r;
+                d->vy *= r;
+                d->ox += d->vx * T;
+                d->oy += d->vy * T;
+            }
+        }
         r = d->ox * d->ox + d->oy * d->oy;
         if (r > 1.0f) {
             r = fm_rsqrtf(r);
@@ -360,6 +474,23 @@ static void swarm_rev_stop(void)
     for (i = 0; i < SW_N; i++)
         sw_resume(&sw.d[i], i);
 }
+/* SWARM <-> TRACE: the dots go on from where they are (the base values and the sound stay) */
+static void swarm_set_mode(uint32_t m)
+{
+    uint32_t i;
+    if (m == sw.mode)
+        return;
+    if (sw.rev)
+        swarm_rev_stop();
+    sw.mode = (uint8_t)m;
+    sw.hn = sw.head = 0;
+    sw.rec_ms = fm1_ms;
+    if (m == 0u && sw.on)
+        for (i = 0; i < SW_N; i++)
+            sw_resume(&sw.d[i], i);
+    for (i = 0; i < SW_N; i++)
+        sw.tcur[i] = sw.tph[i];
+}
 /* the main loop, every frame: the dots move, the parameters follow */
 static void swarm_tick(void)
 {
@@ -392,14 +523,27 @@ static void swarm_tick(void)
         if (sw.rev)
             sw_hist(i, sw.age, &d->x, &d->y);
         else {
-            if (!sw.frozen)
+            if (sw.mode) {                              /* TRACE: the dot follows the knob's place on the path, a little behind */
+                float k = dt * 20.0f;
+                k = k > 1.0f ? 1.0f : k;
+                if (!sw.frozen) {
+                    sw.tcur[i] += (sw.tph[i] - sw.tcur[i]) * k;
+                    tr_eval(i, sw.tcur[i], &d->ox, &d->oy);
+                }
+            } else if (!sw.frozen)
                 sw_step(d, dt);
             sw_centre(d, i, &cx, &cy);
-            d->x = sw_fold(cx + d->ox * (float)d->size * 0.01f);
-            d->y = sw_fold(cy + d->oy * (float)d->size * 0.01f);
+            if (sw.mode) {                              /* TRACE: a shape stays in its own box (SIZE 100 % fills it) */
+                float bx = (float)(i & 1u) * 0.5f, by = (float)(i >> 1) * 0.5f;
+                d->x = fm_clampf(cx + d->ox * (float)d->size * 0.0025f, bx, bx + 0.5f);
+                d->y = fm_clampf(cy + d->oy * (float)d->size * 0.0025f, by, by + 0.5f);
+            } else {
+                d->x = sw_fold(cx + d->ox * (float)d->size * 0.01f);
+                d->y = sw_fold(cy + d->oy * (float)d->size * 0.01f);
+            }
         }
     }
-    if (!sw.rev && !sw.frozen && now - sw.rec_ms >= 100u) {   /* the history: ten a second */
+    if (!sw.mode && !sw.rev && !sw.frozen && now - sw.rec_ms >= 100u) {   /* the history: ten a second */
         sw.rec_ms += 100u;
         if (now - sw.rec_ms >= 100u)
             sw.rec_ms = now;

@@ -751,6 +751,14 @@ static uint32_t proj_djf_events(const motion_store_t *m)
     return n;
 }
 /* (chord-harp fork) the tracks whose P_CTABS has bits past its byte's 7 (FUND's 'C' 'T' block) */
+static int proj_bl2_used(const project_t *q)           /* (2026-11-15) MORPH 2 and 3 not as at power-on */
+{
+    uint32_t i;
+    for (i = G_BL2A; i <= G_BL3MOVE; i++)
+        if (q->g[i] != GP[i].def)
+            return 1;
+    return 0;
+}
 static int proj_bl_used(const project_t *q)            /* (chord-harp fork) the track BLEND not as at power-on */
 {
     uint32_t i;
@@ -844,6 +852,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 4u;
     if (proj_bl_used(q))                                /* (chord-harp fork) the track BLEND's */
         n += 6u;
+    if (proj_bl2_used(q))                               /* (2026-11-15) MORPH 2 and 3 */
+        n += 10u;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -991,6 +1001,11 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'B'; b[pos++] = 'L';
         for (i = 0; i < 4u; i++)
             b[pos++] = (uint8_t)clamp(q->g[G_BLA + i], 0, 127);
+    }
+    if (proj_bl2_used(q)) {                             /* (2026-11-15) MORPH 2 and 3: TRACK A, B, BLEND, MOVE each */
+        b[pos++] = 'B'; b[pos++] = '2';
+        for (i = 0; i < 8u; i++)
+            b[pos++] = (uint8_t)clamp(q->g[G_BL2A + i], 0, 127);
     }
     if (proj_px_tracks(q)) {                            /* (2026-11-11) the packed patch slots, 16 bits each */
         b[pos++] = 'P'; b[pos++] = 'X'; b[pos++] = (uint8_t)proj_px_tracks(q);
@@ -1294,6 +1309,11 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         for (i = 0; i < 4u; i++)
             q->g[G_BLA + i] = (int16_t)clamp(b[pos + 2u + i], GP[G_BLA + i].min, GP[G_BLA + i].max);
         pos += 6u;
+    }
+    if (pos + 10u <= room && b[pos] == 'B' && b[pos + 1u] == '2') {   /* (2026-11-15) MORPH 2 and 3 (else off) */
+        for (i = 0; i < 8u; i++)
+            q->g[G_BL2A + i] = (int16_t)clamp(b[pos + 2u + i], GP[G_BL2A + i].min, GP[G_BL2A + i].max);
+        pos += 10u;
     }
     if (pos + 3u <= room && b[pos] == 'P' && b[pos + 1u] == 'X') {   /* (2026-11-11) the packed patch slots (else the low 7 bits) */
         uint32_t k, c = b[pos + 2u];

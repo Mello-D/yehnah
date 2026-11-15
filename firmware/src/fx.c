@@ -2129,7 +2129,7 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         uint32_t ti = (uint32_t)(t - trk) % NTRK;
         /* (chord-harp fork) + the sound's level trim (P_TRIM, 1/2 dB steps as LEVEL's: Clipper's) */
         int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] ? clamp(t->p[P_LEVEL] + t->p[P_TRIM], 1, 127) : 0] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
-        if (bl_a)                                       /* (chord-harp fork) the track BLEND's share (bl_block), slewed */
+        if (bl_any)                                     /* (chord-harp fork) the track BLEND's share (bl_block), slewed */
             lvl = (lvl >> 4) * bl_g[ti] >> 8;           /* with the LEVEL below */
         if (t->p[P_APDEP] > 0)                          /* (0.6.9) AUTO PAN */
             pan = clamp(pan + autopan(t, ti, n), -(64 << 8), 63 << 8);
@@ -2238,43 +2238,50 @@ static int32_t dx_mot_sh;
 static uint32_t bl_free;
 static __attribute__((noinline)) void bl_block(uint32_t n)
 {
-    uint32_t a = (uint32_t)clamp(song.g[G_BLA], 0, NTRK), b = (uint32_t)clamp(song.g[G_BLB], 0, NTRK), i, ph;
-    uint32_t mv = (uint32_t)clamp(song.g[G_BMOVE], 0, 7);
-    int32_t x = clamp(song.g[G_BLEND], 0, 127);
-    if (!a || !b || a == b)
-        a = b = 0;
-    if (a != bl_a || b != bl_b) {
-        if (bl_a) {
-            trk_all_off1(&trk[bl_a - 1u]);
-            trk_all_off1(&trk[bl_b - 1u]);
-        }
-        if (a) {
-            trk_all_off1(&trk[a - 1u]);
-            trk_all_off1(&trk[b - 1u]);
-        }
-        bl_a = (uint8_t)a;
-        bl_b = (uint8_t)b;
-    }
+    uint32_t k, i, ph, used = 0;
     for (i = 0; i < NTRK; i++)
         bl_g[i] = 4096;
     bl_free += n;
-    if (!a) {
-        bl_now = 0;
-        return;
+    bl_any = 0;
+    for (k = 0; k < NBL; k++) {                         /* (2026-11-15) three morphs; one that names a track an earlier one has is off) */
+        uint32_t a = (uint32_t)clamp(song.g[G_BLA + 4u * k], 0, NTRK), b = (uint32_t)clamp(song.g[G_BLB + 4u * k], 0, NTRK);
+        uint32_t mv = (uint32_t)clamp(song.g[G_BMOVE + 4u * k], 0, 7);
+        int32_t x = clamp(song.g[G_BLEND + 4u * k], 0, 127);
+        if (!a || !b || a == b || ((used >> a) & 1u) || ((used >> b) & 1u))
+            a = b = 0;
+        else
+            used |= 1u << a | 1u << b;
+        if (a != bl_a[k] || b != bl_b[k]) {
+            if (bl_a[k]) {
+                trk_all_off1(&trk[bl_a[k] - 1u]);
+                trk_all_off1(&trk[bl_b[k] - 1u]);
+            }
+            if (a) {
+                trk_all_off1(&trk[a - 1u]);
+                trk_all_off1(&trk[b - 1u]);
+            }
+            bl_a[k] = (uint8_t)a;
+            bl_b[k] = (uint8_t)b;
+        }
+        if (!a) {
+            bl_now[k] = 0;
+            continue;
+        }
+        bl_any = 1;
+        if (mv == 1u)                                   /* VEL */
+            x = x * trk[a - 1u].m_vel / 127;
+        else if (mv == 2u)                              /* WHEEL: A's or B's channel */
+            x = x * (trk[a - 1u].mw > trk[b - 1u].mw ? trk[a - 1u].mw : trk[b - 1u].mw) / 127;
+        else if (mv) {                                  /* LFO 1 .. 16 bars: A, up to BLEND, back (on the bar, playing) */
+            uint32_t len = (beat_samples() * 4u) << (mv - 3u), pos = song.playing ? ms_clock : bl_free;
+            ph = (uint32_t)(((uint64_t)(pos % len) << 32) / len);
+            x = x * (int32_t)(ph < 0x80000000u ? ph >> 16 : 65535u - (ph >> 16)) >> 15;
+        }
+        bl_now[k] = (uint8_t)x;
+        ph = (uint32_t)x * (0x40000000u / 127u);        /* a quarter cycle */
+        bl_g[a - 1u] = (uint16_t)clamp((osc_sine(ph + 0x40000000u) + 4) >> 3, 0, 4096);
+        bl_g[b - 1u] = (uint16_t)clamp((osc_sine(ph) + 4) >> 3, 0, 4096);
     }
-    if (mv == 1u)                                       /* VEL */
-        x = x * trk[a - 1u].m_vel / 127;
-    else if (mv == 2u)                                  /* WHEEL: A's or B's channel */
-        x = x * (trk[a - 1u].mw > trk[b - 1u].mw ? trk[a - 1u].mw : trk[b - 1u].mw) / 127;
-    else if (mv) {                                      /* LFO 1 .. 16 bars: A, up to BLEND, back (on the bar, playing) */
-        uint32_t len = (beat_samples() * 4u) << (mv - 3u), pos = song.playing ? ms_clock : bl_free;
-        ph = (uint32_t)(((uint64_t)(pos % len) << 32) / len);
-        x = x * (int32_t)(ph < 0x80000000u ? ph >> 16 : 65535u - (ph >> 16)) >> 15;
-    }
-    bl_now = (uint8_t)x;
-    ph = (uint32_t)x * (0x40000000u / 127u);            /* a quarter cycle */
-    bl_g[a - 1u] = (uint16_t)clamp((osc_sine(ph + 0x40000000u) + 4) >> 3, 0, 4096);
-    bl_g[b - 1u] = (uint16_t)clamp((osc_sine(ph) + 4) >> 3, 0, 4096);
 }
 static __attribute__((noinline)) void dx_mot_block(uint32_t n)
 {

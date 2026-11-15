@@ -23,6 +23,7 @@ static const uint8_t ED_MENU[][2] = {
     {MI_LOAD, 19},                                     /* (0.6.30) LOAD ECO / LITE / FULL, a row of SYSTEM */
     {MI_MIDIOUT, 20},                                  /* (0.6.72) MIDI OUT KEYS / CLOCK / ALL / OFF, CONTROL */
     {MI_FILL, 23},                                     /* (2026-11-02) FILL RANDOM / SNAKE, a row of DISPLAY */
+    {MI_HOMEPG, 24},                                   /* (2026-11-15) HOME PAGE DANCE / TRACKS, a row of DISPLAY */
 };
 #define ED_MENU_N NELEM(ED_MENU)
 
