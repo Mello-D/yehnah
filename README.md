@@ -97,6 +97,7 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 <td align="center"><img src="docs/img/swarm.png" width="300" alt="SWARM: four coloured dots moving across the screen"><br><sub>SWARM: four dots wander, each moving two parameters of the engine</sub></td>
 <td align="center"><img src="docs/img/trace.png" width="300" alt="TRACE: four dots on four shapes"><br><sub>TRACE: turn a knob to walk a dot round its shape</sub></td>
 <td align="center"><img src="docs/img/tracks.png" width="300" alt="TRACKS: a row for every track"><br><sub>TRACKS: every track's sound, length, key and pattern at a glance</sub></td>
+<td align="center"><img src="docs/img/morph.png" width="300" alt="MORPH: three morphs"><br><sub>MORPH: three pairs of tracks blended at once; SELECT scrolls them</sub></td>
 </tr>
 </table>
 
@@ -193,8 +194,8 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   mutes, the macros and the punch-in effects held) and an END rule.
 - **TRIM: per-track adjustment across the song.** For every track and every part of the arrangement, set how many bars it
   sits out from the part's start and from its end: the bass comes in late, the lead drops out for the last bars, the
-  drums rest through a verse. The same section plays differently each time round, and you can change the cuts while the
-  song plays.
+  drums rest through a verse, or a track sits a whole part out. The same section plays differently each time round, and you
+  can change the cuts while the song plays.
 - **Play the sections live** from the REC layer: tap A–D to switch on the next bar, tap several in one hold for a **quick
   chain**, and **record the song** as you play it (the section system after [SLOOP](https://github.com/isod89/sloop-fm1)).
 - **Autosave.** Set GLO > SYSTEM > RESTORE LAST to ON (it is off by default) and the music is kept as you stop and put back
@@ -223,7 +224,7 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 
 - **A modulation matrix** per track. Sources: LFO, ENV, VEL, KEY, RAND, mod wheel, aftertouch, expression, the four
   macros, **STEP** (the MSEQ step modulator) and a smooth NOISE wander. They reach the filter, pitch, shape and amplitude.
-- **Envelopes and LFOs** per track on their own pages; ALL ENV shows the six tracks' envelopes side by side.
+- **Envelopes and LFOs** per track on their own pages.
 
 ### A screen made of rows
 

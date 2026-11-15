@@ -308,9 +308,9 @@ static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC
     frame();
 }
 #if FELUCCA_MACROPAGE
-#define HCNT(n) #n "/15"
+#define HCNT(n) #n "/14"
 #else
-#define HCNT(n) #n "/15"
+#define HCNT(n) #n "/13"
 #endif
 #define NAV_FIRST(sec) (ui.nmem[nav_key(sec)] = 0)           /* (2026-11-15) MENU > HOME PAGE: DANCE (the default) or TRACKS: power-on and the HOME button; a second tap does not flip */
 static int test_home_page(void)
@@ -3018,9 +3018,11 @@ static int test_song_edit(void)
     ok &= song_idx.scene[song_cur][0].cut[1][0] == 2u && song_idx.scene[song_cur][0].cut[1][1] == 3u &&
           !song_idx.scene[song_cur][0].cut[0][0] && !song_idx.scene[song_cur][1].cut[1][0];
     turn(EN_K3, 50);
-    ok &= song_idx.scene[song_cur][0].cut[1][0] == 4u;  /* (at least one bar left: 8 - 3 - 1) */
-    turn(EN_K3, -2);
-    bad += check("SONG EDIT: K1 the track, K2 the part, K3 / K4 that track's cuts of that part (one bar always left)",
+    ok &= song_idx.scene[song_cur][0].cut[1][0] == 5u;  /* (2026-11-15: the two may take every bar: 8 - 3) */
+    turn(EN_K4, 50);
+    ok &= song_idx.scene[song_cur][0].cut[1][1] == 3u;  /* (K4 cannot pass what K3 left: 8 - 5) */
+    turn(EN_K3, -3);
+    bad += check("SONG EDIT: K1 the track, K2 the part, K3 / K4 that track's cuts of that part (together up to the whole part)",
                  ok && song_idx.scene[song_cur][0].cut[1][0] == 2u);
     ok = chain_prepare() == 0;
     events_block(n);
@@ -3044,6 +3046,18 @@ static int test_song_edit(void)
     seq_stop();
     ok = chain.cut == 0u;
     bad += check("  stopped: nothing cut", ok);
+    song_idx.scene[song_cur][0].cut[1][0] = 8; song_idx.scene[song_cur][0].cut[1][1] = 0;   /* (2026-11-15) the whole part */
+    ok = chain_prepare() == 0;
+    events_block(n);
+    ok &= chain.running && chain.row == 0 && chain.cut == 2u;
+    period = chain_bar();
+    song_poll();
+    events_block(period - n);
+    for (i = 0; i < 6u; i++) { events_block(period); ok &= chain.row == 0 && chain.cut == 2u; }   /* (bars 2 .. 7: T2 out, T1 plays) */
+    events_block(period); events_block(period);
+    ok &= chain.row == 1 && chain.cut == 0u;                       /* (part 2: it plays again) */
+    seq_stop();
+    bad += check("SONG a whole-part cut (8 + 0 of 8 bars): T2 sits out every bar of part 1, plays part 2", ok);
     return bad;
 }
 static int test_section_preview(void)             /* (2026-11-06) SAVE > PROJECT: PLAY previews the picked section */
@@ -8569,8 +8583,8 @@ static int test_bpm_lock(void)
     ok &= str_eq(cur_page()->title, "PATCH");                         /* (2026-11-11: EDIT is one page, SOUND: it stays) */
     sel_turn( -1);
     ok &= str_eq(cur_page()->title, "PATCH");
-    go_title("ENV DEST"); frame(); sel_first(); sel_turn( -1);   /* (2026-11-02: it wraps) */
-    ok &= str_eq(nav_name(), "ALL DEST") && !ui.home;                 /* (ENV -> ALL DEST, the last; no LFO) */
+    go_title("ENV LIST"); frame(); sel_first(); sel_turn( -1);   /* (2026-11-02: it wraps) */
+    ok &= str_eq(cur_page()->title, "ENV LIST") && !ui.home;          /* (2026-11-15: ENV is one page; ALL ENV / ALL DEST are gone: no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (round, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
@@ -8588,12 +8602,12 @@ static int test_bpm_lock(void)
     {
         int16_t before[8];
         uint32_t j, moved = 0;
-        go_title("ENV"); frame();
+        go_title("ENV LIST"); frame();
         for (j = 0; j < 8u; j++) before[j] = TSEL->p[P_E0 + j];
         b0 = song.g[G_BPM]; fm1_ms += 1200u;
         sel_turn( 1);                             /* (0.6.67) SELECT alone: a page on, no dice */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
-        ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "ENV DEST") && !ui.confirm;   /* (0.9.2: the next page) */
+        ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "ENV LIST") && !ui.confirm;   /* (0.9.2: the next page; 2026-11-15: ENV is one page) */
         fm1_ms += 1200u;
         held_turn(B_EDIT, 1);                           /* (chord-harp fork) EDIT held + SELECT: no dice (IDEAS > SOUND) */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
@@ -9403,18 +9417,14 @@ static int test_lz_home(void)
     bad += check("HOME: DANCE TRACKS PRESETS then the IDEAS (TRACK, SOUND ..): SELECT in, PRESETS its GENRE, and back out", ok);
     sw.row = 0; sw.trow = 0;
     sel_turn( -1); frame();                                   /* it wraps: the chain's last, MIXER */
-    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(15));
+    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(13));
     sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(14));
+    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(12));
     sel_turn( -1); frame();                                   /* (SWARM's and TRACE's rows: SELECT goes on at the first going left) */
     sw.row = 0; sw.trow = 0;
-    ok &= str_eq(cur_page()->title, "TRACE") && lz_count_is(HCNT(13));
+    ok &= str_eq(cur_page()->title, "TRACE") && lz_count_is(HCNT(11));
     sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is(HCNT(12));
-    sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "MORPH 3") && lz_count_is(HCNT(11));
-    sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "MORPH 2") && lz_count_is(HCNT(10));
+    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is(HCNT(10));
     sel_turn( -1); frame();
     ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(9));
     sel_turn( -1); frame();                                   /* the IDEAS' last: TEXTURE */
@@ -9423,11 +9433,11 @@ static int test_lz_home(void)
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
     sel_turn( 8); frame();                                    /* MORPH .. TRACE hand on going right (rows last) */
-    ok &= str_eq(cur_page()->title, "MORPH");
+    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(9));
+    sel_turn( 1); frame();                                    /* (2026-11-15: SELECT scrolls MORPH's three morphs first) */
+    ok &= str_eq(cur_page()->title, "MORPH 2") && lz_count_is(HCNT(9));
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "MORPH 2");
-    sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "MORPH 3");
+    ok &= str_eq(cur_page()->title, "MORPH 3") && lz_count_is(HCNT(9));
     sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "SWARM");
     sel_turn( 1); frame();
@@ -9438,7 +9448,7 @@ static int test_lz_home(void)
     ok &= str_eq(cur_page()->title, "MIXER");
     sel_turn( 1); frame();                                    /* .. and on round: DANCE */
     ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
-    bad += check("HOME: MORPH 1..3 SWARM TRACE SENDS MIXER are the chain's last seven (MIXER one turn left of DANCE), SELECT round", ok);
+    bad += check("HOME: MORPH (SELECT scrolls its three morphs) SWARM TRACE SENDS MIXER are the chain's last five (MIXER one turn left of DANCE), SELECT round", ok);
     turn(EN_K1, 1); frame();                                  /* (DANCE: the HOME knobs) */
     sel_turn( 4); frame();                                    /* IDEAS 2 */
     ok = gen_on() && gen_page() == 1u;
@@ -9533,27 +9543,20 @@ static int test_lz_env(void)
     ui_power_on(); frame();
     press(B_ENV); frame();
     ok = pd_on() && lz_fam() == LZ_ENV && pd_level() == 1u && str_eq(cur_page()->title, "ENV LIST") &&
-         lz_crumb_is("ENV \xB7 ENV") && lz_count_is("1/3");
-    sel_turn( 1); frame();                                          /* (the list's end goes on: ALL ENV) */
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "ENV") && lz_crumb_is("ENV \xB7 ALL ENV") && lz_count_is("2/3");
-    sel_turn( 1); frame();
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("ENV \xB7 ALL DEST");
+         lz_crumb_is("ENV \xB7 ENV") && lz_count_is("1/1");
     frames(320); press(B_ENV); frame();
     ok &= ui.home && home_level() == 0u;                            /* (ENV on ENV: TRACKS) */
     frames(320); press(B_ENV); frame();
-    ok &= pd_level() == 0u && lz_crumb_is("ENV \xB7 ALL DEST");           /* (2026-11-15: the page last on) */
-    sel_turn( -2); frame();                                         /* (ENV LIST again) */
-    ok &= pd_level() == 1u && lz_crumb_is("ENV \xB7 ENV");
-    bad += check("ENV: opens on ENV LIST (2026-11-12: ENV + ENV DEST as a picture and rows); ENV LIST, ALL ENV, ALL DEST (2026-11-13: STAGE is gone, its rows are ENV LIST's); the taps", ok);
-    sel_turn( -2); frame();                                   /* ALL ENV (round) */
-    pr = TSEL->preset;                                              /* TRACKS: ALGORITHM the track, PRESETS the sound */
+    ok &= pd_level() == 1u && lz_crumb_is("ENV \xB7 ENV");               /* (the page last on: the only one) */
+    bad += check("ENV: one page, ENV LIST (2026-11-12: a picture and rows); ALL ENV and ALL DEST are gone (2026-11-15); the taps", ok);
+    pr = TSEL->preset;                                              /* ALGORITHM the track, PRESETS the sound */
     turn(EN_ALGO, 1); frame();
-    ok = song.sel == 1u && pd_level() == 0u && pd_on();
+    ok = song.sel == 1u && pd_level() == 1u && pd_on();
     turn(EN_ALGO, -1); frame();
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
-    ok &= song.sel == 0u && pd_level() == 0u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    bad += check("0.9.2 ENV > TRACKS: ALGORITHM picks the track (the tiles), PRESETS the sound (was the track); the page stays", ok);
+    ok &= song.sel == 0u && pd_level() == 1u && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
+    bad += check("0.9.2 ENV: ALGORITHM picks the track, PRESETS the sound (was the track); the page stays", ok);
     go_list("ENV LIST", 0); frame();                                /* (2026-11-13) rows of four on KNOB 1..4, SELECT the rows */
     v = TSEL->p[P_ATK];
     turn(EN_K1, 3); frame();
@@ -10143,6 +10146,7 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
         rv_add();
         at = nav_cur();
         sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;     /* (SWARM's and TRACE's rows: SELECT goes on at the last) */
+        if (PAGES[ui.page].graph == GR_BLEND) { uint32_t q; for (q = 0; q < NPAGES; q++) if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL3A) ui.page = (uint8_t)q; }   /* (MORPH: its last morph) */
         sel_turn( 1); frames(2);
         if (nav_cur() == at || (nav_list(nav_sec(), v) && v[0] == nav_cur()))   /* (round: it wraps) */
             break;
@@ -10156,7 +10160,7 @@ static const old_lv_t OLD_LV[] = {
     {FAM_EDIT, 0, 0, {"PATCH"}},   /* (2026-11-11: FILTER DRIFT VOICE VOICE 2 are SOUND's rows) */
     {FAM_EDIT, 0, 1, {"PATCH"}},
     /* (2026-11-13: the operators, KIT 3, X-MOD, LEVELS, SOUND 1..4, STAGE, MOD, MSEQ, MAIN .. SYSTEM are rows of SOUND / ENV LIST / LFO LIST / GLO) */
-    {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV LIST"}},
+    {FAM_ENV, 1, 9, {"ENV LIST"}},   /* (2026-11-15: ALL ENV and ALL DEST gone) */
     {FAM_LFO, 1, 9, {"LFO LIST"}},
     {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP LIST"}},
     {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLO"}},
@@ -10228,6 +10232,7 @@ static int test_lz_reach(void)
                           CE_HOME[k].t ? !ui.home && str_eq(cur_page()->title, CE_HOME[k].t) :
                           ui.home && home_macros() == (k == HOME_MACRO));
                     sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
+                    if (PAGES[ui.page].graph == GR_BLEND) { uint32_t q; for (q = 0; q < NPAGES; q++) if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL3A) ui.page = (uint8_t)q; }
                     sel_turn( 1); frames(2);
                 }
                 okh &= n == NELEM(CE_HOME);
@@ -11356,16 +11361,22 @@ static int test_blend(void)
         mix_block(o, CTL);
         okt &= !bl_any;
         trk_all_off(&trk[0]); trk_all_off(&trk[2]);
-        {   /* the pages: MORPH 2 and 3 are chain entries with their own four globals */
+        {   /* the pages: MORPH 2 and 3 are MORPH's, with their own four globals; SELECT scrolls the three */
             uint32_t q, p2 = 0, p3 = 0;
             for (q = 0; q < NPAGES; q++) {
                 if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL2A && PAGES[q].id[3] == G_BL2MOVE) p2 = q;
                 if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL3A && PAGES[q].id[3] == G_BL3MOVE) p3 = q;
             }
-            okt &= p2 && p3 && nav_put(SEC_HOME, "MORPH 2") != 0 && ui.page == p2;
-                turn(EN_K2, 3); frame();                    /* its KNOB 2 is ITS TRACK B */
+            okt &= p2 && p3 && nav_put(SEC_HOME, "MORPH") != 0 && PAGES[ui.page].id[0] == G_BLA;
+            sel_turn( 1); frame();                      /* SELECT scrolls to MORPH 2 (one chain page, three morphs) */
+            okt &= ui.page == p2 && morph_page_on();
+            turn(EN_K2, 3); frame();                    /* its KNOB 2 is ITS TRACK B */
             okt &= song.g[G_BL2B] == 3 && song.g[G_BLB] == 0;
-            okt &= nav_put(SEC_HOME, "MORPH 3") != 0 && ui.page == p3;
+            sel_turn( 1); frame();
+            okt &= ui.page == p3;
+            sel_turn( -1); frame();
+            sel_turn( -1); frame();
+            okt &= PAGES[ui.page].id[0] == G_BLA;      /* (and back) */
             song.g[G_BL2B] = 0;
         }
         bad_t = !okt;

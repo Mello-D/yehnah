@@ -55,12 +55,13 @@ static void scene_capture(scene_t *s)
     memcpy(s->mac, macro_v, sizeof s->mac);
 }
 static song_index_t song_idx;
-/* (2026-11-06) a track's cuts in a row, clamped so one bar is left: the bars it sits out from the row's start (*a) and end (*b) */
+/* (2026-11-06) a track's cuts in a row: the bars it sits out from the row's start (*a) and end (*b), at most the row's bars between them
+ * (2026-11-15, the user's: the two may take them all, the track sits the whole part out; it kept one bar before) */
 static void row_trims(const chain_config_t *c, uint32_t song, uint32_t row, uint32_t t, uint32_t *a, uint32_t *b)
 {
     uint32_t bars = c->row[row].bars, ta = song_idx.scene[song][row].cut[t][0], tb = song_idx.scene[song][row].cut[t][1];
-    if (ta > bars - 1u) ta = bars - 1u;
-    if (tb > bars - 1u - ta) tb = bars - 1u - ta;
+    if (ta > bars) ta = bars;
+    if (tb > bars - ta) tb = bars - ta;
     *a = ta;
     *b = tb;
 }

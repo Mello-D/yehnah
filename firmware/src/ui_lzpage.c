@@ -27,52 +27,6 @@ static void env_mini(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t 
         py = yy;
     }
 }
-static int32_t env_now(const track_t *t)                /* the loudest voice's level now, 0..1000 (-1: none) */
-{
-    int32_t lv = -1;
-    uint32_t i;
-    for (i = 0; i < NVOICE; i++)
-        if (t->v[i].stage && t->v[i].stage < 4u)
-            lv = clamp((int32_t)(((int64_t)t->v[i].env * 1000) >> 24), lv, 1000);
-    return lv;
-}
-static void graph_env_tracks(int dest)
-{
-    uint32_t c, k;
-    for (c = 0; c < NTRK; c++) {
-        const track_t *t = &trk[c];
-        int32_t x = 4 + (int32_t)(c % 3u) * 78, y = 2 + (int32_t)(c / 3u) * 68, sel = c == song.sel, lv;
-        uint16_t bg = sel ? T_TINT : T_RAISE, ink = c >= trk_live ? T_DIM : sel ? T_THEME : T_MID;
-        char n[3] = {'T', (char)('1' + c), 0};
-        cv_rect(x, y, 76, 66, bg);
-        if (sel) {
-            cv_rect(x, y, 76, 1, T_THEME); cv_rect(x, y + 65, 76, 1, T_THEME);
-            cv_rect(x, y, 1, 66, T_THEME); cv_rect(x + 75, y, 1, 66, T_THEME);
-        }
-        cv_text(x + 4, y + 4 - AF_X_CAP_Y, &AF_X, n, ink);
-        cv_clip_text(x + 22, y + 4 - AF_X_CAP_Y, &AF_X, trk_engp(t)->name, T_DIM, bg, 50);
-        env_mini(t, x + 5, y + 16, 66, dest ? 34 : 44, c >= trk_live ? T_DIM : T_THEME, sel ? 2 : 1);
-        if (!dest && (lv = env_now(t)) >= 0)
-            og_node((x + 70) * 16, (y + 60 - lv * 44 / 1000) * 16, 2, T_TEXT);
-        for (k = 0; dest && k < 3u; k++) {              /* FILTER PITCH SHAPE: a bar each from the middle */
-            int32_t v = t->p[P_ED_FLT + k], w = v * 34 / 128;
-            cv_rect(x + 5, y + 54 + (int32_t)k * 4, 66, 1, T_LINE);
-            cv_rect(w < 0 ? x + 38 + w : x + 38, y + 53 + (int32_t)k * 4, w < 0 ? -w : w ? w : 1, 3,
-                    k == 0u ? T_THEME : k == 1u ? T_ACCENT : T_MID);
-        }
-    }
-}
-/* the lens's panel for ENV's page pg (1), else 0 (its own) */
-static int graph_env_lz(const track_t *t, const page_t *pg)
-{
-    if (pd_level() == 0u)
-        graph_env_tracks(pg->id[0] != P_ATK);
-    else
-        return 0;
-    return 1;
-}
-
-
 /* (chord-harp fork) SCL's HARP, OMNI and PROG tabs (mockups/harp_omni_tabs.html): the chord keys drawn as a piece of keyboard
  * in the pen line (ui_engline.c el_*), the plate's strings under them. A key: a box a little rounded at its corners; a
  * black key filled dark and hatched across its foot. A chord down (or latched, the plate's) is pressed in, tinted and

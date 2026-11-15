@@ -154,11 +154,15 @@ static void graph_song_view(int trim)
         str_cpy(b, "PART ", sizeof b);
         fmt_int(b + 5, (int32_t)r + 1);
         k = str_len(b);
-        str_cpy(b + k, " \xB7 CUT ", 9);
         row_trims(&chain_config, song_cur, r, st, &pa, &pb);
-        fmt_int(b + str_len(b), (int32_t)pa);
-        k = str_len(b); b[k] = '/'; b[k + 1u] = 0;
-        fmt_int(b + k + 1u, (int32_t)pb);
+        if (pa + pb >= chain_config.row[r].bars) {         /* (2026-11-15) the track sits the whole part out */
+            str_cpy(b + k, " \xB7 MUTED", 10);
+        } else {
+            str_cpy(b + k, " \xB7 CUT ", 9);
+            fmt_int(b + str_len(b), (int32_t)pa);
+            k = str_len(b); b[k] = '/'; b[k + 1u] = 0;
+            fmt_int(b + k + 1u, (int32_t)pb);
+        }
         cv_text_r(236, 128, &AF_X, b, T_DIM, T_SURF);
         return;
     }

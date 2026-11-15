@@ -87,7 +87,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 | --- | --- | --- |
 | **HOME** | HOME's first page, DANCE. | the **HOME layer**: SWARM's and TRACE's actions, on any page |
 | **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, as a menu that stays open (see [12](#12-the-layers)) |
-| **ENV** | The envelopes: **ENV**, then **ALL ENV** and **ALL DEST**. | nothing |
+| **ENV** | The envelopes: **ENV** (one page of rows). | nothing |
 | **LFO** | The **LFO** page: the LFO, the step modulator, the modulation matrix. | nothing |
 | **FX** | The **FX** page: every effect's rows. | the **FX layer**: punch-in effects |
 | **SCL** | The scale, then the chord pages. | nothing |
@@ -139,12 +139,12 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 | Section (button) | Pages |
 | --- | --- |
-| **HOME** | DANCE · TRACKS · PRESETS · I-TRK · I-SND · I-LFO · I-FX · I-TEX · MORPH · MORPH 2 · MORPH 3 · SWARM · TRACE · SENDS · MIXER |
+| **HOME** | DANCE · TRACKS · PRESETS · I-TRK · I-SND · I-LFO · I-FX · I-TEX · MORPH · SWARM · TRACE · SENDS · MIXER |
 | **EDIT** | SOUND (the selected engine's rows; a drum track has its own, see [6](#6-drums)) |
 | **SEQ** | STEP · NOTE · SPICE · AUTO · PATTERN · STRETCH · TRACK |
 | **FX** | FX (one page, every effect's rows) |
 | **GLO** | GLO (four lists of rows) |
-| **ENV** | ENV · ALL ENV · ALL DEST |
+| **ENV** | ENV |
 | **LFO** | LFO |
 | **SCL** | SCALE · CHORD · HARP · OMNI · PROG · GUITAR · TUNE |
 | **ARP** | ARP |
@@ -181,10 +181,10 @@ it on the SOUND page; then save it as a user sound with **SAVE SND** on the SAVE
 
 ### MORPH
 
-Blends two tracks into one part: **TRACK A**, **TRACK B**, **BLEND** and **MOVE**. There are three morphs on three pages,
-**MORPH**, **MORPH 2** and **MORPH 3**, so up to three pairs can be blended at once (three pairs use all six tracks; two
-pairs and two single tracks, or any other grouping, work too). Each page shows all three morphs as rows and frames its own,
-which its four knobs set. A track can be in one morph only: a morph that names a track an earlier morph has is off (the
+Blends two tracks into one part: **TRACK A**, **TRACK B**, **BLEND** and **MOVE**. There are three morphs on one page: **SELECT**
+scrolls them (**MORPH**, **MORPH 2**, **MORPH 3**, then on to the next page), so up to three pairs can be blended at once
+(three pairs use all six tracks; two pairs and two single tracks, or any other grouping, work too). The page shows all three
+morphs as rows and frames the one SELECT is on, which its four knobs set. A track can be in one morph only: a morph that names a track an earlier morph has is off (the
 page says so). A note played on a morph's B plays its A (and so both), as before.
 
 ### MIXER and SENDS
@@ -439,7 +439,8 @@ bars of that part the track sits out: from its start and from its end. Do it for
 sections play differently each time round: the bass comes in after four bars, the lead drops out for the last two, a
 drum track rests through a verse. The picture is the song as one lane per track, with the picked part framed and its
 cut shown, and a line under it spells it out (PART 3 · CUT 8 / 4). The cuts belong to the song, not to the section, so
-a section reused in two parts can be trimmed differently in each. At least one bar of a part always plays, and you
+a section reused in two parts can be trimmed differently in each. Cut start and cut end together may take every bar of the part: the
+track then sits the whole part out (the line under the picture says **MUTED**, and anything it was playing is released). You
 can set cuts while the song plays: they take effect from the next bar. **DEL ROW** on the SAVE layer deletes the part
 TRIM is on.
 
@@ -494,8 +495,8 @@ are **FILTER**, **CRUSH**, **THROW** and **DEPTH**. See [12](#12-the-layers).
 
 ### ENV
 
-**ENV** is a list: **ENV** (ATK, DEC, SUS, REL · LOOP) and **TARGETS** (FILTER, PITCH, SHAPE). **ALL ENV** shows the six
-tracks' envelopes side by side, **ALL DEST** their destinations.
+**ENV** is one page of rows: **ENV** (ATK, DEC, SUS, REL · LOOP) and **TARGETS** (FILTER, PITCH, SHAPE), with a picture of
+the envelope.
 
 ### LFO
 

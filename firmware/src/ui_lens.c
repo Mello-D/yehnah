@@ -57,7 +57,7 @@ static const nv_t CE_HOME[] = {NV(0, "DANCE", 0, 0), NV("TRACKS", 0, 0, 0), NV("
 #endif
                                NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
                                NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2),   /* IDEAS (ideas.c; was Yehnah's GEN) */
-                               NV("MORPH", 0, 2, SV_SOUND), NV("MORPH 2", 0, 2, SV_SOUND), NV("MORPH 3", 0, 2, SV_SOUND), NV("SWARM", 0, 2, 0), NV("TRACE", 0, 2, 0),
+                               NV("MORPH", 0, 2, SV_SOUND), NV("SWARM", 0, 2, 0), NV("TRACE", 0, 2, 0),
                                NV("SENDS", 0, 2, 0), NV("MIXER", 0, 2, 0)};
 static const nv_t CE_SYN[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-11: SOUND, the PATCH entry of PAGES, replaces EDIT 1 / 2; its rows
                                                          * hold the old FILTER, DRIFT, VOICE, VOICE 2) */
@@ -72,8 +72,7 @@ static const nv_t CE_SEQ[] = {NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR)
 enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
 static const nv_t CE_FX[] = {NV("FX ALL", "FX", 0, FXL_TRACK)};   /* (2026-11-13) one page: every effect's rows (ui_fxall.c) */
 static const nv_t CE_GLO[] = {NV("GLO", 0, 0, 1)};   /* (2026-11-13: MAIN DEVICE CONTROL SYSTEM are GLO's rows) */
-static const nv_t CE_ENV[] = {NV("ENV LIST", "ENV", 1, 1),   /* (this track's, then all six tracks'; STAGE is a row of ENV LIST now) */
-                              NV("ENV", "ALL ENV", 0, 0), NV("ENV DEST", "ALL DEST", 0, 0)};
+static const nv_t CE_ENV[] = {NV("ENV LIST", "ENV", 1, 1)};   /* (this track's; STAGE is a row of ENV LIST; 2026-11-15: ALL ENV and ALL DEST, the six tracks' pictures, gone) */
 static const nv_t CE_LFO[] = {NV("LFO LIST", "LFO", 1, 1)};   /* (MSEQ and MOD are rows of LFO LIST now) */
 static const nv_t CE_SCL[] = {NV("SCL", "SCALE", 0, 0), NV("CHORD", 0, 1, 1), NV("HARP", 0, 2, 1), NV("OMNI", 0, 3, 1),
                               NV("PROG", 0, 4, 1), NV("GUITAR", 0, 5, 1), NV("TUNE", 0, 6, 1)};   /* (2026-11-10) GUITAR: guitchordi's chord styles */
@@ -109,6 +108,8 @@ static int home_page(uint32_t i)                        /* a page of HOME's chai
     uint32_t k;
     if (PAGES[i].fam != FAM_SAVE && PAGES[i].fam != FAM_TRK)
         return 0;
+    if (PAGES[i].graph == GR_BLEND)                     /* (2026-11-15) MORPH 2 and 3: MORPH's, SELECT scrolls the three */
+        return 1;
     for (k = 0; k < NELEM(CE_HOME); k++)
         if (CE_HOME[k].t && str_eq(PAGES[i].title, CE_HOME[k].t))
             return 1;
@@ -248,6 +249,24 @@ static void nav_button(uint32_t sec)
         e = home_entry();
     }
     nav_go(sec, e, 1);
+}
+/* MORPH's three morphs are three PAGES entries (the same page, their own four settings); SELECT scrolls them like SWARM's rows */
+static int morph_page_on(void) { return !ui.home && !page_over && !ui.layer && !ui.menu && PAGES[ui.page].graph == GR_BLEND; }
+static void nav_select(int32_t s);
+static void page_entered(void);
+static void morph_select(int32_t s)
+{
+    int32_t l = ((int32_t)PAGES[ui.page].id[0] - (int32_t)G_BLA) / 4 + (s > 0 ? 1 : -1);
+    uint32_t i;
+    if (l >= 0 && l < (int32_t)NBL)
+        for (i = 0; i < NPAGES; i++)
+            if (PAGES[i].graph == GR_BLEND && PAGES[i].id[0] == G_BLA + 4u * (uint32_t)l) {
+                ui.page = (uint8_t)i;
+                page_entered();
+                ui.force = 1;
+                return;
+            }
+    nav_select(s);
 }
 /* rule 1: SELECT, s detents along the chain; it wraps (the last page, then the first: the page row) */
 static uint32_t nav_vis_n(void) { uint8_t v[NAV_MAX]; return nav_list(nav_sec(), v); }   /* (the visible pages of the chain: ui_fxall.c) */

@@ -1021,7 +1021,7 @@ static void setup(int s)
     case S_ED_FILTER_BP: eng(7); { uint32_t pi; for (pi = 0; pi < NPAGES && PAGES[pi].id[0] != P_FTYPE; pi++) ; ui.home = 0; ui.page = (uint8_t)pi; page_entered(); }   /* (the generic FILTER page: go_title finds ANALOG's first) */ TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_ED_VOICE2: go_title("VOICE 2"); TSEL->p[P_VOICE] = 3; trk[0].v[0].stage = 2; trk[0].v[0].env = 9u << 20; break;
     case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
-        song.sel = 1; nav_scene(SEC_ENV, s == S_ENV_TRACKS ? "ALL ENV" : "ALL DEST");
+        song.sel = 1; nav_scene(SEC_ENV, "ENV");   /* (2026-11-15: ALL ENV and ALL DEST are gone: the one ENV page) */
         trk[1].v[0].stage = 2; trk[1].v[0].env = 10u << 20; trk[2].p[P_ED_FLT] = 60; trk[2].p[P_ED_PIT] = -40;
         trk[1].p[P_ED_SHP] = 90; trk[3].p[P_MUTE] = 1;
         break;
@@ -1469,7 +1469,13 @@ static void setup(int s)
         song.g[G_BLA] = 1; song.g[G_BLB] = 2; song.g[G_BLEND] = 40;
         song.g[G_BL2A] = 3; song.g[G_BL2B] = 4; song.g[G_BL2BLEND] = 90;
         song.g[G_BL3A] = 5; song.g[G_BL3B] = 5;
-        nav_scene(SEC_HOME, s == S_TRACKS ? "TRACKS" : "MORPH 2");
+        nav_scene(SEC_HOME, s == S_TRACKS ? "TRACKS" : "MORPH");
+        if (s == S_MORPH3) {                             /* (SELECT's second morph) */
+            for (i = 0; i < NPAGES; i++)
+                if (PAGES[i].graph == GR_BLEND && PAGES[i].id[0] == G_BL2A)
+                    ui.page = (uint8_t)i;
+            ui.force = 1;
+        }
         ui.msg_t = 0;
         break;
     }

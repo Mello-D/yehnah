@@ -1505,7 +1505,6 @@ static void draw_graph(void)
         graph_save_lz(pg);
     } else if (lz_on() && lz_fam() == LZ_FX) {       /* (FX's lens: its only page is FX ALL, drawn by fxall_draw above) */
         cv_oy = 0;
-    } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
     } else {
         cv_oy = GOY;

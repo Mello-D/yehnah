@@ -451,7 +451,9 @@ static int page_in_rows(uint32_t i)
     return PAGES[i].graph == GR_STAGE || PAGES[i].graph == GR_MOD || PAGES[i].graph == GR_MSEQ || PAGES[i].id[0] == P_MSDIV ||
            (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV) || PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG ||
            (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7) || PAGES[i].graph == GR_SETS ||
-           (PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, "BAR"));   /* (2026-11-14: SEQ > BAR is in no chain) */
+           (PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, "BAR")) ||   /* (2026-11-14: SEQ > BAR is in no chain) */
+           (PAGES[i].fam == FAM_ENV && (PAGES[i].id[0] == P_ATK || PAGES[i].id[0] == P_ED_FLT)) ||
+           (PAGES[i].graph == GR_BLEND && PAGES[i].id[0] != G_BLA);   /* (2026-11-15: MORPH 2 and 3 are MORPH's, SELECT scrolls them)   /* (2026-11-15: ALL ENV / ALL DEST gone: in no chain) */
 }
 static int page_visible(uint32_t i)
 {

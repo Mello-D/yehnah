@@ -1278,8 +1278,8 @@ static void edit_param(uint32_t slot, int32_t steps)
         bars = chain_config.row[ui.song_row].bars;         /* (2026-11-11: editable while the song plays; in from the next bar) */
         row_trims(&chain_config, song_cur, ui.song_row, ui.sed_trk, &a, &b);
         cut = song_idx.scene[song_cur][ui.song_row].cut[ui.sed_trk];
-        if (slot == 2u) a = (uint32_t)clamp((int32_t)a + steps, 0, (int32_t)(bars - 1u - b));
-        else b = (uint32_t)clamp((int32_t)b + steps, 0, (int32_t)(bars - 1u - a));
+        if (slot == 2u) a = (uint32_t)clamp((int32_t)a + steps, 0, (int32_t)(bars - b));
+        else b = (uint32_t)clamp((int32_t)b + steps, 0, (int32_t)(bars - a));
         cut[0] = (uint8_t)a;
         cut[1] = (uint8_t)b;
         song_idx_touch();
@@ -2545,6 +2545,8 @@ static void ui_input_frame(void)
                                                         * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
         if (fxall_on())
             fxa_turn(s);                                /* (2026-11-13) FX ALL: SELECT scrolls its rows (a fast turn: a section) */
+        else if (morph_page_on())
+            morph_select(s);                            /* (2026-11-15) MORPH: SELECT scrolls its three morphs */
         else if (swarm_page_on())
             swarm_select(s);                            /* (2026-11-15) SWARM: SELECT scrolls its rows */
         else

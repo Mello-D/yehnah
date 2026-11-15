@@ -867,7 +867,7 @@ static const char *const PG_SHORT[][2] = {   /* (2026-11-02) every page name ove
     {"IDEA TRK", "I-TRK"}, {"IDEA SND", "I-SND"}, {"IDEA LFO", "I-LFO"}, {"IDEA FX", "I-FX"}, {"IDEA TEX", "I-TEX"},
     {"LEVELS 2", "LEVEL2"}, {"PATTERN", "PATTRN"}, {"STRETCH", "STRTCH"}, {"PLAYHEAD", "PLAYHD"},
     {"AUTO LIST", "A LIST"}, {"AUTO PAN", "A PAN"}, {"REVERB 2", "REVRB2"},
-    {"SL BUS 2", "SLBUS2"}, {"SL PITCH", "SL PCH"}, {"ALL ENV", "A ENV"}, {"ALL DEST", "A DEST"}, {"ENV DEST", "E DEST"},
+    {"SL BUS 2", "SLBUS2"}, {"SL PITCH", "SL PCH"}, {"ENV DEST", "E DEST"},
     {"LFO DEST", "L DEST"}, {"PRESETS", "PRESET"}, {"SECTIONS", "SECTS"},
     {"ARRANGE", "ARRANG"}, {"SONG EDIT", "S EDIT"}, {"PROJECT", "PROJ"}, {"PROJECTS", "PROJS"}, {"CONTROL", "CTRL"}};   /* (CONTROL: GLO's, 2026-11-02) */
 #define PG_SIDE_W 40
