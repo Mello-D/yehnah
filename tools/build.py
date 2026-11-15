@@ -445,6 +445,7 @@ def main():
     global PRODUCT, VERSION
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_9XY, version string vX.Y")
+    ap.add_argument("--bridge", action="store_true", help="also write yehnah-bridge.fwsc: the same app and loader in the official V15 layout (fm1pkg_make.py)")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "yehnah.fwsc"
@@ -479,6 +480,11 @@ def main():
     res = (OUT / "yehnah-res.bin").read_bytes()
     pkg = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY), ota, PRODUCT, res)
     (OUT / name).write_bytes(pkg)
+    if a.bridge:
+        bridge = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY, v15=True), ota, PRODUCT, res)
+        (OUT / name.replace(".fwsc", "-bridge.fwsc")).write_bytes(bridge)
+        (OUT / name.replace(".fwsc", "-bridge-res.bin")).write_bytes(res)
+        print(f"bridge   {OUT / name.replace('.fwsc', '-bridge.fwsc')}  {len(bridge)} B (V15 layout)")
     (OUT / name.replace(".fwsc", "-res.bin")).write_bytes(res)
     print(f"app      {OUT / 'yehnah.bin'}  {len(img)} B")
     print(f"loader   {LDR / 'ota.bin'}  {len(ota)} B")

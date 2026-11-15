@@ -15,7 +15,7 @@
  * 0x01C7FD50.. is reserved: boot_info, boot-state mailbox, vector table. */
 MEMORY
 {
-    XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x8DFBC
+    XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x91FBC
     LOWBUF (rw)  : ORIGIN = 0x01C00000, LENGTH = 0x7000
     RES    (r)   : ORIGIN = 0x020C6020, LENGTH = 0x11FE0   /* (chord-harp fork, 2026-11-04, after Melodee) flash 0xCA020..0xDBFFF:
                                                            * the resource region (res.c), read through the plain XIP window */

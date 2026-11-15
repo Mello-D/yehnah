@@ -223,11 +223,11 @@ static RAMFN int fl_read_ram(uint32_t off, uint8_t *dst, uint32_t n)   /* 0x0B f
 static void fl_plain_window_init(void)
 {
     SFCENC_CON &= (uint8_t)~2u;
-    SFCENC_UNENC_L = FL_XIP(0x93000u);            /* 0x0208F000 */
+    SFCENC_UNENC_L = FL_XIP(0x97000u);            /* 0x02093000 (the app area ends 0x93000 in the V15 layout, 0x97000 in the probe's: both below) */
     SFCENC_UNENC_H = 0x07FFFFFFu;
     SFCENC_CON |= 2u;
     __asm__ volatile("cli" ::: "memory");
-    fl_inval(0x93000u, 0x100000u - 0x93000u);     /* drop any decrypted lines */
+    fl_inval(0x97000u, 0x100000u - 0x97000u);     /* drop any decrypted lines */
     __asm__ volatile("csync\n\tsti" ::: "memory");
 }
 

@@ -100,7 +100,7 @@ static int ldr_prog(uint32_t off, const void *p, uint32_t n)
     const uint8_t *s = p;
     uint32_t i;
     if (!FL_RANGE_OK(off, n)) { win_refused++; return -1; }
-    if ((off < 0x4000u || off + n > 0x93000u) && !IN_RES(off, n)) bad_range++;
+    if ((off < 0x4000u || off + n > 0x97000u) && !IN_RES(off, n)) bad_range++;
     if (((off & 0xFFu) + n) > 256u) bad_range++;
     if (IN_RES(off, n) && res_progs++ >= res_cut) return -1;
     for (i = 0; i < n; i++) nor[off + i] &= s[i];
@@ -150,19 +150,23 @@ int main(int argc, char **argv)
     size_t olen;
     static uint8_t user[0x1000];
     uint8_t *old, head[0x4000];
-    uint32_t ofo, nfo, i, rfo, rsz = 0;
+    uint32_t ofo, nfo, i, rfo, rsz = 0, nsz = 0, ahi;
     int bad = 0, rc;
     if (argc < 3) { printf("usage: ldr_test OLD.fwsc NEW.fwsc\n"); return 2; }
     old = load_logical(argv[1], &olen);
     logical = load_logical(argv[2], &logical_len);
     ofo = flash_off(old);
     nfo = flash_off(logical);
+    entry_off(logical, 0, &nsz);
+    ahi = nsz >= 0x97000u ? 0x97000u : 0x93000u;      /* the new package's app area end (probe or V15 layout) */
+    printf("  new package: flash.bin %#x B, app area to %#x\n", nsz, ahi);
     rfo = entry_off(logical, LDR_RES_TYPE, &rsz);
     /* device: OLD installed, plus a valid update record at 0xE4F00 (Felucca's step 1) and 0xE8F00 (the stock
      * firmware's, a first install from it); user sample data in Felucca's store that looks like a record */
     memset(nor, 0xFF, sizeof nor);
     memcpy(nor, old + ofo, 0x93000);
     memcpy(head, nor, sizeof head);
+    if (ahi == 0x93000u) memset(nor + 0x93000, 0xA5, 0x4000);   /* a probe-layout device's tail: V15 layout must blank it */
     {
         uint8_t r[112] = {0};
         r[2] = 0x0D; r[3] = 0x5A; r[4] = 0x01; r[5] = 0x5A; r[6] = 0x41; r[7] = 0x54;
@@ -192,7 +196,12 @@ int main(int argc, char **argv)
     bad += check("install completes", rc == 0);
     bad += check("a sector changed in transfer after the check is read again", flip_seen == 3);
     flip_addr = 0xFFFFFFFFu;
-    bad += check("app area == the new package's flash.bin", !memcmp(nor + 0x4000, logical + nfo + 0x4000, 0x93000 - 0x4000));
+    bad += check("app area == the new package's flash.bin", !memcmp(nor + 0x4000, logical + nfo + 0x4000, ahi - 0x4000));
+    if (ahi == 0x93000u) {
+        uint32_t z = 0;
+        for (i = 0x93000u; i < 0x97000u; i++) z += nor[i] != 0xFFu;
+        bad += check("V15 layout: the probe tail [0x93000, 0x97000) is blank", z == 0);
+    }
     bad += check("flash head [0, 0x4000) untouched", !memcmp(nor, head, sizeof head));
     bad += check("finish asked (0xF0000000)", f0_asked >= 1);
     bad += check("update records cleared (RAM + flash 0xE4F00, the stock firmware's 0xE8F00)",

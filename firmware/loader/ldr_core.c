@@ -12,14 +12,16 @@
  *   2b. reads the whole flash.bin once and checks it against the CRC16 of its
  *      UFW entry (the vendor tools' check), keeping each app sector's CRC16:
  *      a damaged or truncated package is refused before anything is erased;
- *   3. writes ONLY the app area [0x4000, 0x93000), sector by sector, skipping
+ *   3. writes ONLY the app area [0x4000, 0x93000) (a package with flash.bin of 0x93000 B: the V15 layout) or
+ *      [0x4000, 0x97000) (flash.bin of 0x97000 B: the 16 KB space probe), sector by sector, skipping
  *      sectors that are already equal, and verifies each one; a sector that
  *      comes in different from the checked pass is read again, never written;
  *      the flash head (SPL, isd_config) is never written;
+ *   3a. with the V15 layout, [0x93000, 0x97000) (the probe layout's tail) is erased if it holds anything
  *   3b. (chord-harp fork) the resource region from the package's res.bin
  *      (ldr_res), unless it already holds this build's;
  *   4. asks 0xF0000000 ("success"), then invalidates the update record (RAM
- *      and flash: 4K boundary - 256 between 0x93000 and 0xFC000, outside
+ *      and flash: 4K boundary - 256 between the app area's end and 0xFC000, outside
  *      Felucca's store, where only user data lives) so the SPL boots the new
  *      app, and resets.
  * Power loss during 3: the record is still there, the SPL runs the loader
@@ -31,8 +33,8 @@
  *   ldr_progress(done, total)
  * plus the ota.c hooks (frames, time, idle). */
 #define LDR_APP_LO 0x4000u
-#define LDR_APP_HI 0x93000u
-#define LDR_REC_LO 0x93000u                     /* update records live above the app ... */
+#define LDR_APP_OLD 0x93000u                    /* the V15 layout's app area ends here (flash.bin 0x93000 B) ... */
+#define LDR_APP_HI 0x97000u                     /* ... the probe layout's here (flash.bin 0x97000 B): the most it writes */
 #define LDR_REC_HI 0xFC000u                     /* ... and below Felucca's globals (Felucca's records: 0xE4F00, */
 #define LDR_DATA_LO 0x97000u                    /* the stock firmware's: 0xE8F00), never in Felucca's store, whose */
 #define LDR_DATA_HI 0xE0000u                    /* bytes (the store) the host writes */
@@ -95,7 +97,7 @@ static int ldr_chip_key(uint32_t *key)
 
 /* 2b. flash.bin [0, fl_size) from the host, before any erase: its CRC16 must be the UFW entry's (want); sc gets
  * the CRC16 of each app sector as it came in */
-static int ldr_check(uint32_t fl_off, uint32_t fl_size, uint32_t want, uint16_t *sc, uint8_t *b)
+static int ldr_check(uint32_t fl_off, uint32_t fl_size, uint32_t want, uint32_t hi, uint16_t *sc, uint8_t *b)
 {
     uint32_t i, n, crc = 0;
     for (i = 0; i < fl_size; i += n) {
@@ -103,7 +105,7 @@ static int ldr_check(uint32_t fl_off, uint32_t fl_size, uint32_t want, uint16_t 
         if (ota_read(fl_off + i, b, n))
             return -7;
         crc = ota_crc16(b, n, crc);
-        if (i >= LDR_APP_LO && i < LDR_APP_HI) {     /* (512-byte reads from 0: never across a sector) */
+        if (i >= LDR_APP_LO && i < hi) {     /* (512-byte reads from 0: never across a sector) */
             uint32_t k = (i - LDR_APP_LO) >> 12;
             sc[k] = (uint16_t)ota_crc16(b, n, (i & 0xFFFu) ? sc[k] : 0u);
         }
@@ -198,13 +200,14 @@ static int ldr_session(void)
 {
     static uint8_t hdr[0x400], sec[0x1000], cur[0x1000];
     static uint16_t sc[LDR_NSEC];
-    uint32_t i, k, fl_off, fl_size, ota_off, ota_len, key, s, want = ~0u, done = 0;   /* (no CRC16: no flash.bin entry) */
+    uint32_t i, k, fl_off, fl_size, ota_off, ota_len, key, s, hi, want = ~0u, done = 0;   /* (no CRC16: no flash.bin entry) */
     int rc;
     /* 1. UFW header + entry list (ota.c; it leaves the entries decoded in hdr) */
     if ((rc = ota_ufw(hdr, &fl_off, &fl_size, &ota_off, &ota_len)) != 0)
         return rc;
-    if (!fl_off || fl_size < LDR_APP_HI || fl_size > LDR_FL_MAX)
+    if (!fl_off || fl_size < LDR_APP_OLD || fl_size > LDR_FL_MAX)
         return -3;
+    hi = fl_size >= LDR_APP_HI ? LDR_APP_HI : LDR_APP_OLD;   /* the package's layout */
     for (i = 0; i < ota_rd16(hdr + 8); i++)
         if (ota_rd16(hdr + 0x40 + i * 0x50u) == 0)
             want = ota_rd16(hdr + 0x40 + i * 0x50u + 4u);   /* flash.bin's data CRC16 */
@@ -217,10 +220,10 @@ static int ldr_session(void)
     if (ota_crc16(sec + 2, 30, 0) != ota_rd16(sec))
         return -6;                                       /* package for another chip key */
     /* 2b. the whole package first: nothing is erased for a damaged one */
-    if ((rc = ldr_check(fl_off, fl_size, want, sc, sec)) != 0)
+    if ((rc = ldr_check(fl_off, fl_size, want, hi, sc, sec)) != 0)
         return rc;
     /* 3. app area, sector by sector */
-    for (s = LDR_APP_LO; s < LDR_APP_HI; s += 0x1000u) {
+    for (s = LDR_APP_LO; s < hi; s += 0x1000u) {
         uint32_t again;
         for (again = 0;; again++) {                      /* as checked in 2b, else read it again */
             for (k = 0; k < 0x1000u; k += 512u)
@@ -234,7 +237,15 @@ static int ldr_session(void)
         if ((rc = ldr_put(s, sec, cur)) != 0)
             return rc;
         done += 0x1000u;
-        ldr_progress(done, LDR_APP_HI - LDR_APP_LO);
+        ldr_progress(done, hi - LDR_APP_LO);
+    }
+    for (s = hi; s < LDR_APP_HI; s += 0x1000u) {         /* the V15 layout: the probe layout's tail [0x93000, 0x97000) goes back to */
+        if (ldr_fread(s, cur, 0x1000u))                  /* blank (the stock VM region's start; the app area was code and cfg) */
+            return -8;
+        for (k = 0; k < 0x1000u && cur[k] == 0xFFu; k++)
+            ;
+        if (k < 0x1000u && ldr_erase(s))
+            return -9;
     }
     ldr_res(hdr, sec, cur);
     /* 4. finish: the host confirms, the record goes, the SPL boots the app */
@@ -242,7 +253,7 @@ static int ldr_session(void)
         if (!ota_read(0xF0000000u, sec, 8))
             break;
     ldr_record_clear();
-    for (s = LDR_REC_HI; s > LDR_REC_LO; s -= 0x1000u) {   /* flash records: 4K boundary - 256 */
+    for (s = LDR_REC_HI; s > hi; s -= 0x1000u) {   /* flash records: 4K boundary - 256 */
         uint8_t r[80];
         if (s - 0x1000u >= LDR_DATA_LO && s - 0x1000u < LDR_DATA_HI)
             continue;                                    /* Felucca's store: user data that may look like one */

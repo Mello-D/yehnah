@@ -27,8 +27,13 @@ import os
 import struct
 from pathlib import Path
 
-APP_SLOT = 0x8DFBC
-FLASH_SIZE = 0x93000
+# Two layouts. PROBE (the default, 2026-11-16): the app area and the directory end at 0x97000, 16 KB more than the
+# official V15's 0x93000 (app slot 0x91FBC, the VM region starts at 0x97000); needs the loader of this tree (it writes
+# flash.bin's whole size, 0x93000 or 0x97000). V15: the official layout, the BRIDGE package (installs through an older
+# loader that writes only [0x4000, 0x93000)): same app, same loader, official layout.
+APP_SLOT_V15, FLASH_SIZE_V15 = 0x8DFBC, 0x93000
+APP_SLOT, FLASH_SIZE = 0x91FBC, 0x97000
+VM_END = 0xE9000                                       # the region after the VM region: BTIF (V15 and probe)
 RES_TYPE = 101                                         # res.bin (firmware/loader/ldr_core.c LDR_RES_TYPE)
 KEY = 0x980F
 # flash header: JieLi SDK defaults (burner_size 544, VID "0.01", flash_size 0xFF000,
@@ -105,12 +110,13 @@ def sdk_file(rel):
         raise SystemExit(f"fm1pkg_make: {path}: {e.strerror}. Set AC79_SDK to a JieLi AC79 SDK checkout.")
 
 
-def flash_image(app, key):
+def flash_image(app, key, v15=False):
     spl = sdk_file("uboot.boot")                         # SDK SPL, BANKCB-encoded as in the SDK
     cfg_tool = sdk_file("cfg_tool.bin")
     eq = sdk_file("cfg/eq_cfg_hw.bin")
     isd = key_blob(key) + b"[FELUCCA]\r\n"   # (the package's section name: bytes kept as packages always had them)
-    f = bytearray(b"\xFF" * FLASH_SIZE)
+    app_slot, flash_size = (APP_SLOT_V15, FLASH_SIZE_V15) if v15 else (APP_SLOT, FLASH_SIZE)
+    f = bytearray(b"\xFF" * flash_size)
     # ---- head
     spl_off = 0xA0
     isd_off = spl_off + len(spl)
@@ -127,18 +133,18 @@ def flash_image(app, key):
         enc(head, o, 32)
     f[0:len(head)] = head
     # ---- app area (plain first, then SFC)
-    if len(app) > APP_SLOT:
-        raise SystemExit(f"app is {len(app)} B, the slot is {APP_SLOT} B")
-    app = app + b"\xFF" * (APP_SLOT - len(app))
-    blk = 0x120 + APP_SLOT + len(cfg_tool)              # app_area_head block size
+    if len(app) > app_slot:
+        raise SystemExit(f"app is {len(app)} B, the slot is {app_slot} B")
+    app = app + b"\xFF" * (app_slot - len(app))
+    blk = 0x120 + app_slot + len(cfg_tool)              # app_area_head block size
     area = bytearray(b"\xFF" * blk)
-    area[0x120:0x120 + APP_SLOT] = app
-    area[0x120 + APP_SLOT:blk] = cfg_tool
-    ents = [entry(crc16(app), 0x120, APP_SLOT, 0x82, 0xFF, 0, "app.bin"),
-            entry(crc16(cfg_tool), 0x120 + APP_SLOT, len(cfg_tool), 0x82, 0xFF, 0, "cfg_tool.bin"),
+    area[0x120:0x120 + app_slot] = app
+    area[0x120 + app_slot:blk] = cfg_tool
+    ents = [entry(crc16(app), 0x120, app_slot, 0x82, 0xFF, 0, "app.bin"),
+            entry(crc16(cfg_tool), 0x120 + app_slot, len(cfg_tool), 0x82, 0xFF, 0, "cfg_tool.bin"),
             # region descriptors; the bytes after the names are SDK packer fields (VM size, "CODE", "AUTO")
-            entry(0xFFFF, 0x93000, 352256, 0x12, 0x80, 0, bytes.fromhex("564d00ffffffffffffffffff00800000")),
-            entry(0xFFFF, 0, FLASH_SIZE, 0x92, 0x82, 0, bytes.fromhex("5052435400ffffffffffffff434f4445")),
+            entry(0xFFFF, flash_size, VM_END - flash_size, 0x12, 0x80, 0, bytes.fromhex("564d00ffffffffffffffffff00800000")),
+            entry(0xFFFF, 0, flash_size, 0x92, 0x82, 0, bytes.fromhex("5052435400ffffffffffffff434f4445")),
             entry(0xFFFF, 0xE9000, 0x1000, 0x92, 0x80, 0, bytes.fromhex("4254494600ffffffffffffff4155544f")),
             entry(0xFFFF, 0xEA000, 0x12000, 0x92, 0x81, 1, "USR")]
     area[32:32 + len(b"".join(ents))] = b"".join(ents)
