@@ -4121,6 +4121,98 @@ static int pr_columns_match(const track_t *t, uint32_t *nbars)
     }
     return ok;
 }
+/* (2026-11-16) MIDI polish: BANK SELECT, the remote buttons (channel 16's notes), MIDI LEARN, MIDI step entry */
+static int test_midi_polish(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    ui_power_on();
+    t = TSEL;
+    midi_event(0xB0, 0, 0, 0); midi_event(0xB0, 0, 32, 1); midi_event(0xC0, 0, 5, 0);
+    bad += check("BANK SELECT 1 + PROGRAM CHANGE 5: the 134th sound asked for", midi_pc_req[0] == 134u);
+    frame();
+    bad += check("  the UI takes it", midi_pc_req[0] == 0u);
+    midi_event(0xB0, 0, 32, 0); midi_event(0xC0, 0, 3, 0);
+    bad += check("  bank 0 again: the plain number", midi_pc_req[0] == 4u);
+    frame();
+    midi_event(0xB0, 0, 0, 2); midi_event(0xB0, 0, 32, 9); midi_event(0xC0, 0, 1, 0);
+    bad += check("  CC0 (MSB) wins over CC32 when both are set", midi_pc_req[0] == 2u * 128u + 2u);
+    midi_pc_req[0] = 0;
+    midi_event(0xB0, 0, 0, 0); midi_event(0xB0, 0, 32, 0);
+
+    song.g[G_ROUTE] = 1;                                              /* SEL: channel 16 would have played the track */
+    midi_event(0x90, 15, 60, 100);
+    ok = !midi_owners[0];
+    midi_event(0x80, 15, 60, 0);
+    song.g[G_ROUTE] = 0;
+    midi_event(0x90, 15, 56 + 1, 100); frame();
+    ok &= trk[1].p[P_MUTE] == 1;
+    midi_event(0x90, 15, 56 + 1, 100); frame();
+    ok &= trk[1].p[P_MUTE] == 0;
+    midi_event(0x90, 15, 48 + 2, 100); frame();
+    ok &= song.sel == 2u;
+    song.sel = 0;
+    midi_event(0x90, 15, 36, 100); frame();
+    ok &= transport_req == 1u || song.playing;
+    transport_req = 0;
+    bad += check("MIDI remote: channel 16's notes press PLAY, select a track, mute it; they never sound", ok);
+    transport_req = 0; song.playing = 0;
+
+    ui_power_on();
+    t = TSEL;
+    menu_put(MI_MLEARN, 1);
+    ok = midi_learn == 1u;
+    (void)motion_capture(TSEL, P_REV, 40);
+    ok &= midi_learn == 2u && midi_learn_id == P_REV;
+    frame();
+    bad += check("MIDI LEARN: a knob move takes the parameter, then it waits for a CC", ok);
+    midi_event(0xB0, 0, 64, 127);
+    ok = midi_learn == 2u;                                            /* (the pedal is not learnable) */
+    midi_event(0xB0, 0, 30, 100);
+    ok &= midi_learn == 0u && midi_lrn[0][0] == 30u && midi_lrn[0][1] == P_REV;
+    midi_event(0xB0, 0, 30, 127);
+    ok &= t->p[P_REV] == TP[P_REV].max;
+    midi_event(0xB0, 0, 30, 0);
+    ok &= t->p[P_REV] == TP[P_REV].min;
+    bad += check("  the next CC (not the pedal) drives it, 0..127 over its range", ok);
+    menu_put(MI_MLEARN, 1);
+    (void)motion_capture(TSEL, P_DLY, 40);
+    midi_event(0xB0, 0, 74, 5);                                       /* a mapped CC is learnable (and overridden) */
+    ok = midi_lrn[1][0] == 74u && midi_lrn[1][1] == P_DLY;
+    midi_event(0xB0, 0, 74, 127);
+    ok &= t->p[P_DLY] == TP[P_DLY].max;
+    {
+        persist_t pp;
+        memset(&pp, 0, sizeof pp);
+        settings_export(&pp);
+        memset(midi_lrn, 0, sizeof midi_lrn);
+        (void)settings_import(&pp, (int)sizeof pp);
+        ok &= midi_lrn[0][0] == 30u && midi_lrn[1][1] == P_DLY;
+    }
+    menu_put(MI_MLEARN, 2);
+    ok &= !midi_lrn[0][0] && !midi_lrn[1][0] && !midi_learn;
+    bad += check("  a mapped CC can be re-learned; the table is kept in the settings; CLEAR forgets it", ok);
+
+    ui_power_on();
+    t = TSEL;
+    t->p[P_VOICE] = V_POLY;
+    track_defaults_steps(t);
+    go_page(GR_ROLL);
+    cursor_set(3);
+    frame();
+    song.rec = 1u;
+    midi_event(0x90, 0, 64, 100); frame();
+    midi_event(0x90, 0, 67, 100); frame();
+    ok = t->step[3].n == 2u && ui.cursor == 3u;
+    midi_event(0x80, 0, 64, 0); frame();
+    ok &= ui.cursor == 3u;                                            /* (one note still down: the step stays open) */
+    midi_event(0x80, 0, 67, 0); frame();
+    ok &= ui.cursor == 4u && t->step[3].note[0] == 64u && t->step[3].note[1] == 67u;
+    bad += check("MIDI step entry: notes held together are one chord step, the cursor moves on when all are up", ok);
+    song.rec = 0;
+    return bad;
+}
+
 /* 1.2, Discussion #133: step recording on SEQ > STEP. Not armed, the keys only play (being on SEQ writes nothing);
  * REC there arms step recording without starting the transport; armed and stopped a key (keys held together: a
  * chord) writes the cursor step and letting go moves the cursor on one step, wrapping inside LEN; PLAY records live
@@ -11171,6 +11263,7 @@ int main(void)
     bad += test_dxlay();
     bad += test_rec();
     bad += test_step_rec();
+    bad += test_midi_polish();
     bad += test_step_rec();
     bad += test_presets_knob();
     bad += test_midi();

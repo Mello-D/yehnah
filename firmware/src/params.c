@@ -660,7 +660,7 @@ static int16_t trks_ui;
 /* the MENU's rows (menu_items.c: their names, values, the editor's MENU_DESC). (2026-11-02, the redesign step 5) GLO's
  * pages name them: a knob MROW(MI_*) is that row, drawn and turned as the MENU does (ui_draw.c, ui_input.c); page_desc
  * gives none */
-enum { MI_COLOR, MI_LEDS, MI_SCROFF, MI_FILL, MI_HOMEPG, MI_HOLD, MI_ACCEL, MI_LATCH, MI_SCLLED, MI_MIDIOUT,   /* (2026-11-02: SKIN STYLE
+enum { MI_COLOR, MI_LEDS, MI_SCROFF, MI_FILL, MI_HOMEPG, MI_HOLD, MI_ACCEL, MI_LATCH, MI_SCLLED, MI_MIDIOUT, MI_MLEARN,   /* (2026-11-02: SKIN STYLE
        * ANIM BPM LOCK SCOPE BIG VIEW gone) */
        MI_LOWCUT, MI_USB,
        MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_SERIAL, MI_RESTORE, MI_LOAD, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the metronome's rows in
@@ -1067,7 +1067,7 @@ static const uint8_t SETS[4][SETS_MAX] = {
     {G_BPM, G_SWING, G_TRKS, MROW(MI_USB), MROW(MI_CLICK), MROW(MI_CLKLVL), MROW(MI_COUNTIN), 0xFF},
     {MROW(MI_COLOR), MROW(MI_SCROFF), MROW(MI_FILL), MROW(MI_LEDS), MROW(MI_SCLLED), MROW(MI_HOMEPG), 0xFF, 0xFF},
     {MROW(MI_HOLD), MROW(MI_ACCEL), MROW(MI_LATCH), G_CLOCK, G_ROUTE, MROW(MI_MIDIOUT), MROW(MI_LOWCUT), G_TUNE},
-    {G_LOADP, G_INFO, MROW(MI_SERIAL), MROW(MI_RESTORE), MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT), 0xFF}};
+    {G_LOADP, G_INFO, MROW(MI_SERIAL), MROW(MI_RESTORE), MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT), MROW(MI_MLEARN)}};
 static uint8_t sets_cur[4];      /* each list's row KNOB 1 is on */
 static uint32_t sets_of(const page_t *p)              /* the list a GR_SETS page shows */
 {

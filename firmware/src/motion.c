@@ -268,9 +268,17 @@ static uint32_t motion_clear_locks(track_t *t, uint32_t step)
     motion_unguard(f);
     return gone;
 }
+/* (2026-11-16) MIDI LEARN (midi_control.c): 1 waits for a knob move, 2 for a CC; the parameter the knob moved; the
+ * CC path's own motion_capture does not count as a knob */
+static volatile uint8_t midi_learn, midi_learn_id, midi_cc_busy, midi_lrn_say;   /* (say: 1 a knob taken, 2 a CC learned) */
 static int motion_capture(track_t *t, uint32_t id, int16_t value)
 {
     uint32_t k = trk_index(t), idx, len, period, f;
+    if (midi_learn == 1u && !midi_cc_busy && t == TSEL && id < P_COUNT && motion_param(id)) {
+        midi_learn_id = (uint8_t)id;
+        midi_learn = 2;
+        midi_lrn_say = 1;
+    }
     if (!motion_param(id)) return 0;
     if (id == MOT_DJF && (!rec_on(t) || t != TSEL)) {   /* (0.9.1) the knob while its records play: the new base */
         f = motion_guard();

@@ -20,6 +20,7 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/panel.c"
 static void settings_save(void) {}
+static uint8_t midi_lrn[8][2];                   /* (midi_control.c: MIDI LEARN's table, kept in the settings) */
 #if __has_include("../firmware/src/favorites.c")
 #include "../firmware/src/favorites.c"
 #endif

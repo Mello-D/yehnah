@@ -67,7 +67,7 @@ static const arow_t A_GLO[] = {                          /* GLO's four lists (pa
     {"CONTROL", SK_NONE, {MROW(MI_HOLD), MROW(MI_ACCEL), MROW(MI_LATCH), G_CLOCK}},
     {0, 0, {G_ROUTE, MROW(MI_MIDIOUT), MROW(MI_LOWCUT), G_TUNE}},
     {"SYSTEM", SK_NONE, {G_LOADP, G_INFO, MROW(MI_SERIAL), MROW(MI_RESTORE)}},
-    {0, 0, {MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT), 0xFF}},
+    {0, 0, {MROW(MI_PANEL), MROW(MI_INIT), MROW(MI_ABOUT), MROW(MI_MLEARN)}},
 };
 static const arow_t A_ANALOG[] = {                       /* ANALOG's own groups: all 25 settings with the generic VOICE / DRIFT after */
     {"OSC", SK_NONE, {P_E0, P_E1, P_E2, VF(FX_A_RNG)}},

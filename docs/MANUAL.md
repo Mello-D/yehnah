@@ -646,7 +646,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 | **MAIN** | **BPM**, **SWING**, **TRACKS** (1–6), **USB LEVEL** (MASTER: follows the MASTER knob; FIXED; or −6 to −24 dB, for a phone or computer whose input clips) · **CLICK** (OFF, REC, ON), **CLICK LEVEL**, **COUNT-IN** (OFF, 1 BAR, 2 BARS) |
 | **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE, DUSK or CREAM), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on and the HOME button open; a second tap never flips between them) |
 | **CONTROL** | **HOLD** (the layer threshold), **KNOB ACCEL**, **FX LATCH**, **CLOCK** (INT, USB, TRS) · **ROUTE** (CH1-6, SEL), **MIDI OUT** (KEYS, CLOCK, ALL, OFF), **SPEAKER EQ** (FLAT, LOWCUT, BASS+), **TUNE** |
-| **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT** |
+| **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT**, **MIDI LEARN** (OFF, LEARN, CLEAR) |
 
 - **TRACKS 4** (the default) or **6**: how many tracks play. A note sent to an asleep track says so on screen.
 - **LOAD:** ECO, LITE or **FULL**. Voices share a budget of 8 (up to 12 on FULL).
@@ -674,8 +674,19 @@ faded): a photo of that screen helps when you report a problem.
 - **Clock:** **GLO > CONTROL > CLOCK** USB or TRS follows that input's clock and Start / Continue / Stop. With an external
   clock, the tap tempo and restart are disabled.
 - **PROGRAM CHANGE:** program *n* on the channel a track plays loads the PRESETS list's sound number *n* + 1 into that
-  track. **Channel 16** is the song's: it never loads a sound. Programs **0–3** jump to section **A–D** (playing: on the
+  track. **Bank Select** (CC0, or CC32 when CC0 is 0) before it picks a page of 128 sounds: bank 1, program 5 is sound 134. **Channel 16** is the song's: it never loads a sound. Programs **0–3** jump to section **A–D** (playing: on the
   next bar; stopped: at once) and programs **16–21** load project **1–6** (stopped only).
+- **Remote buttons:** the **notes of channel 16** press panel buttons and never sound (even with ROUTE SEL): **36** PLAY
+  (starts, or stops a running transport), **37** STOP, **38** REC (arms or disarms the selected track), **40–43** section
+  **A–D**, **48–53** select track 1–6, **56–61** mute or unmute track 1–6.
+- **Step entry by MIDI:** with a track armed on SEQ > STEP and the transport stopped, the notes a MIDI keyboard holds go
+  into the cursor step like the keys do: held together they are a chord, and when the last is let go the cursor moves
+  on.
+- **MIDI LEARN** (GLO > SYSTEM > **MIDI LEARN**, or MENU > CONTROL): set it to **LEARN**, leave the menu, turn the knob of
+  the parameter you want (the message says NOW MOVE A CC), then move a controller on your keyboard. That CC now drives
+  the parameter over its whole range (on the track the channel plays) and is recorded as automation like a knob move.
+  Eight CCs are kept in the settings; a ninth replaces the oldest, and a parameter has one CC. A learned CC wins over the
+  list below. **CLEAR** forgets them all. Not learnable: CC0, 1, 6, 32, 38, 64, 98–101 and 120 up.
 - **Controllers** (on the track the channel plays): CC5 glide, CC7 level, CC10 pan, CC71 resonance and CC74 cutoff (the
   engine's own, where it has them), CC72 release, CC73 attack, CC75 decay, CC91 reverb send, CC93 chorus send, CC94
   delay send; **CC16–23** the engine's own eight values (E1–E8), **CC102 / CC103** the post filter's cutoff and

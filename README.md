@@ -321,7 +321,8 @@ settings lists.
 - **Controllers:** CC 5, 7, 10, 71–75 and 91–94 (glide, level, pan, resonance, envelope, sends), CC 74 the engine's cutoff,
   **CC 16–23** the engine's own eight values, CC 102–105 the post filter, drive and sustain. Pitch bend, sustain,
   All Sound Off and All Notes Off work, and a CC you move is recorded as automation.
-- **Program Change** loads sounds from the PRESETS list; channel 16 is the song's, and picks sections.
+- **Program Change** (with Bank Select) loads sounds from the PRESETS list; channel 16 is the song's: Program Change picks sections, its notes are remote buttons (play, stop, record, sections, track select, mutes).
+- **MIDI LEARN** gives any CC to a knob's parameter; MIDI keyboards also write the step-entry steps.
 - **USB audio:** the master output as a stereo input on the computer, **STEMS** (eight channels: the six tracks, and the
   effects return in stereo), **IN+OUT**, which makes the FM-1 an audio output of the computer or phone as well, and a
   **TABLET** mode.

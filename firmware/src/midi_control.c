@@ -11,6 +11,7 @@ typedef struct {
     uint8_t owned[NTRK];                    /* held/pedal notes per track, at most 128 per channel */
     uint8_t ready, semis, cents;
     uint8_t rpn_msb, rpn_lsb;
+    uint8_t bank_msb, bank_lsb;             /* (2026-11-16) BANK SELECT CC0 / CC32: PROGRAM CHANGE's page of 128 sounds */
 } midi_channel_t;
 static midi_channel_t midi_ch[16];
 /* A nibble per note (Yehnah: two to a byte, 1 KB): low bits track + 1, bit 3 key released, held by its channel's pedal */
@@ -237,6 +238,40 @@ static const uint8_t MIDI_CC_ENG[NENGINES] = {
     0x80,                                             /* VECTOR CUT (no resonance) */
     0x12,                                             /* HYBRID CUT RES */
 };
+/* (2026-11-16) MIDI LEARN: MLRN_N learned CCs {cc (0 = empty), parameter id < P_COUNT}, kept in the settings (the unused
+ * upper half of favorites.factory[14]: settings_persist.c). A learned CC wins over the standard map */
+#define MLRN_N 8u
+static uint8_t midi_lrn[MLRN_N][2];
+static uint8_t midi_lrn_cc;
+_Static_assert(P_COUNT < 0xFE, "a learned parameter id is a byte below MCC_CUT");
+/* a CC that is not free to learn: bank select, wheel, the data entry and RPN / NRPN, pedal, the modes (120..127) */
+static int midi_lrn_ok(uint32_t cc)
+{
+    return cc && cc != 1u && cc != 6u && cc != 32u && cc != 38u && cc != 64u && (cc < 98u || cc > 101u) && cc < 120u;
+}
+static void midi_lrn_bind(uint32_t cc)
+{
+    uint32_t i, at = MLRN_N;
+    for (i = 0; i < MLRN_N; i++) {
+        if (midi_lrn[i][0] == cc) { at = i; break; }
+        if (!midi_lrn[i][0] && at == MLRN_N) at = i;
+    }
+    if (at == MLRN_N) {                                /* full: the oldest goes, the rest move up */
+        for (i = 1; i < MLRN_N; i++) {
+            midi_lrn[i - 1u][0] = midi_lrn[i][0];
+            midi_lrn[i - 1u][1] = midi_lrn[i][1];
+        }
+        at = MLRN_N - 1u;
+    }
+    for (i = 0; i < MLRN_N; i++)                       /* a parameter has one CC */
+        if (i != at && midi_lrn[i][1] == midi_learn_id)
+            midi_lrn[i][0] = 0;
+    midi_lrn[at][0] = (uint8_t)cc;
+    midi_lrn[at][1] = midi_learn_id;
+    midi_lrn_cc = (uint8_t)cc;
+    midi_learn = 0;
+    midi_lrn_say = 2;
+}
 static void __attribute__((noinline)) midi_cc_map(track_t *t, uint32_t cc, uint32_t value)
 {
     const param_desc_t *d;
@@ -245,6 +280,9 @@ static void __attribute__((noinline)) midi_cc_map(track_t *t, uint32_t cc, uint3
     for (i = 0; i < NELEM(MIDI_CC_MAP); i++)
         if (MIDI_CC_MAP[i][0] == cc)
             id = MIDI_CC_MAP[i][1];
+    for (i = 0; i < MLRN_N; i++)                       /* (2026-11-16) MIDI LEARN: a learned CC takes the parameter */
+        if (midi_lrn[i][0] == cc)
+            id = midi_lrn[i][1];
     if (id >= MCC_CUT) {
         if (id == 0xFFFFu)
             return;
@@ -258,7 +296,9 @@ static void __attribute__((noinline)) midi_cc_map(track_t *t, uint32_t cc, uint3
     if (d->max <= d->min || t->p[id] == v)
         return;
     t->p[id] = (int16_t)v;
+    midi_cc_busy = 1;                                  /* (not a knob: MIDI LEARN keeps waiting for one) */
     (void)motion_capture(t, id, (int16_t)v);
+    midi_cc_busy = 0;
 }
 
 static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
@@ -269,6 +309,8 @@ static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
     case 1:
         c->wheel = (uint8_t)value;
         break;
+    case 0: c->bank_msb = (uint8_t)value; break;       /* (2026-11-16) BANK SELECT: the next PROGRAM CHANGE's page */
+    case 32: c->bank_lsb = (uint8_t)value; break;
     case 120:                                      /* All Sound Off: ignores the pedal */
         mask = midi_targets(ch);
         for (i = 0; i < NTRK; i++)
@@ -343,7 +385,9 @@ static void __attribute__((noinline)) midi_route_ch14(void)
 /* (0.6.72) PROGRAM CHANGE n on the channel a track plays: the n + 1-th sound of the PRESETS list (every engine's
  * presets in their order, then the user presets; the favourites filter aside), loaded by the UI between frames (a
  * sound load is the main loop's: ui.c midi_pc_poll). 0 none, else n + 1 */
-static volatile uint8_t midi_pc_req[NTRK];
+static volatile uint16_t midi_pc_req[NTRK];     /* (BANK SELECT: bank * 128 + program + 1) */
+/* (2026-11-16) channel 16's NOTES are the remote buttons (ui_input.c midi_remote_poll), never sounds. 0 none, else note + 1 */
+static volatile uint8_t midi_rmt_req;
 /* (0.6.80) PROGRAM CHANGE on channel 16, the song's own (never a track's, whatever ROUTE): 0..3 the section A..D
  * (in on the next bar, as the song layer's keys), 16..23 the project 1..8 (stopped only, as SAVE > PROJECT). The UI
  * takes it between frames (ui.c midi_pc_poll). 0 none, else n + 1 */
@@ -359,6 +403,11 @@ static void __attribute__((noinline)) midi_event(uint32_t st, uint32_t ch, uint3
         midi_song_req = (uint8_t)(d1 + 1u);
         return;
     }
+    if (ch == 15u && (st == 0x90u || st == 0x80u)) {      /* (2026-11-16) the remote buttons: a note-on is a press */
+        if (st == 0x90u && d2)
+            midi_rmt_req = (uint8_t)(d1 + 1u);
+        return;
+    }
     if (ch >= NPART && !song.g[G_ROUTE])
         return;
     if (st == 0x90u || st == 0x80u)
@@ -367,10 +416,33 @@ static void __attribute__((noinline)) midi_event(uint32_t st, uint32_t ch, uint3
         midi_channel(ch)->bend = (int16_t)((int32_t)(d1 | (d2 << 7)) - 8192);
         midi_expression_channel(ch);
     } else if (st == 0xB0u) {
+        if (midi_learn == 2u && midi_lrn_ok(d1)) {     /* (2026-11-16) MIDI LEARN: this CC takes the knob's parameter */
+            midi_lrn_bind(d1);
+            return;
+        }
         mod_midi(midi_track(ch), st, d1, d2);
         midi_control(ch, d1, d2);
     } else if (st == 0xD0u)
         mod_midi(midi_track(ch), st, d1, d2);
     else if (st == 0xC0u)                          /* (0.6.72) PROGRAM CHANGE: the UI loads it (ui.c midi_pc_poll) */
-        midi_pc_req[trk_index(midi_track(ch)) % NTRK] = (uint8_t)(d1 + 1u);
+        {
+        const midi_channel_t *c = midi_channel(ch);
+        midi_pc_req[trk_index(midi_track(ch)) % NTRK] = (uint16_t)((c->bank_msb ? c->bank_msb : c->bank_lsb) * 128u + d1 + 1u);
+    }
+}
+
+/* (2026-11-16) MIDI STEP ENTRY (ui_input.c seq_entry): the notes held now that sound on track ti (a pedal-held one is
+ * let go), lowest first, at most max; the count */
+static uint32_t midi_held_notes(uint32_t ti, uint8_t *out, uint32_t max)
+{
+    uint32_t ch, note, n = 0, id = ti + 1u;
+    if (!midi_owners[ti])
+        return 0;
+    for (note = 0; note < 128u && n < max; note++)
+        for (ch = 0; ch < 16u; ch++)
+            if (mn_get(ch, note) == id) {
+                out[n++] = (uint8_t)note;
+                break;
+            }
+    return n;
 }

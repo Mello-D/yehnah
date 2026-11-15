@@ -9,7 +9,7 @@
 /* (the rows' enum MI_*: params.c, GLO's pages name them) */
 #define MI_VALUES MI_PANEL
 static const char *const MI_NAME[MI_COUNT] = {"THEME", "LEDS", "SCREEN OFF", "FILL", "HOME PAGE", "HOLD", "KNOB ACCEL", "FX LATCH",
-                                              "SCALE LEDS", "MIDI OUT",
+                                              "SCALE LEDS", "MIDI OUT", "MIDI LEARN",
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS",
                                               "USB",
                                               "RESTORE LAST", "LOAD", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
@@ -29,6 +29,7 @@ static const uint8_t MI_TAB[MI_COUNT] = {
     MTAB_CONTROL, MTAB_CONTROL, MTAB_CONTROL,                               /* HOLD KNOB ACCEL FX LATCH */
     MTAB_CONTROL,                                                           /* SCALE LEDS (1.2) */
     MTAB_CONTROL,                                                           /* MIDI OUT (0.6.72) */
+    MTAB_CONTROL,                                                           /* MIDI LEARN (2026-11-16) */
     MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO,             /* SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL,
                                                                              * COUNT-IN */
     MTAB_AUDIO,                                                             /* TRACKS (0.6.18) */
@@ -77,6 +78,7 @@ static const char *const SCROFF_N[5] = {"NEVER", "5 MIN", "15 MIN", "30 MIN", "6
 /* (0.6.72) MIDI OUT over USB (ui.c midi_out_mode, seq.c MO_*): the keys; and the clock + START / STOP; and every
  * note the FM-1 plays; nothing */
 static const char *const MIDIOUT_N[4] = {"KEYS", "CLOCK", "ALL", "OFF"};
+static const char *const MLEARN_N[3] = {"OFF", "LEARN", "CLEAR"};   /* (2026-11-16) LEARN waits for a knob, then a CC; CLEAR forgets them all */
 
 /* MENU > USB SERIAL (#67). The serial console is a developer tool (README: YEHNAH_CDC). ON (the default) presents it,
  * the descriptors byte for byte as before; OFF re-enumerates as audio + MIDI only, device class 0 (the bytes of a
@@ -118,7 +120,7 @@ static const menu_flag_t *menu_flag(uint32_t row)
 static uint32_t menu_n(uint32_t row)
 {
     return row == MI_COLOR ? NPALETTES : row == MI_LOWCUT || (row >= MI_CLICK && row <= MI_COUNTIN) || row == MI_LOAD ? 3u :
-           row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_USB || row == MI_TRACKS ? 6u : row == MI_SERIAL ? 5u + YEHNAH_TABLET : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
+           row == MI_MLEARN ? 3u : row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_USB || row == MI_TRACKS ? 6u : row == MI_SERIAL ? 5u + YEHNAH_TABLET : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
 }
 static uint32_t menu_get(uint32_t row)
 {
@@ -138,6 +140,7 @@ static uint32_t menu_get(uint32_t row)
     case MI_LOAD: return load_get();
     case MI_TRACKS: return trk_live - 1u;              /* (chord-harp fork: 1..6) */
     case MI_MIDIOUT: return midi_out_mode & 3u;
+    case MI_MLEARN: return midi_learn ? 1u : 0u;
     case MI_LEDS:
         while (i + 1u < LEDS_COUNT && LEDS_MENU[i] != settings_leds)
             i++;
@@ -162,6 +165,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
     case MI_LOAD: return N_LOAD[v % 3u];
     case MI_TRACKS: return N_TRKS[v % NTRK];
     case MI_MIDIOUT: return MIDIOUT_N[v & 3u];
+    case MI_MLEARN: return MLEARN_N[v % 3u];
     case MI_SCROFF: return SCROFF_N[v % NELEM(SCROFF_N)];
     case MI_LEDS: return LEDS_NAME[LEDS_MENU[v % LEDS_COUNT]];
     }
@@ -205,6 +209,13 @@ static void menu_put(uint32_t row, uint32_t v)
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: rp_put(row - MI_CLICK, v); break;   /* (at once: click.c, seq.c) */
     case MI_LOAD: load_put(v % 3u); break;
     case MI_TRACKS: trks_put(v % NTRK); break;
+    case MI_MLEARN:                                    /* (2026-11-16) LEARN: the next knob move, then the next CC; CLEAR */
+        if (v == 2u)
+            memset(midi_lrn, 0, sizeof midi_lrn);
+        midi_learn = (uint8_t)(v == 1u ? 1u : 0u);
+        if (v == 1u)
+            ui_message("TURN A KNOB");
+        break;
     case MI_MIDIOUT: midi_out_mode = (uint8_t)(v & 3u); break;   /* (seq.c reads it every frame: ui_input) */         /* (at once: voice.c sys_load) */
     }
 }

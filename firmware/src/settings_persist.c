@@ -62,6 +62,7 @@ static int settings_import(persist_t *p, int n)
     settings_leds = (uint8_t)leds_from_stored(p->zoom);
 #ifdef YEHNAH_FAVORITES
     memcpy(&favorites, &p->favorites, sizeof favorites);
+    memcpy(midi_lrn, &p->favorites.factory[14][16], sizeof midi_lrn);   /* (2026-11-16) MIDI LEARN: engine 30's unused favourites */
     favorites.filter = favorites.filter == 1u;
 #ifdef SMP_SET_PERC
     if ((favorites.factory[ENGI_SAMPLE][0] >> SMP_SET_PERC) & 1u) {   /* SAMPLE's PERC (preset 4, retired): DRUM's */
@@ -86,5 +87,6 @@ static void settings_export(persist_t *p)
     p->bold = hold_to_stored(p->bold, settings_hold);
 #ifdef YEHNAH_FAVORITES
     memcpy(&p->favorites, &favorites, sizeof favorites);
+    memcpy(&p->favorites.factory[14][16], midi_lrn, sizeof midi_lrn);
 #endif
 }

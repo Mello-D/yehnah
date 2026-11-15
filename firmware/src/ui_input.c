@@ -642,6 +642,45 @@ static int rec_tap(void)                                /* 1: the arming changed
     return 1;
 }
 
+/* (2026-11-16) MIDI REMOTE: channel 16's notes press the panel's buttons (midi_control.c midi_rmt_req), once a frame:
+ * 36 PLAY (starts, or stops a running one), 37 STOP, 38 REC (arm / disarm the selected track), 40..43 section A..D,
+ * 48..53 select track 1..6, 56..61 mute / unmute track 1..6. MIDI LEARN's messages come from here too (the MIDI side
+ * only sets the flags) */
+static void midi_remote_poll(void)
+{
+    uint32_t n = midi_rmt_req, say = midi_lrn_say;
+    if (say) {
+        midi_lrn_say = 0;
+        if (say == 1u) {
+            ui_message("NOW MOVE A CC");
+        } else {
+            char b[8] = "CC ";
+            fmt_int(b + 3, midi_lrn_cc);
+            ui_say(b, " LEARNED");
+            settings_save();                            /* (the table is in the settings) */
+        }
+    }
+    if (!n)
+        return;
+    midi_rmt_req = 0;
+    n--;
+    if (n == 36u || n == 37u) {
+        if (song.playing || chain_busy() || seq_counting())
+            transport_req = 2;
+        else if (n == 36u)
+            transport_req = 1;
+    } else if (n == 38u) {
+        (void)rec_tap();
+    } else if (n >= 40u && n < 44u) {
+        (void)section_jump(n - 40u);
+    } else if (n >= 48u && n < 48u + NTRK) {
+        track_select(n - 48u);
+    } else if (n >= 56u && n < 56u + NTRK) {
+        trk[n - 56u].p[P_MUTE] ^= 1;
+        ui.force = 1;
+    }
+}
+
 /* live recording into the selected track now: the STEP page's key entry pauses meanwhile */
 static int live_rec_sel(void)
 {
@@ -1716,7 +1755,7 @@ static void seq_entry(uint32_t pressed)
 {
     track_t *t = TSEL;
     step_t *st = &t->step[ui.cursor];
-    uint32_t k, ti = song.sel % NTRK;
+    uint32_t k, ti = song.sel % NTRK, midi_held_now = 0;
     for (k = 0; k < 27u; k++) {
         uint32_t note, c, nc;
         uint8_t cn[KB_CH];
@@ -1751,7 +1790,17 @@ static void seq_entry(uint32_t pressed)
             ent_note(t, st, cn[c]);
         last_note = (uint8_t)note;
     }
-    if (ui.entry_open && !(fm1_in.notes & ~kb_layer))
+    {   /* (2026-11-16) MIDI STEP ENTRY: the notes held on MIDI go into the step as the keys' do (the note as played) */
+        uint8_t mn[8];
+        uint32_t nm = midi_held_notes(ti, mn, sizeof mn);
+        for (k = 0; k < nm; k++) {
+            ent_note(t, st, mn[k]);
+            last_note = mn[k];
+        }
+        if (nm)
+            midi_held_now = 1;
+    }
+    if (ui.entry_open && !(fm1_in.notes & ~kb_layer) && !midi_held_now)
         ent_commit();                                   /* (let go: LEN / the arpeggio written, the cursor on) */
 }
 
@@ -2141,6 +2190,7 @@ static void ui_input_frame(void)
     fx_usb_gain = USB_GAIN[fx_usb_fixed ? usb_lvl % 5u : 0u];   /* (0.7.0) .. and its attenuation (usb.c uac_tap) */
     mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
     midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
+    midi_remote_poll();                                 /* (2026-11-16) channel 16's notes, MIDI LEARN's messages */
     rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
     {   /* (0.6.55) TRACKS 6 -> 4 (MENU or GLO > SYSTEM) on T5 / T6: T4 selected (ALGORITHM stops there) */
         static uint8_t live0 = NTRK;

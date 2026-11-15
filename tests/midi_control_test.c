@@ -266,7 +266,7 @@ static int route_test(void)
 
     midi_test_reset(); song.sel = 2; song.g[G_ROUTE] = 1; trk[2].p[P_VOICE] = V_POLY; trk[2].p[P_SUS] = 127; events_block(CTL);
     queued(0x90, 60, 100, 1); queued(0x96, 62, 100, 2); queued(0x99, 64, 100, 1); queued(0x9F, 65, 100, 2);
-    bad += check("SEL: channels 1, 7, 10, 16 all play the selected track", gate_note(&trk[2], 60) && gate_note(&trk[2], 62) && gate_note(&trk[2], 64) && gate_note(&trk[2], 65) && !gate_note(&trk[0], 60) && midi_owners[2] == 4u);
+    bad += check("SEL: channels 1, 7, 10 play the selected track; channel 16 is the remote buttons (2026-11-16), no sound", gate_note(&trk[2], 60) && gate_note(&trk[2], 62) && gate_note(&trk[2], 64) && !gate_note(&trk[2], 65) && !gate_note(&trk[0], 60) && midi_owners[2] == 3u);
     queued(0xEF, 127, 127, 1); queued(0xB9, 1, 66, 2); queued(0xD6, 33, 0, 1);
     bad += check("SEL: bend, CC1 and aftertouch from channels 7..16 reach the selected track", midi_bend_target[2] == 512 && trk[2].mw == 66 && trk[2].at == 33);
     queued(0xB6, 64, 127, 1); queued(0x86, 62, 0, 2);
