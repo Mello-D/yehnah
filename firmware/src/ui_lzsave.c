@@ -60,6 +60,16 @@ static void graph_lib(void)
  * dim. ARRANGE (trim 0): the picked part framed across every lane, the next INSERT a ghost frame at the end, a header strip with the
  * sections' letters. SONG EDIT (trim 1): only the picked part of the picked track framed. The song playing: a line where it is. */
 #define SV_BARS 32
+/* (2026-11-16) a track's lane colour, from the palette: the four knob colours, then the blend of KNOB 2 + 3 and of KNOB 4 + 1
+ * (six tracks, six hues wherever the palette has them; the sections are told apart by their letters, not the colour) */
+static uint16_t lz_trk(uint32_t q)
+{
+    switch (q % 6u) {
+    case 4:  return ux_mix(T_K(1), T_K(2), 50);
+    case 5:  return ux_mix(T_K(3), T_K(0), 50);
+    default: return T_K(q);
+    }
+}
 static uint32_t sv_scroll;                            /* the first bar on the screen */
 static void graph_song_view(int trim)
 {
@@ -107,7 +117,7 @@ static void graph_song_view(int trim)
         for (i = 0; i < n; i++) {
             uint32_t bars = chain_config.row[i].bars, ta, tb, a = acc, e = acc + bars, va, ve;
             int pick = trim ? (q == st && i == r) : i == r && !ghost;
-            uint16_t c = lz_sec(chain_config.row[i].slot, 1, !pick);
+            uint16_t c = pick ? lz_trk(q) : ux_mix(T_BG, lz_trk(q), 65);
             int32_t x0, x1, k0, k1;
             acc = e;
             if (e <= sv_scroll || a >= sv_scroll + SV_BARS) continue;
