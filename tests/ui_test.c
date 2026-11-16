@@ -1814,10 +1814,12 @@ static int test_display_preferences(void)
     bad += check("COLOR KNOB 1 shows the next palette (VAP LT, light) at once",
                  settings.palette == 1 && str_eq(UI_PALETTES[1].name, "VAP LT") && T_BG == UI_PALETTES[1].bg && ux.light &&
                  !song.octave && memcmp(before, host_screen, sizeof before) && !memcmp(sounds, trk, sizeof sounds));
-    bad += check("COLOR KNOB 1 steps on to NOIRE and the pastel DUSK and CREAM, then wraps to VAP DK",
+    bad += check("COLOR KNOB 1 steps on to NOIRE, the pastel DUSK and CREAM and the four black ones (POP, YELLOW, RED, PURPLE), then wraps to VAP DK",
                  (turn((EN_K1 + glo_kn), 1), settings.palette == 2u) && str_eq(UI_PALETTES[2].name, "NOIRE") &&
                  !ux.light && T_BG == 0u && (turn((EN_K1 + glo_kn), 1), settings.palette == 3u) && !ux.light &&
-                 (turn((EN_K1 + glo_kn), 1), settings.palette == 4u) && ux.light && (turn((EN_K1 + glo_kn), 1), settings.palette == 0u) &&
+                 (turn((EN_K1 + glo_kn), 1), settings.palette == 4u) && ux.light && (turn((EN_K1 + glo_kn), 1), settings.palette == 5u) &&
+                 !ux.light && (turn((EN_K1 + glo_kn), 1), turn((EN_K1 + glo_kn), 1), turn((EN_K1 + glo_kn), 1), settings.palette == 8u) &&
+                 (turn((EN_K1 + glo_kn), 1), settings.palette == 0u) &&
                  str_eq(UI_PALETTES[0].name, "VAP DK") && !ux.light && (turn((EN_K1 + glo_kn), 1), turn((EN_K1 + glo_kn), 1), settings.palette == 2u));
     settings.lowcut = 0; fx_lowcut = 0;
     glo_row(MI_LOWCUT);                                 /* (GLO > AUDIO's KNOB 1) */

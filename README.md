@@ -247,9 +247,9 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 
 SOUND is a scrollable list of rows: SELECT scrolls, KNOB 1–4 set the four values of the row you are on, and each value
 is a cell with a picture for every pick. The same design carries the effects, the envelopes, the LFOs, the arpeggiator and the
-GLO settings. Five colour themes change the look:
+GLO settings. Nine colour themes change the look (NOIRE is greys only; POP is black with red, blue, green and yellow highlights; YELLOW, RED and PURPLE are black with shades of one colour):
 
-![The same screen in the five colour themes: VAP DK, VAP LT, NOIRE, DUSK and CREAM](docs/img/themes.png)
+![The same screen in the nine colour themes: VAP DK, VAP LT, NOIRE, DUSK, CREAM, POP, YELLOW, RED and PURPLE](docs/img/themes.png)
 
 ## Engines
 

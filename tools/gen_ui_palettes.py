@@ -32,19 +32,29 @@ PALETTES = [
     ("VAP DK", (20, 6, 40),     (40, 14, 72),    (248, 232, 255), (1, 205, 254),   (255, 113, 206)),
     ("VAP LT", (255, 236, 250), (248, 226, 248), (48, 16, 84), (132, 16, 152),  (0, 88, 160)),
     # (chord-harp fork) jet black, the Batman look: charcoal cards, grey text, gunmetal values, the bat-signal's yellow
-    ("NOIRE",  (0, 0, 0),       (12, 12, 16),    (204, 206, 212), (150, 158, 172), (255, 214, 0)),
+    ("NOIRE",  (0, 0, 0),       (14, 14, 14),    (208, 208, 208), (160, 160, 160), (255, 255, 255)),   # (2026-11-16) greys only, no colour
     # (chord-harp fork, topic E) pastel, dark and light: a dusk lilac night with powder blue and blush; a cream day with soft slate, lilac and peach
     ("DUSK", (36, 32, 52),  (54, 48, 78),    (240, 236, 250), (164, 206, 250), (255, 176, 202)),
     ("CREAM", (252, 246, 238), (244, 238, 248), (40, 36, 68), (50, 74, 158), (176, 52, 92)),
+    # (2026-11-16) black with bright highlights: red, blue, green, yellow (the four knobs)
+    ("POP",    (0, 0, 0),       (14, 14, 18),    (228, 228, 232), (64, 150, 255),  (255, 224, 0)),
+    # (2026-11-16) black and shades of ONE colour: yellow (the old NOIRE's), red, purple
+    ("YELLOW", (0, 0, 0),       (18, 16, 0),     (255, 244, 190), (255, 234, 0),   (255, 248, 150)),
+    ("RED",    (0, 0, 0),       (18, 2, 2),      (255, 224, 224), (255, 90, 90),   (255, 0, 0)),   # theme as pure as the text-on-selection contrast allows; #FF0000 the hot colour
+    ("PURPLE", (0, 0, 0),       (16, 8, 28),     (238, 226, 255), (178, 112, 255), (224, 176, 255)),
 ]
 # (0.8.9) MENU > DISPLAY > SKIN (the approved mock-up opciones_skin.html, "0.6 COLORS"): each knob its colour, as the 0.6
 # firmware had them, on its card's value and gauge (and the EDIT chips, the knob row of BOTTOM and HUD): KNOB 1..4
 KNOBS = {
     "VAP DK": [(255, 113, 206), (1, 205, 254), (5, 255, 161), (255, 251, 150)],
     "VAP LT": [(168, 10, 118), (0, 80, 150), (100, 30, 170), (0, 92, 96)],
-    "NOIRE":  [(255, 214, 0), (150, 158, 172), (228, 230, 236), (255, 160, 0)],
+    "NOIRE":  [(255, 255, 255), (214, 214, 214), (178, 178, 178), (146, 146, 146)],
     "DUSK": [(255, 176, 202), (164, 206, 250), (180, 232, 200), (255, 226, 160)],
     "CREAM": [(166, 48, 88), (52, 84, 172), (36, 110, 80), (136, 84, 8)],
+    "POP":    [(255, 72, 72), (64, 150, 255), (60, 232, 96), (255, 224, 0)],
+    "YELLOW": [(255, 234, 0), (255, 248, 160), (255, 200, 0), (255, 222, 70)],
+    "RED":    [(255, 0, 0), (255, 72, 56), (255, 112, 112), (255, 40, 96)],
+    "PURPLE": [(178, 112, 255), (226, 184, 255), (150, 128, 255), (255, 160, 240)],
 }
 DEFAULT = "VAP DK"                 # the palette of new settings (src/panel.c)
 REC_DARK, REC_LIGHT = (255, 72, 72), (190, 24, 40)

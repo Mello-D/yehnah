@@ -644,7 +644,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 | List | Rows |
 | --- | --- |
 | **MAIN** | **BPM**, **SWING**, **TRACKS** (1–6), **USB LEVEL** (MASTER: follows the MASTER knob; FIXED; or −6 to −24 dB, for a phone or computer whose input clips) · **CLICK** (OFF, REC, ON), **CLICK LEVEL**, **COUNT-IN** (OFF, 1 BAR, 2 BARS) |
-| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE, DUSK or CREAM), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on and the HOME button open; a second tap never flips between them) |
+| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE (greys only), DUSK, CREAM, POP (black with red, blue, green and yellow), YELLOW, RED or PURPLE (black with shades of one colour)), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on and the HOME button open; a second tap never flips between them) |
 | **CONTROL** | **HOLD** (the layer threshold), **KNOB ACCEL**, **FX LATCH**, **CLOCK** (INT, USB, TRS) · **ROUTE** (CH1-6, SEL), **MIDI OUT** (KEYS, CLOCK, ALL, OFF), **SPEAKER EQ** (FLAT, LOWCUT, BASS+), **TUNE** |
 | **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT**, **MIDI LEARN** (OFF, LEARN, CLEAR) |
 

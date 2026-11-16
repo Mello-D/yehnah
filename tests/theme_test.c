@@ -42,7 +42,8 @@ int main(int argc, char **argv)
     static const uint8_t pd[] = {0x08, 0xf0};
     const aafont_t probe = {1, 1, 'A', 'A', 0, pg, pp, pd, 0};
     double worst = 100;
-    assert(NPALETTES == 5u && !strcmp(UI_PALETTES[0].name, "VAP DK") && !strcmp(UI_PALETTES[1].name, "VAP LT") &&
+    assert(NPALETTES == 9u && !strcmp(UI_PALETTES[5].name, "POP") && !strcmp(UI_PALETTES[6].name, "YELLOW") &&
+           !strcmp(UI_PALETTES[7].name, "RED") && !strcmp(UI_PALETTES[8].name, "PURPLE") && !strcmp(UI_PALETTES[0].name, "VAP DK") && !strcmp(UI_PALETTES[1].name, "VAP LT") &&
            !strcmp(UI_PALETTES[2].name, "NOIRE") && !strcmp(UI_PALETTES[3].name, "DUSK") &&
            !strcmp(UI_PALETTES[4].name, "CREAM") && UI_DEFAULT_INDEX == 0u);   /* (2026-11-02: the rest gone; VAP DK the default) */
     for (unsigned p = 0; p < NPALETTES; p++) {
