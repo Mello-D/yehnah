@@ -602,6 +602,9 @@ static inline int32_t knee(int32_t x)
     a = KNEE + (softclip((a - KNEE) * 2) >> 1);
     return x < 0 ? -a : a;
 }
+/* the MASTER level on the mix, Q12: in 64 bits (2026-11-18). It was ((x >> 2) * mg) >> 10: the floor of the 2 low bits made
+ * the master 13-bit at full MASTER (a quiet sine's THD -23 dB at -70 dBFS, now -41: the mix's own rounding) */
+#define MASTER_GAIN(x, mg) ((int32_t)(((int64_t)(x) * (mg)) >> 12))
 static int32_t ms_l[CTL], ms_r[CTL];                     /* (the master's own: mix_l / mix_r stay the mix, the stems' check) */
 /* the master's end: l, r (master_pre's, in place) through the limiter (lim_block: CTL late) and the knee into out */
 static void master_end(int32_t *out, int32_t *l, int32_t *r, uint32_t n)
@@ -2385,8 +2388,8 @@ static __attribute__((noinline)) void perf_master(int32_t *out, uint32_t n)
     uint32_t i;
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
     for (i = 0; i < n; i++) {
-        mix_l[i] = (((mix_l[i] + wet[i]) >> 2) * mg) >> 10;
-        mix_r[i] = (((mix_r[i] + wet[i]) >> 2) * mg) >> 10;
+        mix_l[i] = MASTER_GAIN(mix_l[i] + wet[i], mg);
+        mix_r[i] = MASTER_GAIN(mix_r[i] + wet[i], mg);
     }
     perf_block(mix_l, mix_r, n);
     for (i = 0; i < n; i++) {
@@ -2788,8 +2791,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         return;
     }
     for (i = 0; i < n; i++) {
-        ms_l[i] = (((mix_l[i] + wet[i]) >> 2) * mg) >> 10;
-        ms_r[i] = (((mix_r[i] + wet[i]) >> 2) * mg) >> 10;
+        ms_l[i] = MASTER_GAIN(mix_l[i] + wet[i], mg);
+        ms_r[i] = MASTER_GAIN(mix_r[i] + wet[i], mg);
         master_pre(&ms_l[i], &ms_r[i]);
     }
     master_end(out, ms_l, ms_r, n);
