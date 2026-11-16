@@ -7,79 +7,135 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Yehnah</title>
 <style>
-  :root { --bg: #fff; --fg: #000; --dim: #777; }
+  /* Yehnah's look: the device's VAP DK (dark) and VAP LT (light) palettes (tools/gen_ui_palettes.py), the UI's face
+     Inter Tight (Latin subset embedded; Japanese falls back to the system face), the splash screen's pixel art. */
+  @font-face { font-family: "Inter Tight"; font-weight: 400 700; font-display: swap;
+               src: url(data:font/woff;base64,) format("woff"); }
+  :root { --bg: #ffecfa; --surf: #f8e2f8; --fg: #301054; --dim: #6b4a8c; --line: #dcb8e4;
+          --theme: #841098; --accent: #a80a76; --k2: #005096; --on: #ffecfa; --warn: #a80a76; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #000; --fg: #fff; --dim: #888; }
+    :root:not([data-theme="light"]) { --bg: #140628; --surf: #280e48; --fg: #f8e8ff; --dim: #b49ccc; --line: #4a2878;
+          --theme: #01cdfe; --accent: #ff71ce; --k2: #01cdfe; --on: #140628; --warn: #ff71ce; }
   }
-  :root[data-theme="dark"] { --bg: #000; --fg: #fff; --dim: #888; }
+  :root[data-theme="dark"] { --bg: #140628; --surf: #280e48; --fg: #f8e8ff; --dim: #b49ccc; --line: #4a2878;
+          --theme: #01cdfe; --accent: #ff71ce; --k2: #01cdfe; --on: #140628; --warn: #ff71ce; }
+  * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
-  main { max-width: 520px; margin: 0 auto; padding: 48px 16px; }
-  h1 { font-size: 24px; font-weight: 600; margin: 0 0 24px; }
-  .lang { float: right; font-size: 13px; color: var(--dim); cursor: pointer; text-decoration: underline; background: none; padding: 0; color: var(--dim); }
+         font: 16px/1.6 "Inter Tight", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { position: relative; margin: 0 0 20px; }
+  .hero { display: block; width: 100%; height: auto; max-width: 280px; aspect-ratio: 1; margin: 0 auto 12px; border-radius: 4px;
+          border: 2px solid var(--accent); image-rendering: pixelated; background: var(--surf); }
+  h1 { font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: .01em; text-align: center; margin: 0;
+       color: var(--accent); text-shadow: 2px 2px 0 var(--k2); }
+  .lang { position: absolute; top: 0; right: 0; font: 600 13px/1 "Inter Tight", sans-serif; color: var(--dim);
+          background: var(--surf); border: 1px solid var(--line); border-radius: 4px; padding: 8px 12px; cursor: pointer; }
+  .lang:hover { color: var(--fg); border-color: var(--theme); }
   p { margin: 0 0 16px; }
-  button { font: inherit; background: var(--fg); color: var(--bg); border: 0; padding: 8px 20px; cursor: pointer; }
-  button:disabled { opacity: .3; cursor: default; }
-  #status { margin-top: 16px; min-height: 1.6em; }
+  a { color: var(--theme); text-underline-offset: 2px; }
+  a:hover { color: var(--accent); }
+  .card { background: var(--surf); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; margin: 0 0 16px; }
+  .card > :last-child { margin-bottom: 0; }
+  .card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: var(--fg); }
+  .alert { border-left: 4px solid var(--warn); }
+  .warn { color: var(--warn); }
+  .step { border: 2px solid var(--accent); }
+  button { font: 600 16px/1.2 "Inter Tight", sans-serif; background: var(--theme); color: var(--on); border: 0; border-radius: 4px;
+           padding: 12px 24px; cursor: pointer; }
+  button:hover:not(:disabled) { background: var(--accent); }
+  button:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: .35; cursor: default; }
+  button.alt { background: transparent; color: var(--theme); border: 2px solid var(--theme); padding: 10px 22px; }
+  button.alt:hover:not(:disabled) { background: var(--theme); color: var(--on); }
+  #go { width: 100%; font-size: 18px; padding: 16px 24px; }
+  select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; }
+  summary { cursor: pointer; font-weight: 600; color: var(--theme); }
+  input[type=file] { max-width: 100%; color: var(--dim); }
+  #status { margin-top: 12px; min-height: 1.6em; font-weight: 600; }
   .small { color: var(--dim); font-size: 13px; }
-  progress { width: 100%; height: 4px; margin-top: 16px; }
-  pre { color: var(--dim); font-size: 12px; white-space: pre-wrap; margin-top: 16px; }
+  .small a { color: var(--theme); }
+  progress { display: block; width: 100%; height: 8px; margin-top: 16px; border: 0; border-radius: 4px; overflow: hidden;
+             background: var(--line); accent-color: var(--accent); }
+  progress::-webkit-progress-bar { background: var(--line); }
+  progress::-webkit-progress-value { background: var(--accent); }
+  progress::-moz-progress-bar { background: var(--accent); }
+  pre { color: var(--dim); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; margin-top: 16px; }
+  .links { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0 0 16px; }
+  .links p { margin: 0; }
+  footer { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 24px; }
+  footer p { margin: 0; }
+  @media (max-width: 480px) {
+    main { padding-top: 16px; }
+    h1 { font-size: 34px; }
+    .hero { max-width: 220px; }
+  }
 </style>
 </head>
 <body>
 <main>
-  <button class="lang" id="lang"></button>
-  <h1>Yehnah</h1>
-  <p data-t="intro"></p>
-  <p data-t="warn"></p>
-  <p data-t="samples" style="color:#ec6e50"></p>
-  <p data-t="dual" style="border-left:3px solid #ec6e50;padding:4px 0 4px 12px"></p>
-  <p class="small" data-t="direct"></p>
-  <p class="small" data-t="beta"></p>
-  <p class="small"><span data-t="brick"></span>
-    <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener" style="color:inherit">FM-1-transporter</a></p>
-  <div style="border:2px solid #ec6e50;padding:12px 14px;margin:0 0 16px">
-    <p style="margin:0 0 8px;font-weight:600" data-t="firstTitle"></p>
-    <p class="small" style="margin:0 0 10px" data-t="firstText"></p>
-    <p style="margin:0 0 10px"><button id="first-stock" data-t="firstStock"></button></p>
-    <p class="small" style="margin:0" data-t="firstOk"></p>
+  <header>
+    <button class="lang" id="lang"></button>
+    <img class="hero" alt="" width="480" height="480" src="data:image/png;base64,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">
+    <h1>Yehnah</h1>
+  </header>
+  <div class="card">
+    <p data-t="intro"></p>
+    <p class="warn" style="font-weight:600" data-t="warn"></p>
+    <p class="small" data-t="direct"></p>
+    <p class="small" data-t="beta"></p>
+    <p class="small"><span data-t="brick"></span>
+      <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener">FM-1-transporter</a></p>
   </div>
-  <p class="small"><label><span data-t="verLabel"></span> <select id="ver" style="font:inherit"></select></label>
+  <div class="card alert"><p class="warn" data-t="samples"></p></div>
+  <div class="card alert"><p data-t="dual"></p></div>
+  <div class="card step">
+    <h2 data-t="firstTitle"></h2>
+    <p class="small" data-t="firstText"></p>
+    <p><button class="alt" id="first-stock" data-t="firstStock"></button></p>
+    <p class="small" data-t="firstOk"></p>
+  </div>
+  <div class="card">
+  <p class="small"><label><span data-t="verLabel"></span> <select id="ver"></select></label>
     <br><span data-t="verOld"></span></p>
   <!-- (0.8.5) the release's notice, before 0.8.5 is written (releaseNotice) -->
-  <div id="notice" hidden style="border:2px solid #ec6e50;padding:12px 14px;margin:0 0 16px">
-    <p style="margin:0 0 8px;font-weight:600" data-t="n085Title"></p>
-    <p class="small" style="margin:0 0 8px" data-t="n085What"></p>
-    <p class="small" style="margin:0 0 8px" data-t="n085Risk"></p>
-    <p class="small" style="margin:0 0 8px" data-t="n085Keep"></p>
-    <div lang="es" style="border-top:1px solid var(--dim);padding-top:8px">
-      <p style="margin:0 0 8px;font-weight:600">Aviso antes de instalar 0.8.5</p>
-      <p class="small" style="margin:0 0 8px">Nuevo en 0.8.5, las octavas de DRUM-X: en la octava central (OCT 0) el kit suena como siempre. Una octava más arriba los mismos sonidos suenan en ratchet a tempo (+1 x2, +2 x4, +3 x8); más abajo, con otro toque: −1 SHORT (la mitad del decay), −2 GHOST (corto, más suave y oscuro: notas fantasma), −3 FLAM (un golpe suave ~20 ms antes del golpe). Cada sonido del kit lleva su propia variación: un hi-hat en ratchet no repite el bombo del mismo paso.</p>
-      <p class="small" style="margin:0 0 8px">Puede cambiar canciones existentes: las notas MIDI fuera del mapa GM (35–81) que hoy una pista DRUM toca como su octava (por ejemplo 24, o 84 y más) ahora suenan como esas variantes; las teclas con OCT movido ya no cambian de sonido sino que hacen ratchet / SHORT / GHOST / FLAM. Las notas guardadas en los pasos suenan igual que antes.</p>
-      <p class="small" style="margin:0">Para conservar el sonido de antes, mové esas notas a la octava central (36–47, o el mapa GM 35–81) en tu DAW o secuenciador. Antes de instalar, guardá un backup completo de tus proyectos con el editor (Backup) o con «Volver al V15 oficial» abajo.</p>
+  <div id="notice" hidden class="card step">
+    <h2 data-t="n085Title"></h2>
+    <p class="small" data-t="n085What"></p>
+    <p class="small" data-t="n085Risk"></p>
+    <p class="small" data-t="n085Keep"></p>
+    <div lang="es" style="border-top:1px solid var(--line);padding-top:12px">
+      <h2>Aviso antes de instalar 0.8.5</h2>
+      <p class="small">Nuevo en 0.8.5, las octavas de DRUM-X: en la octava central (OCT 0) el kit suena como siempre. Una octava más arriba los mismos sonidos suenan en ratchet a tempo (+1 x2, +2 x4, +3 x8); más abajo, con otro toque: −1 SHORT (la mitad del decay), −2 GHOST (corto, más suave y oscuro: notas fantasma), −3 FLAM (un golpe suave ~20 ms antes del golpe). Cada sonido del kit lleva su propia variación: un hi-hat en ratchet no repite el bombo del mismo paso.</p>
+      <p class="small">Puede cambiar canciones existentes: las notas MIDI fuera del mapa GM (35–81) que hoy una pista DRUM toca como su octava (por ejemplo 24, o 84 y más) ahora suenan como esas variantes; las teclas con OCT movido ya no cambian de sonido sino que hacen ratchet / SHORT / GHOST / FLAM. Las notas guardadas en los pasos suenan igual que antes.</p>
+      <p class="small">Para conservar el sonido de antes, mové esas notas a la octava central (36–47, o el mapa GM 35–81) en tu DAW o secuenciador. Antes de instalar, guardá un backup completo de tus proyectos con el editor (Backup) o con «Volver al V15 oficial» abajo.</p>
     </div>
   </div>
-  <p><button id="go" disabled data-t="install"></button></p>
-  <details id="stock" style="margin-top:24px">
+  <p style="margin:0"><button id="go" disabled data-t="install"></button></p>
+  </div>
+  <details id="stock" class="card">
     <summary data-t="stockTitle"></summary>
     <p class="small" data-t="back"></p>
-    <p class="small"><a href="https://www.m-vave.com/download" target="_blank" rel="noopener" style="color:inherit">M-VAVE Downloads</a></p>
+    <p class="small"><a href="https://www.m-vave.com/download" target="_blank" rel="noopener">M-VAVE Downloads</a></p>
     <p><label><span data-t="stockFile"></span><br><input id="stock-file" type="file" accept=".fwsc"></label></p>
-    <p><button id="stock-go" disabled data-t="stockGo"></button></p>
+    <p><button class="alt" id="stock-go" disabled data-t="stockGo"></button></p>
     <p class="small" data-t="stockBackup"></p>
     <p class="small"><label><input id="stock-recovery" type="checkbox"> <span data-t="stockRecovery"></span></label></p>
   </details>
   <progress id="bar" max="100" value="0"></progress>
   <p id="status"></p>
   <pre id="log"></pre>
-  <p><a href="../editor/" style="color:inherit" data-t="editor"></a></p>
+  <div class="links">
+  <p><a href="../editor/" data-t="editor"></a></p>
   <p><span data-t="manual"></span>
-    <a href="https://github.com/Mello-D/yehnah/blob/main/docs/MANUAL.md" target="_blank" rel="noopener" style="color:inherit">Yehnah manual</a></p>
-  <p class="small">Credits: built on JIANT FM by Juan Jiant, which grew from Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments</a>, with its CrispyZebra waveforms and Fukiai icons (MIT); the song system after SLOOP by isod89.<br>
+    <a href="https://github.com/Mello-D/yehnah/blob/main/docs/MANUAL.md" target="_blank" rel="noopener">Yehnah manual</a></p>
+  </div>
+  <footer>
+  <p class="small">Credits: built on JIANT FM by Juan Jiant, which grew from Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments</a>, with its CrispyZebra waveforms and Fukiai icons (MIT); the song system after SLOOP by isod89.<br>
     Font: Inter Tight (The Inter Project Authors, SIL OFL 1.1).<br>
-    FM6 engine: msfa from Dexed (Google Inc., Pascal Gauthier, Apache-2.0). The package also holds three JieLi AC79 SDK files, uboot.boot, cfg_tool.bin and eq_cfg_hw.bin (JieLi Technology, Apache-2.0). <a href="../../firmware/LICENSING.md" style="color:inherit">Licences</a>: <a href="../../firmware/LICENSE" style="color:inherit">GPL-3.0</a>, <a href="../../firmware/LICENSES/Apache-2.0.txt" style="color:inherit">Apache-2.0</a>, <a href="../../firmware/LICENSES/" style="color:inherit">all</a>.<br>
+    FM6 engine: msfa from Dexed (Google Inc., Pascal Gauthier, Apache-2.0). The package also holds three JieLi AC79 SDK files, uboot.boot, cfg_tool.bin and eq_cfg_hw.bin (JieLi Technology, Apache-2.0). <a href="../../firmware/LICENSING.md">Licences</a>: <a href="../../firmware/LICENSE">GPL-3.0</a>, <a href="../../firmware/LICENSES/Apache-2.0.txt">Apache-2.0</a>, <a href="../../firmware/LICENSES/">all</a>.<br>
     M-VAVE and FM-1 are trademarks of their respective owners.<br>
-    <span data-t="license"></span> <a href="https://github.com/Mello-D/yehnah" target="_blank" rel="noopener" style="color:inherit">github.com/Mello-D/yehnah</a></p>
+    <span data-t="license"></span> <a href="https://github.com/Mello-D/yehnah" target="_blank" rel="noopener">github.com/Mello-D/yehnah</a></p>
+  </footer>
 </main>
 <script type="module">
 /*LIB*/

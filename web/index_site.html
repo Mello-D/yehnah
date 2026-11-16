@@ -1,0 +1,220 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+     Yehnah's front page (web/make_site.py writes it as the site's index.html and copies its pictures to img/).
+     Look: the device's VAP DK / VAP LT palettes (tools/gen_ui_palettes.py), Inter Tight, the splash's pixel art. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yehnah: a six-track synth for the FM-1</title>
+<meta name="description" content="Yehnah turns the M-VAVE FM-1 into a six-track synth, drum machine and song sequencer: 25 engines, over 700 sounds, chords on one finger, and an editor and emulator in the browser.">
+<link rel="icon" href="img/splash.png">
+<style>
+  /*FONT*/
+  :root { --bg: #ffecfa; --surf: #f8e2f8; --fg: #301054; --dim: #6b4a8c; --line: #dcb8e4;
+          --theme: #841098; --accent: #a80a76; --k2: #005096; --on: #ffecfa; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #140628; --surf: #280e48; --fg: #f8e8ff; --dim: #b49ccc; --line: #4a2878;
+          --theme: #01cdfe; --accent: #ff71ce; --k2: #01cdfe; --on: #140628; }
+  }
+  :root[data-theme="dark"] { --bg: #140628; --surf: #280e48; --fg: #f8e8ff; --dim: #b49ccc; --line: #4a2878;
+          --theme: #01cdfe; --accent: #ff71ce; --k2: #01cdfe; --on: #140628; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 17px/1.65 "Inter Tight", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  a { color: var(--theme); text-underline-offset: 3px; }
+  a:hover { color: var(--accent); }
+  img { max-width: 100%; height: auto; display: block; image-rendering: pixelated; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+  h2 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; color: var(--accent); }
+  h3 { font-size: 17px; margin: 0 0 4px; }
+  .lead { color: var(--dim); margin: 0 0 28px; max-width: 640px; }
+  section { padding: 56px 0 0; }
+
+  /* top bar */
+  .top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 4px 20px; flex-wrap: wrap; min-height: 52px; }
+  .brand { font-weight: 700; font-size: 20px; color: var(--accent); text-decoration: none; text-shadow: 1px 1px 0 var(--k2); margin-right: auto; }
+  .top a:not(.brand) { color: var(--fg); text-decoration: none; font-size: 15px; font-weight: 600; padding: 12px 0; }
+  .top a:not(.brand):hover { color: var(--accent); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 280px 1fr; gap: 40px; align-items: center; padding: 48px 0 0; }
+  .hero img { width: 280px; aspect-ratio: 1; border: 2px solid var(--accent); border-radius: 4px; background: var(--surf); }
+  h1 { font-size: 64px; line-height: 1; margin: 0 0 12px; color: var(--accent); text-shadow: 3px 3px 0 var(--k2); }
+  .tag { font-size: 22px; line-height: 1.35; margin: 0 0 20px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; padding: 0; list-style: none; }
+  .chips li { font: 600 13px/1 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em; text-transform: uppercase;
+              color: var(--theme); border: 1px solid var(--line); background: var(--surf); border-radius: 4px; padding: 8px 10px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-block; font-weight: 700; font-size: 16px; line-height: 1.2; text-decoration: none; border-radius: 4px;
+         background: var(--theme); color: var(--on); padding: 14px 24px; }
+  .btn:hover { background: var(--accent); color: var(--on); }
+  .btn.alt { background: transparent; color: var(--theme); border: 2px solid var(--theme); padding: 12px 22px; }
+  .btn.alt:hover { background: var(--theme); color: var(--on); }
+  .notice { margin-top: 32px; border-left: 4px solid var(--accent); background: var(--surf); border-radius: 4px; padding: 12px 16px; font-size: 15px; }
+  .banner { margin-top: 40px; width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+
+  /* cards and grids */
+  .grid { display: grid; gap: 16px; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .card { background: var(--surf); border: 1px solid var(--line); border-radius: 4px; padding: 18px 20px; }
+  .card p { margin: 0; color: var(--dim); font-size: 15px; }
+  .shots { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  figure { margin: 0; background: var(--surf); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  figure img { width: 100%; aspect-ratio: 1; }
+  figcaption { padding: 10px 14px 14px; font-size: 14px; line-height: 1.45; color: var(--dim); }
+  figcaption b { display: block; color: var(--fg); font-size: 15px; }
+  .themes { margin-top: 16px; width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+
+  /* engines */
+  .engines { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .engines li { font: 600 14px/1 ui-monospace, Menlo, Consolas, monospace; background: var(--surf); border: 1px solid var(--line);
+                border-radius: 4px; padding: 9px 12px; color: var(--fg); }
+  .engines li span { color: var(--dim); font-weight: 400; font-family: "Inter Tight", sans-serif; }
+
+  /* steps and specs */
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; }
+  ol.steps li { counter-increment: s; position: relative; background: var(--surf); border: 1px solid var(--line); border-radius: 4px;
+                padding: 14px 18px 14px 64px; }
+  ol.steps li::before { content: counter(s); position: absolute; left: 16px; top: 12px; width: 32px; height: 32px; border-radius: 4px;
+                background: var(--accent); color: var(--on); font-weight: 700; display: grid; place-items: center; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  th { width: 150px; color: var(--accent); font-weight: 700; white-space: nowrap; }
+
+  footer { margin-top: 72px; border-top: 1px solid var(--line); padding: 28px 0 48px; font-size: 14px; color: var(--dim); }
+  footer p { margin: 0 0 8px; }
+
+  @media (max-width: 800px) {
+    .hero { grid-template-columns: 1fr; gap: 24px; text-align: center; justify-items: center; }
+    .hero img { width: 200px; }
+    .chips, .btns { justify-content: center; }
+    h1 { font-size: 48px; }
+    .tag { font-size: 19px; }
+    .g3, .g2 { grid-template-columns: 1fr; }
+    h2 { font-size: 24px; }
+    section { padding-top: 44px; }
+    .notice { text-align: left; }
+  }
+  @media (max-width: 480px) {
+    .top .wrap { gap: 0 14px; }
+    .top a:not(.brand) { font-size: 14px; }
+    .brand { flex-basis: 100%; padding-top: 8px; }
+    .shots { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    figcaption { padding: 8px 10px 10px; font-size: 13px; }
+    th { width: auto; white-space: normal; display: block; border: 0; padding-bottom: 0; }
+    td { display: block; padding-top: 2px; }
+  }
+</style>
+</head>
+<body>
+<nav class="top"><div class="wrap">
+  <a class="brand" href="#top">Yehnah</a>
+  <a href="#install">Install</a>
+  <a href="emu/">Emulator</a>
+  <a href="#screens">Screens</a>
+  <a href="#engines">Engines</a>
+  <a href="webapp/editor/">Editor</a>
+  <a href="https://github.com/Mello-D/yehnah/blob/main/docs/MANUAL.md" target="_blank" rel="noopener">Manual</a>
+  <a href="https://github.com/Mello-D/yehnah" target="_blank" rel="noopener">GitHub</a>
+</div></nav>
+
+<main class="wrap" id="top">
+  <div class="hero">
+    <img src="img/splash.png" alt="Yehnah's start-up screen: the name in pink over a pixel-art city at dusk, a small robot in front" width="480" height="480">
+    <div>
+      <h1>Yehnah</h1>
+      <p class="tag">A six-track synth, drum machine and song sequencer for the M-VAVE FM-1</p>
+      <ul class="chips"><li>25 engines</li><li>700+ sounds</li><li>6 tracks</li><li>64-step sequencer</li><li>MIDI + USB audio</li></ul>
+      <div class="btns">
+        <a class="btn" href="webapp/installer/">Install in the browser</a>
+        <a class="btn alt" href="emu/">Try the emulator</a>
+        <a class="btn alt" href="webapp/editor/">Web editor</a>
+      </div>
+    </div>
+  </div>
+  <p class="notice"><b>A development release (v0.1.0).</b> This is custom firmware: install it at your own risk. Your music is
+    backed up before the installer writes anything, and the way back to the official firmware is one click.</p>
+  <img class="banner" src="img/hero.png" alt="Yehnah on the FM-1's screen: HOME, the sound list, the piano roll, the drum grid, the HARP chord keys and the mixer" width="1488" height="996">
+
+  <section id="what">
+    <h2>What it does</h2>
+    <p class="lead">Everything is synthesised in real time: there are no samples. It comes with a web installer, a web editor and an emulator that runs the firmware itself in your browser.</p>
+    <div class="grid g3">
+      <div class="card"><h3>25 synthesis engines</h3><p>Minimoog, Juno, FM, wavetable, strings, guitar, Omnichord, voices and animals. Any engine on any track.</p></div>
+      <div class="card"><h3>Chords on one finger</h3><p>Play an Omnichord or a guitar with single keys. Strum on hold, tunings and shapes.</p></div>
+      <div class="card"><h3>Ideas that write for you</h3><p>IDEAS throws a pattern, a sound, an LFO, an effect or an ambient texture at the track you are on, heard at once.</p></div>
+      <div class="card"><h3>A real sequencer</h3><p>64 steps a track with chords, parameter locks, ratchets, probability and micro timing. Songs of sections and scenes.</p></div>
+      <div class="card"><h3>Play with the sound</h3><p>SWARM, TRACE and XYZ move four dots across the screen and the sound moves with them. Capture the good ones.</p></div>
+      <div class="card"><h3>Effects and MIDI</h3><p>Drive, phaser, delay, six reverbs, chorus, slicer, DJ filter and punch-in effects. USB MIDI and stereo audio, TRS in, clock.</p></div>
+    </div>
+  </section>
+
+  <section id="screens">
+    <h2>On the screen</h2>
+    <p class="lead">Straight from the firmware: every picture here is the FM-1's own display.</p>
+    <div class="grid shots">
+      <figure><img src="img/home.png" alt="HOME" width="480" height="480" loading="lazy"><figcaption><b>HOME</b>The track's dancing robot, its four knobs and the tabs.</figcaption></figure>
+      <figure><img src="img/presets.png" alt="PRESETS" width="480" height="480" loading="lazy"><figcaption><b>PRESETS</b>One list over every engine, by name, type and engine.</figcaption></figure>
+      <figure><img src="img/step.png" alt="STEP" width="480" height="480" loading="lazy"><figcaption><b>STEP</b>A piano roll of the pattern, with chords and lengths.</figcaption></figure>
+      <figure><img src="img/swarm.png" alt="SWARM" width="480" height="480" loading="lazy"><figcaption><b>SWARM</b>Four dots wander, each moving two parameters.</figcaption></figure>
+      <figure><img src="img/trace.png" alt="TRACE" width="480" height="480" loading="lazy"><figcaption><b>TRACE</b>Turn a knob to walk a dot round its shape.</figcaption></figure>
+      <figure><img src="img/xy.png" alt="XYZ" width="480" height="480" loading="lazy"><figcaption><b>XYZ</b>One dot, seven invisible lines, a Z knob.</figcaption></figure>
+      <figure><img src="img/morph.png" alt="MORPH" width="480" height="480" loading="lazy"><figcaption><b>MORPH</b>Three pairs of tracks blended at once.</figcaption></figure>
+      <figure><img src="img/mixer.png" alt="MIXER" width="480" height="480" loading="lazy"><figcaption><b>MIXER</b>Level, pan and sends for every track.</figcaption></figure>
+    </div>
+    <img class="themes" src="img/themes.png" alt="The colour themes" width="1236" height="498" loading="lazy">
+  </section>
+
+  <section id="engines">
+    <h2>Engines</h2>
+    <p class="lead">25 engines, all synthesis, with over 700 factory presets.</p>
+    <ul class="engines">
+      <li>ANALOG</li><li>DIGITAL</li><li>FM6</li><li>FMINI <span>Minimoog</span></li><li>PHASE <span>CZ</span></li><li>JUNO</li>
+      <li>ACID <span>303</span></li><li>VPS</li><li>WSEQ</li><li>TERRAIN</li><li>VECTOR</li><li>HYBRID</li><li>LOFI</li>
+      <li>WHEEL <span>organ</span></li><li>STRINGS</li><li>GUITAR</li><li>KALIMBA</li><li>MODAL</li><li>PLAITS</li>
+      <li>DRIFT</li><li>NOISE</li><li>OMNI</li><li>VOICE</li><li>ANIMAL</li><li>DRUM <span>DRUM-X, HORT, LCD-4</span></li>
+    </ul>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p class="lead">Chrome or Edge on a computer, and a USB cable straight to the FM-1.</p>
+    <ol class="steps">
+      <li><b>Back up first.</b> The installer saves a complete backup of the unit before it writes.</li>
+      <li><b>Coming from another custom firmware?</b> Return to official V15 first: writing Yehnah straight over another custom firmware has bricked an FM-1. The installer checks the unit and writes only over official V15 or over Yehnah.</li>
+      <li><b>Open the <a href="webapp/installer/">installer</a></b>, connect the FM-1 and follow it. The same page takes the unit back to official V15.</li>
+      <li><b>If it crashes, freezes or clicks,</b> hold REC while switching on (one core) and report what GLO &gt; SYSTEM &gt; ABOUT says.</li>
+    </ol>
+    <p class="btns" style="margin-top:20px"><a class="btn" href="webapp/installer/">Open the installer</a></p>
+  </section>
+
+  <section id="specs">
+    <h2>Specifications</h2>
+    <table>
+      <tr><th>Tracks</th><td>6 (4 by default), sharing a budget of 8 voices</td></tr>
+      <tr><th>Sounds</th><td>25 engines, over 700 factory presets, 32 user presets, favourites</td></tr>
+      <tr><th>Drums</th><td>DRUM-X, HORT and LCD-4 machines, A and B sides, 20 kit presets</td></tr>
+      <tr><th>Sequencer</th><td>64 steps per track, parameter locks, ratchets, probability, micro timing</td></tr>
+      <tr><th>Songs</th><td>6 projects × 4 sections, an arrangement of 16 rows, scenes, song record</td></tr>
+      <tr><th>Effects</th><td>drive, auto-pan, phaser, delay, 6 reverbs, chorus, slicer, DJ filter, punch-in effects</td></tr>
+      <tr><th>MIDI</th><td>USB in and out, TRS in, clock in and out, CCs, Program Change</td></tr>
+      <tr><th>USB</th><td>MIDI, stereo audio, 8-channel stems, audio in</td></tr>
+      <tr><th>Update</th><td>From the browser with a backup first, or offline with Python</td></tr>
+    </table>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <p>Yehnah is free software (GPL-3.0, no warranty): <a href="https://github.com/Mello-D/yehnah" target="_blank" rel="noopener">github.com/Mello-D/yehnah</a>.
+    Please report problems <a href="https://github.com/Mello-D/yehnah/issues" target="_blank" rel="noopener">there</a>.</p>
+  <p>Built on <a href="https://github.com/juanjiant-bit/JIANT" target="_blank" rel="noopener">JIANT FM</a> by Juan Jiant, which grew from
+    <a href="https://github.com/hugelton/Felucca" target="_blank" rel="noopener">Felucca</a> by Leo Kuroshita (@kurogedelic), Hügelton Instruments. The full credits are in the
+    <a href="https://github.com/Mello-D/yehnah#credits" target="_blank" rel="noopener">README</a>.</p>
+  <p>Font: Inter Tight (The Inter Project Authors, SIL OFL 1.1). M-VAVE and FM-1 are trademarks of their respective owners.</p>
+</div></footer>
+</body>
+</html>

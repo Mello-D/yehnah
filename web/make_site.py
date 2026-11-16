@@ -124,10 +124,15 @@ def main(pkg, version, out, prev=None):
     for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt", "fm1backup.js"):
         if (HERE / f).exists():
             shutil.copy(HERE / f, ed / f)
-    (out / "index.html").write_text(
-        '<!doctype html><meta charset="utf-8"><title>Felucca</title>'
-        '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
-        '<a href="webapp/installer/">Felucca installer</a>\n', encoding="utf-8")
+    # the front page (web/index_site.html): the installer's embedded font, and the pictures it names, from docs/img
+    site = (HERE / "index_site.html").read_text(encoding="utf-8")
+    face = re.search(r"@font-face \{.*?\}", html, re.S)
+    if not face or site.count("/*FONT*/") != 1:
+        raise SystemExit("index_site.html needs one /*FONT*/ and index_pkg.html an @font-face; update make_site.py")
+    (out / "index.html").write_text(site.replace("/*FONT*/", face.group(0)), encoding="utf-8")
+    (out / "img").mkdir(exist_ok=True)
+    for n in sorted(set(re.findall(r'img/([\w-]+\.png)', site))):
+        shutil.copy(HERE.parent / "docs" / "img" / n, out / "img" / n)
     print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, firmware/{name} ({len(raw)} B, {product})"
           + (f", earlier: {' '.join(e['version'] for e, _ in old)}" if old else ""))
 

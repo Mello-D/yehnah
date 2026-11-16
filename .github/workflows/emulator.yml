@@ -117,7 +117,8 @@ jobs:
             if [ -e "build/emu/$f" ]; then mv "build/emu/$f" build/pages/emu/; fi
           done
           cp -r build/emu/. build/pages/
-          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=emu/"><title>Yehnah</title><a href="emu/">Yehnah emulator</a>\n' > build/pages/index.html
+          cp -r build/site/img build/pages/img
+          cp build/site/index.html build/pages/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/pages
