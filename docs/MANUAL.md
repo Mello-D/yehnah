@@ -180,7 +180,7 @@ tracks that play show: four with **TRACKS 4**, six with **TRACKS 6**. **ALGORITH
 One list over every engine's factory sounds, then your user presets. The columns are **#**, **NAME**, **TYPE** (bass,
 lead, pad…) and **ENGINE**. The knobs filter it: **KNOB 1 TYPE**, **KNOB 2 ENG** (an engine, or ALL), **KNOB 3 FAV**
 (favourites only) and **KNOB 4 LIST**. Turning the PRESETS encoder loads the next sound into the track on any page.
-Switching a track to another engine fades the old one out, and the notes you hold go on in the new one.
+Switching a track to another engine fades the old one out, and the notes you hold go on in the new one. Types, engines and each engine's sounds are all in A to Z order (ALL first on KNOB 1 and INIT, USER last; INIT first in each engine's sounds).
 
 **Every engine has an INIT sound**, its plain starting point, first in its list (a drum track's is the plain DRUM-X
 kit). To build a sound from scratch, set **KNOB 1 TYPE** to **INIT** and **KNOB 2 ENG** to an engine, load it, and shape
@@ -327,8 +327,8 @@ the PRESETS page). There are over 700 factory sounds and 32 user preset slots.
 | **ANALOG** | two oscillators (SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3) into a per-voice filter |
 | **DIGITAL** | a four-operator FM voice |
 | **FM6** | six-operator FM from Dexed's core: 32 algorithms and a patch of its own on every track |
-| **FMINI** | a Minimoog: a 24 dB ladder filter, oscillators, mixer and 200 factory patches |
-| **PHASE** | phase distortion, after the CZ synths |
+| **FMINI** | a Minimoog: a 24 dB ladder filter, oscillators, mixer and 200 factory patches, then INIT and nine more of ours (an acid and a pedal bass, two funk basses, a unison lead, a wide sync-style lead, a sequence, a trill lead and **MINI KIT**, a drum kit: the key picks the drum, C and C# kick, D and D# snare, E, F, A, A# and B toms tuned by the key, F#, G and G# hat) |
+| **PHASE** | phase distortion, after the CZ synths (ten more tones after INIT: SYNC LEAD, FLUTE, VIOLIN, SAX, VIBES, CLAV, SLAP BASS, GLASS, VOICE, RING) |
 | **JUNO** | a Juno-106-style voice with its factory bank |
 | **ACID** | a TB-303-style mono bass line |
 | **VPS** | variable phase shaping |

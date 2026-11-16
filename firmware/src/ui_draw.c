@@ -1180,7 +1180,7 @@ static void draw_cards(void)
         return;
     }
     if (cur_page()->graph == GR_BROWSE) {                /* (chord-harp fork) KNOB 1 the TYPE; the numbers by the list */
-        draw_column(0, "TYPE", PTYPE_NAME[ptype_sel % (PT_USER + 1u)], "", VAL(0u), pick_of(PT_USER + 1u, ptype_sel), ICON_NONE);
+        draw_column(0, "TYPE", PTYPE_NAME[ptype_sel % (PT_USER + 1u)], "", VAL(0u), pick_of(PT_USER + 1u, ptype_pos(ptype_sel)), ICON_NONE);
         draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), pick_of(NENG_SHOWN, eng_rank(TSEL->eng_req)),
                     engine_icon(ENGINES[TSEL->eng_req]->name));   /* (2026-11-03, the user's: all four their grids) */
         draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), pick_of(2u, (uint32_t)preset_favorite()), ICON_X_STAR);

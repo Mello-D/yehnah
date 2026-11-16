@@ -62,6 +62,33 @@ int main(void)
             chk("a field written leaves the others", k == FX_MM ? fmx_get(p, k) == 99 : fmx_get(p, k) == b[k]);
         chk("DET 2", b[FX_D2] == -700); chk("DET 3", b[FX_D3] == 700); chk("TUNE", b[FX_TU] == -64);
     }
+    {   /* MINI KIT (patch 209, OSC 1 WAVE = KIT): the key's pitch class picks the drum; each sounds, decays on its own and none is silent */
+        static int32_t mo[2 * CTL];
+        static const uint8_t KEY[4] = {60, 62, 64, 66};          /* C kick, D snare, E tom, F# hat */
+        double en[4][2];
+        uint32_t d, b, q;
+        chk("the kit is the last patch but INIT's successors", FMINI_NFACTORY == 210u && !strcmp(FMINI_PRESETS[209].name, "MINI KIT"));
+        for (d = 0; d < 4; d++) {
+            track_t *t = &trk[0];
+            host_tracks_init();
+            for (q = 1; q < NTRK; q++)
+                trk[q].p[P_MUTE] = 1;
+            host_preset(t, ENGI_MINI, 209);
+            t->engine = t->eng_req;
+            t->p[P_VOICE] = V_POLY;
+            t->p[P_DIST] = t->p[P_CHOR] = t->p[P_DLY] = t->p[P_REV] = 0;
+            trk_note_on(t, KEY[d], 100);
+            en[d][0] = en[d][1] = 0;
+            for (b = 0; b < 44100 / CTL / 2; b++) {              /* the first and the second quarter-second */
+                mix_block(mo, CTL);
+                for (q = 0; q < 2 * CTL; q++)
+                    en[d][b < 44100 / CTL / 4 ? 0 : 1] += (double)mo[q] * mo[q] / 1e12;
+            }
+            chk("a kit drum sounds", en[d][0] > 1e-3);
+            chk("a kit drum decays", en[d][1] < en[d][0] * 0.2);
+        }
+        chk("the hat is shorter than the kick", en[3][1] < en[0][1] || en[3][1] < en[0][0] * 0.01);
+    }
     printf(bad ? "fmini_test: %d FAILED\n" : "fmini_test: all passed\n", bad);
     return bad != 0;
 }

@@ -214,7 +214,7 @@ if [ -f build/gen/yehnah_tables.h ]; then
                                                         # firmware: no ENGS)
     run "chord-harp fork: ANIMAL, NOISE and DIGITAL built, T3 PHASE CZ PLUCK, IDEAS on built engines" "$OUT/retire_test"
     $CC -O1 -w -fpermissive -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/fmini_test" tests/fmini_test.c -lm
-    run "FMINI: its 200 patches survive the packing, a patch load writes only its own parameters (not the chord mode, HUMAN, KEY>F ..)" "$OUT/fmini_test"
+    run "FMINI: its 210 patches survive (MINI KIT's four drums sound) the packing, a patch load writes only its own parameters (not the chord mode, HUMAN, KEY>F ..)" "$OUT/fmini_test"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/speaker_test" tests/speaker_test.c -lm
     run "SPEAKER EQ: FLAT / LOWCUT / BASS+ responses, BASS+ harmonics of the bass, the sub cut, no offset after" "$OUT/speaker_test"
     run "DSP render (ANALOG preset 0)" "$OUT/hostsim" 0 0 1 "$OUT/render.wav"

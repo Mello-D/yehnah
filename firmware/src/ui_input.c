@@ -1371,7 +1371,7 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (pg->graph == GR_BROWSE) {                         /* KNOB 1: the TYPE (chord-harp fork: PRESETS alone browses),
                                                          * KNOB 2: the next / previous engine */
         if (slot == 0u) {
-            uint32_t ty = (uint32_t)wrap_add((int32_t)ptype_sel, steps, (int32_t)PT_USER + 1);
+            uint32_t ty = PTYPE_AZ[wrap_add((int32_t)ptype_pos(ptype_sel), steps, (int32_t)PT_USER + 1)];   /* (A to Z) */
             if (ty != ptype_sel) {
                 uint32_t total;
                 ptype_sel = (uint8_t)ty;

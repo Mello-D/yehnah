@@ -320,11 +320,12 @@ static const param_desc_t WROT_DESC[2] = {               /* (0.7.8) WHEEL's ROTO
 static const char *const N_FRNG[] = {"LO", "32'", "16'", "8'", "4'", "2'"};
 static const char *const N_FCLR[] = {"WHITE", "PINK"}, *const N_FLFO[] = {"LFO", "SQUARE"}, *const N_FOUT[] = {"LOWPASS", "HIGHPASS"};
 static const char *const N_FWAV[] = {"TRI", "SHARK", "SAW", "SQR", "PLS W", "PLS N", "SIN"};
+static const char *const N_FWAV1[] = {"TRI", "SHARK", "SAW", "SQR", "PLS W", "PLS N", "SIN", "KIT"};   /* OSC 1 only: KIT = MINI KIT (eng_fmini.c) */
 static const char *const N_A2RNG[] = {"+0", "-12", "+5", "+7", "+12", "+19", "+24", "-5"};   /* ANALOG OSC 2: semitones (eng_analog.c) */
 static const char *const N_A2WAV[] = {"SAME", "SAW", "SQR", "TRI", "SIN", "PWM"};
 static const param_desc_t FMX_DESC[NFMX] = {
     PE("RANGE", N_FRNG, 3), PE("RANGE", N_FRNG, 3), PE("RANGE", N_FRNG, 3),
-    PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2),
+    PE("WAVE", N_FWAV1, 2), PE("WAVE", N_FWAV, 2), PE("WAVE", N_FWAV, 2),
     PD("LEVEL", F_PCT, 0, 127, 0), PD("LEVEL", F_PCT, 0, 127, 0), PD("LEVEL", F_PCT, 0, 127, 0), PD("NOISE", F_PCT, 0, 127, 0),
     {"DET", F_INT, -700, 700, 0, 0, "ct"}, {"DET", F_INT, -700, 700, 0, 0, "ct"},
     {"TUNE", F_INT, -64, 63, 0, 0, 0}, PD("MIX", F_PCT, 0, 127, 0),

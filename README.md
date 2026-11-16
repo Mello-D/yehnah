@@ -267,8 +267,8 @@ Any engine can go on any track. **25 engines**, all synthesis:
 | **ANALOG** | two oscillators (SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3) into a per-voice filter |
 | **DIGITAL** | a four-operator FM voice |
 | **FM6** | six-operator FM from Dexed's core: 32 algorithms and a patch of its own on every track |
-| **FMINI** | a Minimoog: a 24 dB ladder filter, oscillators, mixer and 200 factory patches |
-| **PHASE** | phase distortion, after the CZ synths |
+| **FMINI** | a Minimoog: a 24 dB ladder filter, oscillators, mixer and 200 factory patches, then INIT and nine more of ours (an acid and a pedal bass, two funk basses, a unison lead, a wide sync-style lead, a sequence, a trill lead and **MINI KIT**, a drum kit: the key picks the drum, C and C# kick, D and D# snare, E, F, A, A# and B toms tuned by the key, F#, G and G# hat) |
+| **PHASE** | phase distortion, after the CZ synths (ten more tones after INIT: SYNC LEAD, FLUTE, VIOLIN, SAX, VIBES, CLAV, SLAP BASS, GLASS, VOICE, RING) |
 | **JUNO** | a Juno-106-style voice with its factory bank |
 | **ACID** | a TB-303-style mono bass line |
 | **VPS** | variable phase shaping |
@@ -410,7 +410,7 @@ Yehnah is made by Mello-D, and stands on a lot of other people's work. Thank you
 - **[hera-fm1](https://github.com/benbadio/hera-fm1)** by benbadio (GPL-3.0): the J-6 chord sets of HARP.
 - **[FMini-1](https://github.com/ruppert/fmini-1)** by Guilherme Ruppert (GPL-3.0): FMINI, the Minimoog engine: its ladder
   filter, oscillators, mixer and its 200 factory patches (`firmware/src/eng_fmini.c`, `eng_fmini_data.h`,
-  `eng_fmini_filter.h`; `tools/gen_fmini_data.py` makes the data files).
+  `eng_fmini_filter.h`; `tools/gen_fmini_data.py` made the data files, `eng_fmini_data.h` has been edited by hand since: INIT and nine patches of ours).
 - **[guitchordi](https://github.com/stoogs/guitchordi)** by stoogs (GPL-3.0): SCL > GUITAR's 50 chord styles
   (`tools/gtr/`, `firmware/src/harp_gtr.h`).
 - **[klattsch](https://github.com/tgies/klattsch)** by Tony Gies (MIT): VOICE is after it, with formant data from Klatt

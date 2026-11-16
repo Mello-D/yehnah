@@ -309,8 +309,8 @@ async function editorMock() {
   ok(!prefs.favorites[info.nengines][31] && !E.devicePresetRows(info, names, prefs).some((r) => r.user), "editor: erased slot disappears and loses star");
   {   /* the lists in the device's order (engines.c ENGINE_ORDER; chord-harp fork: A to Z), "-" never; the numbers stay */
     const shown = E.engineOrder(info.engines).map((i) => info.engines[i]);
-    ok(shown.join() === "ACID,ANALOG,ANIMAL,DIGITAL,DRIFT,DRUM,FM6,MINI,GUITAR,HYBRID,JUNO,KALIMBA,LOFI,MODAL,NOISE,OMNI,PHASE,PLAITS,STRINGS,TERRAIN,VECTOR,VOICE,VPS,WHEEL,WSEQ" &&
-       E.engineOrder(info.engines).join() === "20,0,14,1,21,10,12,18,19,29,15,17,3,25,11,16,2,22,23,27,28,5,24,7,26",
+    ok(shown.join() === "ACID,ANALOG,ANIMAL,DIGITAL,DRIFT,DRUM,FM6,GUITAR,HYBRID,JUNO,KALIMBA,LOFI,MINI,MODAL,NOISE,OMNI,PHASE,PLAITS,STRINGS,TERRAIN,VECTOR,VOICE,VPS,WHEEL,WSEQ" &&
+       E.engineOrder(info.engines).join() === "20,0,14,1,21,10,12,19,29,15,17,3,18,25,11,16,2,22,23,27,28,5,24,7,26",
        "editor: engines listed A to Z (chord-harp fork; indices kept)");
     ok(E.engineOrder(["ANALOG", "X", "-", "DRUM", "FM6"]).join() === "0,3,4,1", "editor: an unknown engine follows the known ones");
     ok(E.engineOrder(["ANALOG", "DIGITAL", "FM6", "DRUM"]).join() === "0,1,3,2", "editor: DIGITAL (Clipper's, 2026-10-30) among the others, A to Z");
@@ -318,7 +318,7 @@ async function editorMock() {
     await rq(E.req.uiSet(3, 0));
     prefs = await E.readDevicePreferences(rq, info, names, prefs);
     const rows = E.devicePresetRows(info, names, prefs).filter((r) => !r.user), eng = [...new Set(rows.map((r) => r.engine))];
-    ok(eng.join() === "20,0,14,1,21,10,12,18,19,29,15,17,3,25,11,16,2,22,23,27,28,5,24,7,26", "editor: device presets in the device's engine order (A to Z)");
+    ok(eng.join() === "20,0,14,1,21,10,12,19,29,15,17,3,18,25,11,16,2,22,23,27,28,5,24,7,26", "editor: device presets in the device's engine order (A to Z)");
   }
   const none = await E.readDevicePreferences(() => { throw new Error("unexpected request"); }, { uiCaps: 0 }, []);
   ok(none === null, "editor: old firmware receives no unsupported preference requests");

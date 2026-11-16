@@ -11261,6 +11261,34 @@ static int test_engine_order_099(void)
     ok &= k == ENGI_ACID && eng_step(eng_step(ENGI_ANIMAL, 1), -1) == ENGI_ANIMAL &&
           eng_step(ENGI_ANIMAL, 1) == ENGI_DIGITAL && eng_step(ENGI_DIGITAL, 1) == ENGI_DRIFT;
     bad += check("  the selector: place <-> engine round trips (every engine once; DIGITAL after ANIMAL, retired ones at ANALOG's)", ok);
+    {   /* (2026-11-17, the user's) PRESETS: the engines (KNOB 2), the types (KNOB 1) and each engine's sounds all A to Z, INIT first */
+        uint32_t total = 0, q, ee, kk;
+        for (n = 1, ok = 1; n < NENG_SHOWN; n++)
+            ok &= strcmp(ENGINES[eng_vis(n - 1u)]->name, ENGINES[eng_vis(n)]->name) < 0;
+        for (n = 2, ok &= PTYPE_AZ[0] == 0 && PTYPE_AZ[PT_USER - 1u] == 19u && PTYPE_AZ[PT_USER] == PT_USER; n < PT_USER - 1u; n++)   /* INIT, USER last */
+            ok &= strcmp(PTYPE_NAME[PTYPE_AZ[n - 1u]], PTYPE_NAME[PTYPE_AZ[n]]) < 0;
+        for (n = 0; n <= PT_USER; n++)
+            ok &= PTYPE_AZ[ptype_pos(n)] == n;                           /* a walk of every type once */
+        for (ee = 0; ee < NENGINES; ee++) {
+            const engine_t *en = ENGINES[ee];
+            if (!eng_ok(ee) || !ENG_NP(en))
+                continue;
+            total += ENG_NP(en);
+            for (q = 1; q < ENG_NP(en); q++) {
+                const char *x = en->presets[preset_nth(en, q - 1u)].name, *y = en->presets[preset_nth(en, q)].name;
+                kk = (q == 1u) ? 1u : 0u;                                 /* the first is INIT (DRUM: DRUM-X), the rest in order */
+                if (q > 1u && strcmp(x, y) > 0) {
+                    printf("order: %s: %s > %s\n", en->name, x, y);
+                    ok = 0;
+                }
+                (void)kk;
+            }
+            ok &= str_eq(en->presets[preset_nth(en, 0)].name, "INIT") || en == &ENG_DRUM;
+        }
+        if (total > PR_ORDER_N) printf("order: %u presets, room %u\n", (unsigned)total, (unsigned)PR_ORDER_N);
+        ok &= total <= PR_ORDER_N;
+        bad += check("  PRESETS: engines (KNOB 2), types (KNOB 1) and each engine's sounds A to Z, INIT first; the list fits pr_order", ok);
+    }
     preset_all_pos(&all);
     k = 0;
     ok = preset_all_at(0, &k) == ENGI_ACID && str_eq(ENG_ACID.presets[k].name, "INIT");   /* the PRESETS list: ACID's INIT

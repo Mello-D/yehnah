@@ -16,7 +16,7 @@
  * EDIT 1  CUT EMPH CNTR F.ATK    EDIT 2  F.DEC F.SUS MOD KBD
  * Voice state: s[0..3] the ladder (Q8), s[4] the feedback's lag pole (Q8), s[5] s[6] the oscillators' drift (cents * 256),
  * s[7] the contour (stage << 24 | level, Q23). Per part (in .pool): the noise, the smoothed CUT / EMPH / CNTR. */
-#define FMINI_NFACTORY 201u
+#define FMINI_NFACTORY 210u
 #define FGP(r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl, d2l, d2h, d3l, d3h, bl, bh) \
     {r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl, d2l, d2h, d3l, d3h, bl, bh}
 #define FG_SIZE 32u
@@ -219,16 +219,16 @@ static void fmini_note_on(track_t *t, voice_t *v)
 }
 
 /* the contour, once a block: stage 1 attack, 2 decay to the sustain, 3 release (the DECAY time); level Q23 */
-static int32_t fmini_contour(const int16_t *p, voice_t *v)
+static int32_t fmini_contour(int32_t att, int32_t dec, int32_t susv, voice_t *v)
 {
     uint32_t st = (uint32_t)v->s[7] >> 24;
-    int32_t e = v->s[7] & 0xFFFFFF, sus = (int32_t)p[P_E5] << 16, k = (int32_t)ENV_EXP[p[P_E4] & 127];
+    int32_t e = v->s[7] & 0xFFFFFF, sus = susv << 16, k = (int32_t)ENV_EXP[dec & 127];
     if (!v->gate && st && st != 3u)
         st = 3;
     switch (st) {
     case 1:
         {   /* the capacitor charges toward a level above full: a concave rise that ends in a corner, as in the Minimoog */
-            int32_t step = (int32_t)(ENV_LIN[p[P_E3] & 127] >> 1), d = (int32_t)(((int64_t)((5 << 21) - e) * step * 824) >> 32);
+            int32_t step = (int32_t)(ENV_LIN[att & 127] >> 1), d = (int32_t)(((int64_t)((5 << 21) - e) * step * 824) >> 32);
             e += d < 1 ? 1 : d;
         }
         if (e >= (1 << 23)) {
@@ -255,6 +255,19 @@ static inline int32_t fmini_mulr(int32_t a, uint32_t k)
     return (int32_t)(((a >> 16) * (int32_t)k) + (int32_t)(((uint32_t)(a & 0xFFFF) * k + 32768u) >> 16));
 }
 
+/* MINI KIT: a patch whose OSC 1 WAVE is KIT (7) is a drum kit, the key picks the drum (its pitch class: C C# kick, D D# snare, E F
+ * and A A# B toms (tuned by the key), F# G G# hat). Each drum is the one voice with its own fixed settings (oscillator 1 a sine, the
+ * noise, the ladder's CUT / EMPH / CNTR, the contour's ATTACK / DECAY, LP or HP, the pitch with its drop along the contour), and the
+ * contour is also its amplitude, so each decays at its own rate whatever the patch's ADSR. */
+typedef struct { uint8_t l1, ln, cut, emph, cntr, att, dec, hp, follow; int16_t base, drop; } fmini_kit_t;   /* base, drop: 1/16 st */
+static const fmini_kit_t FMINI_KIT[4] = {
+    {110, 0, 110, 0, 0, 0, 82, 0, 0, 33 * 16, 26 * 16},                  /* KICK */
+    {70, 100, 100, 0, 0, 0, 74, 0, 0, 55 * 16, 7 * 16},                   /* SNARE */
+    {110, 0, 110, 0, 0, 0, 80, 0, 1, -12 * 16, 7 * 16},                  /* TOM (base: relative to the key) */
+    {0, 115, 100, 30, 0, 0, 56, 1, 0, 60 * 16, 0},                       /* HAT */
+};
+static const uint8_t FMINI_KITZ[12] = {0, 0, 1, 1, 2, 2, 3, 3, 3, 2, 2, 2};
+
 /* The filter, after the Minimoog's (FMini-1's tools/fmini_filter.py has the laws and the reasoning): four equal one-pole
  * stages, each a differential pair (tanh in front), the last stage's output fed back to the first through a lag pole (the
  * emphasis network), solved without a delay in the loop (each stage is a trapezoidal integrator, G = g / (1 + g), and the
@@ -276,7 +289,12 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2];
     if (n > CTL)
         n = CTL;
-    env15 = fmini_contour(p, v);
+    const fmini_kit_t *kz = fmx_get(p, FX_W1) == 7 ? &FMINI_KIT[FMINI_KITZ[v->note % 12u]] : 0;   /* MINI KIT: this key's drum */
+    if (kz) {
+        hp = kz->hp;
+        env15 = fmini_contour(kz->att, kz->dec, 0, v);
+    } else
+        env15 = fmini_contour(p[P_E3], p[P_E4], p[P_E5], v);
 
     /* modulation: the LFO (the square with SQUARE) or noise held for the block, MOD deep */
     lfo = mulq15(t->lfo_val, t->lfo_fade);
@@ -288,6 +306,10 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     /* oscillator pitches */
     p16 = m->pitch16 + (fmx_get(p, FX_MO) ? (mod * 16) >> 14 : 0);        /* full depth: +-2 semitones */
     fine = m->fine + (int32_t)fmx_get(p, FX_TU) * 237 / 64;                        /* TUNE: +-100 cents */
+    if (kz) {                                                                      /* the drum's pitch falls with its contour */
+        p16 = (kz->follow ? m->pitch16 : 0) + kz->base + ((env15 * kz->drop) >> 15);
+        fine = 0;
+    }
     {   /* the VCOs wander a few cents (temperature, the integrators): a slow random walk per oscillator, about +-2 cents */
         int32_t d1 = v->s[5], d2 = v->s[6];
         d1 += ((int32_t)(fmini_noise(tr) >> 20) - 2048 >> 6) - (d1 >> 11);
@@ -307,10 +329,15 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     l2 = (int32_t)(fmx_get(p, FX_L2) * fmx_get(p, FX_L2) * 2);
     l3 = (int32_t)(fmx_get(p, FX_L3) * fmx_get(p, FX_L3) * 2);
     ln = (int32_t)(fmx_get(p, FX_LN) * fmx_get(p, FX_LN) * 2);
+    if (kz) {
+        l1 = kz->l1 * kz->l1 * 2;
+        l2 = l3 = 0;
+        ln = kz->ln * kz->ln * 2;
+    }
     for (i = 0; i < n; i++)
         mix[i] = 0;
     if (l1)
-        fmini_wave((uint32_t)fmx_get(p, FX_W1), &ph0, inc1, l1, mix, n);
+        fmini_wave(kz ? 6u : (uint32_t)fmx_get(p, FX_W1), &ph0, inc1, l1, mix, n);
     else
         ph0 += inc1 * n;
     if (l2)
@@ -327,14 +354,14 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 
     /* the singing pitch (MIDI x 16): the CUTOFF knob's dial, the contour, the keyboard, the modulation, the host's (LFO / matrix / ENV routings) */
     {
-        int32_t kn = fmini_sm[tr][0], i0 = kn >> 16, fr = (kn >> 8) & 255;
+        int32_t kn = kz ? (int32_t)kz->cut << 16 : fmini_sm[tr][0], i0 = kn >> 16, fr = (kn >> 8) & 255;
         lc = FMINI_CUT[i0];
         if (i0 < 127)
             lc += ((FMINI_CUT[i0 + 1] - lc) * fr) >> 8;
     }
     lc += (m->cutoff * 55) >> 10;                                                                           /* the host's steps (1/14 octave) in 1/16 semitones */
-    lc += (int32_t)(((int64_t)env15 * fmini_sm[tr][2] / (127 * 65536)) * 960) >> 15;                          /* the contour: up to 5 octaves */
-    lc += ((v->pitch_cur - FMINI_NOTE0 * 16) * (int32_t)p[P_E7] * 516) >> 16;                                /* the keyboard: 1 V/oct at 127, 0 V on F */
+    lc += (int32_t)(((int64_t)env15 * (kz ? (int32_t)kz->cntr << 16 : fmini_sm[tr][2]) / (127 * 65536)) * 960) >> 15;                          /* the contour: up to 5 octaves */
+    lc += kz ? 0 : ((v->pitch_cur - FMINI_NOTE0 * 16) * (int32_t)p[P_E7] * 516) >> 16;                                /* the keyboard: 1 V/oct at 127, 0 V on F */
     if (fmx_get(p, FX_MF))
         lc += (mod * 547) >> 15;                                                                            /* +-2.85 octaves at full depth */
     lc = clamp(lc, FMINI_GM0 * 16, FMINI_FOSC_MAX16);
@@ -353,7 +380,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         c1 = (int32_t)((g2 * om) >> 18);
         c0 = (int32_t)((g3 * om) >> 18);
         {   /* EMPHASIS: the feedback gain k and the passband's loss, from the knob (Q16) */
-            int32_t kn = fmini_sm[tr][1], i0 = kn >> 16, fk = (kn >> 8) & 255, den;
+            int32_t kn = kz ? (int32_t)kz->emph << 16 : fmini_sm[tr][1], i0 = kn >> 16, fk = (kn >> 8) & 255, den;
             k12 = FMINI_K[i0];
             trim12 = FMINI_TRIM[i0];
             if (i0 < 127) {
@@ -388,7 +415,10 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         sx += w + w;
         /* HP: the stages are one-pole lows H; (1 - H)^4 = 1 - 4H + 6H^2 - 4H^3 + H^4 on the stages' outputs (linear, the states as they are) */
         o = hp ? xin - 4 * y1 + 6 * y2 - 4 * y3 + y4 : y4;
-        out[i] += voice_amp((((o + 128) >> 8) * trim12) >> 12, m, i) << 1;
+        o = (((o + 128) >> 8) * trim12) >> 12;
+        if (kz)
+            o = mulq15(o, env15 > 32767 ? 32767 : env15);              /* the contour is the drum's amplitude */
+        out[i] += voice_amp(o, m, i) << 1;
     }
     v->ph[0] = ph0;
     v->ph[1] = ph1;

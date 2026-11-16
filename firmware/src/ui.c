@@ -1253,7 +1253,7 @@ static uint32_t preset_orig(const engine_t *e, uint32_t k) { (void)e; return k; 
  * stored order; 0.5.1's LOFI_ORDER gone). The stored numbers stay (projects, user presets, favourites, the editor and
  * PROGRAM CHANGE keep theirs): pr_order maps the place shown to the stored number. Built on first use, in LOWBUF (the
  * main loop's alone; app.ld) */
-#define PR_ORDER_N 720u                                 /* (every engine's presets: 650 in 27 engines; 640 left HYBRID's unsorted, INIT not first) */
+#define PR_ORDER_N 840u                                 /* (every engine's presets: 801 in 2026-11-17 (650 earlier); 720 left TERRAIN, VECTOR and HYBRID unsorted, INIT not first: tests/ui_test.c checks the total fits) */
 static uint8_t pr_order[PR_ORDER_N] __attribute__((section(".lowbuf")));
 static uint16_t pr_off[NENGINES + 1u] __attribute__((section(".lowbuf")));   /* engine e's places: pr_off[e] .. [e + 1] */
 static uint8_t pr_built __attribute__((section(".lowbuf")));
@@ -1563,6 +1563,15 @@ static const char *const PTYPE_ABBR[PT_USER + 1u] = {"", "BASS", "LEAD", "PAD", 
                                                      "FX", "INIT", "USER"};   /* (a list row's) */
 _Static_assert(sizeof PTYPE == PT_USER, "a name a type");
 static uint8_t ptype_sel;
+/* (2026-11-17, the user's) KNOB 1 walks the types A to Z after ALL, INIT and USER last: ids by name (ptype_sel stays the id; PTYPE's order is the stored one) */
+static const uint8_t PTYPE_AZ[PT_USER + 1u] = {0, 16, 1, 10, 13, 17, 18, 8, 9, 4, 2, 11, 6, 3, 5, 7, 12, 15, 14, 19, 20};
+static uint32_t ptype_pos(uint32_t id)                  /* the place of type id in that walk */
+{
+    uint32_t i;
+    for (i = 0; i <= PT_USER && PTYPE_AZ[i] != id; i++)
+        ;
+    return i <= PT_USER ? i : 0u;
+}
 static uint32_t preset_type(uint32_t e, uint32_t k)   /* engine e's preset k's type (1..), a user preset's USER; 0 none */
 {
     const char *p;

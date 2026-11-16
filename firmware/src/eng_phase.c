@@ -195,12 +195,23 @@ static const preset_t PHASE_PRESETS[] YEHNAH_RES = {
     {"CZ SOLO", {5, 0, 60, 60, 6, 0, 0, 0}, {2, 70, 110, 40}, 0, 1, FX(0, 10, 26, 24), XP(P_GLIDE + 1, 30, P_MWDST + 1, MWD_VIB)},
     {"CZ EPIANO", {3, 0, 55, 70, 0, 0, 0, 0}, {0, 82, 30, 55}, 0, 0, FX(0, 30, 10, 28)},
     {"INIT", {0, 0, 60, 64, 0, 0, 0, 0}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 0)},   /* (chord-harp fork) the EDIT defaults, dry */
+    /* (chord-harp fork, 2026-11-17) after INIT, so no earlier preset moves */
+    {"CZ SYNC LEAD", {5, 0, 85, 90, 0, 0, 0, 0}, {4, 75, 100, 35}, 0, 1, FX(0, 10, 25, 25), XP(P_GLIDE + 1, 35, P_MWDST + 1, MWD_VIB)},
+    {"CZ FLUTE", {3, 0, 18, 25, 0, 0, 0, 0}, {40, 80, 110, 60}, 0, 1, FX(0, 20, 10, 35), XP(P_GLIDE + 1, 20, P_MWDST + 1, MWD_VIB)},
+    {"CZ VIOLIN", {0, 5, 45, 40, 7, 0, 0, 0}, {45, 85, 110, 65}, 0, 0, FX(0, 40, 15, 40), XP(P_MWDST + 1, MWD_VIB)},
+    {"CZ SAX", {2, 2, 55, 60, 0, 0, 0, 0}, {10, 75, 105, 40}, 0, 1, FX(0, 10, 20, 25), XP(P_GLIDE + 1, 15, P_MWDST + 1, MWD_VIB)},
+    {"CZ VIBES", {3, 0, 40, 60, 5, 0, 0, 0}, {0, 92, 0, 70}, 0, 0, FX(0, 15, 20, 45)},
+    {"CZ CLAV", {2, 0, 65, 85, 0, 0, 0, 0}, {0, 62, 0, 25}, 0, 0, FX(0, 0, 25, 20)},
+    {"CZ SLAP BASS", {1, 0, 60, 90, 0, 0, 70, 0}, {0, 60, 60, 18}, 0, 1, FX(8, 0, 0, 4)},
+    {"CZ GLASS", {6, 0, 55, 35, 10, 0, 0, 0}, {55, 90, 115, 85}, 0, 0, FX(0, 50, 25, 65)},
+    {"CZ VOICE", {7, 4, 50, 45, 6, 0, 0, 30}, {30, 85, 112, 55}, 0, 0, FX(0, 35, 15, 45)},
+    {"CZ RING", {3, 0, 70, 70, 12, 1, 0, 0}, {0, 80, 0, 50}, 0, 0, FX(0, 10, 25, 40)},
 };
 /* (chord-harp fork) each preset's sound type (ui.c PTYPE) and level trim (1/2 dB, P_TRIM: Clipper's
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
-static const char PHASE_PT[] = "BKSURLPLBOEPVULKN";
+static const char PHASE_PT[] = "BKSURLPLBOEPVULKNLWSWMKBPVX";
 _Static_assert(sizeof PHASE_PT == NELEM(PHASE_PRESETS) + 1u, "a type a preset");
-static const int8_t PHASE_TRIM[] = {4, -5, -21, 14, -6, -9, -23, 5, -12, -30, 23, -5, -18, -6, 3, -5, -6};
+static const int8_t PHASE_TRIM[] = {4, -5, -21, 14, -6, -9, -23, 5, -12, -30, 23, -5, -18, -6, 3, -5, -6, 6, -9, -8, -12, -6, -6, -13, 9, 0, -3};
 _Static_assert(sizeof PHASE_TRIM == NELEM(PHASE_PRESETS), "a trim a preset");
 _Static_assert(NELEM(PHASE_PRESETS) <= 128u, "PHASE's favourites");
 

@@ -1624,7 +1624,8 @@ function makeMockDevice(opt = {}) {
         P("CZ BELLS", [6, 0, 70, 90, 8, 1, 0, 0], [0, 96, 0, 80]), P("CZ SWEEP", [7, 0, 90, 100, 6, 0, 0, 0], [20, 100, 100, 70]),
         P("CZ CHOIR", [3, 4, 40, 40, 10, 0, 0, 0], [60, 90, 115, 85]), P("CZ PLUCK", [0, 0, 70, 90, 0, 0, 0, 0], [0, 70, 0, 50]),
         P("CZ SOLO", [5, 0, 60, 60, 6, 0, 0, 0], [2, 70, 110, 40], 1), P("CZ EPIANO", [3, 0, 55, 70, 0, 0, 0, 0], [0, 82, 30, 55]),
-        P("INIT", [0, 0, 60, 64, 0, 0, 0, 0], [0, 64, 127, 30])] },
+        P("INIT", [0, 0, 60, 64, 0, 0, 0, 0], [0, 64, 127, 30]),
+        P("CZ SYNC LEAD", [5, 0, 85, 90, 0, 0, 0, 0], [4, 75, 100, 35], 1), P("CZ FLUTE", [3, 0, 18, 25, 0, 0, 0, 0], [40, 80, 110, 60], 1), P("CZ VIOLIN", [0, 5, 45, 40, 7, 0, 0, 0], [45, 85, 110, 65]), P("CZ SAX", [2, 2, 55, 60, 0, 0, 0, 0], [10, 75, 105, 40], 1), P("CZ VIBES", [3, 0, 40, 60, 5, 0, 0, 0], [0, 92, 0, 70]), P("CZ CLAV", [2, 0, 65, 85, 0, 0, 0, 0], [0, 62, 0, 25]), P("CZ SLAP BASS", [1, 0, 60, 90, 0, 0, 70, 0], [0, 60, 60, 18], 1), P("CZ GLASS", [6, 0, 55, 35, 10, 0, 0, 0], [55, 90, 115, 85]), P("CZ VOICE", [7, 4, 50, 45, 6, 0, 0, 30], [30, 85, 112, 55]), P("CZ RING", [3, 0, 70, 70, 12, 1, 0, 0], [0, 80, 0, 50])] },
     { name: "LOFI", titles: ["CHIP", "MOTN"], edit: [E("CHIP", ["4BIT", "4B/2", "8BIT", "1BIT", "STEP"], 0), E("WAVE", ["PLS", "TRI", "SAW", "NOIS", "WRAM"], 0), D("DUTY", F.INT, 0, 127, 64), D("CRSH", F.PCT, 0, 127, 0),
         D("SWP", F.PCT, 0, 127, 0), D("VIB", F.PCT, 0, 127, 0), E("ARP", ["OFF", "OCT", "MAJ", "MIN"], 0), D("TONE", F.PCT, 0, 127, 127)],
       presets: [P("GAME LEAD", [0, 0, 32, 0, 0, 20, 0, 127], [0, 60, 90, 30], 1), P("GB BASS", [1, 1, 0, 0, 0, 0, 0, 90], [0, 50, 70, 20], 1),
@@ -1940,7 +1941,8 @@ function makeMockDevice(opt = {}) {
         P("CARPET", [59, 67, 71, 0, 86, 60, 0, -62], [72, 90, 90, 84], 1), P("SPACESHIP", [73, 57, 51, 0, 72, 90, 0, -61], [53, 81, 110, 81], 1),
         P("BEEP BOOP", [82, 38, 0, 0, 55, 0, 0, -60], [0, 59, 0, 50]), P("GLITCH FX", [68, 53, 76, 0, 59, 0, 0, -59], [0, 65, 0, 61], 1),
         P("TAPE STOP", [71, 42, 61, 0, 96, 0, 0, -58], [0, 99, 0, 92], 1), P("SUB DROP", [51, 25, 51, 0, 99, 0, 0, -57], [0, 103, 0, 96], 1),
-        P("INIT", [64, 40, 64, 0, 64, 40, 0, -56], [0, 64, 127, 30])] },
+        P("INIT", [64, 40, 64, 0, 64, 40, 0, -56], [0, 64, 127, 30]),
+        P("ACID SQUELCH", [30, 108, 100, 0, 62, 0, 0, -55], [0, 66, 100, 50], 1), P("TAURUS PEDAL", [40, 20, 30, 0, 90, 60, 0, -54], [20, 90, 115, 80], 1), P("SLAP BASS", [28, 45, 85, 0, 58, 5, 0, -53], [0, 66, 40, 40], 1), P("FUNK BASS 2", [40, 60, 70, 0, 66, 15, 0, -52], [0, 70, 70, 45], 1), P("UNISON LEAD", [70, 30, 50, 0, 80, 70, 20, -51], [5, 75, 110, 55], 1), P("WIDE SYNC", [55, 55, 85, 0, 80, 40, 0, -50], [0, 78, 100, 50], 1), P("TD SEQUENCE", [45, 70, 60, 0, 70, 0, 0, -49], [0, 72, 60, 50], 1), P("TRILL LEAD", [65, 35, 45, 0, 78, 70, 45, -48], [4, 72, 112, 55], 1), P("MINI KIT", [100, 0, 0, 0, 60, 0, 0, -47], [0, 60, 127, 105])] },
     /* 19: GUITAR (chord-harp fork, eng_guitar.c): a plucked string (Karplus-Strong), nylon, steel, electric */
     { name: "GUITAR", titles: ["STRING", "HAND"], edit: [E("MODEL", ["NYLON", "STEEL", "ELEC", "BASS"], 1), D("PICK", F.PCT, 0, 127, 25), D("PLUCK", F.PCT, 0, 127, 70), D("DECY", F.PCT, 0, 127, 64),
         D("TONE", F.PCT, 0, 127, 64), D("BODY", F.PCT, 0, 127, 64), D("MUTE", F.PCT, 0, 127, 0), D("DAMP", F.PCT, 0, 127, 30)],
@@ -2798,7 +2800,7 @@ function enumShown(d) {
 /* the order the device shows its engines in (src/engines.c ENGINE_ORDER): the lists here follow it, the protocol keeps
    the engine numbers. engineOrder(names): the indices of names in that order, "-" (a reserved number) left out; a name
    the list does not know (another firmware) follows in index order */
-const ENGINE_ORDER = ["ACID", "ANALOG", "ANIMAL", "DIGITAL", "DRIFT", "DRUM", "FM6", "MINI", "GUITAR", "HYBRID", "JUNO", "KALIMBA", "LOFI", "MODAL", "NOISE", "OMNI", "PHASE", "PLAITS", "STRINGS", "TERRAIN", "VECTOR", "VOICE", "VPS", "WHEEL", "WSEQ"];   /* (chord-harp fork: A to Z, as the device; 0.9.9: DRUM-X, VOICE,
+const ENGINE_ORDER = ["ACID", "ANALOG", "ANIMAL", "DIGITAL", "DRIFT", "DRUM", "FM6", "GUITAR", "HYBRID", "JUNO", "KALIMBA", "LOFI", "MINI", "MODAL", "NOISE", "OMNI", "PHASE", "PLAITS", "STRINGS", "TERRAIN", "VECTOR", "VOICE", "VPS", "WHEEL", "WSEQ"];   /* (chord-harp fork: A to Z, as the device; 0.9.9: DRUM-X, VOICE,
    ANIMAL first, as the parts at power-on; DIGITAL (2026-10-30: Clipper's, a plain engine again) among them; was ANALOG FM6 DIGITAL PHASE LOFI VOICE WHEEL NOISE
    DRUM ANIMAL, the order PROGRAM CHANGE still numbers the sounds in: engines.c ENGINE_PC_ORDER) */
 function engineOrder(names) {
