@@ -5,6 +5,7 @@
  * preset_trim_clipper.h), an INIT preset (the EDIT defaults, dry). */
 /* ANALOG: two band-limited oscillators (saw / square / tri / sine / PWM),
  * noise, drive and a trapezoidal low-pass. */
+#include "eng_fmini_filter.h"           /* the ladder's laws (also FMINI's): FMINI_K FMINI_TRIM for the MOOG model's resonance */
 static const char *const N_ANALOG_WAVE[] = {"SAW", "SQR", "TRI", "SIN", "PWM"};
 
 static void analog_note_on(track_t *t, voice_t *v)
@@ -64,10 +65,18 @@ static void analog_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     uint32_t pw;
     int32_t m2 = mix * 258, m1 = 32767 - m2;                    /* osc mix Q15 */
     int32_t nz = noise * 200, drv = p[P_E6];
+    int32_t mg = 4096;                                           /* MOOG: the passband gain, Q12 */
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1];                  /* state in locals: out[] may alias v->s[] */
     int32_t sv[2] = {v->s[0], v->s[1]}, nst = v->s[2];
     int32_t ls[4] = {v->s[3], v->s[4], v->s[5], v->s[6]};      /* (MOOG's stages, in locals too) */
     fmod_coef(&fm, model, cut, p[P_E5]);
+    if (model == FM_MOOG) {   /* (2026-11-18) RES on FMINI's law: it sings from ~80 % of the knob (was the last 5 detents) and the
+                           * passband keeps FMINI's loss (-1.4 dB at most; the plain ladder lost 4.5 dB) */
+        int32_t ri = clamp(p[P_E5], 0, 127), kq = (int32_t)(((uint32_t)FMINI_K[ri] * 22453u) >> 14);   /* FMINI's k x 4 / its singing k */
+        fm.lad.k = kq;
+        fm.lad.inv = (int32_t)(0xFFFFFFFFu / (uint32_t)(65536 + mul_sh(kq, fm.lad.G4, 12)));
+        mg = (4096 + kq) * (int32_t)FMINI_TRIM[ri] / (4096 + (kq >> 1));
+    }
     if (pwo)
         psh = clamp(psh + (pwo << 8), -(63 << 8), 63 << 8);
     pw = 0x80000000u + (uint32_t)(psh << 15);
@@ -91,7 +100,7 @@ static void analog_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         if (drv)                                      /* pre-shifts: drive is up to 4x, no overflow */
             s += mulq15(softclip(((s >> 2) * (drive >> 2)) >> 11) - s, dw);
         {   /* filter: linear up to half scale, then a soft knee (only resonance peaks saturate) */
-            int32_t y = model == FM_SVF ? tsvf_lp(&fm.sv, s >> 1, &sv[0], &sv[1]) : fmod_tick(&fm, s, sv, ls);
+            int32_t y = model == FM_SVF ? tsvf_lp(&fm.sv, s >> 1, &sv[0], &sv[1]) : fmod_tick(&fm, mg == 4096 ? s : (int32_t)(((int64_t)s * mg) >> 12), sv, ls);
             int32_t a = y < 0 ? -y : y;
             if (a > 16000) {
                 a = 16000 + (softclip((a - 16000) * 2) >> 1);
@@ -170,7 +179,7 @@ static const preset_t ANALOG_PRESETS[] YEHNAH_RES = {
  * preset_trim_clipper.h, tools/level_presets.py over its whole mix) */
 static const char ANALOG_PT[] = "BBBBBBBBBLURLPSPWLBLPBLPRBLKUBL" "LPN";
 _Static_assert(sizeof ANALOG_PT == NELEM(ANALOG_PRESETS) + 1u, "a type a preset");
-static const int8_t ANALOG_TRIM[] = {-9, -10, -10, -8, -4, -6, 3, 2, 6, -10, 7, 7, -18, -7, -4, -9, -7, -5, 4, -6, -23, 11, -3, -14, 8, 5, 2, 5, 9, 11, -2, 0, 0, 0};
+static const int8_t ANALOG_TRIM[] = {-9, -10, -10, -8, -4, -6, 3, 2, 6, -10, 7, 7, -18, -7, -4, -9, -7, -5, 4, -6, -23, 6, -8, -14, 8, 0, -4, 5, 9, 6, -2, 0, 0, 0};
 _Static_assert(sizeof ANALOG_TRIM == NELEM(ANALOG_PRESETS), "a trim a preset");
 _Static_assert(NELEM(ANALOG_PRESETS) <= 128u, "ANALOG's favourites");
 

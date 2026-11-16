@@ -27,7 +27,7 @@ enum {                           /* a factory patch's bytes (FMini-1's) */
 enum { FS_O1 = 1, FS_O2 = 2, FS_O3 = 4, FS_NZ = 8, FS_PINK = 16, FS_MOSC = 32, FS_MFLT = 64 };   /* FG_SW1 */
 enum { FTG_GLIDE = 1, FTG_SQR = 2, FTG_HP = 4 };                                                   /* FG_SW2 */
 #include "eng_fmini_data.h"             /* FMINI_FACTORY FMINI_CATS FMINI_PRESETS FMINI_X: tools/gen_fmini_data.py */
-#include "eng_fmini_filter.h"           /* the ladder's laws: FMINI_CUT FMINI_K FMINI_TRIM FMINI_G FMINI_GX */
+/* (eng_fmini_filter.h: FMINI_CUT FMINI_K FMINI_TRIM FMINI_G FMINI_GX, included by eng_analog.c, which comes first) */
 
 /* a patch's DET 2 / 3 in cents: the signed 10-bit magnitude in the two 7-bit bytes at lo (low 7 bits, then bits 7..9 and the sign at bit 3) */
 static int32_t fmini_det(const uint8_t *g, uint32_t lo)
