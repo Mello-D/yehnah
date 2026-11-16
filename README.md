@@ -395,6 +395,7 @@ Yehnah is made by Mello-D, and stands on a lot of other people's work. Thank you
   contributors: keremimo, ChanceTheMaker, andreahaku, spinkham, zednaked, jasonpersinger.
 - **[Clipper](https://github.com/isod89/clipper-fm1)** by isod89 (GPL-3.0): the ANALOG, DIGITAL, PHASE, LOFI, NOISE, JUNO,
   ACID, VPS, WSEQ, TERRAIN, VECTOR, STRINGS, WHEEL and HYBRID engines and their sound banks.
+- **[OberVave](https://github.com/zvenson/obervave)** by zvenson (GPL-3.0-only, itself after the Dinghy platform), with **[S1Vave](https://github.com/AndrewGG88/S1Vave)** by AndrewGG88 (GPL-3.0-only; its logo and branding are not used): 33 HYBRID patches (BASS, SYNC, lead, pad, brass and keys types) are OberVave's factory programs translated to HYBRID's voice (`firmware/src/hybrid_patches.h`, patches 48 to 80); the sounds only, with our own effects.
 - **[SLOOP](https://github.com/isod89/sloop-fm1)** by isod89 (GPL-3.0): the sections, quick chain and SONG REC system the
   song mode is based on.
 - **[Hortator](https://github.com/deadactive/hortator)** by DEADACTIVE (GPL-3.0, itself built on Felucca): the drum models

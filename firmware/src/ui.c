@@ -1253,7 +1253,7 @@ static uint32_t preset_orig(const engine_t *e, uint32_t k) { (void)e; return k; 
  * stored order; 0.5.1's LOFI_ORDER gone). The stored numbers stay (projects, user presets, favourites, the editor and
  * PROGRAM CHANGE keep theirs): pr_order maps the place shown to the stored number. Built on first use, in LOWBUF (the
  * main loop's alone; app.ld) */
-#define PR_ORDER_N 840u                                 /* (every engine's presets: 801 in 2026-11-17 (650 earlier); 720 left TERRAIN, VECTOR and HYBRID unsorted, INIT not first: tests/ui_test.c checks the total fits) */
+#define PR_ORDER_N 880u                                 /* (every engine's presets: 801 in 2026-11-17, about 850 with the OberVave set (650 earlier); 720 left TERRAIN, VECTOR and HYBRID unsorted, INIT not first: tests/ui_test.c checks the total fits) */
 static uint8_t pr_order[PR_ORDER_N] __attribute__((section(".lowbuf")));
 static uint16_t pr_off[NENGINES + 1u] __attribute__((section(".lowbuf")));   /* engine e's places: pr_off[e] .. [e + 1] */
 static uint8_t pr_built __attribute__((section(".lowbuf")));

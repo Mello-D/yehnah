@@ -821,11 +821,13 @@ static void hybrid_spread(track_t *t, voice_t *v, uint32_t r)
 /* (chord-harp fork) each preset's type (ui.c PTYPE: Clipper's banks, its bells BELL) and Clipper's level trim
  * (preset_trim_clipper.h, engine 12) */
 static const char HY_PT[] = "PPSBLEKBBLRPUXUBLPPBLUENBLPLPBEL"
-                          "RSLKKLPKKOWEPLUBPVRX";
+                          "RSLKKLPKKOWEPLUBPVRX"
+                          "BBBBBRPLLLLLPPPPPSRRRKIKIXXPPXXKX";
 _Static_assert(sizeof HY_PT == NELEM(HY_PRESETS) + 1u, "a type a preset");
 static const int8_t HY_TRIM[] = {-2, -14, 2, 1, -1, -7, -13, 3, -1, 6, 4, 14, 8, 2, 8, 5,
                                  6, -7, -1, -2, 11, 15, -7, 3, 8, 2, -7, 0, -13, -8, -6, 3,
-                                 1, -3, 2, 1, 7, 0, -2, 2, 7, -3, -2, 0, -1, 0, 9, 1, -4, -2, 4, 16};
+                                 1, -3, 2, 1, 7, 0, -2, 2, 7, -3, -2, 0, -1, 0, 9, 1, -4, -2, 4, 16,
+                                 0, 11, -1, 2, -1, 0, -1, -5, -1, -6, -3, -8, 0, -5, -1, -2, 0, -3, -5, -5, -5, 4, 4, -4, 2, 0, 0, 1, 1, -1, -5, -4, -4};
 _Static_assert(sizeof HY_TRIM == NELEM(HY_PRESETS), "a trim a preset");
 _Static_assert(NELEM(HY_PRESETS) <= 128u, "HYBRID's favourites");
 _Static_assert(HY_NFACTORY <= 255u, "hy_act.seen");
