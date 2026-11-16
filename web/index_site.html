@@ -69,6 +69,17 @@
   figcaption b { display: block; color: var(--fg); font-size: 15px; }
   .themes { margin-top: 16px; width: 100%; border: 1px solid var(--line); border-radius: 4px; }
 
+  /* the emulator panel: the frame loads only after the click */
+  .play { position: relative; border: 1px solid var(--line); border-radius: 4px; background: var(--surf); overflow: hidden; }
+  .play iframe { display: block; width: 100%; height: 780px; border: 0; background: #000; }
+  .play .go { display: grid; place-items: center; gap: 16px; text-align: center; padding: 40px 20px; background: var(--surf); }
+  .play .go img { width: 100%; max-width: 360px; border: 2px solid var(--accent); border-radius: 4px; }
+  .play .go p { margin: 0; color: var(--dim); max-width: 34em; }
+  .play .go button { font: 700 16px/1.2 "Inter Tight", sans-serif; background: var(--theme); color: var(--on); border: 0; border-radius: 4px; padding: 14px 28px; cursor: pointer; }
+  .play .go button:hover { background: var(--accent); }
+  .play .go button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .more { margin: 12px 0 0; font-size: 14px; color: var(--dim); }
+
   /* engines */
   .engines { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
   .engines li { font: 600 14px/1 ui-monospace, Menlo, Consolas, monospace; background: var(--surf); border: 1px solid var(--line);
@@ -96,6 +107,7 @@
     .tag { font-size: 19px; }
     .g3, .g2 { grid-template-columns: 1fr; }
     h2 { font-size: 24px; }
+    .play iframe { height: 840px; }
     section { padding-top: 44px; }
     .notice { text-align: left; }
   }
@@ -114,7 +126,7 @@
 <nav class="top"><div class="wrap">
   <a class="brand" href="#top">Yehnah</a>
   <a href="#install">Install</a>
-  <a href="emu/">Emulator</a>
+  <a href="#play">Emulator</a>
   <a href="#screens">Screens</a>
   <a href="#engines">Engines</a>
   <a href="webapp/editor/">Editor</a>
@@ -169,6 +181,19 @@
     <img class="themes" src="img/themes.png" alt="The colour themes" width="1236" height="498" loading="lazy">
   </section>
 
+  <section id="play">
+    <h2>Try it now</h2>
+    <p class="lead">The emulator is the firmware itself, compiled to WebAssembly, drawn as an FM-1 you play with the mouse, a touch screen or the computer keyboard. Nothing is installed and nothing leaves your computer.</p>
+    <div class="play" id="playbox">
+      <div class="go">
+        <img src="img/home.png" alt="" width="480" height="480" loading="lazy">
+        <p>Loading starts when you press the button, and it turns the sound on.</p>
+        <button type="button" id="playgo">Start the emulator</button>
+      </div>
+    </div>
+    <p class="more"><a href="emu/">Open the emulator on its own page</a>, which is better on a phone.</p>
+  </section>
+
   <section id="engines">
     <h2>Engines</h2>
     <p class="lead">25 engines, all synthesis, with over 700 factory presets.</p>
@@ -216,5 +241,12 @@
     <a href="https://github.com/Mello-D/yehnah#credits" target="_blank" rel="noopener">README</a>.</p>
   <p>Font: Inter Tight (The Inter Project Authors, SIL OFL 1.1). M-VAVE and FM-1 are trademarks of their respective owners.</p>
 </div></footer>
+<script>
+document.getElementById("playgo").addEventListener("click", function () {
+  var f = document.createElement("iframe");
+  f.src = "emu/"; f.title = "Yehnah emulator"; f.allow = "autoplay; midi; fullscreen";
+  var box = document.getElementById("playbox"); box.textContent = ""; box.appendChild(f);
+});
+</script>
 </body>
 </html>
