@@ -70,6 +70,7 @@ static struct {
     int32_t cd, dm;
 } rf;
 static int32_t ref_rd(uint32_t d, int32_t m) { return dly_rd_of(ref_dly, rf.dly_w, d, m); }
+#define RV_RND(x) (((x) + 16384) >> 15)
 static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet, uint32_t n)
 {
     uint32_t i, k, dl = delay_samples();
@@ -119,8 +120,8 @@ static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_
             int32_t in = mulq15(rev_in[i], 2580);
             for (k = 0; k < 4u; k++) {
                 int32_t o = c[rf.comb_i[k]];
-                rf.comb_lp[k] = o + mulq15(rf.comb_lp[k] - o, 32767 - damp);
-                c[rf.comb_i[k]] = (int16_t)clamp(in + mulq15(rf.comb_lp[k], size), -32768, 32767);
+                rf.comb_lp[k] = o + RV_RND((rf.comb_lp[k] - o) * (32767 - damp));   /* (3eb6dc78: rounded, as fx.c) */
+                c[rf.comb_i[k]] = (int16_t)clamp(in + RV_RND(rf.comb_lp[k] * size), -32768, 32767);
                 if (++rf.comb_i[k] >= REV_COMB[k])
                     rf.comb_i[k] = 0;
                 a += o;

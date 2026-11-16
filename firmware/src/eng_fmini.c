@@ -250,6 +250,9 @@ static int32_t fmini_contour(int32_t att, int32_t dec, int32_t susv, voice_t *v)
 }
 
 /* a * k / 65536 rounded to the nearest (mulq16 floors: four stages of it leave a bias that a quiet, low ladder cannot sing against) */
+#define FMINI_LADDER_IN 2
+#define FMINI_PAIR_BIAS 1500
+static inline int32_t pairb(int32_t x, int32_t pair_off) { return softclip(x + FMINI_PAIR_BIAS) - pair_off; }
 static inline int32_t fmini_mulr(int32_t a, uint32_t k)
 {
     return (int32_t)(((a >> 16) * (int32_t)k) + (int32_t)(((uint32_t)(a & 0xFFFF) * k + 32768u) >> 16));
@@ -280,7 +283,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 {
     const int16_t *p = t->p;
     int32_t mix[CTL];
-    int32_t env15, mod, lfo, lc, p16, fine, k12, G16, gx16, c0, c1, c2, c3, inv14, kinv12, trim12;
+    int32_t env15, mod, lfo, lc, p16, fine, k12, G16, gx16, c0, c1, c2, c3, inv14, kinv12, trim12, pair_off;
     int32_t l1 = 0, l2 = 0, l3 = 0, ln = 0, dr1, dr2, dr3;
     uint32_t hp = fmx_get(p, FX_HP) ? 1u : 0u;      /* the output: LP (the last stage) or HP ((1 - LP)^4 of the same stages) */
     uint32_t tr = (uint32_t)(t - trk) % NTRK, i;
@@ -360,7 +363,13 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
             lc += ((FMINI_CUT[i0 + 1] - lc) * fr) >> 8;
     }
     lc += (m->cutoff * 55) >> 10;                                                                           /* the host's steps (1/14 octave) in 1/16 semitones */
-    lc += (int32_t)(((int64_t)env15 * (kz ? (int32_t)kz->cntr << 16 : fmini_sm[tr][2]) / (127 * 65536)) * 960) >> 15;                          /* the contour: up to 5 octaves */
+    if (kz) lc += (int32_t)(((int64_t)env15 * ((int32_t)kz->cntr << 16) / (127 * 65536)) * 960) >> 15;
+    else {
+        uint32_t ci = (uint32_t)fmini_sm[tr][2] >> 16, cf = ((uint32_t)fmini_sm[tr][2] & 0xFFFFu) >> 1; int32_t ctap;
+        if (ci > 126u) { ci = 126u; cf = 32768u; }
+        ctap = (int32_t)FMINI_CNTR[ci] + (int32_t)((((int32_t)FMINI_CNTR[ci + 1u] - (int32_t)FMINI_CNTR[ci]) * (int32_t)cf) >> 15);
+        lc += (int32_t)(((int64_t)env15 * ctap * FMINI_CNTR_FULL16) >> 30);
+    }
     lc += kz ? 0 : ((v->pitch_cur - FMINI_NOTE0 * 16) * (int32_t)p[P_E7] * 516) >> 16;                                /* the keyboard: 1 V/oct at 127, 0 V on F */
     if (fmx_get(p, FX_MF))
         lc += (mod * 547) >> 15;                                                                            /* +-2.85 octaves at full depth */
@@ -393,22 +402,23 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         }
     }
 
+    pair_off = softclip(FMINI_PAIR_BIAS);
     for (i = 0; i < n; i++) {
-        int32_t x = softclip(mix[i]), S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
+        int32_t x = (mix[i] > (32767 << FMINI_LADDER_IN) ? (32767 << FMINI_LADDER_IN) : mix[i] < -(32767 << FMINI_LADDER_IN) ? -(32767 << FMINI_LADDER_IN) : mix[i]) >> FMINI_LADDER_IN, S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
         S = (c0 * ((s0 + 128) >> 8) + c1 * ((s1 + 128) >> 8) + c2 * ((s2 + 128) >> 8) + c3 * ((s3 + 128) >> 8)) >> 14;   /* what the stages already hold */
         fbc = sx + fmini_mulr((S << 8) - sx, (uint32_t)gx16);              /* through the lag pole (Q8) */
         u = ((x * inv14) >> 14) - ((kinv12 * ((fbc + 128) >> 8)) >> 12);  /* the input less the feedback, the loop solved */
-        xin = softclip(u) << 8;                                              /* the first stage's input (Q8) */
+        xin = pairb(u, pair_off) << 8;                                              /* the first stage's input (Q8) */
         v1 = fmini_mulr(xin - s0, (uint32_t)G16);                          /* each stage is a differential pair: tanh in front of it */
         y1 = v1 + s0;
         s0 = y1 + v1;
-        v2 = fmini_mulr((softclip((y1 + 128) >> 8) << 8) - s1, (uint32_t)G16);
+        v2 = fmini_mulr((pairb((y1 + 128) >> 8, pair_off) << 8) - s1, (uint32_t)G16);
         y2 = v2 + s1;
         s1 = y2 + v2;
-        v3 = fmini_mulr((softclip((y2 + 128) >> 8) << 8) - s2, (uint32_t)G16);
+        v3 = fmini_mulr((pairb((y2 + 128) >> 8, pair_off) << 8) - s2, (uint32_t)G16);
         y3 = v3 + s2;
         s2 = y3 + v3;
-        v4 = fmini_mulr((softclip((y3 + 128) >> 8) << 8) - s3, (uint32_t)G16);
+        v4 = fmini_mulr((pairb((y3 + 128) >> 8, pair_off) << 8) - s3, (uint32_t)G16);
         y4 = v4 + s3;
         s3 = y4 + v4;
         w = fmini_mulr(y4 - sx, (uint32_t)gx16);                           /* the lag pole follows the output */
@@ -418,7 +428,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         o = (((o + 128) >> 8) * trim12) >> 12;
         if (kz)
             o = mulq15(o, env15 > 32767 ? 32767 : env15);              /* the contour is the drum's amplitude */
-        out[i] += voice_amp(o, m, i) << 1;
+        out[i] += voice_amp(o, m, i) << (1 + FMINI_LADDER_IN);
     }
     v->ph[0] = ph0;
     v->ph[1] = ph1;
