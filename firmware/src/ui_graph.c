@@ -23,6 +23,7 @@ static void lcd_clear(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c
 }
 
 /* a strip cleared to BG */
+static uint32_t glo_save_ms;                              /* (2026-11-17) a GLO row turned at this ms (|1): its settings are saved once the knob rests */
 static uint8_t glo_k, about_glo;                        /* (2026-11-02) GLO: the knob last turned on a MENU row's page (its
                                                          * values the panel's chips); ABOUT opened from GLO > TOOLS */
 static void lz_begin(uint32_t w, uint32_t h, uint32_t x, uint32_t y)
@@ -1285,15 +1286,23 @@ static void trk_short_name(uint32_t c, char *b)      /* the track's sound, b hol
 #define T6_W 38
 #define T6_H 122                                     /* (a column's height, under the panel's top 9 px) */
 #define T6_X(c) (3 + 39 * (int32_t)(c))
+static uint16_t lz_trk(uint32_t q);                  /* (ui_lzsave.c) a track's own palette colour */
 static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uint32_t hot, uint32_t lvl, int32_t pan,
                        int32_t rv, const char *b)
 {
     char v[8];
     int32_t k, lv = (int32_t)lvl * 14 / 127, mt = ts.meter[c] * 14 / TS_MH, pw = T6_W - 8;
     uint16_t lc = hot == 1u ? T_ACCENT : lvl ? (mute ? T_DIM : T_TEXT) : T_DIM;
+    uint16_t tc = lz_trk(c);                         /* (2026-11-17, the user's) the track's own colour: the mixer's and SENDS' columns */
     cv_begin(T6_W, T6_H, T_BG);
     cv_rrect(0, 0, T6_W, T6_H, 5, T_SURF, T_BG);
-    cv_trk(4, 5, 16, c, sel ? T_ACCENT : mute ? T_DIM : T_MID, T_SURF);
+    if (sel) {                                       /* the selected track: an ACCENT frame (its number was ACCENT) */
+        cv_rect(0, 5, 1, T6_H - 10, T_ACCENT);
+        cv_rect(T6_W - 1, 5, 1, T6_H - 10, T_ACCENT);
+        cv_rect(5, 0, T6_W - 10, 1, T_ACCENT);
+        cv_rect(5, T6_H - 1, T6_W - 10, 1, T_ACCENT);
+    }
+    cv_trk(4, 5, 16, c, mute ? T_DIM : tc, T_SURF);
     if (st == 1u || st == 2u)                        /* armed: a dot (recording: red) */
         cv_rrect(T6_W - 11, 10, 6, 6, 3, st == 1u ? T_REC : T_ACCENT, T_SURF);
     if (mute == 2u)                                  /* asleep (TRACKS 4) */
@@ -1308,7 +1317,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
         sn[n] = 0;
         while (n > 1u && text_w(&AF_S, sn) > T6_W - 7)
             sn[--n] = 0;
-        cv_text_on(4, 22, &AF_S, sn, mute ? T_ACCENT : sel ? T_TEXT : T_MID, T_SURF);
+        cv_text_on(4, 22, &AF_S, sn, mute ? T_ACCENT : sel ? tc : ux_mix(T_SURF, tc, 70), T_SURF);
     }
     if (cur_page()->id[0] == P_DIST) {               /* (0.8.5) GLO > MIX > SENDS: DIST CHORUS DLY REV as bars */
         static const char *const SN[4] = {"D", "C", "D", "R"};
@@ -1316,7 +1325,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
             int32_t v = trk[c].p[P_DIST + (uint32_t)k] * 60 / 127;   /* (P_DIST P_CHOR P_DLY P_REV: in a row) */
             cv_rect(4 + k * 8, 38, 6, 62, T_RAISE);
             if (v)
-                cv_rect(4 + k * 8, 100 - v, 6, v, mute ? T_DIM : sel && hot == (uint32_t)k + 1u ? T_ACCENT : T_THEME);
+                cv_rect(4 + k * 8, 100 - v, 6, v, mute ? T_DIM : sel && hot == (uint32_t)k + 1u ? T_ACCENT : tc);
             cv_text(4 + k * 8, 106 - AF_X_CAP_Y, &AF_X, SN[k], T_DIM);
         }
         cv_blit((uint32_t)T6_X(c), graph_y() + 9u);
@@ -1324,8 +1333,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
     }
     for (k = 0; k < 14; k++) {                       /* LEVEL: cold at the bottom, hot at the top */
         int32_t sy = 95 - k * 4;
-        uint16_t sc = heat_col(20 + k * 220 / 13);
-        sc = mute ? (k < lv ? T_DIM : T_RAISE) : k < mt ? sc : k < lv ? ux_mix(T_SURF, sc, 42) : T_RAISE;
+        uint16_t sc = mute ? (k < lv ? T_DIM : T_RAISE) : k < mt ? tc : k < lv ? ux_mix(T_SURF, tc, 42) : T_RAISE;   /* (the track's colour: the meter bright over the level) */
         cv_rect(4, sy, 12, 3, sc);
     }
     if (lvl) {
@@ -1340,10 +1348,10 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
     cv_rect(4 + pw / 2, 102, 1, 7, hot == 2u ? T_ACCENT : T_MID);
     if (pan)
         cv_rect(pan > 0 ? 4 + pw / 2 + 1 : 4 + pw / 2 + pan * (pw / 2) / 64, 104, (pan > 0 ? pan : -pan) * (pw / 2) / 64 + 1,
-                3, mute ? T_DIM : hot == 2u ? T_ACCENT : heat_col(70 + (pan > 0 ? pan : -pan) * 2));
+                3, mute ? T_DIM : hot == 2u ? T_ACCENT : tc);
     cv_rect(4, 113, pw, 3, T_RAISE);                 /* the REV send */
     if (rv)
-        cv_rect(4, 113, rv * pw / 127 + 1, 3, mute ? T_DIM : hot == 3u ? T_ACCENT : heat_col(40 + rv * 3 / 2));
+        cv_rect(4, 113, rv * pw / 127 + 1, 3, mute ? T_DIM : hot == 3u ? T_ACCENT : tc);
     cv_blit((uint32_t)T6_X(c), graph_y() + 9u);
 }
 static void draw_tracks(void)

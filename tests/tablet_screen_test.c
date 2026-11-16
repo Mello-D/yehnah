@@ -245,10 +245,12 @@ static void part_end(void)
     p->frames = tscr.frames - p->frames; p->forced = tscr.forced - p->forced;
 }
 
+/* (2026-11-17) the HOME button returns to the page of HOME last on: the session means DANCE, the road */
+static void home_first(void) { if (!ui.home) nav_go(SEC_HOME, 0, 0); }
 static void session(void)
 {
     uint32_t b;
-    part_begin("HOME idle 2 s"); press(B_HOME); run_ms(1800); part_end();
+    part_begin("HOME idle 2 s"); home_first(); press(B_HOME); run_ms(1800); part_end();
     part_begin("K1..K4 turned"); turn(EN_K1, 1, 10); turn(EN_K2, -1, 10); turn(EN_K3, 1, 6); turn(EN_K4, 1, 6); part_end();
     for (b = B_FX; b <= B_SEQ; b++)
         if (b != B_HOME && b != B_SAVE) {
@@ -266,7 +268,7 @@ static void session(void)
             part_end();
             press(b);                                   /* (again: some pages toggle off) */
         }
-    part_begin("presets"); press(B_HOME); turn(EN_PRESET, 1, 6); turn(EN_ALGO, 1, 2); part_end();
+    part_begin("presets"); home_first(); press(B_HOME); turn(EN_PRESET, 1, 6); turn(EN_ALGO, 1, 2); part_end();
     part_begin("playing on HOME 3 s"); press(B_PLAY); run_ms(3000); part_end();
     part_begin("stopped"); press(B_PLAY); part_end();
 }

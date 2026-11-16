@@ -430,7 +430,7 @@ static void xy_knob(uint32_t slot, int32_t steps)
     t = &trk[xy.trk];
     switch (slot & 3u) {
     case 0: xy.x = fm_clampf(xy.x + (float)st * 0.03f, -1.0f, 1.0f); break;
-    case 1: xy.y = fm_clampf(xy.y + (float)st * 0.03f, -1.0f, 1.0f); break;
+    case 1: xy.y = fm_clampf(xy.y - (float)st * 0.03f, -1.0f, 1.0f); break;   /* (2026-11-17, the user's: clockwise goes down) */
     case 2: xy.rot = (uint8_t)(((int32_t)xy.rot + st % 100 + 100) % 100); break;
     default: {                                          /* Z: the parameter itself */
         const param_desc_t *pd = sw_desc(t, XY_ZID[xy.zsel]);

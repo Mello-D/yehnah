@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TRACKS (2026-11-15, the user's; HOME's second page, after DANCE: the old TRACKS page of meters and the road): one row a track,
  * what each holds: its sound and engine, the length, the key, the pattern written to it (a small roll of its steps, a kit's
- * three lanes) with the playhead on it, ARP / MUTE / REC, the level. K1 picks the track (the other pages then follow it).
+ * three lanes) with the playhead on it, ARP / MUTE / SOLO / REC, the level. The knobs act on the selected track (ALGORITHM picks it;
+ * 2026-11-17, the user's: they were all scrolling the tracks): K1 LEVEL, K2 OFF / SOLO / MUTE, K3 the length, K4 the global BPM.
  * The panel runs to the page row, drawn in two passes as SWARM's. Included after ui_swarm.c. */
 static int summary_page_on(void)
 {
@@ -9,9 +10,29 @@ static int summary_page_on(void)
 }
 static void summary_knob(uint32_t slot, int32_t steps)
 {
-    uint32_t n = trk_live ? trk_live : NTRK;
-    (void)slot;
-    track_select((song.sel + n + (steps > 0 ? 1u : n - 1u)) % n);
+    switch (slot & 3u) {
+    case 0:                                             /* LEVEL (the row shows its dB) */
+        tracks_edit(0, steps);
+        break;
+    case 1: {                                           /* OFF / SOLO / MUTE, as MIXER's knob 3 */
+        static const char *const ST[3] = {"ON", "SOLO", "MUTE"};
+        char m[16];
+        tracks_edit(2, steps);
+        m[0] = 'T';
+        m[1] = (char)('1' + song.sel);
+        m[2] = ' ';
+        str_cpy(m + 3, ST[mix_state(song.sel) % 3u], 6);
+        ui_message(m);
+        break;
+    }
+    case 2:                                             /* LEN: steps (the row shows it) */
+        TSEL->p[P_SLEN] = (int16_t)clamp(TSEL->p[P_SLEN] + accel(EN_K3, steps, NSTEP), 1, NSTEP);
+        break;
+    default:                                            /* the global BPM (the header shows it, lit while it turns) */
+        song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_K4, steps, GP[G_BPM].max - GP[G_BPM].min), GP[G_BPM].min, GP[G_BPM].max);
+        ui.bpm_t = 40;
+        break;
+    }
     ui.force = 1;
 }
 /* a signature of what the rows show (a redraw only when it changes; the playhead moves it while playing) */
@@ -21,7 +42,7 @@ static uint32_t summary_sig(void)
     for (c = 0; c < NTRK; c++) {
         const track_t *t = &trk[c];
         uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP);
-        h = (h ^ (t->preset | (uint32_t)t->user << 8 | (uint32_t)t->eng_req << 16 | (uint32_t)(t->p[P_MUTE] != 0) << 24)) * 16777619u;
+        h = (h ^ (t->preset | (uint32_t)t->user << 8 | (uint32_t)t->eng_req << 16 | (uint32_t)(t->p[P_MUTE] != 0) << 24 | (uint32_t)((ui.msolo >> c) & 1u) << 25)) * 16777619u;
         h = (h ^ ((uint32_t)len | (uint32_t)(t->p[P_LEVEL] & 127) << 8 | (uint32_t)t->p[P_AMODE] << 16 | (uint32_t)t->p[P_ROOT] << 20 |
                   (uint32_t)t->p[P_SCALE] << 24)) * 16777619u;
         for (i = 0; i < len; i++) {
@@ -104,8 +125,10 @@ static void summary_graph(void)
             str_cpy(b + str_len(b), " ARP", 5);
         cv_clip_text(tx, y + ch - 11, &AF_X, b, fm, bg, 86);
         summary_roll(t, 120, y + 4, 66, ch - 8, col, (int)mute);
-        if (mute)                                       /* MUTE, or the key (a kit has none), at the top right */
+        if (mute)                                       /* MUTE, SOLO, or the key (a kit has none), at the top right */
             cv_text_r(229, y + 3, &AF_X, "MUTE", T_DIM, bg);
+        else if ((ui.msolo >> c) & 1u)
+            cv_text_r(229, y + 3, &AF_X, "SOLO", T_ACCENT, bg);
         else if (!drum_track(t) && !e->oneshot) {
             str_cpy(b, N_NOTE[(uint32_t)t->p[P_ROOT] % 12u], 4);
             str_cpy(b + str_len(b), " ", 2);

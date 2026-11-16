@@ -320,24 +320,40 @@ static int test_home_page(void)
     ok = menu_n(MI_HOMEPG) == 2u && str_eq(menu_vname(MI_HOMEPG, 1), "TRACKS") && MI_TAB[MI_HOMEPG] == MTAB_DISPLAY && menu_get(MI_HOMEPG) == 0u;
     press(B_SCL); frame();
     press(B_HOME); frame();
-    ok &= ui.home;                                                  /* the default: DANCE */
+    ok &= ui.home;                                                  /* the default, nothing visited yet: DANCE */
     menu_put(MI_HOMEPG, 1);
     ok &= (ui_prefs & PREF_HOME_TRACKS) && menu_get(MI_HOMEPG) == 1u;
-    press(B_SCL); frame();
-    frames(320); press(B_HOME); frame();
-    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;           /* HOME: TRACKS */
-    frames(320); press(B_HOME); frame();
-    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;           /* a second tap: still TRACKS (no flip) */
+    ui.nmem[nav_key(SEC_HOME)] = 0;
+    go_home(); frame();
+    home_boot(); frame();                                           /* the power-on: TRACKS */
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;
     frames(320); press(B_SCL); frame();
-    frames(320); press(B_SCL); frame();                             /* a section's button again: HOME's page, TRACKS */
-    ok &= PAGES[ui.page].graph == GR_SUMMARY && !ui.home;
-    go_home(); frame();                                             /* (the power-on: the same page) */
-    home_boot(); frame();
-    ok &= PAGES[ui.page].graph == GR_SUMMARY;
-    menu_put(MI_HOMEPG, 0);
     frames(320); press(B_HOME); frame();
-    ok &= ui.home;
-    bad += check("MENU > HOME PAGE: DANCE or TRACKS for power-on and the HOME button; a second tap does not flip", ok);
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;           /* HOME: the page last on, TRACKS */
+    frames(320); press(B_HOME); frame();
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SUMMARY;           /* a second tap: still there */
+    frames(320); press(B_SCL); frame();
+    frames(320); press(B_SCL); frame();                             /* a section's button again: HOME's page last on, TRACKS */
+    ok &= PAGES[ui.page].graph == GR_SUMMARY && !ui.home;
+    menu_put(MI_HOMEPG, 0);
+    bad += check("MENU > HOME PAGE is the power-on page; HOME and a section's button on itself go to HOME's page last on, a second tap stays", ok);
+    /* (2026-11-17, the user's) every button remembers its page: HOME too */
+    ui_power_on(); frame();
+    ok = nav_put(SEC_HOME, "SWARM") != 0 && PAGES[ui.page].graph == GR_SWARM;
+    frames(320); press(B_SCL); frame();
+    ok &= PAGES[ui.page].fam == FAM_SCL;
+    frames(320); press(B_HOME); frame();
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SWARM;             /* HOME: SWARM, not DANCE */
+    frames(320); press(B_HOME); frame();
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SWARM;             /* a second tap stays */
+    frames(320); press(B_SCL); frame();
+    frames(320); press(B_SCL); frame();                             /* SCL on itself: HOME's page last on */
+    ok &= !ui.home && PAGES[ui.page].graph == GR_SWARM;
+    nav_go(SEC_HOME, 0, 0); frame();
+    frames(320); press(B_SCL); frame();
+    frames(320); press(B_HOME); frame();
+    ok &= ui.home;                                                  /* DANCE was the last: DANCE */
+    bad += check("HOME remembers its page like the other buttons (SWARM, then DANCE); only power-on opens the first", ok);
     return bad;
 }
 /* (2026-11-15) a section's button opens the page last on, the first at power-on: tests that want the first forget it */
@@ -2518,7 +2534,8 @@ static int test_product_ux(void)
     frames(320);                                       /* (taps further apart than a double tap: #83) */
     sel_turn( -1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain, (2026-11-15) left: MIXER is the last page; GLO its */
     press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLO");   /* first) */
-    press(B_GLO); frames(320); ok &= ui.home && home_level() == 0u;
+    { uint32_t m = ui.nmem[nav_key(SEC_HOME)];                      /* (2026-11-17) GLO on GLO: HOME's page last on */
+      press(B_GLO); frames(320); ok &= nav_sec() == SEC_HOME && nav_cur() == m && str_eq(cur_page()->title, "SENDS"); }
     press(B_GLO); ok &= str_eq(cur_page()->title, "GLO");
     bad += check("GLO: its one page (2026-11-13); a GLO tap on it TRACKS; again GLO", ok);
     go_home(); hold(B_SEQ);
@@ -9525,7 +9542,9 @@ static int test_lz_home(void)
     ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(9));
     sel_turn( -1); frame();                                   /* the IDEAS' last: TEXTURE */
     ok &= gen_on() && gen_page() == IX_TEX && nav_cur() == HOME_IDEA + 4u && lz_count_is(HCNT(8));
-    press(B_HOME); frame();                                         /* a HOME tap on IDEAS: round to DANCE */
+    press(B_HOME); frame();                                         /* a HOME tap on IDEAS: stays (2026-11-17: HOME is the page last on) */
+    ok &= gen_on() && gen_page() == IX_TEX;
+    nav_go(SEC_HOME, 0, 0); frame();                                /* DANCE */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
     sel_turn( 8); frame();                                    /* MORPH .. TRACE hand on going right (rows last) */
@@ -9552,7 +9571,9 @@ static int test_lz_home(void)
     ok = gen_on() && gen_page() == 1u;
     press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV LIST");
-    press(B_HOME); frame();                                         /* HOME: DANCE (IDEAS shut) */
+    press(B_HOME); frame();                                         /* HOME: IDEAS 2, the page last on (2026-11-17) */
+    ok &= gen_on() && gen_page() == 1u;
+    nav_go(SEC_HOME, 0, 0); frame();                                /* DANCE (IDEAS shut) */
     ok &= !gen_on() && ui.home && home_level() == 0u;
     sel_turn( 4); frame();                                    /* IDEAS 2 */
     turn(EN_ALGO, 1); frame();
@@ -9561,7 +9582,8 @@ static int test_lz_home(void)
     press(B_OCTDN); frame();                                        /* OCT-: DANCE */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     bad += check("HOME: IDEAS are HOME's pages, not modal (ENV leaves them, HOME then DANCE, ALGORITHM works); OCT- DANCE", ok);
-    sel_turn( 3); frame();                                    /* MIXER */
+    sel_turn( 3); frame();                                    /* (IDEAS) */
+    nav_go(SEC_HOME, 0, 0); frame();                                /* DANCE is the page last on */
     open_family(FAM_ENV); frame();
     ok = !ui.home;
     press(B_HOME); frame();                                         /* HOME from elsewhere: TRACKS */
@@ -9801,8 +9823,9 @@ static int test_lz_glo(void)
     sel_turn( 1); frame();
     ok &= fxa_cur == 1u && str_eq(cur_page()->title, "GLO");        /* (2026-11-13: SELECT the rows) */
     sel_turn( -1); frame();
-    frames(320); press(B_GLO); frame();
-    ok &= ui.home && home_level() == 0u;                            /* (GLO on GLO: TRACKS) */
+    { uint32_t m = ui.nmem[nav_key(SEC_HOME)];
+      frames(320); press(B_GLO); frame();
+      ok &= nav_sec() == SEC_HOME && nav_cur() == m; }              /* (GLO on GLO: HOME's page last on, 2026-11-17) */
     open_family(FAM_ENV); frame();
     press(B_GLO); frame();
     ok &= str_eq(cur_page()->title, "GLO");                         /* (from elsewhere: its page) */
@@ -9813,6 +9836,9 @@ static int test_lz_glo(void)
         ok &= settings.palette != pal && glo_k == kc;
         turn(EN_K1 + kc, -1); frame();
         ok &= settings.palette == pal;
+        ok &= glo_save_ms != 0u;                        /* (2026-11-17) a GLO row's setting is saved once the knob rests (was never) */
+        frames(2000);
+        ok &= glo_save_ms == 0u;
         kc = glo_row(MI_HOLD); frame();
         turn(EN_K1 + kc, 1); frame();
         ok &= settings_hold != hold;
@@ -10531,10 +10557,28 @@ static int test_summary(void)
     frame(); frame();
     sg0 = summary_sig();
     s0 = song.sel;
-    turn(EN_K1, 1); frame();
-    ok &= song.sel == (s0 + 1u) % trk_live && summary_sig() != sg0;          /* K1 picks the next track, the rows redraw */
-    turn(EN_K1, -1); frame();
-    ok &= song.sel == s0;
+    {   /* (2026-11-17, the user's) the knobs act on the selected track: K1 LEVEL, K2 OFF / SOLO / MUTE, K3 LEN, K4 BPM */
+        int16_t lv = TSEL->p[P_LEVEL], ln = TSEL->p[P_SLEN], bp = song.g[G_BPM];
+        turn(EN_K1, 1); frame();
+        ok &= song.sel == s0 && TSEL->p[P_LEVEL] == lv + 1 && summary_sig() != sg0;   /* (the rows redraw) */
+        turn(EN_K1, -1); frame();
+        ok &= TSEL->p[P_LEVEL] == lv;
+        sg0 = summary_sig();
+        turn(EN_K2, 1); frame();                                          /* SOLO */
+        ok &= song.sel == s0 && mix_state(s0) == 1u && (ui.msolo >> s0 & 1u) && summary_sig() != sg0;
+        turn(EN_K2, 1); frame();                                          /* MUTE */
+        ok &= mix_state(s0) == 2u && TSEL->p[P_MUTE];
+        turn(EN_K2, 1); frame();                                          /* ON */
+        ok &= mix_state(s0) == 0u && !TSEL->p[P_MUTE] && !ui.msolo;
+        turn(EN_K3, -1); frame();
+        ok &= song.sel == s0 && TSEL->p[P_SLEN] == ln - 1;
+        turn(EN_K3, 1); frame();
+        ok &= TSEL->p[P_SLEN] == ln;
+        turn(EN_K4, 1); frame();
+        ok &= song.sel == s0 && song.g[G_BPM] == bp + 1 && ui.bpm_t;
+        turn(EN_K4, -1); frame();
+        ok &= song.g[G_BPM] == bp;
+    }
     sg0 = summary_sig();
     trk[0].step[3].time = ST_NOTE; trk[0].step[3].n = 1; trk[0].step[3].note[0] = 64;
     ok &= summary_sig() != sg0;                                              /* a step written changes what it shows */
@@ -10543,7 +10587,7 @@ static int test_summary(void)
     ok &= summary_sig() != sg0;
     trk[0].p[P_MUTE] = 0;
     for (i = 0; i < 6u; i++) frame();
-    bad += check("HOME > TRACKS: the summary page (full height); K1 picks the track; the rows follow a step or a mute", ok);
+    bad += check("HOME > TRACKS: the summary page (full height); K1 LEVEL, K2 OFF / SOLO / MUTE, K3 LEN, K4 BPM of the selected track; the rows follow a step or a mute", ok);
     ok = nav_put(SEC_HOME, "DANCE") != 0 || (go_home(), ui.home);
     bad += check("HOME > DANCE: the old TRACKS page is HOME itself", ok && ui.home);
     return bad;
@@ -10882,12 +10926,14 @@ static int test_xy(void)
     bad += check("XY: knob 1 right raises PAN (its 100 % end is on the right) and, CUT's end being up and a little left, lowers CUT a little", t->p[P_PAN] > pan0 && t->p[P_FCUT] < cut0);
     cut0 = t->p[P_FCUT];
     pan0 = t->p[P_PAN];
-    xy_knob(1, 10); sw_run(2);                          /* up: CUT up, PAN (horizontal) stays */
+    xy_knob(1, -10); sw_run(2);                         /* up (knob 2 anticlockwise, 2026-11-17): CUT up, PAN (horizontal) stays */
     bad += check("XY: knob 2 up raises CUT and leaves PAN (the horizontal line) alone", t->p[P_FCUT] > cut0 && t->p[P_PAN] == pan0);
     cut0 = t->p[P_FCUT]; pan0 = t->p[P_PAN];
     xy_knob(2, 25); sw_run(2);                          /* a quarter turn: PAN is now the vertical line, CUT the horizontal (mirrored) */
     bad += check("XY: knob 3 rotates the line set (a quarter turn: the lines now cut the dot another way, the sound moves)",
                  xy.rot == 25u && (t->p[P_PAN] != pan0 || t->p[P_FCUT] != cut0));
+    { float cx, sx, kx, c1, s1; uint8_t r0 = xy.rot; xy.rot = 0; xy_dir(0, &cx, &sx, &kx); xy_knob(2, 1); xy_dir(0, &c1, &s1, &kx); xy.rot = r0;
+      bad += check("XY: knob 3 clockwise turns the lines clockwise on the screen (a line on the right goes down: its sine falls)", s1 < sx); }
     xy_knob(3, 12); sw_run(2);
     bad += check("XY: knob 4 is Z: REV rises by two units a click, and nothing else moves", t->p[P_REV] == rev0 + 24);
     swarm_act(1);
@@ -10949,6 +10995,32 @@ static int test_home_layer(void)
     bad += check("HOME layer: held on any page, F3 FREEZE and C4 SWARM act, no HOME tap after them", ok);
     press(B_HOME); frame();
     bad += check("HOME layer: a tap is still HOME", ui.home);
+    {   /* (2026-11-17) F#3: IDEA ALL, IDEAS > TRACK's throw on every track that plays; one UNDO */
+        uint32_t t, i, n = 0, sig0[NTRK];
+        ui_power_on();
+        transport_req = 0; song.playing = 0;
+        go_title("TRACK"); frame();
+        for (t = 0; t < trk_live; t++) {
+            for (i = 0; i < NSTEP; i++) step_clear(&trk[t].step[i]);
+            sig0[t] = steps_sig(&trk[t]);
+        }
+        undo_ok = 0;
+        btn_down(B_HOME); frames(500);
+        key_down(black(0)); frame(); key_up(black(0)); frame();
+        btn_up(B_HOME); frame();
+        for (t = 0; t < trk_live; t++)
+            n += steps_sig(&trk[t]) != sig0[t];
+        ok = n == trk_live && undo_ok && !ui.layer && !ui.home && ix.pend == 0u;
+        bad += check("HOME layer: F#3 IDEA ALL writes every live track (one UNDO mark, nothing pending for BACK)", ok);
+        for (t = 0; t < trk_live; t++)
+            for (i = 0; i < NSTEP; i++) step_clear(&trk[t].step[i]);
+        chain.running = 1;                              /* a song playing: STOP TO EDIT, nothing written */
+        n = steps_sig(&trk[0]);
+        ix_all();
+        ok = steps_sig(&trk[0]) == n && msg_is("STOP TO EDIT");
+        chain.running = 0;
+        bad += check("HOME layer: IDEA ALL while the song plays: STOP TO EDIT, nothing written", ok);
+    }
     return bad;
 }
 
@@ -11063,8 +11135,8 @@ static void ui_power_on_099(void)
  * each part sounds a note with no effects, none clipping */
 static int test_power_on_099(void)
 {
-    static const char *const ENG[NPART] = {"JUNO", "ANALOG", "ANALOG", "DRUM", "LOFI", "FM6"};   /* (2026-11-02, the user's: */
-    static const char *const PRE[NPART] = {"JUNO 106 PAD", "MINI BASS", "PROPH LEAD", "909 SWEEP", "GAME LEAD", "TINE EP"};   /* a
+    static const char *const ENG[NPART] = {"JUNO", "MINI", "MINI", "DRUM", "LOFI", "FM6"};   /* (2026-11-17, the user's: */
+    static const char *const PRE[NPART] = {"DARK ENS", "HONEY LEAD", "MOOG BASS", "808 CIRCUIT", "GAME LEAD", "TINE EP"};   /* a
                                                          * pad, a bass, a lead, a kit) */
     int bad = 0, ok = 1;
     uint32_t i, k, b, drums = 0, live;
@@ -11081,7 +11153,7 @@ static int test_power_on_099(void)
         drums += drum_track(&trk[i]);
     }
     ok &= load_depth == 0 && song.sel == 0u && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
-    bad += check("power-on (2026-11-02): T1 JUNO 106 PAD, T2 MINI BASS, T3 PROPH LEAD, T4 DRUM 909 SWEEP, T5 LOFI GAME LEAD, T6 FM6 TINE EP", ok);
+    bad += check("power-on (2026-11-17): T1 JUNO DARK ENS, T2 FMINI HONEY LEAD, T3 FMINI MOOG BASS, T4 DRUM 808 CIRCUIT, T5 LOFI GAME LEAD, T6 FM6 TINE EP", ok);
     ok = drums == 1u && drum_track(&trk[3]) && drum_elsewhere(&trk[0]) == 4u && !drum_elsewhere(&trk[3]) && trk[3].preset == TRK_DEF[3][1];
     bad += check("  .. DRUM on T4 alone (909 SWEEP)", ok);   /* (chord-harp fork: no longer
                                                          * the display order's first six: that is A to Z) */

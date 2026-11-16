@@ -240,13 +240,16 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
 static uint32_t home_entry(void) { return (ui_prefs & PREF_HOME_TRACKS) ? 1u : 0u; }
 static void home_boot(void) { if (home_entry()) nav_go(SEC_HOME, home_entry(), 0); }
 /* rule 2: a section's button: the page of it you were last on (the first, until you have been on another: at power-on);
- * already inside it, HOME's first page, DANCE (2026-11-15, the user's: it was always the section's first page) */
+ * already inside it, HOME: the page of HOME you were last on too (2026-11-17, the user's: every button remembers; MENU > HOME
+ * PAGE is only the page power-on opens, home_boot). HOME's own button on HOME stays on the page shown */
 static void nav_button(uint32_t sec)
 {
-    uint32_t e = sec == SEC_HOME ? home_entry() : nav_mem(nav_key(sec));
-    if (nav_sec() == sec && (sec == SEC_HOME || !ui.home)) {
+    uint32_t e = nav_mem(nav_key(sec));
+    if (sec == SEC_HOME && nav_sec() == SEC_HOME)
+        e = nav_cur();
+    else if (nav_sec() == sec && (sec == SEC_HOME || !ui.home)) {
         sec = SEC_HOME;
-        e = home_entry();
+        e = nav_mem(nav_key(SEC_HOME));
     }
     nav_go(sec, e, 1);
 }

@@ -24,10 +24,10 @@ int main(void)
 
     ui_power_on();
     power_on_parts();                                   /* (main.c's power-on parts; ui_power_on keeps the old ones) */
-    ok = trk[2].eng_req == ENGI_ANALOG && !strcmp(trk_engp(&trk[2])->presets[trk[2].preset].name, "PROPH LEAD");
+    ok = trk[2].eng_req == ENGI_MINI && !strcmp(trk_engp(&trk[2])->presets[trk[2].preset].name, "MOOG BASS");
     for (k = 0; k < NTRK; k++)
         ok &= eng_ok(trk[k].eng_req);
-    bad += check("power-on: T3 ANALOG's PROPH LEAD (2026-11-02, was PHASE's CZ PLUCK), every part on an engine that is built", ok);
+    bad += check("power-on: T3 FMINI's MOOG BASS (2026-11-17, was ANALOG's PROPH LEAD), every part on an engine that is built", ok);
 
     set_engine_of(&trk[0], ENGI_ANIMAL);                /* (a project's, a user preset's, the editor's) */
     ok = trk[0].eng_req == ENGI_ANIMAL;

@@ -111,6 +111,7 @@ const ROBOTS = [
   { name: 'DIGITAL', about: 'a pocket calculator: its note in seven segments, lit on each hit', shape: 'std', head: 'box', hr: R.teal, br: R.pink, ac: R.yellow, em: 'segs', ant: 'twin', eyes: 'visor' },
   { name: 'VECTOR',  about: 'a joystick-bot: a scope on its chest where the point moves between four waves', shape: 'std', head: 'box', hr: R.violet, br: R.navy, ac: R.yellow, em: 'scope', ant: 'twin', eyes: 'pixel' },
   { name: 'HYBRID',  about: 'a tall patch-bot in shades: three waves on its chest, a bolt for an aerial', shape: 'std', head: 'tall', hr: R.copper, br: R.navy, ac: R.mint, em: 'wave', ant: 'bolt', eyes: 'shades' },
+  { name: 'MINI',    about: 'a Minimoog in a wooden case: a wave across its panel', shape: 'squat', head: 'wide', hr: R.black, br: R.wood, ac: R.cream, em: 'wave', ant: 'none', eyes: 'dots' },
 ];
 const HEAD_TOP = { box: 4, round: 4, dome: 4, wide: 5, tall: 2 };
 

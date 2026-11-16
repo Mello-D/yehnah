@@ -99,13 +99,11 @@ static void ix_cell(track_t *t, uint32_t r, const char *cell, uint32_t len)
         dhold(t, i, r == RL_PAD || chance(50) ? gap - 1u : chance(60) ? 0u : gap / 2u, len);
     }
 }
-/* TRACK's throw: its message */
-static const char *ix_track(track_t *t)
+/* TRACK's throw on track t: its message. The genre st and the progression pr are given (IDEA ALL gives every track the same,
+ * and each its own role: all) */
+static const char *ix_track_as(track_t *t, const dstyle_t *st, uint32_t pr, uint32_t all)
 {
-    if (!RES_OK())                                      /* (chord-harp fork) the genres in the resource region (res.c) */
-        return "SOUNDS MISSING";
-    const dstyle_t *st = &DSTYLE[ix.genre ? (ix.genre - 1u) % NDSTYLE : dstyle_pick()];
-    uint32_t len = dlen(t), i, r = IX_ROLE[ix.role % IX_NROLE], rh = ix.rhythm, pr = rng() % 3u;
+    uint32_t len = dlen(t), i, r = all ? RL_N : IX_ROLE[ix.role % IX_NROLE], rh = ix.rhythm;
     uint64_t was = tl_used(t, len);
     if (drum_track(t) || r == RL_N) r = ix_role(t);
     if (!rh) rh = r == RL_DRUM || chance(40) ? 1u : 2u + rng() % IX_NCELL;
@@ -144,6 +142,16 @@ static const char *ix_track(track_t *t)
                 sizeof ix.last - str_len(ix.last));
     }
     return ix.last;
+}
+static const char *ix_track(track_t *t)
+{
+    const dstyle_t *st;
+    uint32_t pr;
+    if (!RES_OK())                                      /* (chord-harp fork) the genres in the resource region (res.c) */
+        return "SOUNDS MISSING";
+    st = &DSTYLE[ix.genre ? (ix.genre - 1u) % NDSTYLE : dstyle_pick()];
+    pr = rng() % 3u;
+    return ix_track_as(t, st, pr, 0);
 }
 /* TEXTURE's sounds: an engine and a word of its presets' names (NOISE not built: a pad) */
 #define IX_NTSND 5u
@@ -259,6 +267,34 @@ static void ix_throw(uint32_t p, uint32_t how)
     if (p != IX_TRACK && p != IX_TEX && m != ix.last) str_cpy(ix.last, m, sizeof ix.last);
     ix.n++;
     ui_message(m);
+    ui.force = 1;
+}
+
+/* (2026-11-17, the user's) the HOME layer's IDEA ALL: IDEAS > TRACK's throw on every track that plays, with its GENRE and
+ * RHYTHM; one genre and one progression for all (so they fit), each track its own role (AUTO). One UNDO (REC + D4) */
+static void ix_all(void)
+{
+    const dstyle_t *st;
+    uint32_t pr, i;
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return;
+    }
+    if (!RES_OK()) {
+        ui_message("SOUNDS MISSING");
+        return;
+    }
+    ix_settle();
+    rng_state ^= fm1_ticks() * 2654435761u;
+    if (!rng_state) rng_state = 0x1234567u;
+    undo_mark();
+    st = &DSTYLE[ix.genre ? (ix.genre - 1u) % NDSTYLE : dstyle_pick()];
+    pr = rng() % 3u;
+    for (i = 0; i < trk_live; i++)
+        ix_track_as(&trk[i], st, pr, 1u);
+    str_cpy(ix.last, "ALL TRACKS", sizeof ix.last);
+    ix.n++;
+    ui_message("IDEA ALL TRACKS");
     ui.force = 1;
 }
 

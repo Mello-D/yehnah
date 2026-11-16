@@ -47,7 +47,7 @@ Yehnah has no user samples: it synthesises everything.
 
 1. Power on. The name draws itself, then you land on your **home page**. There are two to choose from, **DANCE** (the
    selected track as a small robot on a city street, its four knobs under it; the default) and **TRACKS** (every track's
-   sound, length, key and pattern at a glance). You pick which is yours in **GLO > DEVICE > HOME PAGE**.
+   sound, length, key and pattern at a glance). You pick which one the unit opens on in **GLO > DEVICE > HOME PAGE**.
 2. Turn **ALGORITHM** to pick a track. With the default **TRACKS 4** you can reach T1–T4; T5 and T6 appear with
    **TRACKS 6** (GLO > MAIN).
 3. Turn **PRESETS** to load a sound into the track, and play the keys.
@@ -86,7 +86,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 
 | Button | Tap | Hold |
 | --- | --- | --- |
-| **HOME** | Your home page: **DANCE** or **TRACKS**, whichever you have chosen (**HOME PAGE**; DANCE by default). | the **HOME layer**: SWARM's and TRACE's actions, on any page |
+| **HOME** | The page of HOME you were last on (at power-on, the one you chose in **HOME PAGE**: DANCE by default). | the **HOME layer**: SWARM's and TRACE's actions, and IDEA ALL, on any page |
 | **EDIT** | The **SOUND** page of the selected track. | a list of the sound's named parameters, as a menu that stays open (see [12](#12-the-layers)) |
 | **ENV** | The envelopes: **ENV** (one page of rows). | nothing |
 | **LFO** | The **LFO** page: the LFO, the step modulator, the modulation matrix. | nothing |
@@ -101,7 +101,7 @@ itself unless **RESTORE LAST** is on (GLO > SYSTEM): see [section 9](#9-songs-pr
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | |
 
 A section's button opens the page of that section you were last on (its first page after power-on, until you have been on another). Pressed again while you are inside it, it goes back to
-your home page (**DANCE** or **TRACKS**, as you have chosen). A button held past the hold time (**GLO > CONTROL > HOLD**) is its layer instead.
+the page of HOME you were last on (at power-on, your home page: **DANCE** or **TRACKS**, as you have chosen). A button held past the hold time (**GLO > CONTROL > HOLD**) is its layer instead.
 
 ### The keys
 
@@ -125,7 +125,7 @@ Yehnah has **no tabs**. Each section's pages are one chain, shown as a **row of 
 the page you are on lit. The rules are the same everywhere:
 
 1. **SELECT** walks the section's pages, round.
-2. A section's **button** opens the page you were last on in that section (its first page at power-on); pressed again inside it, it goes to your home page (DANCE or TRACKS, your choice: **HOME PAGE**). The **HOME** button always goes to it, and a second tap stays there.
+2. A section's **button** opens the page you were last on in that section (its first page at power-on); pressed again inside it, it goes to the page of HOME you were last on. The **HOME** button goes to that page too (every button remembers its page; only at power-on do they open the first, HOME's being your **HOME PAGE**), and a second tap stays there.
 3. **PRESETS** loads a sound: in every section, never a page or track.
 4. A page that picks something picks it with **KNOB 1**; the track is **ALGORITHM**'s.
 5. A button **held** is its layer.
@@ -156,10 +156,9 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 ## 4. HOME, sounds and IDEAS
 
 HOME is a row of pages: **DANCE**, **TRACKS**, **PRESETS**, the **IDEAS**, **MORPH**, **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER**.
-Two of them, **DANCE** and **TRACKS**, are the ones you can make your own **home page**: the page the unit opens at power-on
-and the **HOME** button (and a section's button pressed again inside it) returns to. **You choose which is your home
-screen** in **GLO > DEVICE > HOME PAGE** (**DANCE**, the default, or **TRACKS**); the choice is saved with the settings.
-A second tap of HOME never flips between the two.
+Two of them, **DANCE** and **TRACKS**, are the ones you can make your own **home page**: the page the unit opens at power-on.
+**You choose which is your home screen** in **GLO > DEVICE > HOME PAGE** (**DANCE**, the default, or **TRACKS**); the choice is saved with the settings.
+After that the **HOME** button (and a section's button pressed again inside it) returns to the page of HOME you were last on, like every other button; a second tap of HOME stays where it is.
 
 ### DANCE
 
@@ -173,8 +172,8 @@ The other home page: choose it in **HOME PAGE** if you would rather see the whol
 to see the whole song at a glance: its **sound** and **engine**, its **length** in steps, its **key**
 (root and scale; a kit has none), the **pattern** written to it drawn as a small roll of its steps (a kit's hits in three
 lanes; EMPTY when nothing is written) with the playhead running along it, **ARP** or **REC** after the length, **MUTE**
-in place of the key, and the **level** in dB. The selected track's row is framed, and a muted track's is dimmed. Only the
-tracks that play show: four with **TRACKS 4**, six with **TRACKS 6**. **KNOB 1** picks the track.
+in place of the key (**SOLO** the same way), and the **level** in dB. The selected track's row is framed, and a muted track's is dimmed. Only the
+tracks that play show: four with **TRACKS 4**, six with **TRACKS 6**. **ALGORITHM** picks the track; the knobs then act on it: **KNOB 1 LEVEL**, **KNOB 2 OFF / SOLO / MUTE** (as MIXER's knob 3), **KNOB 3 LEN** (its length in steps) and **KNOB 4 BPM** (the tempo for everything, shown in the header).
 
 ### PRESETS
 
@@ -197,7 +196,7 @@ page says so). A note played on a morph's B plays its A (and so both), as before
 
 ### MIXER and SENDS
 
-**MIXER:** six strips, one per track. **KNOB 1 LEVEL**, **KNOB 2 PAN**, **KNOB 3 MUTE**, **KNOB 4 DJ FILT** (a DJ
+**MIXER:** six strips, one per track, each in its track's own colour (the number, the sound's name, the level column with its meter, PAN and REV; the selected track has a frame round it). **KNOB 1 LEVEL**, **KNOB 2 PAN**, **KNOB 3 MUTE**, **KNOB 4 DJ FILT** (a DJ
 filter: low-pass to the left of the middle, high-pass to the right). **SENDS:** the same strips with each track's sends
 to the distortion, chorus, delay and reverb (**DIST**, **CHORUS**, **DELAY**, **REVERB**).
 
@@ -281,7 +280,7 @@ edge, a 100 % end of one parameter is always next to a 0 % end of another (seven
 | the engine's second own setting (VINTAGE on an engine with none) | down |
 | **PHASER** (its amount) | down and right |
 
-- **KNOB 3 ROTATES** the line set (100 is a whole turn). The lines then cut the dot another way, so the sound moves.
+- **KNOB 3 ROTATES** the line set (100 is a whole turn): turned clockwise the lines turn clockwise (and the value goes up). The lines then cut the dot another way, so the sound moves.
 - **KNOB 4 is Z**, a third axis for one more parameter: **REV** to begin with. It is drawn as flying down a tunnel of six
   frames: turning Z up zooms the camera forward, so the frames grow towards the edge one after another, the outermost first, and are
   gone once they reach it; at 100 % you are on the floor: the last, outermost rectangle is there, the cross in the middle has grown and
@@ -654,7 +653,7 @@ layer's UNDO covers big changes).
 
 On a drum track the **black keys** pick the lane (1–8) the lane tools act on. The tools refuse while the arrangement plays.
 
-### HOME: SWARM's and TRACE's actions
+### HOME: SWARM's and TRACE's actions, IDEA ALL
 
 Hold **HOME** on any page (a tap is still HOME) and the keys run **SWARM** (see [4](#swarm)), or **TRACE** (see [TRACE](#trace)) if that was the last of the two you opened, whatever page you are on.
 The key is lit while the action is on, and breathes when it can be used.
@@ -666,6 +665,7 @@ The key is lit while the action is on, and breathes when it can be used.
 | **A3** | **THROW** | Throws every THROW dot at once. |
 | **B3** | **CAPTURE** | The sound as it is now becomes the track's own, and SWARM stops. |
 | **C4** | **SWARM** | Turns SWARM on; off puts the sound back as it was. |
+| **F♯3** (the black key) | **IDEA ALL** | The [I-TRK](#ideas) throw on every track that plays: its **GENRE** and **RHYTHM** settings, one genre and one chord progression for all of them (so they fit together) and each track its own role. Only the steps, length and key change. One **UNDO** (REC held + D4) puts it back. Refused while a song plays. |
 
 The four knobs do nothing on this layer.
 
@@ -684,7 +684,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 | List | Rows |
 | --- | --- |
 | **MAIN** | **BPM**, **SWING**, **TRACKS** (1–6), **USB LEVEL** (MASTER: follows the MASTER knob; FIXED; or −6 to −24 dB, for a phone or computer whose input clips) · **CLICK** (OFF, REC, ON), **CLICK LEVEL**, **COUNT-IN** (OFF, 1 BAR, 2 BARS) |
-| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE (greys only), DUSK, CREAM, POP (black with red, blue, green and yellow), YELLOW, RED or PURPLE (black with shades of one colour)), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on and the HOME button open; a second tap never flips between them) |
+| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE (greys only), DUSK, CREAM, POP (black with red, blue, green and yellow), YELLOW, RED or PURPLE (black with shades of one colour)), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on opens; after that the HOME button returns to the page of HOME you were last on) |
 | **CONTROL** | **HOLD** (the layer threshold), **KNOB ACCEL**, **FX LATCH**, **CLOCK** (INT, USB, TRS) · **ROUTE** (CH1-6, SEL), **MIDI OUT** (KEYS, CLOCK, ALL, OFF), **SPEAKER EQ** (FLAT, LOWCUT, BASS+), **TUNE** |
 | **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT**, **MIDI LEARN** (OFF, LEARN, CLEAR) |
 

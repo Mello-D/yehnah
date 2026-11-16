@@ -1290,7 +1290,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         else if (slot == 3u) ui.act = steps > 0 ? 4u : 0u;
         return;
     }
-    if (pg->graph == GR_SUMMARY) {                  /* (2026-11-15) TRACKS: K1 picks the track */
+    if (pg->graph == GR_SUMMARY) {                  /* (2026-11-15) TRACKS: (2026-11-17) K1 LEVEL, K2 OFF / SOLO / MUTE, K3 LEN, K4 BPM */
         summary_knob(slot, steps);
         return;
     }
@@ -1477,7 +1477,7 @@ static void edit_param(uint32_t slot, int32_t steps)
                                                          * (CALIBRATION INIT SYSTEM ABOUT) its YES / NO dialog */
         uint32_t r = pg->id[slot] - ID_MENU;
         if (r < MI_VALUES)
-            menu_put(r, menu_step(r, steps)), ui.force = 1;   /* (THEME: the screen anew) */
+            menu_put(r, menu_step(r, steps)), ui.force = 1, glo_save_ms = fm1_ms | 1u;   /* (THEME: the screen anew; saved once the knob rests) */
         else
             confirm_open(r == MI_PANEL ? CF_CALIB : r == MI_INIT ? CF_INIT_SYS : CF_ABOUT, song.sel);
         return;
@@ -2191,6 +2191,10 @@ static void ui_input_frame(void)
     mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
     midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
     midi_remote_poll();                                 /* (2026-11-16) channel 16's notes, MIDI LEARN's messages */
+    if (glo_save_ms && (uint32_t)(fm1_ms - glo_save_ms) > 1500u) {   /* (2026-11-17) GLO's rows (THEME, HOME PAGE ..) were never saved: only the old MENU's close did */
+        glo_save_ms = 0;
+        settings_save();
+    }
     rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
     {   /* (0.6.55) TRACKS 6 -> 4 (MENU or GLO > SYSTEM) on T5 / T6: T4 selected (ALGORITHM stops there) */
         static uint8_t live0 = NTRK;

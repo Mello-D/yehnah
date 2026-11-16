@@ -670,7 +670,8 @@ static void xy_ids(const track_t *t)
 static const uint8_t XY_POS[XY_NL] = {0, 6, 8, 4, 2, 10, 12};
 static void xy_dir(uint32_t i, float *c, float *s, float *k)
 {
-    float a = (float)XY_POS[i] * 0.4487990f + (float)xy.rot * 0.0628319f, cc = fm_cosf(a), ss = fm_sinf(a), m = fm_fabsf(cc) > fm_fabsf(ss) ? fm_fabsf(cc) : fm_fabsf(ss);
+    float a = (float)XY_POS[i] * 0.4487990f - (float)xy.rot * 0.0628319f,   /* (2026-11-17, the user's: ROTATE up turns the lines clockwise on the screen, whose y is up here) */
+           cc = fm_cosf(a), ss = fm_sinf(a), m = fm_fabsf(cc) > fm_fabsf(ss) ? fm_fabsf(cc) : fm_fabsf(ss);
     *c = cc;
     *s = ss;
     *k = m;

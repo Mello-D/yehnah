@@ -84,7 +84,7 @@ RP2040.
 ### HOME: your home screen, DANCE or TRACKS
 
 HOME is a row of pages, and you choose which one is **your home screen**: **DANCE** (the default) or **TRACKS**, in
-GLO > DEVICE > HOME PAGE. The unit opens on it at power-on and the HOME button returns to it. **DANCE** shows the selected
+GLO > DEVICE > HOME PAGE. The unit opens on it at power-on; after that the HOME button, like every section's button, returns to the page you were last on. **DANCE** shows the selected
 track as a small robot that dances to what the track plays, on a city street at dusk or by night, with the track's four
 knobs under it (the engine decides which four). The pages of HOME are tabs along the foot:
 **DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, **MORPH** (three morphs on one page), **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
@@ -101,7 +101,7 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 <td align="center"><img src="docs/img/xy.png" width="300" alt="XYZ: one dot on a pad, a parameter at every edge dot"><br><sub>XYZ: one dot, seven invisible lines, a Z knob</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/img/tracks.png" width="300" alt="TRACKS: a row for every track"><br><sub>TRACKS: every track's sound, length, key and pattern at a glance</sub></td>
+<td align="center"><img src="docs/img/tracks.png" width="300" alt="TRACKS: a row for every track"><br><sub>TRACKS: every track at a glance; the knobs set the selected track's level, mute / solo and length, and the BPM</sub></td>
 <td align="center"><img src="docs/img/morph.png" width="300" alt="MORPH: three morphs"><br><sub>MORPH: three pairs of tracks blended at once; SELECT scrolls them</sub></td>
 </tr>
 </table>
@@ -125,7 +125,8 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
   effect (drive, space, movement), and **TEXTURE** makes what the track plays ambient: a pad, choir, hiss, sea or crackle
   sound, softer and longer notes, a wider space. OCT+ keeps an idea, OCT− puts back what was there before; and UNDO
-  (REC held + D4) brings back the one before.
+  (REC held + D4) brings back the one before. On the HOME layer the black key **F♯3 (IDEA ALL)** throws TRACK's idea on every
+  track at once, with one genre and progression for all of them and each track its own role.
 
 ### Sequencer
 
@@ -302,7 +303,7 @@ and its pages open. Five buttons have a layer:
 <td align="center"><img src="docs/img/rec.png" width="220" alt="The REC layer"><br><sub><b>REC</b>: undo, restart, sections, song</sub></td>
 <td align="center"><img src="docs/img/save_layer.png" width="220" alt="The SAVE layer"><br><sub><b>SAVE</b>: clear, erase, new, save sound</sub></td>
 <td align="center"><img src="docs/img/seq_layer.png" width="220" alt="The SEQ layer"><br><sub><b>SEQ</b>: pattern tools</sub></td>
-<td align="center"><img src="docs/img/home_layer.png" width="220" alt="The HOME layer"><br><sub><b>HOME</b>: SWARM's actions</sub></td>
+<td align="center"><img src="docs/img/home_layer.png" width="220" alt="The HOME layer"><br><sub><b>HOME</b>: SWARM's actions, IDEA ALL</sub></td>
 </tr>
 </table>
 

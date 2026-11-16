@@ -852,9 +852,9 @@ async function editorTracks() {
   const { m, rq, ev, done } = attachMock({ watchMs: 1000 });
   const info = E.parse[C.INFO](await rq(E.req.info()));
   const tr = E.parse[C.TRACK](await rq(E.req.track()));
-  ok(info.ntrk === 6 && tr.sel === 0 && tr.ntrk === 6 && tr.tracks.map((t) => t.engine).join() === "15,0,0,10,3,12"
-    && tr.tracks[0].preset === 0 && tr.tracks[1].preset === 21 && tr.tracks[2].preset === 26 && tr.tracks[3].preset === 10,
-    "tracks: INFO NTRK, TRACK lists 6 parts (2026-11-02: JUNO 106 PAD, MINI BASS, PROPH LEAD, DRUM 909 SWEEP, LOFI, FM6)");
+  ok(info.ntrk === 6 && tr.sel === 0 && tr.ntrk === 6 && tr.tracks.map((t) => t.engine).join() === "15,18,18,10,3,12"
+    && tr.tracks[0].preset === 85 && tr.tracks[1].preset === 122 && tr.tracks[2].preset === 1 && tr.tracks[3].preset === 9,
+    "tracks: INFO NTRK, TRACK lists 6 parts (2026-11-17: JUNO DARK ENS, FMINI HONEY LEAD, FMINI MOOG BASS, DRUM 808 CIRCUIT, LOFI, FM6)");
   /* the v1 commands follow the selected track */
   const d0 = E.parse[C.DUMP](await rq(E.req.dump()), info);
   const t1 = E.parse[C.TRACK](await rq(E.req.track(1)));
@@ -862,7 +862,7 @@ async function editorTracks() {
   await rq(E.req.set(0, 1, 77));
   const td0 = E.parse[C.TRACK_DUMP](await rq(E.req.trackDump(0)), info);
   const td1 = E.parse[C.TRACK_DUMP](await rq(E.req.trackDump(1)), info);
-  ok(t1.sel === 1 && d1.engine === 0 && d0.engine === 15 && td1.p[1] === 77 && td0.p[1] === d0.p[1] && td0.p[1] !== 77,
+  ok(t1.sel === 1 && d1.engine === 18 && d0.engine === 15 && td1.p[1] === 77 && td0.p[1] === d0.p[1] && td0.p[1] !== 77,
     "tracks: TRACK selects; DUMP / SET act on it, TRACK_DUMP reads any track");
   /* steps of a track that is not selected */
   const s0 = E.parse[C.STEP_GET](await rq(E.req.stepGet(5)));
