@@ -808,11 +808,12 @@ static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *o
     int32_t l0 = fx.comb_lp[0], l1 = fx.comb_lp[1], l2 = fx.comb_lp[2], l3 = fx.comb_lp[3];
     int16_t *c0 = rev_comb, *c1 = c0 + REV_COMB[0], *c2 = c1 + REV_COMB[1], *c3 = c2 + REV_COMB[2];
     int16_t *p0 = rev_ap, *p1 = p0 + REV_AP[0];
+#define RV_RND(x) (((x) + 16384) >> 15)                 /* Q15 product rounded to nearest (mulq15 floors: -0.5 LSB a pass, a DC) */
 #define RV_COMB(C, I, L, K)                                                                                        \
     {                                                                                                              \
         int32_t o = C[I];                                                                                          \
-        L = o + mulq15(L - o, dk);                                                                                 \
-        C[I] = (int16_t)clamp(in + mulq15(L, size), -32768, 32767);                                                \
+        L = o + RV_RND((L - o) * dk);                   /* (rounded, not floored: the floor left a negative DC */  \
+        C[I] = (int16_t)clamp(in + RV_RND(L * size), -32768, 32767);   /* that never died away) */              \
         if (++I >= REV_COMB[K])                                                                                    \
             I = 0;                                                                                                 \
         a += o;                                                                                                    \
@@ -873,8 +874,8 @@ static __attribute__((noinline)) void rev_room_mod(const int32_t *rev_in, int32_
             o0 = c[j0];
             o1 = c[j1];
             o = o0 + (((o1 - o0) * (m & 255)) >> 8);    /* (a shorter delay: nearer the write) */
-            fx.comb_lp[k] = o + mulq15(fx.comb_lp[k] - o, 32767 - damp);
-            c[fx.comb_i[k]] = (int16_t)clamp(in + mulq15(fx.comb_lp[k], size), -32768, 32767);
+            fx.comb_lp[k] = o + RV_RND((fx.comb_lp[k] - o) * (32767 - damp));
+            c[fx.comb_i[k]] = (int16_t)clamp(in + RV_RND(fx.comb_lp[k] * size), -32768, 32767);
             if (++fx.comb_i[k] >= L)
                 fx.comb_i[k] = 0;
             a += o;
