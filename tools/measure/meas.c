@@ -20,7 +20,7 @@ int main(int argc, char **argv)
     }
     if (!strcmp(argv[1], "mix")) {   /* mix E P NOTE : through mix_block, dry; prints peak dBFS, loudest-250ms rms dBFS, limiter min gain */
         static int32_t mo[2 * CTL]; uint32_t e = atoi(argv[2]), p = atoi(argv[3]), n = atoi(argv[4]), b, k, w = 11025 / CTL;
-        double pk = 0, bestr = 0, acc[64]; double gmin = 1; int nacc = 0; static double blk[400];
+        double pk = 0, bestr = 0, acc[64]; double gmin = 1; int nacc = 0; static double blk[1500];
         track_t *t = &trk[0];
         host_tracks_init(); for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
         host_preset(t, e, p); t->engine = t->eng_req; t->p[P_VOICE] = V_POLY; t->p[P_SUS] = 127;

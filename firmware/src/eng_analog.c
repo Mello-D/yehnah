@@ -15,20 +15,57 @@ static void analog_note_on(track_t *t, voice_t *v)
         v->ph[0] = 0;                                 /* a fresh note: from phase 0 (an 808 starts the same every time) */
     v->ph[1] = v->ph[0] + 0x40000000u;
     v->s[0] = v->s[1] = 0;                            /* filter */
+    v->s[7] = 0;                                      /* (SYNC: the step of OSC 2 at the last reset) */
     v->s[3] = v->s[4] = v->s[5] = v->s[6] = 0;        /* (MOOG: the ladder's four stages) */
     if (!v->s[2])
         v->s[2] = 0x1234567 + (int32_t)v->age;        /* noise state */
 }
 
-/* one oscillator of wave w (0 SAW 1 SQR 2 TRI 3 SIN 4 PWM) */
+/* (2026-11-18, fix B) 4-point polyBLEP: the residual of the cubic B-spline step (support 2 samples each side of the step, the
+ * integral of dsp.c's 2-point triangle kernel's successor); 2 R(u) in Q15 (saw -= it), u the distance in samples after the step:
+ *   0 <= u < 1: -1 + 4u/3 - 2u^3/3 + u^4/4      1 <= u < 2: -(2 - u)^4 / 12      before the step: minus the same at |u| */
+static inline int32_t an_b4(int32_t x)                /* x = u in Q15, 0 .. 65535 */
+{
+    int32_t x2, x3, x4;
+    if (x < 32768) {
+        x2 = (x * x) >> 15, x3 = (x2 * x) >> 15, x4 = (x2 * x2) >> 15;
+        return -32768 + ((x * 43691) >> 15) - ((x3 * 21845) >> 15) + (x4 >> 2);
+    }
+    x = 65536 - x;
+    if (x < 0)
+        x = 0;
+    x2 = (x * x) >> 15, x4 = (x2 * x2) >> 15;
+    return -((x4 * 2731) >> 15);
+}
+static inline int32_t an_blep(uint32_t ph, uint32_t inc)
+{
+    uint32_t d = inc >> 15;
+    if (!d)
+        return 0;
+    if (ph < (inc << 1))
+        return an_b4((int32_t)(ph / d));
+    if (ph > 0xFFFFFFFFu - (inc << 1))
+        return -an_b4((int32_t)((0xFFFFFFFFu - ph) / d));
+    return 0;
+}
+static inline int32_t an_saw(uint32_t ph, uint32_t inc)
+{
+    return ((int32_t)(ph >> 16) - 32768) - an_blep(ph, inc);
+}
+static inline int32_t an_pulse(uint32_t ph, uint32_t inc, uint32_t pw)
+{
+    return (an_saw(ph, inc) - an_saw(ph + pw, inc)) >> 1;
+}
+
+/* one oscillator of wave w (0 SAW 1 SQR 2 TRI 3 SIN 4 PWM); inc 0: the plain (naive) value, for the SYNC step */
 static inline int32_t an_osc(uint32_t w, uint32_t ph, uint32_t inc, uint32_t pw)
 {
     switch (w) {
-    case 1: return osc_pulse(ph, inc, 0x80000000u);
+    case 1: return an_pulse(ph, inc, 0x80000000u);
     case 2: return osc_tri_bl(ph, inc);               /* (Clipper 0.2: band-limited, dsp.c osc_tri_bl) */
     case 3: return osc_sine(ph);
-    case 4: return osc_pulse(ph, inc, pw);
-    default: return osc_saw(ph, inc);
+    case 4: return an_pulse(ph, inc, pw);
+    default: return an_saw(ph, inc);
     }
 }
 static const int8_t AN_RNG[8] = {0, -12, 5, 7, 12, 19, 24, -5};   /* OSC 2's RANGE: semitones from OSC 1 (FX_A_RNG) */
@@ -58,7 +95,7 @@ static void analog_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     int32_t dw = p[P_E6] * 258;                                  /* DRV: dry -> driven (a clean range low) */
     uint32_t inc1 = m->inc;
     /* DTN in cents: whole 1/16 semitones from the table, the rest as a fine factor */
-    int32_t d16 = det * 16 / 100 + st * 16, rem = det * 16 - d16 * 100;            /* rem: 1/1600 semitone */
+    int32_t d16 = det * 16 / 100 + st * 16, rem = det * 16 - (det * 16 / 100) * 100;            /* rem: 1/1600 semitone */
     uint32_t inc2 = pitch_inc(clamp(m->pitch16 + d16, 0, 2047));
     inc2 += (uint32_t)((int32_t)(inc2 >> 12) * (rem * 2367 / 16000));
     int32_t psh = m->shape - (64 << 8);
@@ -69,6 +106,9 @@ static void analog_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1];                  /* state in locals: out[] may alias v->s[] */
     int32_t sv[2] = {v->s[0], v->s[1]}, nst = v->s[2];
     int32_t ls[4] = {v->s[3], v->s[4], v->s[5], v->s[6]};      /* (MOOG's stages, in locals too) */
+    int32_t dstep = v->s[7];                                   /* SYNC: OSC 2's step (value after the reset - before) of the reset in reach */
+    uint32_t sy = sync && m2;
+    int32_t own2 = wave2 == 0 ? -65536 : (wave2 == 1 || wave2 == 4) ? -32768 : 0;   /* the step a wrap of OSC 2's wave has (an_blep) */
     fmod_coef(&fm, model, cut, p[P_E5]);
     if (model == FM_MOOG) {   /* (2026-11-18) RES on FMINI's law: it sings from ~80 % of the knob (was the last 5 detents) and the
                            * passband keeps FMINI's loss (-1.4 dB at most; the plain ladder lost 4.5 dB) */
@@ -87,12 +127,25 @@ static void analog_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         a = an_osc(wave, ph0, inc1, pw);
         if (m2)
             b = an_osc(wave2, ph1, inc2, pw);
+        if (sy) {   /* the BLEP of the reset: OSC 2 jumps by dstep when OSC 1 wraps, 2 samples before .. 2 after it */
+            uint32_t d1 = inc1 >> 15;
+            if (d1) {
+                if (ph0 > 0xFFFFFFFFu - (inc1 << 1)) {          /* the wrap is ahead, t samples (Q15): OSC 2's phase there is ph1 + t inc2 */
+                    uint32_t t = (0xFFFFFFFFu - ph0) / d1;
+                    uint32_t pz = ph1 + (uint32_t)(((uint64_t)t * inc2) >> 15);
+                    dstep = an_osc(wave2, 0, 0, pw) - an_osc(wave2, pz, 0, pw);
+                    b -= (int32_t)(((int64_t)dstep * an_b4((int32_t)t)) >> 16);   /* R(-t) = -R(t) = -b4 / 2 */
+                } else if (ph0 < (inc1 << 1)) {                 /* the wrap was ph0 / inc1 samples ago */
+                    b += (int32_t)(((int64_t)(dstep - own2) * an_b4((int32_t)(ph0 / d1))) >> 16);   /* (OSC 2's own wrap residual, keyed on its phase near 0, already did the step of its own wrap) */
+                }
+            }
+        }
         {
             uint32_t o0 = ph0;
             ph0 += inc1;
             ph1 += inc2;
-            if (sync && ph0 < o0)                     /* (SOUND > OSC 2 SYNC) osc 2 restarts with osc 1 */
-                ph1 = 0;
+            if (sync && ph0 < o0)                     /* (SOUND > OSC 2 SYNC) osc 2 restarts with osc 1: at the wrap's time inside the sample */
+                ph1 = (uint32_t)(((uint64_t)ph0 * inc2) / inc1);
         }
         s = m2 ? mulq15(a, m1) + mulq15(b, m2) : a;  /* (MIX 0, the 808s and subs: one oscillator) */
         if (nz)
@@ -112,6 +165,7 @@ static void analog_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     }
     v->ph[0] = ph0;
     v->ph[1] = ph1;
+    v->s[7] = dstep;
     v->s[0] = sv[0];
     v->s[1] = sv[1];
     v->s[3] = ls[0], v->s[4] = ls[1], v->s[5] = ls[2], v->s[6] = ls[3];
