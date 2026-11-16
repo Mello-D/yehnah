@@ -440,6 +440,9 @@ static int songs_test(void)
     ok = project_save(0) == 0 && song_cur == 0 && st_load(OBJ_PROJECT0, &proj_wire, sizeof proj_wire) > 0;
     ok &= song_select(1) == 0 && song_cur == 1 && !project_used(0) && !chain_config.count &&
           trk[0].p[P_SLEN] == 5;                        /* (an empty song: the music stays) */
+    ok &= song_idx_dirty;                               /* (the index waits for the knob to rest: no flash write a detent) */
+    fm1_ms += 3000u;
+    song_poll();
     ok &= st_load(OBJ_SONGIDX, &song_idx, sizeof song_idx) == (int)sizeof song_idx && song_idx.cur == 1u &&
           song_idx.rows[0].count == 1u && song_idx.rows[0].row[0].bars == 3u;
     bad += check("songs: song 2 in, song 1's rows and the current song in the index", ok);

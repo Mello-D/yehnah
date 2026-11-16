@@ -337,10 +337,8 @@ static int song_switch(uint32_t n, int load_a)
     song_idx.rows[song_cur] = chain_config;           /* (the rows of the song left) */
     song_cur = (uint8_t)n;
     chain_config = song_idx.rows[n];
-    if (song_index_save()) {                          /* (failed: written again by song_poll) */
-        song_idx_dirty = 1;
-        song_idx_t = fm1_ms;
-    }
+    song_idx_touch();                                 /* (2026-11-16: into flash once the knob rests, song_poll: a flash write
+                                                       * a detent stops the LED scan (interrupts off) and the keys flashed) */
     for (k = 0; k < 4u; k++) {
         memset(proj_slot[k].raw, 0, 4);
 #if YEHNAH_FLASH
