@@ -1,0 +1,8 @@
+{
+  "what": "Six-track groovebox firmware with 25 synthesis engines, 800+ presets and no samples. Chord layouts you play with one thumb, a 64-step sequencer, idea generators, songs with arrangement, SWARM, TRACE and XYZ sound-morphing pads, a browser editor and emulator.",
+  "author": "Mello-D",
+  "kinds": ["groove"],
+  "play": "https://mello-d.github.io/yehnah/",
+  "image": "docs/img/home.png",
+  "sounds": "licensed: the Juno-106 factory patch data (parameter settings, not recordings) as decoded by FM-106 (PatttF, GPL-3.0); everything else is made in code"
+}

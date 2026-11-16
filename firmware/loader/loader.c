@@ -3,7 +3,7 @@
 /* Felucca update loader (device side). Runs from RAM, started by the SPL from
  * an update record, with interrupts off: USB is polled from the main loop.
  * It is a USB-MIDI device "Felucca Update" (1209:0002) that answers the
- * M-UPGRADE update protocol as "ota-FM-1_900" (hosts look for "ota-"), and
+ * M-UPGRADE update protocol as "ota-FM-1_069" (hosts look for "ota-"), and
  * writes the app area only (ldr_core.c). The UBOOT soft key works here too.
  * Single compilation unit. */
 #include <stdint.h>
@@ -12,7 +12,7 @@
 #define YEHNAH_OTA 1
 #define YEHNAH_OTA_DRYRUN 0
 #define YEHNAH_USB_PID 0x0002
-#define YEHNAH_ID "ota-FM-1_900"
+#define YEHNAH_ID "ota-FM-1_069"
 #define RING_PUBLISH() __asm__ volatile("" ::: "memory")
 #include "fm1_time.h"
 #include "fm1_sys.h"

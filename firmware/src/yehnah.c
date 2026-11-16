@@ -36,7 +36,7 @@
 #define YEHNAH_HOTRAM 1         /* (0.6.78, experimental) core 0's hottest audio code in RAM (core.h) */
 #endif
 #ifndef YEHNAH_ID
-#define YEHNAH_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
+#define YEHNAH_ID "FM-1_069"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef YEHNAH_VERSION
 #define YEHNAH_VERSION "v0.1.0"      /* (chord-harp fork) Yehnah's own numbering (was VitaminDSDC); based on JIANT 0.9.9-cpu2 */

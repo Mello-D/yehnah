@@ -302,7 +302,7 @@ $("ver").addEventListener("change", () => { showNotice(); if (!writing) loadVers
   await loadVersion(0);
 })();
 /* (0.6.21) a report of a brick from another custom firmware; (0.6.62) the installer checks it itself (fwKind): it
- * writes only over official V15 (FM-1_015) or Yehnah (FM-1_9xx answering the editor's INFO as Yehnah: its tag 0x4A, or
+ * writes only over official V15 (FM-1_015) or Yehnah (FM-1_069, or FM-1_9xx for the older builds, answering the editor's INFO as Yehnah: its tag 0x4A, or
  * an older Yehnah's six tracks with a v0.x version); anything else is sent to Return to official V15 first */
 /* (0.6.70) MIDI refused: blocked for the site (the browser no longer asks: say where to allow it) or just dismissed */
 async function midiRefused(e) {
@@ -326,7 +326,7 @@ async function fwKind(up) {
   if (!dev) return { kind: "none" };
   const text = dev.id.text;
   if (text === "FM-1_015") { dev.link.close(); return { kind: "stock", text }; }
-  if (!/^FM-1_9\d\d$/.test(text)) { dev.link.close(); return { kind: "other", text }; }
+  if (!/^FM-1_(?:9\d\d|069)$/.test(text)) { dev.link.close(); return { kind: "other", text }; }
   const input = dev.link.input, output = dev.link.output; dev.link.close();
   const link = new BackupConnection(input, output);
   try { return isYehnahInfo(await link.request([1, []], { timeout: 2000 })) ? { kind: "yehnah", text } : { kind: "other", text }; }

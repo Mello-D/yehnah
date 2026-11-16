@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define YEHNAH_ID "FM-1_900"
+#define YEHNAH_ID "FM-1_069"
 #define YEHNAH_OTA_DRYRUN 0
 
 static uint8_t nor[0x100000];

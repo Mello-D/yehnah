@@ -20,5 +20,5 @@
     } while (0)
 #define FM1CORE_FW_EDITOR_C "../../cores/YehNah/firmware/src/editor.c"  /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/YehNah/firmware/src/ota.c"        /* the M-UPGRADE identity */
-#define YEHNAH_ID "FM-1_900"                                             /* (yehnah.c) */
+#define YEHNAH_ID "FM-1_069"                                             /* (yehnah.c) */
 #include "fw_core.h"

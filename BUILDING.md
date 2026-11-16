@@ -43,8 +43,8 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 1.0` makes a release build: the package identity becomes `FM-1_910`
-and the version string `v1.0`; the package is `build/yehnah-1.0.fwsc`, and
+`./build.sh --release 1.0` makes a release build: the version string becomes `v1.0`
+(the package identity is `FM-1_069` in every build); the package is `build/yehnah-1.0.fwsc`, and
 `build/release-1.0/` holds what a release ships: the package, the app
 (`yehnah-1.0-app.bin`), `SHA256SUMS`, `LICENSE`, `LICENSING.md` and
 `LICENSES/` (the package contains Apache-2.0 SDK files, so the licence texts travel with it).
