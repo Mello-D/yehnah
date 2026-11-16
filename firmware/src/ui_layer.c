@@ -794,11 +794,14 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     if (l == LAYER_SEQ)
         return sq_keyname(blk, p, nm);
     if (l == LAYER_HOME) {                              /* SWARM */
-        static const char *const SN[SWA_N] = {"FREEZE", "REVERSE", "THROW", "CAPTURE", "SWARM"};
-        static const char *const TN[SWA_N] = {"FREEZE", "RANDOM", "REROLL", "CAPTURE", "TRACE"};   /* (TRACE: the shapes) */
+        static const char *const SN[SWA_N] = {"FREEZE", "REVERSE", "THROW", "CAPTURE", "SWARM", "", ""};
+        static const char *const TN[SWA_N] = {"FREEZE", "RANDOM", "REROLL", "CAPTURE", "TRACE", "", ""};   /* (TRACE: the shapes) */
+        static const char *const XN[SWA_N] = {"Z REV", "Z DLY", "Z CHORUS", "Z LEVEL", "XYZ", "CAPTURE", "RE-FIT"};          /* (XY) */
         if (blk || p >= SWA_N)
             return LS_OFF;
-        str_cpy(nm, sw.mode ? TN[p] : SN[p], 12);
+        str_cpy(nm, sw.mode == 2u ? XN[p] : sw.mode ? TN[p] : SN[p], 12);
+        if (!nm[0])
+            return LS_OFF;
         return swarm_act_on(p) ? LS_SEL : swarm_act_ok(p) ? LS_OFF : LS_DIM;
     }
     if (l == LAYER_REC) {
@@ -1023,8 +1026,13 @@ static void layer_state(uint32_t l)
             lst_chip("BARS LEFT", v, 1);
         }
     } else if (l == LAYER_HOME) {                       /* SWARM: what is going on */
-        lst_chip(sw.mode ? "TRACE" : "SWARM", sw.on ? "ON" : "OFF", sw.on);
-        if (sw.on) {
+        if (sw.mode == 2u) {
+            lst_chip("XYZ", xy.on ? "ON" : "OFF", xy.on);
+            if (xy.on)
+                lst_chip("Z", XY_ZNAME[xy.zsel], 1);
+        } else
+            lst_chip(sw.mode ? "TRACE" : "SWARM", sw.on ? "ON" : "OFF", sw.on);
+        if (sw.on && sw.mode != 2u) {
             b[0] = 'T'; b[1] = (char)('1' + sw.trk); b[2] = 0;
             lst_chip("TRACK", b, 1);
             lst_chip("FROZEN", 0, sw.frozen);

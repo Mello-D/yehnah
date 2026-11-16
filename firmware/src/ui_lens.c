@@ -57,7 +57,7 @@ static const nv_t CE_HOME[] = {NV(0, "DANCE", 0, 0), NV("TRACKS", 0, 0, 0), NV("
 #endif
                                NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
                                NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2),   /* IDEAS (ideas.c; was Yehnah's GEN) */
-                               NV("MORPH", 0, 2, SV_SOUND), NV("SWARM", 0, 2, 0), NV("TRACE", 0, 2, 0),
+                               NV("MORPH", 0, 2, SV_SOUND), NV("SWARM", 0, 2, 0), NV("TRACE", 0, 2, 0), NV("XYZ", 0, 2, 0),
                                NV("SENDS", 0, 2, 0), NV("MIXER", 0, 2, 0)};
 static const nv_t CE_SYN[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-11: SOUND, the PATCH entry of PAGES, replaces EDIT 1 / 2; its rows
                                                          * hold the old FILTER, DRIFT, VOICE, VOICE 2) */

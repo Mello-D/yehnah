@@ -30,7 +30,7 @@ enum { SWR_POS, SWR_SHAPE, SWR_SIZE, SWR_SPEED, SWR_GAIN, SWR_N, SWR_TRAVEL = SW
 #include "trace_data.h"                                 /* TRACE: the shapes (tools/gen_trace_shapes.py) */
 #define TR_ROWS 6u
 static const uint8_t TR_ROW[TR_ROWS] = {SWR_TRAVEL, SWR_SHAPE, SWR_SIZE, SWR_ROT, SWR_POS, SWR_GAIN};
-enum { SWA_FREEZE, SWA_REVERSE, SWA_THROW, SWA_CAPTURE, SWA_ONOFF, SWA_N };   /* the HOME layer's keys (F3 ..): ui_swarm.c swarm_act */
+enum { SWA_FREEZE, SWA_REVERSE, SWA_THROW, SWA_CAPTURE, SWA_ONOFF, SWA_X5, SWA_X6, SWA_N };   /* the HOME layer's keys (F3 ..): ui_swarm.c swarm_act */
 static const char *const SW_ROW[SWR_N] = {"POSITION", "SHAPE", "SIZE", "SPEED", "GAIN"};
 static const char *const SW_SHAPE[SWS_N] = {"ORBIT", "DRIFT", "CHAOS", "THROW"};
 
@@ -105,6 +105,11 @@ static const char *sw_rowname(void)
     return r == SWR_TRAVEL ? "TRAVEL" : r == SWR_ROT ? "ROTATE" : SW_ROW[r];
 }
 /* the page (ui_swarm.c), reached from the lens, the cards and the knobs */
+static void xy_tick(void);
+static void xy_start(void);
+static void xy_follow(void);
+static void xy_off(int restore);
+static int xy_is_on(void);
 static void swarm_graph(void);
 static void swarm_cards(void);
 static void swarm_knob(uint32_t slot, int32_t steps);
@@ -300,9 +305,22 @@ static void swarm_follow(void)
 static void swarm_set_mode(uint32_t m);
 static void swarm_enter(void)
 {
+    uint32_t g = PAGES[ui.page].graph, m = g == GR_XY ? 2u : g == GR_TRACE ? 1u : 0u;
     if (!sw.inited)
         swarm_defaults();
-    swarm_set_mode(PAGES[ui.page].graph == GR_TRACE ? 1u : 0u);   /* (the page shown says which of the two moves the sound) */
+    swarm_set_mode(m);                                  /* (the page shown says which of the three moves the sound) */
+    if (m == 2u) {                                      /* XY: SWARM's dots stand (the sound as it was), XY follows the track */
+        if (sw.on) {
+            swarm_restore(&trk[sw.trk]);
+            sw.on = sw.frozen = sw.rev = 0;
+        }
+        if (xy_is_on())
+            xy_follow();
+        else
+            xy_start();
+        return;
+    }
+    xy_off(1);                                          /* (one of them at a time: both write the same parameters) */
     if (sw.on)
         swarm_follow();
     else if (!sw.manual_off)
@@ -498,6 +516,7 @@ static void swarm_tick(void)
     float dt;
     track_t *t;
     sw.last_ms = now;
+    xy_tick();
     if (!sw.on)
         return;
     ms = ms > 100u ? 100u : ms;
@@ -592,5 +611,230 @@ static void swarm_tick(void)
             d->put[a] = (int16_t)(v + (v < 0.0f ? -0.5f : 0.5f));
             t->p[id] = d->put[a];
         }
+    }
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------
+ * XY (2026-11-16, the user's idea). One dot (knobs 1 / 2: left-right, up-down) in a square; seven INVISIBLE lines cross its
+ * centre, 30 degrees apart, in a RECTANGLE; a line's value is where the dot's shadow falls on it, 0..100 % (the pad's edge is
+ * 0 or 100 where the line meets it, the centre 50). Knob 3 ROTATES the line set (100 = a whole turn); knob 4 is a third (Z) axis for one more parameter, REV
+ * to begin with (the HOME layer's first four keys pick REV DLY CHORUS LEVEL).
+ *   the lines' 100 % ends at the start (rotation 0), every 51.4 degrees from the right: PAN, the engine's own first setting, CUT, DIST,
+ *   RES, the engine's second, PHASER (SW_TAB's dot 1: its first two E slots, DETUNE and VINTAGE where it has fewer); their 0 % ends are
+ *   opposite, so the fourteen ends round the pad run 100, 0, 100, 0 .. exactly (seven lines: an odd number can).
+ *   ONE dot moves several lines at once: a line at right angles to the move stays, the ones along it follow (it is a pad
+ *   that morphs the sound, not seven faders).
+ * The sound does not change when the page comes up: the dot starts at the place that is nearest to the sound's seven values
+ * (a least-squares fit; two positions cannot match seven), and each line keeps an OFFSET so that its value is what it was; it moves from
+ * there with the dot. Turning knob 3 changes the sound (the lines now cut the dot another way). A parameter changed by hand
+ * is the new anchor for its line. OFF puts the sound back; CAPTURE keeps it. Not saved in a project.
+ * XY and SWARM / TRACE never run together (they write the same parameters): each page turns the other off.
+ * ------------------------------------------------------------------------------------------------------------------------ */
+#define XY_NL 7u
+#define XY_NZ 4u
+static const uint16_t XY_ZID[XY_NZ] = {P_REV, P_DLY, P_CHOR, P_LEVEL};
+static const char *const XY_ZNAME[XY_NZ] = {"REV", "DLY", "CHORUS", "LEVEL"};
+static const char *const XY_LNAME[XY_NL] = {"PAN", "DIST", "RES", "CUT", "", "", "PHASER"};   /* (the two blanks: the engine's own, by its parameter) */
+static struct {
+    uint8_t on, trk, rot, zsel, manual_off, inited;
+    uint16_t id[XY_NL];                                 /* each line's parameter */
+    uint32_t sig;
+    float x, y;                                         /* the dot, -1..1, y up */
+    float c[XY_NL];                                     /* each line's offset (a fraction of its range) */
+    int16_t base[XY_NL + XY_NZ], put[XY_NL + XY_NZ];    /* the values before XY, and what it last wrote */
+} xy __attribute__((section(".pool")));
+
+static int xy_is_on(void) { return xy.on; }
+/* the engine's own two lines: its first two E slots in SW_TAB, DETUNE and VINTAGE where it has fewer */
+static void xy_ids(const track_t *t)
+{
+    const uint16_t *tab = SW_TAB[trk_eng(t)];
+    static const uint16_t FB[2] = {P_DETUNE, P_VINT};
+    uint32_t k, n = 0;
+    xy.id[0] = P_PAN;
+    xy.id[1] = P_DIST;
+    xy.id[2] = P_FRES;
+    xy.id[3] = P_FCUT;
+    xy.id[6] = P_PHAMT;
+    for (k = 0; k < 8u && n < 2u; k++)
+        if (tab[k] >= P_E0 && tab[k] < P_E0 + 8u)
+            xy.id[4u + n++] = tab[k];
+    while (n < 2u)
+        xy.id[4u + n] = FB[n], n++;
+}
+/* line i's direction (c, s) in the pad's own (-1..1 each way) coordinates, and the scale that puts its 0 / 100 % ends where the line
+ * meets the pad's edge: the point (c, s) / max(|c|, |s|) is the 100 % end */
+/* where each line's 100 % end starts, in steps of 360 / 14 degrees from the right, anticlockwise (PAN DIST RES CUT eng1 eng2 PHASER): the
+ * 100 % ends are the even places and the 0 % ends (opposite: 7 places on) the odd ones, so the fourteen ends round the pad run 100 % of one
+ * line, 0 % of another, .. exactly (an odd number of lines can; six could not) */
+static const uint8_t XY_POS[XY_NL] = {0, 6, 8, 4, 2, 10, 12};
+static void xy_dir(uint32_t i, float *c, float *s, float *k)
+{
+    float a = (float)XY_POS[i] * 0.4487990f + (float)xy.rot * 0.0628319f, cc = fm_cosf(a), ss = fm_sinf(a), m = fm_fabsf(cc) > fm_fabsf(ss) ? fm_fabsf(cc) : fm_fabsf(ss);
+    *c = cc;
+    *s = ss;
+    *k = m;
+}
+static float xy_proj(uint32_t i)                        /* line i's value 0..1 from the dot alone */
+{
+    float c, s, k;
+    xy_dir(i, &c, &s, &k);
+    return fm_clampf(0.5f + 0.5f * k * (xy.x * c + xy.y * s), 0.0f, 1.0f);
+}
+static float xy_norm(const track_t *t, uint32_t id)     /* a parameter's value as 0..1 of its range */
+{
+    const param_desc_t *pd = sw_desc(t, id);
+    return pd->max > pd->min ? fm_clampf(((float)t->p[id] - (float)pd->min) / (float)(pd->max - pd->min), 0.0f, 1.0f) : 0.0f;
+}
+/* the dot goes to the place nearest to the seven values of the track's sound (least squares, a 2 x 2 system) */
+static void xy_fit(const track_t *t)
+{
+    float saa = 0.0f, sab = 0.0f, sbb = 0.0f, ba = 0.0f, bb = 0.0f, det;
+    uint32_t i;
+    for (i = 0; i < XY_NL; i++) {
+        float c, sn, k, ga, gb, w = xy_norm(t, xy.id[i]) - 0.5f;
+        xy_dir(i, &c, &sn, &k);
+        ga = 0.5f * k * c;
+        gb = 0.5f * k * sn;
+        saa += ga * ga;
+        sab += ga * gb;
+        sbb += gb * gb;
+        ba += w * ga;
+        bb += w * gb;
+    }
+    det = saa * sbb - sab * sab;
+    if (det > 1e-6f) {
+        xy.x = fm_clampf((sbb * ba - sab * bb) / det, -1.0f, 1.0f);
+        xy.y = fm_clampf((saa * bb - sab * ba) / det, -1.0f, 1.0f);
+    } else
+        xy.x = xy.y = 0.0f;
+}
+/* every line's offset makes its value what the sound's is now, wherever the dot is */
+static void xy_anchor(const track_t *t)
+{
+    uint32_t i;
+    for (i = 0; i < XY_NL; i++)
+        xy.c[i] = xy_norm(t, xy.id[i]) - xy_proj(i);
+}
+/* the track's sound is the anchor: base = what the parameters are now (OFF puts them back), fit = the dot to the nearest place */
+static void xy_rebase(const track_t *t, int fit)
+{
+    uint32_t i;
+    xy.sig = (uint32_t)t->preset | (uint32_t)t->user << 8 | (uint32_t)t->eng_req << 16;
+    xy_ids(t);
+    for (i = 0; i < XY_NL; i++)
+        xy.base[i] = xy.put[i] = t->p[xy.id[i]];
+    for (i = 0; i < XY_NZ; i++)
+        xy.base[XY_NL + i] = xy.put[XY_NL + i] = t->p[XY_ZID[i]];
+    if (fit)
+        xy_fit(t);
+    xy_anchor(t);
+}
+/* each track remembers its dot (and ROTATE, and Z's choice) and the sound it started from, for when the page comes back to it:
+ * a track not visited (or whose sound was loaded since) starts at the best fit to its sound */
+static struct { int8_t x, y; uint8_t rot, zsel, have; uint32_t sig; int16_t base[XY_NL + XY_NZ]; } xym[NTRK] __attribute__((section(".pool")));
+static void xy_save(void)
+{
+    uint32_t i;
+    xym[xy.trk].x = (int8_t)(xy.x * 127.0f + (xy.x < 0.0f ? -0.5f : 0.5f));
+    xym[xy.trk].y = (int8_t)(xy.y * 127.0f + (xy.y < 0.0f ? -0.5f : 0.5f));
+    xym[xy.trk].rot = xy.rot;
+    xym[xy.trk].zsel = xy.zsel;
+    xym[xy.trk].sig = xy.sig;
+    for (i = 0; i < XY_NL + XY_NZ; i++)
+        xym[xy.trk].base[i] = xy.base[i];
+    xym[xy.trk].have = 1;
+}
+static void xy_load(void)                               /* the track xy.trk: where its dot was, or the fit */
+{
+    const track_t *t = &trk[xy.trk];
+    uint32_t i, sig = (uint32_t)t->preset | (uint32_t)t->user << 8 | (uint32_t)t->eng_req << 16;
+    if (xym[xy.trk].have && xym[xy.trk].sig == sig) {
+        xy.sig = sig;
+        xy_ids(t);
+        xy.x = (float)xym[xy.trk].x * (1.0f / 127.0f);
+        xy.y = (float)xym[xy.trk].y * (1.0f / 127.0f);
+        xy.rot = xym[xy.trk].rot;
+        xy.zsel = xym[xy.trk].zsel;
+        for (i = 0; i < XY_NL; i++) {
+            xy.base[i] = xym[xy.trk].base[i];
+            xy.put[i] = t->p[xy.id[i]];
+        }
+        for (i = 0; i < XY_NZ; i++) {
+            xy.base[XY_NL + i] = xym[xy.trk].base[XY_NL + i];
+            xy.put[XY_NL + i] = t->p[XY_ZID[i]];
+        }
+        xy_anchor(t);                                   /* (the sound as it is: unchanged, the dot where it was left) */
+    } else {
+        xym[xy.trk].have = 0;
+        xy_rebase(t, 1);
+    }
+}
+static void xy_restore(track_t *t)
+{
+    uint32_t i;
+    for (i = 0; i < XY_NL; i++)
+        if (xy.put[i] == t->p[xy.id[i]])                /* (a value the user has since set is theirs) */
+            t->p[xy.id[i]] = xy.base[i];
+    for (i = 0; i < XY_NZ; i++)
+        if (xy.put[XY_NL + i] == t->p[XY_ZID[i]])
+            t->p[XY_ZID[i]] = xy.base[XY_NL + i];
+}
+static void xy_start(void)
+{
+    if (!xy.inited) {
+        xy.inited = 1;
+        xy.zsel = 0;
+        xy.rot = 0;
+    }
+    xy.trk = song.sel;
+    xy_load();
+    xy.on = 1;
+    xy.manual_off = 0;
+}
+static void xy_off(int restore)
+{
+    if (xy.on && restore)
+        xy_restore(&trk[xy.trk]);
+    if (xy.on)
+        xym[xy.trk].have = 0;                           /* (the sound is back, or kept as the new one: the dot starts from the fit again) */
+    xy.on = 0;
+}
+static void xy_follow(void)                             /* the page came up on another track: XY follows */
+{
+    if (xy.on && xy.trk != song.sel) {                  /* (the track left keeps its sound as it is and its dot) */
+        xy_save();
+        xy.trk = song.sel;
+        xy_load();
+    }
+}
+/* the main loop: each line's parameter follows the dot */
+static void xy_tick(void)
+{
+    uint32_t i;
+    track_t *t;
+    if (!xy.on)
+        return;
+    if (xy.trk != song.sel && sw.mode == 2u && swarm_page_on())   /* the selected track changed with the page open: it follows at once */
+        xy_follow();
+    t = &trk[xy.trk];
+    if (xy.sig != ((uint32_t)t->preset | (uint32_t)t->user << 8 | (uint32_t)t->eng_req << 16)) {   /* another sound loaded: its values anchor the lines */
+        xy_rebase(t, 0);
+        return;
+    }
+    for (i = 0; i < XY_NL; i++) {
+        uint32_t id = xy.id[i];
+        const param_desc_t *pd = sw_desc(t, id);
+        float rg = (float)(pd->max - pd->min), u, fl = pd->fmt == F_CUTOFF ? 0.15f : 0.0f, v;
+        int16_t iv;
+        if (t->p[id] != xy.put[i]) {                    /* the user's edit: the new anchor of this line */
+            xy.put[i] = t->p[id];
+            xy.c[i] = xy_norm(t, id) - xy_proj(i);
+        }
+        u = fm_clampf(xy_proj(i) + xy.c[i], fl, 1.0f);
+        v = (float)pd->min + u * rg;
+        iv = (int16_t)(v + (v < 0.0f ? -0.5f : 0.5f));
+        if (iv != xy.put[i])
+            t->p[id] = xy.put[i] = iv;
     }
 }

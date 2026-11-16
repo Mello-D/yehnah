@@ -140,7 +140,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 | Section (button) | Pages |
 | --- | --- |
-| **HOME** | DANCE · TRACKS · PRESETS · I-TRK · I-SND · I-LFO · I-FX · I-TEX · MORPH · SWARM · TRACE · SENDS · MIXER |
+| **HOME** | DANCE · TRACKS · PRESETS · I-TRK · I-SND · I-LFO · I-FX · I-TEX · MORPH · SWARM · TRACE · XYZ · SENDS · MIXER |
 | **EDIT** | SOUND (the selected engine's rows; a drum track has its own, see [6](#6-drums)) |
 | **SEQ** | STEP · NOTE · SPICE · AUTO · PATTERN · STRETCH · TRACK |
 | **FX** | FX (one page, every effect's rows) |
@@ -155,7 +155,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 ## 4. HOME, sounds and IDEAS
 
-HOME is a row of pages: **DANCE**, **TRACKS**, **PRESETS**, the **IDEAS**, **MORPH**, **SWARM**, **TRACE**, **SENDS** and **MIXER**.
+HOME is a row of pages: **DANCE**, **TRACKS**, **PRESETS**, the **IDEAS**, **MORPH**, **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER**.
 Two of them, **DANCE** and **TRACKS**, are the ones you can make your own **home page**: the page the unit opens at power-on
 and the **HOME** button (and a section's button pressed again inside it) returns to. **You choose which is your home
 screen** in **GLO > DEVICE > HOME PAGE** (**DANCE**, the default, or **TRACKS**); the choice is saved with the settings.
@@ -261,6 +261,46 @@ On the HOME layer TRACE's keys are **F3 FREEZE**, **G3 RANDOM** (all four dots g
 rotation), **A3 REROLL** (only the dot whose knob you turned last, shown in white), **B3 CAPTURE** and **C4 TRACE** (on / off).
 SWARM and TRACE share the running sound: the page you open takes over (the dots go on from where they are), and CAPTURE or
 off acts on whichever is running. TRACE is not saved in a project either.
+
+### XYZ
+
+One dot you move yourself. **KNOB 1** moves it left and right, **KNOB 2** up and down, anywhere in the rectangle that fills the
+panel. Seven invisible lines cross the pad's centre, and each is one parameter: a line's value is where the dot's shadow
+falls on it, **100 % where the line meets the edge of the pad, 0 % at the opposite edge**, 50 % at the centre. Each line's
+100 % end is a bright dot on the edge with the parameter's name and value just inside it (the faint dot opposite is its 0 %),
+so turning KNOB 3 carries the texts round the edge with their dots. The fourteen ends are spread so that, going round the
+edge, a 100 % end of one parameter is always next to a 0 % end of another (seven lines can do it exactly; six could not).
+
+| Parameter | Its 100 % end is at the start (going round from the right) |
+| --- | --- |
+| **PAN** | right |
+| the engine's first own setting (the first parameter SWARM's first dot uses on that engine; DETUNE on an engine with none) | up and right |
+| **CUT** (the part's filter cutoff) | up (a little left) |
+| **DIST** | left and up |
+| **RES** (the part's filter resonance) | down and left |
+| the engine's second own setting (VINTAGE on an engine with none) | down |
+| **PHASER** (its amount) | down and right |
+
+- **KNOB 3 ROTATES** the line set (100 is a whole turn). The lines then cut the dot another way, so the sound moves.
+- **KNOB 4 is Z**, a third axis for one more parameter: **REV** to begin with. It is drawn as flying down a tunnel of six
+  frames: turning Z up zooms the camera forward, so the frames grow towards the edge one after another, the outermost first, and are
+  gone once they reach it; at 100 % you are on the floor: the last, outermost rectangle is there, the cross in the middle has grown and
+  Z's name is written on it (faint at first, clear at the bottom). Turning back down brings the frames back. KNOB 4 moves Z two
+  units a click. The dot throws a longer shadow as Z rises.
+  The foot of the panel
+  shows X, Y, ROT and Z with its name. On the **HOME layer** the first four keys choose what Z is: **F3 REV, G3 DLY, A3 CHORUS,
+  B3 LEVEL** (the chosen one is lit).
+- **One dot moves several lines at once.** A line at right angles to your move stays where it is; the lines along it follow, by
+  their share. XYZ is a pad that morphs the sound, not seven faders: rotate it to change which parameters go together.
+- **The sound does not change when you open the page.** The dot starts at the place nearest to the sound's six values (two
+  positions cannot match six, so each line also keeps an offset that holds its value). It moves from there. A parameter you change
+  by hand becomes that line's new starting point. **RE-FIT** (E4 on the HOME layer) puts the dot back to the best place for the sound as it is now.
+- **Each track remembers its dot** (and ROTATE and the Z choice): change the selected track with the page open and the dot goes to
+  that track's remembered place, or to the best fit for its sound if you have not used it; the track you left keeps the sound the dot
+  gave it. **OFF** on a track puts its own sound back and forgets its dot.
+- **C4 XYZ** turns it on or, off, puts the sound back as it was. **D4 CAPTURE** keeps the sound as it is and stops XYZ.
+- XYZ and SWARM / TRACE never run together (they move the same parameters): opening one page turns the other off and puts its sound back.
+  XYZ is not saved in a project: CAPTURE first to keep a sound.
 
 ### IDEAS
 
@@ -592,7 +632,7 @@ the arrangement or the transport is running (the screen says STOP TO EDIT).
 | **G4** | **SAVE SND** | Saves the selected track's sound: over the user slot it came from, or into the first free slot (you name it). |
 | **A4** | **ERASE SND** | Erases that user sound slot. |
 
-On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
+On XYZ the keys are **F3 Z REV, G3 Z DLY, A3 Z CHORUS, B3 Z LEVEL** (what KNOB 4 turns), **C4 XYZ** (on / off), **D4 CAPTURE** and **E4 RE-FIT**. On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
 turned last), **B3** CAPTURE, **C4** TRACE (on / off).
 
 The four knobs do nothing on this layer.

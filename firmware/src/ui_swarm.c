@@ -9,6 +9,10 @@ static int swarm_page_on(void)
 static void swarm_select(int32_t s)
 {
     int32_t r = (int32_t)(sw.mode ? sw.trow : sw.row) + (s > 0 ? 1 : -1);
+    if (sw.mode == 2u) {                                /* XY has no rows */
+        nav_select(s);
+        return;
+    }
     if (r < 0 || r >= (int32_t)(sw.mode ? TR_ROWS : SWR_N)) {
         nav_select(s);
         return;
@@ -22,6 +26,10 @@ static void swarm_select(int32_t s)
 /* the HOME layer's actions (ui_layer.c): can it be done now, is it on now, do it */
 static int swarm_act_ok(uint32_t a)
 {
+    if (sw.mode == 2u)                                  /* XY: Z = REV DLY CHORUS LEVEL (F3 .. B3), XY on / off (C4), CAPTURE, RE-FIT */
+        return a < XY_NZ || a == SWA_ONOFF ? 1 : a <= SWA_X6 ? xy.on : 0;
+    if (a >= SWA_X5)
+        return 0;
     switch (a) {
     case SWA_FREEZE: return sw.on && !sw.rev;
     case SWA_REVERSE: return sw.mode ? 1 : sw.on && (sw.rev || sw.hn > 1u);   /* (TRACE: RANDOM, always) */
@@ -32,6 +40,8 @@ static int swarm_act_ok(uint32_t a)
 }
 static int swarm_act_on(uint32_t a)
 {
+    if (sw.mode == 2u)
+        return a < XY_NZ ? xy.zsel == a : a == SWA_ONOFF && xy.on;
     return a == SWA_FREEZE ? sw.frozen : a == SWA_REVERSE ? (sw.mode ? 0 : sw.rev) : a == SWA_ONOFF ? sw.on : 0;
 }
 static void swarm_act(uint32_t a)
@@ -40,8 +50,41 @@ static void swarm_act(uint32_t a)
     if (!sw.inited)
         swarm_defaults();
     if (!swarm_act_ok(a)) {
-        if (!sw.on && a != SWA_ONOFF)
+        if (sw.mode == 2u && a >= SWA_X5 && !xy.on)
+            ui_message("XYZ IS OFF");
+        else if (sw.mode != 2u && !sw.on && a != SWA_ONOFF && a < SWA_X5)
             ui_message(sw.mode ? "TRACE IS OFF" : "SWARM IS OFF");
+        return;
+    }
+    if (sw.mode == 2u) {
+        if (a < XY_NZ) {                                /* Z: the parameter knob 4 turns */
+            xy.zsel = (uint8_t)a;
+            ui_message(XY_ZNAME[a]);
+            ui.force = 1;
+            return;
+        }
+        switch (a) {
+        case SWA_X6:                                    /* RE-FIT: the dot to the nearest place to the sound as it is now */
+            xy_fit(&trk[xy.trk]);
+            xy_anchor(&trk[xy.trk]);
+            ui_message("XYZ: DOT RE-FITTED");
+            break;
+        case SWA_X5:
+            xy_off(0);
+            ui_message("SOUND KEPT: XYZ OFF");
+            break;
+        default:
+            if (xy.on) {
+                xy_off(1);
+                xy.manual_off = 1;
+                ui_message("SOUND AS IT WAS");
+            } else {
+                xy_start();
+                ui_message("XYZ ON");
+            }
+            break;
+        }
+        ui.force = 1;
         return;
     }
     if (sw.mode && (a == SWA_REVERSE || a == SWA_THROW)) {   /* TRACE: shuffle the shapes (all four, or the dot last turned) */
@@ -94,12 +137,19 @@ static void swarm_act(uint32_t a)
     ui.force = 1;
 }
 static int32_t sw_clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
+static void xy_knob(uint32_t slot, int32_t steps);
+static void xy_cards(void);
+static void xy_graph(void);
 static void swarm_knob(uint32_t slot, int32_t steps)
 {
     sw_dot_t *d;
     int32_t st;
     if (!sw.inited)
         swarm_defaults();
+    if (sw.mode == 2u) {
+        xy_knob(slot, steps);
+        return;
+    }
     swarm_follow();
     slot &= 3u;
     d = &sw.d[slot];
@@ -156,6 +206,10 @@ static const char *sw_row_text(uint32_t i, char *val, const char **lab)
 static void swarm_cards(void)
 {
     uint32_t i;
+    if (sw.mode == 2u) {
+        xy_cards();
+        return;
+    }
     char val[12], lab[8];
     for (i = 0; i < SW_N; i++) {
         const sw_dot_t *d = &sw.d[i];
@@ -239,6 +293,10 @@ static void swarm_graph(void)
     const track_t *t = &trk[sw.on ? sw.trk : song.sel];
     uint32_t i, a, k;
     char b[24];
+    if (sw.mode == 2u) {
+        xy_graph();
+        return;
+    }
     if (!sw.inited)
         swarm_defaults();
     if (sw.mode)                                        /* TRACE: each dot's shape, faint, where it walks (the sky's stars brighter) */
@@ -344,5 +402,175 @@ static void swarm_graph(void)
             b[0] = 0;
         if (b[0])
             cv_text_r(5 + 224 - 6, cy0 + 4, &AF_X, b, T_BG, T_ACCENT);
+    }
+}
+
+/* ---- XY (swarm.c has the idea): knobs 1 / 2 the dot, 3 the lines' rotation, 4 the Z parameter ---- */
+static const char *xy_lname(uint32_t i)                 /* a line's name (the engine's own: its parameter's label) */
+{
+    const track_t *t = &trk[xy.on ? xy.trk : song.sel];
+    return XY_LNAME[i][0] ? XY_LNAME[i] : sw_desc(t, xy.id[i])->label;
+}
+static int32_t xy_pct(uint32_t i)                       /* a line's real value now, 0..100 */
+{
+    const track_t *t = &trk[xy.on ? xy.trk : song.sel];
+    return (int32_t)(xy_norm(t, xy.id[i]) * 100.0f + 0.5f);
+}
+static void xy_knob(uint32_t slot, int32_t steps)
+{
+    track_t *t;
+    int32_t st = accel(EN_K1 + (slot & 3u), steps, 100);
+    if (!xy.inited || !xy.on) {
+        if (!xy.manual_off)
+            xy_start();
+        else
+            return;
+    }
+    xy_follow();
+    t = &trk[xy.trk];
+    switch (slot & 3u) {
+    case 0: xy.x = fm_clampf(xy.x + (float)st * 0.03f, -1.0f, 1.0f); break;
+    case 1: xy.y = fm_clampf(xy.y + (float)st * 0.03f, -1.0f, 1.0f); break;
+    case 2: xy.rot = (uint8_t)(((int32_t)xy.rot + st % 100 + 100) % 100); break;
+    default: {                                          /* Z: the parameter itself */
+        const param_desc_t *pd = sw_desc(t, XY_ZID[xy.zsel]);
+        int32_t v = (int32_t)t->p[XY_ZID[xy.zsel]] + st * 2;   /* (twice the knob's step: Z is quick) */
+        v = v < pd->min ? pd->min : v > pd->max ? pd->max : v;
+        t->p[XY_ZID[xy.zsel]] = xy.put[XY_NL + xy.zsel] = (int16_t)v;
+        break;
+    }
+    }
+    ui.force = 1;
+}
+static void xy_cards(void)
+{
+    uint32_t i;
+    char val[12];
+    const track_t *t = &trk[xy.on ? xy.trk : song.sel];
+    for (i = 0; i < 4u; i++) {
+        const char *lab = i == 0u ? "DOT X" : i == 1u ? "DOT Y" : i == 2u ? "ROTATE" : XY_ZNAME[xy.zsel];
+        int32_t g, v;
+        if (i == 0u)
+            v = (int32_t)(xy.x * 50.0f + 50.5f);
+        else if (i == 1u)
+            v = (int32_t)(xy.y * 50.0f + 50.5f);
+        else if (i == 2u)
+            v = (int32_t)xy.rot;
+        else
+            v = (int32_t)(xy_norm(t, XY_ZID[xy.zsel]) * 100.0f + 0.5f);
+        g = v * 10;
+        fmt_int(val, v);
+        draw_column(i, lab, val, "%", VAL(i), g, ICON_NONE);
+    }
+}
+/* the panel: the pad is a rectangle to the panel's edges (the fourteen ends: seven lines). Each line's 100 % end is a bright dot on the pad's edge (0 %: a faint one
+ * opposite) with its name and value just inside it, so rotating carries the texts round the edge. The dot is a ring that shrinks and
+ * fades as Z rises (further away), over a faint tunnel (frames shrinking towards the middle). The four knobs' values run along the foot. */
+static void xy_text_at(int32_t mx, int32_t my, int32_t edge, const char *b, uint16_t c, int32_t X0, int32_t W)
+{
+    int32_t w = text_w(&AF_X, b), tx, ty;
+    if (edge == 1) { tx = mx - 8 - w; ty = my - 4; }            /* right edge: the text inside, to the left */
+    else if (edge == 3) { tx = mx + 8; ty = my - 4; }           /* left edge */
+    else if (edge == 0) { tx = mx - w / 2; ty = my + 7; }       /* top edge: below the dot */
+    else { tx = mx - w / 2; ty = my - 15; }                     /* bottom edge: above it */
+    tx = tx < X0 + 2 ? X0 + 2 : tx > X0 + W - 2 - w ? X0 + W - 2 - w : tx;
+    cv_text(tx, ty, &AF_X, b, c);
+}
+static void xy_graph(void)
+{
+    const int32_t X0 = 4, Y0 = 3, W = 232, H = (int32_t)graph_h() - 20, M = 7;   /* (the pad, and the margin that keeps an edge dot whole) */
+    const track_t *t = &trk[xy.on ? xy.trk : song.sel];
+    int32_t px, py, cx = X0 + W / 2, cy = Y0 + H / 2, rx = W / 2 - M, ry = H / 2 - M, rr;
+    uint32_t i, k;
+    float z = xy_norm(t, XY_ZID[xy.zsel]);
+    char b[40];
+    uint16_t dc = xy.on ? T_K(0) : ux_mix(T_BG, T_K(0), 90);
+    /* the depth: a tunnel of SIX frames at fixed depths (1.15 .. 6.6) running down to the middle of the pad, seen from a camera that Z
+     * flies forward: a frame is drawn at 1 / (its depth - the camera), so turning Z up grows each frame towards the edge and it is gone
+     * once it reaches it, the outermost first. At Z 100 % the last one has passed: no squares are left (and a Z of 0 shows all six
+     * again). Four rails run from the corners to the middle (the tunnel's walls) */
+    {
+        static const float XD[6] = {1.15f, 1.6f, 2.3f, 3.3f, 4.7f, 6.7f};
+        float cam = z * (XD[5] - 1.0f);                  /* (at Z 100 % the last frame has reached the edge and stays: the floor) */
+        int32_t fxl = (int32_t)((float)rx * (1.0f / XD[5])), fyl = (int32_t)((float)ry * (1.0f / XD[5]));
+        uint16_t rc = ux_mix(T_SURF, T_TEXT, 16);
+        cv_line(cx - rx, cy - ry, cx - fxl, cy - fyl, rc);
+        cv_line(cx + rx, cy - ry, cx + fxl, cy - fyl, rc);
+        cv_line(cx + rx, cy + ry, cx + fxl, cy + fyl, rc);
+        cv_line(cx - rx, cy + ry, cx - fxl, cy + fyl, rc);
+        for (k = 0; k < 6u; k++) {
+            float d = XD[k] - cam, sc;
+            int32_t fx, fy;
+            uint16_t fc;
+            if (d < 0.999f)                             /* (it has passed the camera) */
+                continue;
+            sc = 1.0f / d;
+            fx = (int32_t)((float)rx * sc);
+            fy = (int32_t)((float)ry * sc);
+            fc = ux_mix(T_SURF, T_TEXT, 10 + (int32_t)(sc * 40.0f));
+            cv_line(cx - fx, cy - fy, cx + fx, cy - fy, fc);
+            cv_line(cx + fx, cy - fy, cx + fx, cy + fy, fc);
+            cv_line(cx + fx, cy + fy, cx - fx, cy + fy, fc);
+            cv_line(cx - fx, cy + fy, cx - fx, cy - fy, fc);
+        }
+    }
+    {   /* the floor: the cross in the middle grows as you go down to it, and Z's name is written on it, faint far away, clear at the bottom */
+        int32_t arm = 4 + (int32_t)(z * 8.0f + 0.5f);
+        const char *zn = XY_ZNAME[xy.zsel];
+        cv_line(cx - arm, cy, cx + arm, cy, ux_mix(T_SURF, T_TEXT, 60));
+        cv_line(cx, cy - arm, cx, cy + arm, ux_mix(T_SURF, T_TEXT, 60));
+        if (z > 0.15f)
+            cv_text_on(cx - HALF_UP(text_w(&AF_B, zn)), cy + arm + 4, &AF_B, zn, ux_mix(T_SURF, T_TEXT, (int32_t)(z * z * 85.0f)), T_SURF);
+    }
+    for (i = 0; i < XY_NL; i++) {                       /* each line's two ends on the pad's edge */
+        float c, sn, kk, m;
+        int32_t ex, ey, edge;
+        uint16_t col = i < 4u ? T_K(i) : i == 4u ? ux_mix(T_K(1), T_K(2), 50) : i == 5u ? ux_mix(T_K(3), T_K(0), 50) : ux_mix(T_K(0), T_K(2), 50);   /* (the lane colours' blends: no two lines alike) */
+        const char *nm = xy_lname(i);
+        xy_dir(i, &c, &sn, &kk);
+        m = kk > 0.0f ? 1.0f / kk : 1.0f;               /* (the ray from the centre meets the edge at (c, s) / max) */
+        ex = cx + (int32_t)(c * m * (float)rx);
+        ey = cy - (int32_t)(sn * m * (float)ry);
+        edge = fm_fabsf(c) >= fm_fabsf(sn) ? (c > 0.0f ? 1 : 3) : (sn > 0.0f ? 0 : 2);
+        og_node((cx - (ex - cx)) << 4, (cy - (ey - cy)) << 4, 4, ux_mix(T_SURF, col, 35));        /* 0 %: faint */
+        og_node(ex << 4, ey << 4, 5, col);                                                    /* 100 %: bright, its text inside it */
+        k = 0;
+        while (nm[k] && k < 8u) { b[k] = nm[k]; k++; }
+        b[k++] = ' ';
+        fmt_int(b + k, xy_pct(i));
+        xy_text_at(ex, ey, edge, b, col, X0, W);
+    }
+    px = cx + (int32_t)(xy.x * (float)rx);
+    py = cy - (int32_t)(xy.y * (float)ry);
+    rr = 7 - (int32_t)(z * 2.0f + 0.5f);                /* the dot: a little smaller as Z rises */
+    {
+        uint16_t c2 = xy.on ? ux_mix(T_SURF, T_K(0), 100 - (int32_t)(z * 20.0f)) : dc;
+        int32_t sh = (int32_t)(z * 6.0f + 0.5f);        /* its shadow on the floor: further from the dot as it goes deeper */
+        if (sh > 0)
+            og_node((px + sh) << 4, (py + sh) << 4, rr > 2 ? rr - 1 : 1, ux_mix(T_SURF, T_TEXT, 40));
+        og_node(px << 4, py << 4, rr, c2);
+        og_node(px << 4, py << 4, rr > 3 ? rr - 2 : 1, T_SURF);
+        og_node(px << 4, py << 4, 1, c2);
+    }
+    {   /* the four knobs' values along the foot; the Z parameter named beside its value as ROT is */
+        k = 0;
+        if (!xy.on) {
+            b[k++] = 'O'; b[k++] = 'F'; b[k++] = 'F'; b[k++] = ' '; b[k++] = ' ';
+        }
+        b[k++] = 'X'; b[k++] = ' ';
+        fmt_int(b + k, (int32_t)(xy.x * 50.0f + 50.5f));
+        k = str_len(b);
+        b[k++] = ' '; b[k++] = ' '; b[k++] = 'Y'; b[k++] = ' ';
+        fmt_int(b + k, (int32_t)(xy.y * 50.0f + 50.5f));
+        k = str_len(b);
+        b[k++] = ' '; b[k++] = ' '; b[k++] = 'R'; b[k++] = 'O'; b[k++] = 'T'; b[k++] = ' ';
+        fmt_int(b + k, (int32_t)xy.rot);
+        k = str_len(b);
+        b[k++] = ' '; b[k++] = ' ';
+        str_cpy(b + k, XY_ZNAME[xy.zsel], 8);
+        k = str_len(b);
+        b[k++] = ' ';
+        fmt_int(b + k, (int32_t)(z * 100.0f + 0.5f));
+        cv_text(X0 + W / 2 - text_w(&AF_X, b) / 2, (int32_t)graph_h() - 14, &AF_X, b, T_TEXT);
     }
 }

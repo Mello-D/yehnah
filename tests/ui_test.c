@@ -308,9 +308,9 @@ static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC
     frame();
 }
 #if FELUCCA_MACROPAGE
-#define HCNT(n) #n "/14"
+#define HCNT(n) #n "/15"
 #else
-#define HCNT(n) #n "/13"
+#define HCNT(n) #n "/14"
 #endif
 #define NAV_FIRST(sec) (ui.nmem[nav_key(sec)] = 0)           /* (2026-11-15) MENU > HOME PAGE: DANCE (the default) or TRACKS: power-on and the HOME button; a second tap does not flip */
 static int test_home_page(void)
@@ -9511,9 +9511,11 @@ static int test_lz_home(void)
     bad += check("HOME: DANCE TRACKS PRESETS then the IDEAS (TRACK, SOUND ..): SELECT in, PRESETS its GENRE, and back out", ok);
     sw.row = 0; sw.trow = 0;
     sel_turn( -1); frame();                                   /* it wraps: the chain's last, MIXER */
-    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(13));
+    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(14));
     sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(12));
+    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(13));
+    sel_turn( -1); frame();                                   /* XY (no rows) */
+    ok &= str_eq(cur_page()->title, "XYZ") && lz_count_is(HCNT(12));
     sel_turn( -1); frame();                                   /* (SWARM's and TRACE's rows: SELECT goes on at the first going left) */
     sw.row = 0; sw.trow = 0;
     ok &= str_eq(cur_page()->title, "TRACE") && lz_count_is(HCNT(11));
@@ -9537,12 +9539,14 @@ static int test_lz_home(void)
     sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "TRACE");
     sel_turn( 1); frame();
+    ok &= str_eq(cur_page()->title, "XYZ");
+    sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "SENDS");
     sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "MIXER");
     sel_turn( 1); frame();                                    /* .. and on round: DANCE */
     ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
-    bad += check("HOME: MORPH (SELECT scrolls its three morphs) SWARM TRACE SENDS MIXER are the chain's last five (MIXER one turn left of DANCE), SELECT round", ok);
+    bad += check("HOME: MORPH (SELECT scrolls its three morphs) SWARM TRACE XYZ SENDS MIXER are the chain's last six (MIXER one turn left of DANCE), SELECT round", ok);
     turn(EN_K1, 1); frame();                                  /* (DANCE: the HOME knobs) */
     sel_turn( 4); frame();                                    /* IDEAS 2 */
     ok = gen_on() && gen_page() == 1u;
@@ -10783,6 +10787,145 @@ static int test_swarm(void)
     return bad;
 }
 
+/* (2026-11-16) XY (swarm.c, ui_swarm.c): the page, the sound unchanged on entry for every engine, the lines, ROTATE, Z and its
+ * switch, OFF / CAPTURE, a hand edit, XY and SWARM never together */
+static int test_xy(void)
+{
+    int bad = 0, same = 1, in_range = 1;
+    uint32_t e, i;
+    track_t *t;
+    int16_t cut0, pan0, rev0;
+    ui_power_on();
+    memset(&sw, 0, sizeof sw);
+    memset(&xy, 0, sizeof xy);
+    bad += check("XY: HOME's chain has the page after TRACE, XY starts on it on the selected track, SWARM stays off",
+                 nav_put(SEC_HOME, "XYZ") != 0 && PAGES[ui.page].graph == GR_XY && sw.mode == 2u && xy.on && xy.trk == song.sel && !sw.on);
+    for (e = 0; e < NENGINES; e++) {                    /* the sound is as loaded on every engine, every line in range */
+        int16_t orig[XY_NL];
+        xy_off(0);
+        set_engine_of(TSEL, e);
+        t = TSEL;
+        xy_start();
+        for (i = 0; i < XY_NL; i++) orig[i] = xy.base[i];
+        for (i = 0; i < 30u; i++) { fm1_ms += 50u; swarm_tick(); }
+        for (i = 0; i < XY_NL; i++) {
+            const param_desc_t *pd = sw_desc(t, xy.id[i]);
+            same &= t->p[xy.id[i]] == orig[i];
+            in_range &= t->p[xy.id[i]] >= pd->min && t->p[xy.id[i]] <= pd->max;
+        }
+        xy.x = 1.0f; xy.y = -1.0f;                      /* a corner: still in range, and OFF puts it back */
+        for (i = 0; i < 30u; i++) { fm1_ms += 50u; swarm_tick(); }
+        for (i = 0; i < XY_NL; i++) {
+            const param_desc_t *pd = sw_desc(t, xy.id[i]);
+            in_range &= t->p[xy.id[i]] >= pd->min && t->p[xy.id[i]] <= pd->max;
+        }
+        xy_off(1);
+        for (i = 0; i < XY_NL; i++) same &= t->p[xy.id[i]] == orig[i];
+        for (i = 0; i < XY_NL; i++)                     /* (the seven are distinct parameters) */
+            for (uint32_t j = i + 1u; j < XY_NL; j++) in_range &= xy.id[i] != xy.id[j];
+    }
+    bad += check("XY: on every engine the sound is unchanged on entry and after OFF, the seven lines distinct and in range", same && in_range);
+    {   /* the pad is a rectangle: each line is 100 % where it meets the edge (and 0 % opposite) */
+        float lo = 1.0f, hi = 0.0f;
+        xy.rot = 0; xy.x = 1.0f; xy.y = 0.0f;
+        for (i = 0; i < XY_NL; i++) { float c, sn, k, f; xy_dir(i, &c, &sn, &k); xy.x = c / k; xy.y = sn / k; f = xy_proj(i); lo = f < lo ? f : lo; hi = f > hi ? f : hi; }
+        bad += check("XY: the dot at a line's edge end is that line's 100 % (every line, rotation 0)", lo > 0.999f && hi < 1.001f);
+        xy.rot = 7;
+        lo = 1.0f;
+        for (i = 0; i < XY_NL; i++) { float c, sn, k, f; xy_dir(i, &c, &sn, &k); xy.x = -c / k; xy.y = -sn / k; f = xy_proj(i); lo = f < lo ? f : lo; hi = f > hi ? f : hi; }
+        bad += check("XY: and the opposite end is 0 % (rotated)", lo < 0.001f);
+        xy.rot = 0; xy.x = xy.y = 0.0f;
+    }
+    {   /* each track remembers its dot: a track left and come back to has the dot where it was, a fresh one starts at its fit */
+        track_t *a, *b;
+        float ax, ay;
+        xy_off(1);
+        song.sel = 0;
+        a = &trk[0]; b = &trk[1];
+        a->p[P_FCUT] = 64; a->p[P_PAN] = 0;
+        b->p[P_FCUT] = 100; b->p[P_PAN] = 20;
+        memset(xym, 0, sizeof xym);
+        xy.rot = 0;
+        xy_start();
+        xy_knob(0, 6); xy_knob(1, -9); sw_run(2);
+        ax = xy.x; ay = xy.y;
+        {
+            int16_t cut_a = a->p[P_FCUT], pan_a = a->p[P_PAN];
+            song.sel = 1;
+            xy_follow();
+            bad += check("XY: another track: it follows, the first keeps its sound as the dot made it", xy.trk == 1u && a->p[P_FCUT] == cut_a && a->p[P_PAN] == pan_a);
+            bad += check("XY: a track not visited starts at the fit to its sound (the sound unchanged)", b->p[P_FCUT] == 100 && b->p[P_PAN] == 20 && (xy.x != ax || xy.y != ay));
+            xy_knob(0, -8); sw_run(2);
+            song.sel = 0;
+            xy_follow();
+            bad += check("XY: back on the first track: its dot is where it was left, its sound as it was", xy.trk == 0u && xy.x == (float)(int8_t)(ax * 127.0f + (ax < 0.0f ? -0.5f : 0.5f)) * (1.0f / 127.0f) && a->p[P_FCUT] == cut_a);
+            sw_run(3);
+            bad += check("XY: and it stays so (nothing jumps back to the start)", a->p[P_FCUT] == cut_a && a->p[P_PAN] == pan_a);
+            song.sel = 1;
+            xy_follow();
+            xy_off(1);
+            bad += check("XY: OFF on the second track puts ITS sound back", b->p[P_FCUT] == 100 && b->p[P_PAN] == 20 && !xym[1].have);
+        }
+        song.sel = 0;
+        xy.trk = 0;
+        xy_start();
+        xy_off(1);
+        memset(xym, 0, sizeof xym);
+    }
+    xy_off(0);
+    set_engine_of(TSEL, ENGI_ANALOG);
+    t = TSEL;
+    t->p[P_FCUT] = 64; t->p[P_PAN] = 0; t->p[P_REV] = 10;
+    xy_start();
+    cut0 = t->p[P_FCUT]; pan0 = t->p[P_PAN]; rev0 = t->p[P_REV];
+    xy_knob(0, 10); sw_run(2);                          /* right: PAN up, CUT (at right angles) stays */
+    bad += check("XY: knob 1 right raises PAN (its 100 % end is on the right) and, CUT's end being up and a little left, lowers CUT a little", t->p[P_PAN] > pan0 && t->p[P_FCUT] < cut0);
+    cut0 = t->p[P_FCUT];
+    pan0 = t->p[P_PAN];
+    xy_knob(1, 10); sw_run(2);                          /* up: CUT up, PAN (horizontal) stays */
+    bad += check("XY: knob 2 up raises CUT and leaves PAN (the horizontal line) alone", t->p[P_FCUT] > cut0 && t->p[P_PAN] == pan0);
+    cut0 = t->p[P_FCUT]; pan0 = t->p[P_PAN];
+    xy_knob(2, 25); sw_run(2);                          /* a quarter turn: PAN is now the vertical line, CUT the horizontal (mirrored) */
+    bad += check("XY: knob 3 rotates the line set (a quarter turn: the lines now cut the dot another way, the sound moves)",
+                 xy.rot == 25u && (t->p[P_PAN] != pan0 || t->p[P_FCUT] != cut0));
+    xy_knob(3, 12); sw_run(2);
+    bad += check("XY: knob 4 is Z: REV rises by two units a click, and nothing else moves", t->p[P_REV] == rev0 + 24);
+    swarm_act(1);
+    bad += check("XY: the HOME layer's second key (F3 REV, G3 DLY ..) switches Z to DLY (REV stays where it is)", xy.zsel == 1u && t->p[P_REV] == rev0 + 24);
+    t->p[P_DLY] = 0;
+    xy_knob(3, 5); sw_run(1);
+    bad += check("XY: knob 4 now moves DLY (two units a click)", t->p[P_DLY] == 10);
+    swarm_act(3);
+    bad += check("XY: the fourth key is LEVEL, the first REV again", xy.zsel == 3u && (swarm_act(0), xy.zsel == 0u));
+    t->p[P_DIST] = (int16_t)(t->p[P_DIST] > 60 ? t->p[P_DIST] - 5 : t->p[P_DIST] + 5);   /* DIST changed by hand: the new anchor */
+    {
+        int16_t d = t->p[P_DIST];
+        sw_run(5);
+        bad += check("XY: a parameter changed by hand is kept (the line's new anchor)", t->p[P_DIST] == d);
+    }
+    xy_off(1);
+    bad += check("XY: OFF puts every line and Z back as they were, except the one set by hand",
+                 t->p[P_FCUT] == 64 && t->p[P_PAN] == 0 && t->p[P_REV] == 10);
+    t->p[P_FCUT] = 64;
+    xy.rot = 0;
+    xy_start();
+    xy_knob(1, 8); sw_run(3);
+    cut0 = t->p[P_FCUT];
+    swarm_act(SWA_X5);
+    sw_run(3);
+    bad += check("XY: CAPTURE keeps the sound and stops", !xy.on && t->p[P_FCUT] == cut0 && cut0 != 64);
+    t->p[P_FCUT] = 64; t->p[P_PAN] = 0;
+    xy_start();
+    xy_knob(0, 6); sw_run(2);
+    bad += check("XY: the page's SWARM neighbour turns XY off and the sound back",
+                 nav_put(SEC_HOME, "SWARM") != 0 && !xy.on && t->p[P_PAN] == 0 && sw.mode == 0u && sw.on);
+    bad += check("XY: and back on XY, SWARM stands (sound as it was) and XY starts", nav_put(SEC_HOME, "XYZ") != 0 && !sw.on && xy.on);
+    rev0 = 0;
+    for (i = 0; i < XY_NL; i++) rev0 |= (xy.id[i] >= P_E0) ? 1 : 0;
+    bad += check("XY: the engine's own two lines are its E slots (here ANALOG's)", xy.id[4] >= P_E0 && xy.id[5] >= P_E0 && rev0);
+    xy_off(1);
+    return bad;
+}
 /* (2026-11-15) a latched arp: a key it already plays stops it, any other key is a new chord */
 /* (2026-11-15) the HOME layer: HOME held, the keys are SWARM's actions on any page (a tap is still HOME) */
 static int test_home_layer(void)
@@ -11249,6 +11392,7 @@ int main(void)
     bad += test_lz_reach();
     bad += test_nav_tasks();
     bad += test_swarm();
+    bad += test_xy();
     bad += test_trace();
     bad += test_summary();
     bad += test_nav_memory();

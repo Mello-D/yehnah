@@ -87,7 +87,7 @@ HOME is a row of pages, and you choose which one is **your home screen**: **DANC
 GLO > DEVICE > HOME PAGE. The unit opens on it at power-on and the HOME button returns to it. **DANCE** shows the selected
 track as a small robot that dances to what the track plays, on a city street at dusk or by night, with the track's four
 knobs under it (the engine decides which four). The pages of HOME are tabs along the foot:
-**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, **MORPH** (three morphs on one page), **SWARM**, **TRACE**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
+**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, **MORPH** (three morphs on one page), **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
 between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the last two.
 
 <table>
@@ -98,6 +98,9 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 <tr>
 <td align="center"><img src="docs/img/swarm.png" width="300" alt="SWARM: four coloured dots moving across the screen"><br><sub>SWARM: four dots wander, each moving two parameters of the engine</sub></td>
 <td align="center"><img src="docs/img/trace.png" width="300" alt="TRACE: four dots on four shapes"><br><sub>TRACE: turn a knob to walk a dot round its shape</sub></td>
+<td align="center"><img src="docs/img/xy.png" width="300" alt="XYZ: one dot on a pad, a parameter at every edge dot"><br><sub>XYZ: one dot, seven invisible lines, a Z knob</sub></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/img/tracks.png" width="300" alt="TRACKS: a row for every track"><br><sub>TRACKS: every track's sound, length, key and pattern at a glance</sub></td>
 <td align="center"><img src="docs/img/morph.png" width="300" alt="MORPH: three morphs"><br><sub>MORPH: three pairs of tracks blended at once; SELECT scrolls them</sub></td>
 </tr>
@@ -114,6 +117,9 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 - **TRACE.** SWARM's hands-on twin: each dot rides a shape (33 of them: polygons, stars, a lemniscate, a triquetra, a Mobius
   strip that takes two laps to come back, eight constellations as stick figures; each dot stays in its own quarter of the screen) and you turn its knob to walk the sound
   round it. A held-HOME key shuffles every shape, or just the one you last turned.
+- **XYZ.** A pad you play with one dot: knobs 1 and 2 move it, and seven invisible lines through the centre each carry a parameter
+  (PAN, DIST, RES, CUT, PHASER and the engine's own two) that follows where the dot falls on it. Knob 3 rotates the lines, knob 4 is a
+  third axis, drawn as a zoom down a tunnel (REV, or DLY, CHORUS or LEVEL from the HOME layer's keys). The sound is unchanged when the page opens.
 - **IDEAS.** The five IDEAS tabs throw ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
   genre's progression, voicing and figures, a rhythm cell, a role: bass, chords, melody or arp), **SOUND** picks a preset
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
@@ -307,7 +313,7 @@ and its pages open. Five buttons have a layer:
 - **SAVE:** CLEAR the pattern or the song, DELETE a song row, ERASE a section or a project, start a NEW project, and SAVE
   or ERASE the track's user sound. Each asks first.
 - **SEQ:** REVERSE and SHIFT the pattern, CLR STEP, and on a drum track BEAT and the lane tools (clear, reverse, fill).
-- **HOME:** SWARM's and TRACE's actions on any page: FREEZE, REVERSE (TRACE: RANDOM), THROW (TRACE: REROLL), CAPTURE and on / off.
+- **HOME:** SWARM's, TRACE's and XYZ's actions on any page: FREEZE, REVERSE (TRACE: RANDOM), THROW (TRACE: REROLL), CAPTURE and on / off.
 
 Hold **EDIT** or **GLO** and a list menu opens and stays open: EDIT's is the sound's named parameters, GLO's the four
 settings lists.

@@ -637,7 +637,7 @@ enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_
        GR_SLCR, GR_MOD, GR_SONG, GR_TOOLS, GR_ERASE, GR_SEDIT, GR_CHANCE, GR_MOTION, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
        GR_COMP, GR_MORPH, GR_DXIMG, GR_SHAPE, GR_PUNCH, GR_BUSES, GR_STAGE,
-       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL, GR_SWARM, GR_TRACE, GR_SUMMARY };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
+       GR_PROG, GR_BLEND, GR_SETS, GR_PLIST, GR_RLIST, GR_FXALL, GR_SWARM, GR_TRACE, GR_XY, GR_SUMMARY };   /* (GR_STAGE: LENTE's ENV > STAGE; GR_PUNCH: FX > PUNCH;
                                                          * GR_COMP: no page uses it now, SEQ > SPICE draws GR_ROLL; GR_FMOP*: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
@@ -876,11 +876,12 @@ static const page_t PAGES[] = {
     {"FX ALL", FAM_FX, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) every effect's rows on one scrollable page (ui_fxall.c) */
     {"SWARM", FAM_SAVE, SC_GLOBAL, GR_SWARM, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) HOME's four moving dots (swarm.c, ui_swarm.c): K1..K4 the dots, SELECT the row */
     {"TRACE", FAM_SAVE, SC_GLOBAL, GR_TRACE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) SWARM's second page: the dots walk shapes the knobs steer (swarm.c) */
+    {"XYZ", FAM_SAVE, SC_GLOBAL, GR_XY, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-16) one dot, seven invisible lines through its pad, a Z knob (swarm.c XY) */
     {"TRACKS", FAM_SAVE, SC_GLOBAL, GR_SUMMARY, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) HOME's summary of the tracks (ui_summary.c); the old TRACKS page is DANCE */
     {"MORPH 3", FAM_SAVE, SC_GLOBAL, GR_BLEND, {G_BL3A, G_BL3B, G_BL3BLEND, G_BL3MOVE}},   /* (2026-11-15) the 2nd and 3rd morph (the same page, their lane) */
     {"MORPH 2", FAM_SAVE, SC_GLOBAL, GR_BLEND, {G_BL2A, G_BL2B, G_BL2BLEND, G_BL2MOVE}},
 };
-#define GR_IS_SWARM(g) ((g) == GR_SWARM || (g) == GR_TRACE)   /* (SWARM's two pages) */
+#define GR_IS_SWARM(g) ((g) == GR_SWARM || (g) == GR_TRACE || (g) == GR_XY)   /* (SWARM's two pages) */
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define GTR_PAGE(pg) ((pg)->id[2] == P_GSET)
 #define GTU_PAGE(pg) ((pg)->id[0] == P_GTUN)          /* (2026-11-10) SCL > TUNE */          /* (2026-11-10) SCL > GUITAR: KNOB 2 GENRE, KNOB 3 STYLE */

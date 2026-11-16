@@ -577,7 +577,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
        S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_WHEEL, S_V6_WHEEL_FAST, S_V6_WHEEL_HOME, S_V6_WHEEL_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_V6_ANIMAL_FULL, S_HOME_FACES,
-       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_HM_GLO, S_HM_GLO_SYS, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
+       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_HM_GLO, S_HM_GLO_SYS, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_XY, S_XY_ACT, S_XY_R1, S_XY_R2, S_XY_Z0, S_XY_Z1, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
        S_TOAST_ENV, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH,
        S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
@@ -613,7 +613,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
     "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_wheel", "v6_wheel_fast", "v6_wheel_home", "v6_wheel_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full", "v6_voice_full", "v6_animal_full", "home_faces",
-    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "hm_glo", "hm_glo_sys", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
+    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "hm_glo", "hm_glo_sys", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "xy", "xy_layer", "xy_r1", "xy_r2", "xy_z0", "xy_z1", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
     "toast_env", "toast_motion", "toast_motion_locks", "toast_punch",
     "toast_pattern", "toast_fm6_op", "toast_analog"};
 
@@ -1432,6 +1432,25 @@ static void setup(int s)
             swarm_tick();
         }
         if (s == S_TRACE_ACT) {
+            ui.layer = LAYER_HOME;
+            ui.lylv = 0;
+        }
+        ui.msg_t = 0;
+        break;
+    }
+    case S_XY: case S_XY_ACT: case S_XY_R1: case S_XY_R2: case S_XY_Z0: case S_XY_Z1: {                         /* (2026-11-16) HOME > XY: the dot moved off the middle, Z (REV) turned up */
+        eng(ENGI_JUNO);
+        memset(&sw, 0, sizeof sw);
+        memset(&xy, 0, sizeof xy);
+        trk[song.sel].p[P_FCUT] = 90; trk[song.sel].p[P_PAN] = 0; trk[song.sel].p[P_DIST] = 20;
+        nav_scene(SEC_HOME, "XYZ");
+        xy_knob(0, 14);
+        xy_knob(1, 9);
+        xy_knob(2, s == S_XY_R1 ? 4 : s == S_XY_R2 ? 40 : 12);
+        xy_knob(3, s == S_XY_R1 ? 100 : s == S_XY_Z0 ? -40 : s == S_XY_Z1 ? 127 : 40);
+        if (s == S_XY_R2) { xy_knob(0, -30); xy_knob(1, -20); }
+        swarm_tick();
+        if (s == S_XY_ACT) {
             ui.layer = LAYER_HOME;
             ui.lylv = 0;
         }
