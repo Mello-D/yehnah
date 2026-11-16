@@ -19,7 +19,7 @@
   <a href="https://github.com/Mello-D/yehnah/issues">Report a bug</a>
 </p>
 
-![Yehnah on the FM-1's screen: HOME, the sound list, the piano roll, the drum grid, the HARP chord keys and the mixer](docs/img/hero.png)
+![Yehnah on the FM-1's screen: the HOME robot, TRACKS, the sound list, the HARP chord keys, an LFO and the XYZ pad](docs/img/hero.png)
 
 Yehnah turns the FM-1 into a six-track instrument: twenty-five synthesis engines with over 700 factory sounds, drum
 machines that morph between two sides of a kit, a 64-step sequencer with chords and parameter locks, songs made of

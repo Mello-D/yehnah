@@ -38,6 +38,6 @@ SINGLE = {   # file: render name
 }
 for fn, n in SINGLE.items():
     save(shot(n), fn + ".png")
-grid(["home", "presets", "roll_chords", "drum", "key_harp", "mixer"], 3, "hero.png")
+grid(["home", "tracks", "presets", "key_harp", "lfo", "xy"], 3, "hero.png")
 grid(["home"] * 9, 5, "themes.png", pals=["VAP DK", "VAP LT", "NOIRE", "DUSK", "CREAM", "POP", "YELLOW", "RED", "PURPLE"], scale=1)   # (the nine palettes the firmware has: tools/gen_ui_palettes.py)
 print(len(list(OUT.glob("*.png"))), "images in", OUT)
