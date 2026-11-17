@@ -1180,11 +1180,15 @@ static void draw_cards(void)
         return;
     }
     if (cur_page()->graph == GR_BROWSE) {                /* (chord-harp fork) KNOB 1 the TYPE; the numbers by the list */
-        draw_column(0, "TYPE", PTYPE_NAME[ptype_sel % (PT_USER + 1u)], "", VAL(0u), pick_of(PT_USER + 1u, ptype_pos(ptype_sel)), ICON_NONE);
+        char lt[2] = {0, 0}, tot;
+        static const char *const SORTN[PB_N] = {"ENGINE", "TYPE", "A-Z"};
+        draw_column(0, "TYPE", PTYPE_NAME[ptype_sel % PT_N], "", VAL(0u), pick_of(PT_N, ptype_pos(ptype_sel)), ICON_NONE);
         draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), pick_of(NENG_SHOWN, eng_rank(TSEL->eng_req)),
                     engine_icon(ENGINES[TSEL->eng_req]->name));   /* (2026-11-03, the user's: all four their grids) */
-        draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), pick_of(2u, (uint32_t)preset_favorite()), ICON_X_STAR);
-        draw_column(3, "LIST", favorites.filter ? "FAV" : "ALL", "", VAL(3u), pick_of(2u, favorites.filter), ICON_X_FOLDER);
+        lt[0] = (char)pb_letter();
+        tot = (char)(lt[0] >= 'A' && lt[0] <= 'Z' ? lt[0] - 'A' : 26);
+        draw_column(2, "LETTER", lt, "", VAL(2u), pick_of(27u, (uint32_t)tot), ICON_NONE);
+        draw_column(3, "SORT", SORTN[pb_sort()], "", VAL(3u), pick_of(PB_N, pb_sort()), ICON_X_FOLDER);
         return;
     }
     if (cur_page()->graph == GR_SLOTS) {                 /* (0.6.12) PROJECT, SECT A-D, then LOAD and SAVE */
@@ -1528,18 +1532,21 @@ static void draw_columns(void)
 #define SPL_NS 4                                    /* a font pixel's size */
 #define SPL_CY 74                                   /* the name's middle (its left end lower, its right higher) */
 static uint8_t spl_anim;                            /* main.c: 1 = the scene moves (splash_write) */
-/* the name's font pixel under screen x y (turned 30 degrees about its middle, 120 SPL_CY): its SNAKE order + 1 when it
- * is lit and written (of n), else 0 */
-static int32_t splash_at(int32_t x, int32_t y, int32_t n)
+/* the name's font pixel under a point of the turned name (u, v in Q16 font pixels, + 64 so a shift floors): its SNAKE order + 1,
+ * 0 none. (2026-11-17, the boot lag) The mapping from the screen is linear: a pixel's u, v are walked along x with whole steps
+ * (0.8660254 / 4 and 0.5 / 4 in Q16), and its neighbours (the cyan edge, the shadow) are fixed offsets from them, not a float
+ * rotation of each (no row cache: the RAM is full) */
+#define SPL_DX_U 14189                              /* the step along x in u (cos 30 / SPL_NS) */
+#define SPL_DX_V 8192                               /* .. and in v (sin 30 / SPL_NS) */
+static int32_t splash_uv(int32_t u, int32_t v)
 {
-    float px = (float)x + 0.5f - 120.0f, py = (float)y + 0.5f - (float)SPL_CY;
-    float u = (px * 0.8660254f - py * 0.5f) / (float)SPL_NS + (float)(NAME_N * 4), v = (px * 0.5f + py * 0.8660254f) / (float)SPL_NS + 4.0f;
-    int32_t gx = (int32_t)(u + 8.0f) - 8, gy = (int32_t)(v + 8.0f) - 8, o;
+    int32_t gx = (u >> 16) - 64, gy = (v >> 16) - 64;
     if (gx < 0 || gx >= NAME_N * 8 || gy < 0 || gy >= 8 || !(NAME_G[(gx >> 3) * 8 + gy] & (128 >> (gx & 7))))
         return 0;
-    o = gx * 8 + (gx & 1 ? 7 - gy : gy);
-    return o < n ? o + 1 : 0;
+    return gx * 8 + (gx & 1 ? 7 - gy : gy) + 1;
 }
+static int32_t splash_lit(int32_t u, int32_t v, int32_t n) { int32_t f = splash_uv(u, v); return f && f <= n; }
+#define SPL_LIT(u, v, n) splash_lit(u, v, n)
 static void splash_name(uint32_t ms)                /* the name, ms after the start (in the band cv_oy picks) */
 {
     static const uint32_t FILL[8] = {0xffb4e0, 0xff8ccc, 0xff64b4, 0xff3c9c, 0xf02c8c, 0xe02080, 0xc81870, 0xb01464};
@@ -1552,19 +1559,27 @@ static void splash_name(uint32_t ms)                /* the name, ms after the st
         }
     for (y = SPL_CY - 64; y < SPL_CY + 66; y++) {
         uint16_t c0 = 0;
-        int32_t x0 = -1;
+        int32_t x0 = -1, u, v;
+        float px, py;
         if (y < -cv_oy || y >= -cv_oy + SPL_BAND)
             continue;
-        for (x = 26; x <= 214; x++) {                   /* (runs of a colour: 1 the cyan edge, 2 the shadow) */
-            int32_t f = x < 214 ? splash_at(x, y, n) : 0;
+        px = 26.0f + 0.5f - 120.0f, py = (float)y + 0.5f - (float)SPL_CY;
+        u = (int32_t)(((px * 0.8660254f - py * 0.5f) / (float)SPL_NS + (float)(NAME_N * 4) + 64.0f) * 65536.0f);
+        v = (int32_t)(((px * 0.5f + py * 0.8660254f) / (float)SPL_NS + 4.0f + 64.0f) * 65536.0f);
+        for (x = 26; x <= 214; x++, u += SPL_DX_U, v += SPL_DX_V) {   /* (runs of a colour: 1 the cyan edge, 2 the shadow) */
+            int32_t f = x < 214 ? splash_uv(u, v) : 0;
             uint16_t c = 0;
+            if (f > n)
+                f = 0;                                  /* (not written yet) */
             if (x < 214) {
                 if (f) {
                     int32_t gx = (f - 1) >> 3, gy = gx & 1 ? 7 - ((f - 1) & 7) : (f - 1) & 7;
                     c = rb_565(f - 1 == pen ? 0xffffff : FILL[gy]);
-                } else if (splash_at(x - 1, y, n) || splash_at(x + 1, y, n) || splash_at(x, y - 1, n) || splash_at(x, y + 1, n))
+                } else if (SPL_LIT(u - SPL_DX_U, v - SPL_DX_V, n) || SPL_LIT(u + SPL_DX_U, v + SPL_DX_V, n) ||
+                           SPL_LIT(u + SPL_DX_V, v - SPL_DX_U, n) ||    /* (y - 1) */
+                           SPL_LIT(u - SPL_DX_V, v + SPL_DX_U, n))      /* (y + 1) */
                     c = rb_565(0x40f0ff);
-                else if (splash_at(x - 2, y - 3, n))
+                else if (SPL_LIT(u - 2 * SPL_DX_U + 3 * SPL_DX_V, v - 2 * SPL_DX_V - 3 * SPL_DX_U, n))   /* (x - 2, y - 3) */
                     c = rb_565(0x2a0838);
             }
             if (c != c0 || x == 214) {

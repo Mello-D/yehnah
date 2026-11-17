@@ -48,15 +48,15 @@ enum { HOME_MACRO = 3, HOME_IDEA = 4 };
 #else
 enum { HOME_MACRO = 99, HOME_IDEA = 3 };               /* (2026-11-06) MACRO hidden: never an entry */
 #endif
-#define HOME_NIDEA 5u                                   /* IDEAS: five pages, in the middle of the chain (2026-11-15; they were the last) */
+#define HOME_NIDEA 1u                                   /* IDEAS: one entry (its five sub-pages: ideas.c), in the middle of the chain */
 /* (2026-11-15, the user's order: what SELECT turned left from TRACKS reaches first is the last) TRACKS, PRESETS, the IDEAS, then MORPH,
  * SWARM, TRACE, SENDS and MIXER (MIXER one turn left of TRACKS) */
 static const nv_t CE_HOME[] = {NV(0, "DANCE", 0, 0), NV("TRACKS", 0, 0, 0), NV("PRESETS", 0, 1, SV_SOUND),
 #if FELUCCA_MACROPAGE
                                NV(0, "MACRO", 2, 1),
 #endif
-                               NV(0, "IDEA TRK", 3, 2), NV(0, "IDEA SND", 3, 2), NV(0, "IDEA LFO", 3, 2),   /* (chord-harp fork) */
-                               NV(0, "IDEA FX", 3, 2), NV(0, "IDEA TEX", 3, 2),   /* IDEAS (ideas.c; was Yehnah's GEN) */
+                               NV(0, "IDEAS", 3, 2),   /* (2026-11-17, the user's) IDEAS: one page, its TRACK SOUND LFO FX TEXTURE sub-pages
+                                                         * under SELECT, the header chip at the foot of the panel (ideas.c gen_panel, as SWARM's rows) */
                                NV("MORPH", 0, 2, SV_SOUND), NV("SWARM", 0, 2, 0), NV("TRACE", 0, 2, 0), NV("XYZ", 0, 2, 0),
                                NV("SENDS", 0, 2, 0), NV("MIXER", 0, 2, 0)};
 static const nv_t CE_SYN[] = {NV("PATCH", "SOUND", 0, 0)};   /* (2026-11-11: SOUND, the PATCH entry of PAGES, replaces EDIT 1 / 2; its rows
@@ -74,8 +74,8 @@ static const nv_t CE_FX[] = {NV("FX ALL", "FX", 0, FXL_TRACK)};   /* (2026-11-13
 static const nv_t CE_GLO[] = {NV("GLO", 0, 0, 1)};   /* (2026-11-13: MAIN DEVICE CONTROL SYSTEM are GLO's rows) */
 static const nv_t CE_ENV[] = {NV("ENV LIST", "ENV", 1, 1)};   /* (this track's; STAGE is a row of ENV LIST; 2026-11-15: ALL ENV and ALL DEST, the six tracks' pictures, gone) */
 static const nv_t CE_LFO[] = {NV("LFO LIST", "LFO", 1, 1)};   /* (MSEQ and MOD are rows of LFO LIST now) */
-static const nv_t CE_SCL[] = {NV("SCL", "SCALE", 0, 0), NV("CHORD", 0, 1, 1), NV("HARP", 0, 2, 1), NV("OMNI", 0, 3, 1),
-                              NV("PROG", 0, 4, 1), NV("GUITAR", 0, 5, 1), NV("TUNE", 0, 6, 1)};   /* (2026-11-10) GUITAR: guitchordi's chord styles */
+static const nv_t CE_SCL[] = {NV("HARP", 0, 0, 1), NV("OMNI", 0, 1, 1), NV("GUITAR", 0, 2, 1), NV("CHORD", 0, 3, 1),
+                              NV("SCL", "SCALE", 4, 0), NV("TUNE", 0, 5, 1), NV("PROG", 0, 6, 1)};   /* (2026-11-17, the user's order) HARP OMNI GUITAR CHORD SCALE TUNE PROG */
 static const nv_t CE_ARP[] = {NV("ARP LIST", "ARP", 0, 2)};
 static const nv_t CE_SAVE[] = {NV("PROJECT", 0, 2, SV_LIB), NV("ARRANGE", "STRUCT", 1, SV_PROJ),   /* (2026-11-06: TOOLS, ERASE, USER went to the
                                                          * SAVE held layer; PRESETS, MORPH are HOME's) */
@@ -146,7 +146,7 @@ static uint32_t nav_cur(void)
     uint32_t sec = nav_sec(), key = nav_key(sec), e = nav_mem(key), k, pass, s;
     const ch_t *c = &CHAINS[key];
     if (sec == SEC_HOME && (ui.home || gen_on()))
-        return gen_on() ? HOME_IDEA + gen_page() : ui.hlv && FELUCCA_MACROPAGE ? HOME_MACRO : 0u;   /* (hidden: a forced level 1 reads as TRACKS) */
+        return gen_on() ? HOME_IDEA : ui.hlv && FELUCCA_MACROPAGE ? HOME_MACRO : 0u;   /* (hidden: a forced level 1 reads as TRACKS) */
     s = ((((ui.page * 31u + key) * 131u + e) * 257u + TSEL->eng_req) * 8191u + (uint32_t)(uint16_t)TSEL->p[P_E1]) * 7u +
         sys_load + 1u;
     if (s == ui.nav_sig)
@@ -212,7 +212,6 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
             }
-            gen_page_put(e - HOME_IDEA);
         } else {                                        /* TRACKS (level 0), MACRO (ROUTES' screen: level 1's set 1) */
             if (gen_on())
                 ui.confirm = 0;

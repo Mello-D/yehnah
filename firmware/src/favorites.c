@@ -8,6 +8,7 @@ typedef struct {
     uint32_t user, filter;
 } favorites_t;
 static favorites_t favorites;
+static uint8_t favorites_gen;   /* (2026-11-17) bumped when a favourite or a user preset changes: PRESETS' sorted list is built again (ui.c pb_build) */
 /* (chord-harp fork) a factory preset's bit: engines 0..15 in their rows' bytes 0..15, engines 16..30 (OMNI ..) in rows
  * 0..14's bytes 16..31, presets 0..127 each (no engine had more: those bytes were never set; row 15's 19.. are settings) */
 static uint8_t *favorite_byte(uint32_t engine, uint32_t preset)
@@ -29,6 +30,7 @@ static int favorite_set(uint32_t engine, uint32_t preset, int on)
     if (engine == NENGINES ? preset >= UP_SLOTS : !b)
         return 0;
     if (favorite_has(engine, preset) == !!on) return 0;
+    favorites_gen++;
     if (engine == NENGINES) {
         if (on) favorites.user |= 1u << preset;
         else favorites.user &= ~(1u << preset);

@@ -335,7 +335,7 @@ static void graph_lz_presets(void)
     cv_text_on(136, CAP_IN(X, LP_HDR), &AF_X, "TYPE", T_MID, T_RAISE);
     cv_text_r(232, CAP_IN(X, LP_HDR), &AF_X, "ENGINE", T_MID, T_RAISE);
     if (!total) {
-        cv_text_in(4, LP_HDR + 52, 232, &AF_X, favorites.filter ? "NO FAVORITES" : "NO SOUNDS", T_MID, T_SURF);
+        cv_text_in(4, LP_HDR + 52, 232, &AF_X, ptype_sel == PT_FAV ? "NO FAVORITES" : "NO SOUNDS", T_MID, T_SURF);
         return;
     }
     first = cur >= total || cur < 3u ? 0u : cur - 3u;   /* (the sound loaded not in the list: its start) */

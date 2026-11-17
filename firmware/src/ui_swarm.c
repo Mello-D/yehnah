@@ -23,10 +23,21 @@ static void swarm_select(int32_t s)
         sw.row = (uint8_t)r;
     ui.force = 1;
 }
+/* (2026-11-17) IDEAS: SELECT scrolls TRACK SOUND LFO FX TEXTURE, then (the ends) goes on along the chain */
+static void idea_select(int32_t s)
+{
+    int32_t p = (int32_t)gen_page() + s;
+    if (p < 0 || p >= (int32_t)IX_N) {                  /* (the detents past the end go on along the chain) */
+        gen_page_put(p < 0 ? 0u : IX_N - 1u);
+        nav_select(p < 0 ? p : p - ((int32_t)IX_N - 1));
+        return;
+    }
+    gen_page_put((uint32_t)p);
+}
 /* the HOME layer's actions (ui_layer.c): can it be done now, is it on now, do it */
 static int swarm_act_ok(uint32_t a)
 {
-    if (sw.mode == 2u)                                  /* XY: Z = REV DLY CHORUS LEVEL (F3 .. B3), XY on / off (C4), CAPTURE, RE-FIT */
+    if (sw.mode == 2u)                                  /* XY: Z = REV DLY CUT LEVEL (F3 .. B3), XY on / off (C4), CAPTURE, RE-FIT */
         return a < XY_NZ || a == SWA_ONOFF ? 1 : a <= SWA_X6 ? xy.on : 0;
     if (a >= SWA_X5)
         return 0;

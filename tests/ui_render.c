@@ -1035,7 +1035,7 @@ static void setup(int s)
                                                          * BEFORE / NOW (was 0.8.5's DICE dialog) */
         uint32_t k = s == S_DLG_DICE_SOUND ? IX_SOUND : s == S_DLG_DICE_SEQ ? IX_TRACK : IX_FX;
         go_home(); song.playing = 0;
-        nav_go(SEC_HOME, HOME_IDEA + k, 1);
+        ideas_go(k);
         dk_keep(k);
         if (k == IX_SOUND) { TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] = 100; TSEL->p[ENGINES[TSEL->eng_req]->knob[2]] = 5; }
         else if (k == IX_TRACK) for (uint32_t i = 0; i < 16u; i += 3u) { TSEL->step[i].time = ST_NOTE; TSEL->step[i].n = 1; TSEL->step[i].note[0] = (uint8_t)(48 + i); }
@@ -1078,8 +1078,8 @@ static void setup(int s)
         go_list("ARP LIST", s == S_KEY_ARP ? 0 : 1);
         break;           /* (0.8.5) LFO . MOD's lens: MSEQ 2 */
     case S_ED_OPERATOR: eng(ENGI_FM6); go_title("OPERATOR"); break;
-    case S_GEN_EXPLORE: nav_go(SEC_HOME, HOME_IDEA + IX_FX, 1); break;   /* (chord-harp fork) IDEAS > FX, nothing thrown */
-    case S_GEN_LEAD: nav_go(SEC_HOME, HOME_IDEA + IX_LFO, 1); break;      /* IDEAS > LFO */
+    case S_GEN_EXPLORE: ideas_go(IX_FX); break;   /* (chord-harp fork) IDEAS > FX, nothing thrown */
+    case S_GEN_LEAD: ideas_go(IX_LFO); break;      /* IDEAS > LFO */
     case S_MIXER_PAN:                            /* PAN just turned, the ends of each knob, OFF, armed while stopped */
         go_page(GR_TRK); song.playing = 0; song.sel = 1;
         trk[0].p[P_LEVEL] = 127; trk[1].p[P_LEVEL] = 0; trk[2].p[P_LEVEL] = 1; trk[3].p[P_LEVEL] = 104;
@@ -1162,8 +1162,8 @@ static void setup(int s)
     case S_CONFIRM_USER: song.playing = 0; up_store(6, "A VERY LONG SOUND NAME"); ui.confirm = CF_OVR_USER; ui.confirm_trk = 6; break;
     case S_CONFIRM_MOTION: ui.confirm = CF_CLEAR_MOTION; ui.confirm_trk = 3; break;
     case S_CONFIRM_ERASE: song.playing = 0; up_store(6, "A VERY LONG SOUND NAME"); ui.confirm = CF_ERASE_USER; ui.confirm_trk = 6; break;
-    case S_GEN: nav_go(SEC_HOME, HOME_IDEA + IX_TRACK, 1); ix.hot = 0; ix.genre = 1; ix.rhythm = 2; break;   /* (chord-harp fork) IDEAS > TRACK */
-    case S_GEN_PARTS: nav_go(SEC_HOME, HOME_IDEA + IX_SOUND, 1); ix.hot = 1; break;   /* IDEAS > SOUND */
+    case S_GEN: ideas_go(IX_TRACK); ix.hot = 0; ix.genre = 1; ix.rhythm = 2; break;   /* (chord-harp fork) IDEAS > TRACK */
+    case S_GEN_PARTS: ideas_go(IX_SOUND); ix.hot = 1; break;   /* IDEAS > SOUND */
     case S_ABOUT: ui.menu = 2; ui.menu_scroll = 0; break;
     case S_ABOUT_REC: ui.menu = 2; ui.menu_scroll = 0; song.rec = 1; break;          /* the REC mark beside OCT- BACK */
     case S_ABOUT_CREDITS: ui.menu = 2; ui.menu_scroll = 360; break;

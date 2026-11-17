@@ -1371,21 +1371,24 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (pg->graph == GR_BROWSE) {                         /* KNOB 1: the TYPE (chord-harp fork: PRESETS alone browses),
                                                          * KNOB 2: the next / previous engine */
         if (slot == 0u) {
-            uint32_t ty = PTYPE_AZ[wrap_add((int32_t)ptype_pos(ptype_sel), steps, (int32_t)PT_USER + 1)];   /* (A to Z) */
+            uint32_t ty = PTYPE_AZ[wrap_add((int32_t)ptype_pos(ptype_sel), steps, (int32_t)PT_N)];   /* (A to Z) */
             if (ty != ptype_sel) {
                 uint32_t total;
                 ptype_sel = (uint8_t)ty;
                 ui.force = 1;
                 preset_pos(&total);
                 if (total)
-                    preset_go(0);                       /* (the user: the type's first sound, loaded) */
+                    pb_load_first();                    /* (the user: the type's first sound, loaded) */
             }
         } else if (slot == 1u) {
             preset_engine_step(steps);
-        } else if (slot == 2u) {
-            preset_mark(!preset_favorite());            /* (2026-11-03: a pick of two, each detent the other) */
-        } else if (slot == 3u && steps) {
-            favorites.filter = !favorites.filter;
+        } else if (slot == 2u && steps) {               /* (2026-11-17, the user's) KNOB 3: the next / previous first letter */
+            pb_mode = pb_sort();
+            pb_run_step(steps, pb_key_of);
+            ui.force = 1;
+        } else if (slot == 3u && steps) {               /* KNOB 4: SORT, ENGINE TYPE A-Z (saved) */
+            uint32_t m = (uint32_t)wrap_add((int32_t)pb_sort(), steps > 0 ? 1 : -1, (int32_t)PB_N);
+            favorites.filter = (favorites.filter & ~6u) | m << 1;
             ui.force = 1;
             settings_save();
         }
@@ -2603,6 +2606,8 @@ static void ui_input_frame(void)
             morph_select(s);                            /* (2026-11-15) MORPH: SELECT scrolls its three morphs */
         else if (swarm_page_on())
             swarm_select(s);                            /* (2026-11-15) SWARM: SELECT scrolls its rows */
+        else if (gen_on())
+            idea_select(s);                             /* (2026-11-17) IDEAS: SELECT scrolls its sub-pages */
         else
             nav_select(s);
     }

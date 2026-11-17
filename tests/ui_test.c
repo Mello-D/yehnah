@@ -308,9 +308,9 @@ static void tempo_turn(int32_t s)                 /* (2026-11-02) the tempo: REC
     frame();
 }
 #if FELUCCA_MACROPAGE
-#define HCNT(n) #n "/15"
+#define HCNT(n) #n "/11"
 #else
-#define HCNT(n) #n "/14"
+#define HCNT(n) #n "/10"
 #endif
 #define NAV_FIRST(sec) (ui.nmem[nav_key(sec)] = 0)           /* (2026-11-15) MENU > HOME PAGE: DANCE (the default) or TRACKS: power-on and the HOME button; a second tap does not flip */
 static int test_home_page(void)
@@ -357,7 +357,8 @@ static int test_home_page(void)
     return bad;
 }
 /* (2026-11-15) a section's button opens the page last on, the first at power-on: tests that want the first forget it */
-static void ideas_open(void) { nav_go(SEC_HOME, HOME_IDEA + gen_page(), 1); frame(); }   /* (2026-11-02: HOME + SELECT gone) */
+static void ideas_go(uint32_t p) { nav_go(SEC_HOME, HOME_IDEA, 1); gen_page_put(p); }   /* (2026-11-17: one IDEAS entry, its sub-pages) */
+static void ideas_open(void) { ideas_go(gen_page()); frame(); }   /* (2026-11-02: HOME + SELECT gone) */
 static void stop_transport(void) { transport_req = 0; song.playing = 0; }
 static int16_t stored_param(uint32_t slot, uint32_t track, uint32_t id)
 {
@@ -1771,39 +1772,71 @@ static int test_favorites(void)
     TSEL->p[P_AMODE] = 2;
     go_page(GR_BROWSE);
     before = *TSEL;
-    turn(EN_K3, 1);
-    turn(EN_K4, 1);
+    preset_mark(!preset_favorite());                    /* (2026-11-17: the HOME layer's FAVORITE key does this) */
+    ptype_sel = PT_FAV;                                 /* (FAV is a TYPE now: KNOB 1) */
     pos = preset_pos(&total);
-    bad += check("FAV and LIST mark/filter the current sound without loading or touching its steps",
-                 preset_favorite() && favorites.filter && total == 1 && pos == 0 &&
+    bad += check("FAVORITE and the FAV type mark/filter the current sound without loading or touching its steps",
+                 preset_favorite() && ptype_sel == PT_FAV && total == 1 && pos == 0 &&
                  !memcmp(TSEL, &before, sizeof before));
     select_engine(ENGI_DRUM);
     before = *TSEL;
-    turn(EN_K3, 1);
+    preset_mark(!preset_favorite());
     bad += check("a DRUM sound can be a favorite on any track", preset_favorite() &&
                  favorite_has(ENGI_DRUM, 0) && !memcmp(TSEL, &before, sizeof before));
     turn(EN_PRESET, 1);
     bad += check("filtered browsing crosses DRUM and synth sounds while retaining the track's pattern and ARP",
                  TSEL->eng_req == 0 && preset_favorite() && !memcmp(TSEL->step, before.step, sizeof before.step) &&
                  TSEL->p[P_AMODE] == 2);
-    turn(EN_K3, -1);
+    preset_mark(!preset_favorite());
     pos = preset_pos(&total);
     bad += check("unmarking the current sound leaves it loaded even when outside the filtered list",
                  !preset_favorite() && total == 1 && pos == total && TSEL->eng_req == 0);
     turn(EN_PRESET, -1);
     bad += check("browsing from a nonfavorite selects the last favorite", TSEL->eng_req == ENGI_DRUM);
-    turn(EN_K3, -1);
+    preset_mark(!preset_favorite());
     before = *TSEL;
     turn(EN_PRESET, 1);
-    bad += check("empty favorites explains LIST ALL and retains the current sound and steps",
+    bad += check("empty favorites explain themselves and retains the current sound and steps",
                  msg_is("NO FAVORITES") && !memcmp(TSEL, &before, sizeof before));
-    turn(EN_K4, -1);
+    ptype_sel = 0;
     preset_pos(&total);
-    bad += check("LIST ALL restores the full browser without an implicit load", !favorites.filter && total > 1 &&
+    bad += check("TYPE ALL restores the full browser without an implicit load", !ptype_sel && total > 1 &&
                  !memcmp(TSEL, &before, sizeof before));
+    {   /* (2026-11-17, the user's) SORT: A-Z by name, TYPE by the types' walk then name, ENGINE by engine name; KNOB 3 the next first letter */
+        uint32_t m, n, ok, it, prev, total2;
+        char a[13], b[13];
+        pb_pk_t p;
+        for (m = 0; m < PB_N; m++) {
+            favorites.filter = (favorites.filter & ~6u) | m << 1;
+            preset_pos(&total);
+            for (n = 0, ok = 1, prev = PB_NONE; ; n++, prev = it) {
+                pb_pick(&p, 1, prev, 1, 0, 0);
+                it = p.best;
+                if (it == PB_NONE)
+                    break;
+                if (prev != PB_NONE)
+                    ok &= m == PB_AZ ? pb_cmp_s(pb_name(prev, a), pb_name(it, b)) <= 0 :
+                          m == PB_TYPE ? ptype_pos(preset_type(prev >> 8, prev & 255u)) <= ptype_pos(preset_type(it >> 8, it & 255u)) :
+                          pb_cmp_s(pb_eng_name(prev >> 8), pb_eng_name(it >> 8)) <= 0;
+            }
+            bad += check(m == PB_AZ ? "PRESETS SORT A-Z: the whole list in name order, every sound once" :
+                         m == PB_TYPE ? "PRESETS SORT TYPE: the types in KNOB 1's walk, every sound once" :
+                         "PRESETS SORT ENGINE: the engines A to Z, every sound once", ok && n == total && total > 100u);
+        }
+        favorites.filter = (favorites.filter & ~6u) | (uint32_t)PB_AZ << 1;
+        preset_pos(&total);
+        pb_load_first();
+        n = preset_pos(&total2);
+        bad += check("PRESETS: the first of the list loaded is the list's place 0", n == 0u);
+        pb_mode = PB_AZ; pb_run_step(1, pb_key_of); n = preset_pos(&total2);
+        bad += check("PRESETS KNOB 3: the next first letter (A-Z sort)", n > 0u && n < total2 && pb_key_of(pb_cur()) != pb_key_of(PB_NONE & 0));
+        pb_run_step(-1, pb_key_of); n = preset_pos(&total2);
+        bad += check("PRESETS KNOB 3: and back to the first letter's start", n == 0u);
+        favorites.filter &= ~6u;
+    }
     up_store(31, "Favorite");
     up_load(31);
-    turn(EN_K3, 1);
+    preset_mark(!preset_favorite());
     bad += check("user slot 32 has its own favorite reference", favorite_has(NENGINES, 31) && preset_favorite());
     up_store(31, "Renamed");
     bad += check("overwriting or renaming a user slot retains its star", favorite_has(NENGINES, 31));
@@ -3509,14 +3542,14 @@ static int test_quick_layers(void)
             held_turn(B_SEQ, 1);                        /* (chord-harp fork: no dice; IDEAS has them) */
             ok &= !ui.confirm && steps_sig(TSEL) == sig;
             fm1_ms += 1200u;
-            nav_go(SEC_HOME, HOME_IDEA + IX_TRACK, 1); frame();
+            ideas_go(IX_TRACK); frame();
             turn(EN_K4, 1); frame();
             ok &= gen_on() && ix.pend == IX_TRACK + 1u && steps_sig(TSEL) != sig;
             press(B_OCTDN); frame();
             ok &= gen_on() && !ix.pend && steps_sig(TSEL) == sig && msg_is("BACK");
             for (j = 0; j < 8u; j++) lf[j] = TSEL->p[P_LRATE + j];
             fm1_ms += 1200u;
-            nav_go(SEC_HOME, HOME_IDEA + IX_LFO, 1); frame();
+            ideas_go(IX_LFO); frame();
             turn(EN_K2, 1); frame();
             okk = ix.pend == IX_LFO + 1u;
             press(B_OCTUP); frame();
@@ -3524,7 +3557,7 @@ static int test_quick_layers(void)
             ok &= okk && !ix.pend && sig > 0u && msg_is("KEPT");
             rs = song.g[G_RSIZE]; rv = TSEL->p[P_REV];
             fm1_ms += 1200u;
-            nav_go(SEC_HOME, HOME_IDEA + IX_FX, 1); frame();
+            ideas_go(IX_FX); frame();
             for (j = 0, okk = 0; j < 4u && !okk; j++) {   /* (a throw may land where it was: again) */
                 turn(EN_K1, 1); frame(); fm1_ms += 1200u;
                 okk = ix.pend == IX_FX + 1u && (song.g[G_RSIZE] != rs || TSEL->p[P_REV] != rv);
@@ -3547,13 +3580,13 @@ static int test_quick_layers(void)
             int16_t v[4], dist, rev, chor, ap, rs;
             uint32_t j, q, len;
             go_home(); frames(8);
-            nav_go(SEC_HOME, HOME_IDEA + IX_LFO, 1); frame();
+            ideas_go(IX_LFO); frame();
             for (j = 0; j < 4u; j++) v[j] = TSEL->p[LK[j]];
             for (q = 0; q < 6u; q++) { turn(EN_K4, 1); frame(); fm1_ms += 1200u; }
             ok = ix.pend == IX_LFO + 1u && msg_is("NEW LFO TARGET");
             for (j = 0; j < 4u; j++) ok &= TSEL->p[LK[j]] == v[j];
             press(B_OCTDN); frame();
-            nav_go(SEC_HOME, HOME_IDEA + IX_FX, 1); frame();
+            ideas_go(IX_FX); frame();
             rev = TSEL->p[P_REV]; chor = TSEL->p[P_CHOR]; ap = TSEL->p[P_APDEP]; rs = song.g[G_RSIZE];
             for (q = 0; q < 6u; q++) { turn(EN_K2, 1); frame(); fm1_ms += 1200u; }
             ok &= msg_is("NEW DRIVE") && TSEL->p[P_REV] == rev && TSEL->p[P_CHOR] == chor && TSEL->p[P_APDEP] == ap &&
@@ -3564,14 +3597,14 @@ static int test_quick_layers(void)
             ok &= msg_is("NEW SPACE") && TSEL->p[P_DIST] == dist && TSEL->p[P_CHOR] == chor;
             press(B_OCTDN); frame();
             ok &= !ix.pend;
-            nav_go(SEC_HOME, HOME_IDEA + IX_TRACK, 1); frame();
+            ideas_go(IX_TRACK); frame();
             ix.role = 2u; ix.rhythm = 2u + 3u;          /* (CHORDS, OFFBEAT "..x...x...x...x.") */
             turn(EN_K4, 1); frame(); fm1_ms += 1200u;
             len = dlen(TSEL);
             ok &= len >= 16u && TSEL->step[0].time == ST_TIE && TSEL->step[1].time == ST_TIE &&
                   TSEL->step[2].time == ST_NOTE && TSEL->step[len - 1u].time == ST_TIE;
             press(B_OCTDN); frame();
-            nav_go(SEC_HOME, HOME_IDEA + IX_TEX, 1); frame();  /* (IDEAS > TEXTURE: the part playing made ambient, every note
+            ideas_go(IX_TEX); frame();  /* (IDEAS > TEXTURE: the part playing made ambient, every note
                                                          * kept; a PAD, HAZE, VAST; a knob back as BEFORE; OCT- BACK the
                                                          * steps, sound, mix) */
             ix.tsnd = 1u; ix.tblr = 3u; ix.tspc = 3u;
@@ -5670,6 +5703,7 @@ static int test_seq_quant(void)
     ui_power_on();
     song.sel = 0;
     open_family(FAM_SCL);
+    go_title("SCL");
     frame();
     ok = cur_page()->id[2] == P_QUANT && t->p[P_QUANT] == 0;   /* (chord-harp fork, 2026-10-27: the SCL page's KNOB 3 only) */
     turn(EN_K3, 3); frame();
@@ -6690,7 +6724,7 @@ static int test_scl_alltr(void)
     ok &= song.g[G_STRN] == 2 && t->p[P_TRANS] == 0;
     song.rec = 0;
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "CHORD");          /* (no SCL 2 between) */
+    ok &= str_eq(cur_page()->title, "TUNE");           /* (no SCL 2 between; 2026-11-17: SCALE then TUNE) */
     {
         uint32_t i, n2 = 0;
         for (i = 0; i < NPAGES; i++) n2 += str_eq(PAGES[i].title, "SCL 2");
@@ -8729,7 +8763,7 @@ static int test_bpm_lock(void)
             uint32_t same = 1, pr;
             fm1_ms += 1200u;
             ix.seng = 0;                                              /* (ENGINE SAME: an earlier test's sweep may leave ANY) */
-            nav_go(SEC_HOME, HOME_IDEA + IX_SOUND, 1); frame();
+            ideas_go(IX_SOUND); frame();
             turn(EN_K2, 1); frame();                                  /* VARY */
             for (j = 0, moved = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
             ok = song.g[G_BPM] == b0 && ix.pend == IX_SOUND + 1u && moved > 0u && undo_ok;
@@ -9155,7 +9189,7 @@ static int test_skin(void)
         for (i = 0; i < 3u; i++) {                                /* HOME's own: TRACKS, MACRO, IDEAS (2026-11-02) */
             ui_power_on(); frame();
             if (i == 1u && !FELUCCA_MACROPAGE) continue;     /* (2026-11-06: no MACRO page) */
-            if (i) nav_put(SEC_HOME, i == 1u ? "MACRO" : "IDEA TRK");
+            if (i) nav_put(SEC_HOME, i == 1u ? "MACRO" : "IDEAS");
             frames(100);
             ok &= lz_on() && lz_fam() == LZ_HOME && home_level() == i && skin_ink(TF_PG_Y, 240) > 0 &&   /* (the page row) */
                   graph_h() * 240u <= CV_MAX;   /* (the canvas holds the whole panel: else its foot is never redrawn) */
@@ -9511,48 +9545,50 @@ static int test_lz_home(void)
           lz_crumb_is("HOME \xB7 TRACKS") && lz_count_is(HCNT(2));
     sel_turn( 1); frame();                                    /* PRESETS */
     ok &= !ui.home && str_eq(cur_page()->title, "PRESETS") && lz_crumb_is("HOME \xB7 PRESETS") && lz_count_is(HCNT(3));
-    sel_turn( 1); frame();                                    /* (2026-11-15) the IDEAS follow PRESETS: TRACK */
+    ix.page = IX_TRACK;
+    sel_turn( 1); frame();                                    /* (2026-11-15) the IDEAS follow PRESETS: one page (2026-11-17), TRACK its first sub-page */
     fm1_ms += 1000u;
     ok &= gen_on() && gen_page() == IX_TRACK && home_level() == 2u && lz_on() &&
-          lz_crumb_is("HOME \xB7 IDEA TRK") && lz_count_is(HCNT(4));
+          lz_crumb_is("HOME \xB7 IDEAS") && lz_count_is(HCNT(4));
     k = ix.genre;
     turn(EN_PRESET, 1); frame();
     ok &= ix.genre == (k + 1u) % (NDSTYLE + 1u);                    /* PRESETS: the GENRE */
     sel_turn( 1); frame();
-    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEA SND") && lz_count_is(HCNT(5));
+    ok &= gen_on() && gen_page() == IX_SOUND && lz_crumb_is("HOME \xB7 IDEAS") && lz_count_is(HCNT(4));   /* (SELECT scrolls the sub-pages) */
     sel_turn( -2); frame();                                   /* back out of the IDEAS: PRESETS */
     ok &= !ui.confirm && !gen_on() && !ui.home && str_eq(cur_page()->title, "PRESETS");
     sel_turn( -2); frame();                                   /* TRACKS, then DANCE */
     ok &= ui.home && home_level() == 0u && !home_set() && lz_count_is(HCNT(1)) && lz_crumb_is("HOME \xB7 DANCE");
     ok &= !home_macros();
-    bad += check("HOME: DANCE TRACKS PRESETS then the IDEAS (TRACK, SOUND ..): SELECT in, PRESETS its GENRE, and back out", ok);
+    bad += check("HOME: DANCE TRACKS PRESETS then IDEAS (TRACK, SOUND .. under SELECT): SELECT in, PRESETS its GENRE, and back out", ok);
     sw.row = 0; sw.trow = 0;
+    ix.page = IX_TEX;
     sel_turn( -1); frame();                                   /* it wraps: the chain's last, MIXER */
-    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(14));
+    ok = !ui.home && str_eq(cur_page()->title, "MIXER") && lz_count_is(HCNT(10));
     sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(13));
+    ok &= str_eq(cur_page()->title, "SENDS") && lz_count_is(HCNT(9));
     sel_turn( -1); frame();                                   /* XY (no rows) */
-    ok &= str_eq(cur_page()->title, "XYZ") && lz_count_is(HCNT(12));
+    ok &= str_eq(cur_page()->title, "XYZ") && lz_count_is(HCNT(8));
     sel_turn( -1); frame();                                   /* (SWARM's and TRACE's rows: SELECT goes on at the first going left) */
     sw.row = 0; sw.trow = 0;
-    ok &= str_eq(cur_page()->title, "TRACE") && lz_count_is(HCNT(11));
+    ok &= str_eq(cur_page()->title, "TRACE") && lz_count_is(HCNT(7));
     sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is(HCNT(10));
+    ok &= str_eq(cur_page()->title, "SWARM") && lz_count_is(HCNT(6));
     sel_turn( -1); frame();
-    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(9));
-    sel_turn( -1); frame();                                   /* the IDEAS' last: TEXTURE */
-    ok &= gen_on() && gen_page() == IX_TEX && nav_cur() == HOME_IDEA + 4u && lz_count_is(HCNT(8));
+    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(5));
+    sel_turn( -1); frame();                                   /* IDEAS, on the sub-page it was left on: TEXTURE */
+    ok &= gen_on() && gen_page() == IX_TEX && nav_cur() == HOME_IDEA && lz_count_is(HCNT(4));
     press(B_HOME); frame();                                         /* a HOME tap on IDEAS: stays (2026-11-17: HOME is the page last on) */
     ok &= gen_on() && gen_page() == IX_TEX;
     nav_go(SEC_HOME, 0, 0); frame();                                /* DANCE */
     ok &= !ui.confirm && ui.home && home_level() == 0u && !home_set();
     sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
-    sel_turn( 8); frame();                                    /* MORPH .. TRACE hand on going right (rows last) */
-    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(9));
+    sel_turn( 4); frame();                                    /* TRACKS PRESETS IDEAS, then MORPH (rows last) */
+    ok &= str_eq(cur_page()->title, "MORPH") && lz_count_is(HCNT(5));
     sel_turn( 1); frame();                                    /* (2026-11-15: SELECT scrolls MORPH's three morphs first) */
-    ok &= str_eq(cur_page()->title, "MORPH 2") && lz_count_is(HCNT(9));
+    ok &= str_eq(cur_page()->title, "MORPH 2") && lz_count_is(HCNT(5));
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "MORPH 3") && lz_count_is(HCNT(9));
+    ok &= str_eq(cur_page()->title, "MORPH 3") && lz_count_is(HCNT(5));
     sel_turn( 1); frame();
     ok &= str_eq(cur_page()->title, "SWARM");
     sel_turn( 1); frame();
@@ -9567,7 +9603,8 @@ static int test_lz_home(void)
     ok &= home_level() == 0u && !home_set() && ui.home && !ui.confirm;
     bad += check("HOME: MORPH (SELECT scrolls its three morphs) SWARM TRACE XYZ SENDS MIXER are the chain's last six (MIXER one turn left of DANCE), SELECT round", ok);
     turn(EN_K1, 1); frame();                                  /* (DANCE: the HOME knobs) */
-    sel_turn( 4); frame();                                    /* IDEAS 2 */
+    ix.page = IX_TRACK;
+    sel_turn( 1); sel_turn( 1); sel_turn( 1); sel_turn( 1); frame();   /* IDEAS, its second sub-page (a detent each) */
     ok = gen_on() && gen_page() == 1u;
     press(B_ENV); frame();                                          /* not modal: a section's button leaves it */
     ok &= !ui.confirm && !ui.home && str_eq(cur_page()->title, "ENV LIST");
@@ -9575,7 +9612,8 @@ static int test_lz_home(void)
     ok &= gen_on() && gen_page() == 1u;
     nav_go(SEC_HOME, 0, 0); frame();                                /* DANCE (IDEAS shut) */
     ok &= !gen_on() && ui.home && home_level() == 0u;
-    sel_turn( 4); frame();                                    /* IDEAS 2 */
+    ix.page = IX_TRACK;
+    sel_turn( 1); sel_turn( 1); sel_turn( 1); sel_turn( 1); frame();   /* IDEAS 2 */
     turn(EN_ALGO, 1); frame();
     ok &= song.sel == 1u && gen_on() && gen_page() == 1u;           /* (ALGORITHM the track there too) */
     turn(EN_ALGO, -1); frame();
@@ -9751,30 +9789,30 @@ static int test_lz_key(void)
     uint32_t pr;
     ui_power_on(); frame();
     press(B_SCL); frame();
-    ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(0) &&
-         lz_tabs() == 7u && lz_crumb_is("SCL \xB7 SCALE") && lz_count_is("1/7");   /* (chord-harp fork: KEY CHORD
-                                                                     * HARP OMNI PROG GUITAR) */
+    ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 1u && str_eq(cur_page()->title, "HARP") && lz_tab_lit(0) &&
+         lz_tabs() == 7u && lz_crumb_is("SCL \xB7 HARP") && lz_count_is("1/7") && TSEL->p[P_CHRD] == CD_HARP;   /* (2026-11-17 order: HARP OMNI
+                                                                     * GUITAR CHORD SCALE TUNE PROG) */
     sel_turn( 1); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(1) && lz_crumb_is("SCL \xB7 CHORD");
+    ok &= str_eq(cur_page()->title, "OMNI") && lz_tab_lit(1) && TSEL->p[P_CHRD] == CD_OMNI;
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "HARP") && lz_tab_lit(2) && TSEL->p[P_CHRD] == CD_HARP;
+    ok &= str_eq(cur_page()->title, "GUITAR") && lz_tab_lit(2) && TSEL->p[P_CHRD] == CD_GTR;
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "OMNI") && lz_tab_lit(3) && TSEL->p[P_CHRD] == CD_OMNI;
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(3) && lz_crumb_is("SCL \xB7 CHORD");
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "PROG") && lz_tab_lit(4) && TSEL->p[P_CHRD] == CD_PROG;
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(4) && lz_crumb_is("SCL \xB7 SCALE");
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "GUITAR") && lz_tab_lit(5) && TSEL->p[P_CHRD] == CD_GTR;
+    ok &= str_eq(cur_page()->title, "TUNE") && lz_tab_lit(5) && TSEL->p[P_CHRD] == CD_GTR;   /* (TUNE is GUITAR's tab: its mode on) */
     sel_turn( 1); frame();
-    ok &= str_eq(cur_page()->title, "TUNE") && lz_tab_lit(6) && TSEL->p[P_CHRD] == CD_GTR;   /* (GUITAR's tunings and shapes: its mode stays on) */
+    ok &= str_eq(cur_page()->title, "PROG") && lz_tab_lit(6) && TSEL->p[P_CHRD] == CD_PROG;
     frames(320); press(B_SCL); frame();
     ok &= ui.home && home_level() == 0u;                            /* (SCL on SCL: TRACKS) */
     NAV_FIRST(SEC_SCL);
     frames(320); press(B_SCL); frame();
-    ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
-    sel_turn( 5); frame();
-    ok &= str_eq(cur_page()->title, "GUITAR");
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "HARP");
     sel_turn( 2); frame();
-    ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL's chain wraps there: not into ARP) */
+    ok &= str_eq(cur_page()->title, "GUITAR");
+    sel_turn( 5); frame();
+    ok &= str_eq(cur_page()->title, "HARP");                        /* (SCL's chain wraps there: not into ARP) */
     sel_turn( -1); frame();
     frames(320); press(B_ARP); frame();
     ok &= pd_level() == 2u && str_eq(cur_page()->title, "ARP LIST") && lz_tab_lit(0) && lz_tabs() == 1u &&
@@ -9786,16 +9824,16 @@ static int test_lz_key(void)
     sel_turn( 1); frame();
     NAV_FIRST(SEC_SCL);
     press(B_SCL); frame();
-    ok &= str_eq(cur_page()->title, "SCL");                         /* (SCL from ARP: SCL's first, here forgotten) */
+    ok &= str_eq(cur_page()->title, "HARP");                        /* (SCL from ARP: SCL's first, here forgotten) */
     press(B_ARP); frame();
     ok &= str_eq(cur_page()->title, "ARP LIST");                    /* (ARP from SCL: ARP's first) */
-    bad += check("0.9.2 SCL and ARP: two sections; SCL KEY . CHORD . HARP . OMNI . PROG . GUITAR . TUNE, ARP one list (ARP LIST); taps, SELECT, each its first page", ok);
+    bad += check("0.9.2 SCL and ARP: two sections; SCL HARP . OMNI . GUITAR . CHORD . SCALE . TUNE . PROG, ARP one list (ARP LIST); taps, SELECT, each its first page", ok);
     press(B_SCL); frame();
-    sel_turn( 4); frame();
+    sel_turn( 6); frame();
     pr = TSEL->preset;
     turn(EN_PRESET, 1); frame();
     ok = song.sel == 0u && str_eq(cur_page()->title, "PROG") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
-    sel_turn( -4); frame();
+    sel_turn( -2); frame();
     r = TSEL->p[P_ROOT];
     turn(EN_PRESET, 1); frame();
     ok &= pd_level() == 0u && TSEL->p[P_ROOT] == r;
@@ -10271,6 +10309,7 @@ static void rv_walk(uint32_t sec)                      /* the button from HOME, 
         at = nav_cur();
         sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;     /* (SWARM's and TRACE's rows: SELECT goes on at the last) */
         if (PAGES[ui.page].graph == GR_BLEND) { uint32_t q; for (q = 0; q < NPAGES; q++) if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL3A) ui.page = (uint8_t)q; }   /* (MORPH: its last morph) */
+        while (gen_on() && gen_page() + 1u < IX_N) { sel_turn( 1); frames(2); }   /* (IDEAS: its sub-pages first, 2026-11-17) */
         sel_turn( 1); frames(2);
         if (nav_cur() == at || (nav_list(nav_sec(), v) && v[0] == nav_cur()))   /* (round: it wraps) */
             break;
@@ -10350,6 +10389,7 @@ static int test_lz_reach(void)
                 uint32_t n = 0;
                 go_home(); frames(32);
                 sel_first();
+                ix.page = IX_TRACK;
                 for (k = 0; k < NELEM(CE_HOME); k++) {
                     n += nav_sec() == SEC_HOME && nav_cur() == k &&
                          (k >= HOME_IDEA && k < HOME_IDEA + HOME_NIDEA ? gen_on() && gen_page() == k - HOME_IDEA :
@@ -10357,6 +10397,7 @@ static int test_lz_reach(void)
                           ui.home && home_macros() == (k == HOME_MACRO));
                     sw.row = SWR_N - 1u; sw.trow = TR_ROWS - 1u;
                     if (PAGES[ui.page].graph == GR_BLEND) { uint32_t q; for (q = 0; q < NPAGES; q++) if (PAGES[q].graph == GR_BLEND && PAGES[q].id[0] == G_BL3A) ui.page = (uint8_t)q; }
+                    while (gen_on() && gen_page() + 1u < IX_N) { sel_turn( 1); frames(2); }   /* (IDEAS: its sub-pages first) */
                     sel_turn( 1); frames(2);
                 }
                 okh &= n == NELEM(CE_HOME);
@@ -10526,24 +10567,24 @@ static int test_nav_memory(void)
     int bad = 0, ok;
     ui_power_on(); frame();
     press(B_SCL); frame();
-    ok = str_eq(cur_page()->title, "SCL");                          /* power-on: the first */
+    ok = str_eq(cur_page()->title, "HARP");                         /* power-on: the first */
     sel_turn( 2); frame();
-    ok &= str_eq(cur_page()->title, "HARP");
+    ok &= str_eq(cur_page()->title, "GUITAR");
     press(B_SEQ); frame();                                          /* another section, then back */
     ok &= !ui.home && PAGES[ui.page].fam == FAM_SEQ;
     press(B_SCL); frame();
-    ok &= str_eq(cur_page()->title, "HARP");                        /* the page left, not the first */
+    ok &= str_eq(cur_page()->title, "GUITAR");                      /* the page left, not the first */
     frames(320); press(B_SCL); frame();
     ok &= ui.home;                                                  /* on it: DANCE, as ever */
     frames(320); press(B_SCL); frame();
-    ok &= str_eq(cur_page()->title, "HARP");                        /* and the memory kept */
+    ok &= str_eq(cur_page()->title, "GUITAR");                      /* and the memory kept */
     frames(320); press(B_HOME); frame();
     ok &= ui.home && home_level() == 0u;                            /* HOME: DANCE, not a page it was on */
     press(B_ARP); frame();
     ok &= str_eq(cur_page()->title, "ARP LIST");                    /* a section not visited: its first */
     ui_power_on(); frame();
     press(B_SCL); frame();
-    ok &= str_eq(cur_page()->title, "SCL");                         /* a fresh power-on forgets */
+    ok &= str_eq(cur_page()->title, "HARP");                        /* a fresh power-on forgets */
     bad += check("A section's button: the page last on (the first at power-on); again: DANCE; HOME: DANCE", ok);
     return bad;
 }
@@ -10886,29 +10927,29 @@ static int test_xy(void)
         xy_off(1);
         song.sel = 0;
         a = &trk[0]; b = &trk[1];
-        a->p[P_FCUT] = 64; a->p[P_PAN] = 0;
-        b->p[P_FCUT] = 100; b->p[P_PAN] = 20;
+        a->p[P_CHOR] = 64; a->p[P_PAN] = 0;
+        b->p[P_CHOR] = 100; b->p[P_PAN] = 20;
         memset(xym, 0, sizeof xym);
         xy.rot = 0;
         xy_start();
         xy_knob(0, 6); xy_knob(1, -9); sw_run(2);
         ax = xy.x; ay = xy.y;
         {
-            int16_t cut_a = a->p[P_FCUT], pan_a = a->p[P_PAN];
+            int16_t cut_a = a->p[P_CHOR], pan_a = a->p[P_PAN];
             song.sel = 1;
             xy_follow();
-            bad += check("XY: another track: it follows, the first keeps its sound as the dot made it", xy.trk == 1u && a->p[P_FCUT] == cut_a && a->p[P_PAN] == pan_a);
-            bad += check("XY: a track not visited starts at the fit to its sound (the sound unchanged)", b->p[P_FCUT] == 100 && b->p[P_PAN] == 20 && (xy.x != ax || xy.y != ay));
+            bad += check("XY: another track: it follows, the first keeps its sound as the dot made it", xy.trk == 1u && a->p[P_CHOR] == cut_a && a->p[P_PAN] == pan_a);
+            bad += check("XY: a track not visited starts at the fit to its sound (the sound unchanged)", b->p[P_CHOR] == 100 && b->p[P_PAN] == 20 && (xy.x != ax || xy.y != ay));
             xy_knob(0, -8); sw_run(2);
             song.sel = 0;
             xy_follow();
-            bad += check("XY: back on the first track: its dot is where it was left, its sound as it was", xy.trk == 0u && xy.x == (float)(int8_t)(ax * 127.0f + (ax < 0.0f ? -0.5f : 0.5f)) * (1.0f / 127.0f) && a->p[P_FCUT] == cut_a);
+            bad += check("XY: back on the first track: its dot is where it was left, its sound as it was", xy.trk == 0u && xy.x == (float)(int8_t)(ax * 127.0f + (ax < 0.0f ? -0.5f : 0.5f)) * (1.0f / 127.0f) && a->p[P_CHOR] == cut_a);
             sw_run(3);
-            bad += check("XY: and it stays so (nothing jumps back to the start)", a->p[P_FCUT] == cut_a && a->p[P_PAN] == pan_a);
+            bad += check("XY: and it stays so (nothing jumps back to the start)", a->p[P_CHOR] == cut_a && a->p[P_PAN] == pan_a);
             song.sel = 1;
             xy_follow();
             xy_off(1);
-            bad += check("XY: OFF on the second track puts ITS sound back", b->p[P_FCUT] == 100 && b->p[P_PAN] == 20 && !xym[1].have);
+            bad += check("XY: OFF on the second track puts ITS sound back", b->p[P_CHOR] == 100 && b->p[P_PAN] == 20 && !xym[1].have);
         }
         song.sel = 0;
         xy.trk = 0;
@@ -10919,25 +10960,25 @@ static int test_xy(void)
     xy_off(0);
     set_engine_of(TSEL, ENGI_ANALOG);
     t = TSEL;
-    t->p[P_FCUT] = 64; t->p[P_PAN] = 0; t->p[P_REV] = 10;
+    t->p[P_CHOR] = 64; t->p[P_PAN] = 0; t->p[P_REV] = 10;
     xy_start();
-    cut0 = t->p[P_FCUT]; pan0 = t->p[P_PAN]; rev0 = t->p[P_REV];
-    xy_knob(0, 10); sw_run(2);                          /* right: PAN up, CUT (at right angles) stays */
-    bad += check("XY: knob 1 right raises PAN (its 100 % end is on the right) and, CUT's end being up and a little left, lowers CUT a little", t->p[P_PAN] > pan0 && t->p[P_FCUT] < cut0);
-    cut0 = t->p[P_FCUT];
+    cut0 = t->p[P_CHOR]; pan0 = t->p[P_PAN]; rev0 = t->p[P_REV];
+    xy_knob(0, 10); sw_run(2);                          /* right: PAN up, CHORUS (at right angles) stays */
+    bad += check("XY: knob 1 right raises PAN (its 100 % end is on the right) and, CHORUS's end being up and a little left, lowers CHORUS a little", t->p[P_PAN] > pan0 && t->p[P_CHOR] < cut0);
+    cut0 = t->p[P_CHOR];
     pan0 = t->p[P_PAN];
-    xy_knob(1, -10); sw_run(2);                         /* up (knob 2 anticlockwise, 2026-11-17): CUT up, PAN (horizontal) stays */
-    bad += check("XY: knob 2 up raises CUT and leaves PAN (the horizontal line) alone", t->p[P_FCUT] > cut0 && t->p[P_PAN] == pan0);
-    cut0 = t->p[P_FCUT]; pan0 = t->p[P_PAN];
-    xy_knob(2, 25); sw_run(2);                          /* a quarter turn: PAN is now the vertical line, CUT the horizontal (mirrored) */
+    xy_knob(1, -10); sw_run(2);                         /* up (knob 2 anticlockwise, 2026-11-17): CHORUS up, PAN (horizontal) stays */
+    bad += check("XY: knob 2 up raises CHORUS and leaves PAN (the horizontal line) alone", t->p[P_CHOR] > cut0 && t->p[P_PAN] == pan0);
+    cut0 = t->p[P_CHOR]; pan0 = t->p[P_PAN];
+    xy_knob(2, 25); sw_run(2);                          /* a quarter turn: PAN is now the vertical line, CHORUS the horizontal (mirrored) */
     bad += check("XY: knob 3 rotates the line set (a quarter turn: the lines now cut the dot another way, the sound moves)",
-                 xy.rot == 25u && (t->p[P_PAN] != pan0 || t->p[P_FCUT] != cut0));
+                 xy.rot == 25u && (t->p[P_PAN] != pan0 || t->p[P_CHOR] != cut0));
     { float cx, sx, kx, c1, s1; uint8_t r0 = xy.rot; xy.rot = 0; xy_dir(0, &cx, &sx, &kx); xy_knob(2, 1); xy_dir(0, &c1, &s1, &kx); xy.rot = r0;
       bad += check("XY: knob 3 clockwise turns the lines clockwise on the screen (a line on the right goes down: its sine falls)", s1 < sx); }
     xy_knob(3, 12); sw_run(2);
     bad += check("XY: knob 4 is Z: REV rises by two units a click, and nothing else moves", t->p[P_REV] == rev0 + 24);
     swarm_act(1);
-    bad += check("XY: the HOME layer's second key (F3 REV, G3 DLY ..) switches Z to DLY (REV stays where it is)", xy.zsel == 1u && t->p[P_REV] == rev0 + 24);
+    bad += check("XY: the HOME layer's second key (F3 REV, G3 DLY, A3 CUT, B3 LEVEL) switches Z to DLY (REV stays where it is)", xy.zsel == 1u && t->p[P_REV] == rev0 + 24);
     t->p[P_DLY] = 0;
     xy_knob(3, 5); sw_run(1);
     bad += check("XY: knob 4 now moves DLY (two units a click)", t->p[P_DLY] == 10);
@@ -10951,16 +10992,16 @@ static int test_xy(void)
     }
     xy_off(1);
     bad += check("XY: OFF puts every line and Z back as they were, except the one set by hand",
-                 t->p[P_FCUT] == 64 && t->p[P_PAN] == 0 && t->p[P_REV] == 10);
-    t->p[P_FCUT] = 64;
+                 t->p[P_CHOR] == 64 && t->p[P_PAN] == 0 && t->p[P_REV] == 10);
+    t->p[P_CHOR] = 64;
     xy.rot = 0;
     xy_start();
     xy_knob(1, 8); sw_run(3);
-    cut0 = t->p[P_FCUT];
+    cut0 = t->p[P_CHOR];
     swarm_act(SWA_X5);
     sw_run(3);
-    bad += check("XY: CAPTURE keeps the sound and stops", !xy.on && t->p[P_FCUT] == cut0 && cut0 != 64);
-    t->p[P_FCUT] = 64; t->p[P_PAN] = 0;
+    bad += check("XY: CAPTURE keeps the sound and stops", !xy.on && t->p[P_CHOR] == cut0 && cut0 != 64);
+    t->p[P_CHOR] = 64; t->p[P_PAN] = 0;
     xy_start();
     xy_knob(0, 6); sw_run(2);
     bad += check("XY: the page's SWARM neighbour turns XY off and the sound back",
@@ -11352,7 +11393,7 @@ static int test_pattern_gen(void)
     motion_clear(t);
     t->p[P_SLEN] = 16; t->p[P_SCALE] = 1; t->p[P_ROOT] = 0;   /* (C major) */
     sig = steps_sig(t);
-    nav_go(SEC_HOME, HOME_IDEA + IX_TRACK, 1); frame();
+    ideas_go(IX_TRACK); frame();
     ix.genre = 1; ix.rhythm = 2; ix.role = 3;            /* (the first genre, TRESILLO x..x..x...x....., MELODY) */
     fm1_ms += 1200u; turn(EN_K4, 1); frame();
     ok = gen_on() && ix.pend == IX_TRACK + 1u && t->p[P_SLEN] == 16 && t->p[P_SCALE] == 1;

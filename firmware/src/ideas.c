@@ -404,6 +404,13 @@ static void gen_panel(void)
     dice_side(p, 0, 4);
     cv_rect(119, 8, 1, 108, T_LINE);
     dice_side(p, 1, 124);
-    cv_clip_text(6, 126, &AF_X, ix.last[0] ? ix.last : "TURN A KNOB", ix.last[0] ? T_TEXT : T_DIM, T_SURF, 130);
-    cv_text_r(234, 126, &AF_X, ix.pend ? "OCT+ KEEP" : "OCT- DONE", ix.pend ? T_ACCENT : T_DIM, T_SURF);
+    {   /* (2026-11-17, the user's) the sub-page's name centred in a header chip at the foot of the panel, as SWARM's rows; the idea
+         * just thrown at its left end, the OCT hint at its right */
+        static const char *const NM[IX_N] = {"TRACK", "SOUND", "LFO", "FX", "TEXTURE"};
+        const char *nm = NM[p];
+        cv_rrect(5, 123, 224, 16, 4, T_ACCENT, T_SURF);
+        cv_text_on(117 - HALF_UP(text_w(&AF_B, nm)), 123 + CAP_IN(B, 16), &AF_B, nm, T_BG, T_ACCENT);
+        cv_clip_text(11, 123 + CAP_IN(X, 16), &AF_X, ix.last[0] ? ix.last : "TURN A KNOB", ux_mix(T_ACCENT, T_BG, 200), T_ACCENT, 66);
+        cv_text_r(224, 123 + CAP_IN(X, 16), &AF_X, ix.pend ? "OCT+ KEEP" : "OCT- DONE", T_BG, T_ACCENT);
+    }
 }

@@ -1653,9 +1653,12 @@ static __attribute__((noinline)) void harp_unlatch(track_t *t)
         rec_release(t, r);
     }
 }
+static uint8_t latch_key[NTRK];                     /* (2026-11-17) track i's latched chord came from key (this - 1): the same key
+                                                     * again lets it go (0: none, or layered keys) */
 static void latch_release(track_t *t)
 {
     uint32_t i;
+    latch_key[trk_index(t) % NTRK] = 0;
     harp_unlatch(t);
     for (i = 0; i < t->nheld; i++) {
         rec_release(t, t->held[i]);                 /* (its recording hold ends here: key_off kept it) */
@@ -1748,9 +1751,18 @@ static __attribute__((noinline)) void key_on(uint32_t k, track_t *t)   /* (chord
                                              12u);          /* (chord-harp fork) what it plays, for SCL's circle: the
                                                      * chord's root (HARP's too), a single note (a plate key's) itself */
     if (key_latch_k(t, k)) {                             /* LATCH: a new chord lets the last one go */
-        uint32_t j;
-        if (!t->arp_phys)
+        uint32_t j, ti = trk_index(t) % NTRK;
+        if (!t->arp_phys && t->nheld && latch_key[ti] == k + 1u) {   /* (2026-11-17, the user's) the same key again: the chord stops */
             latch_release(t);
+            kb_on[k] = 0;
+            kb_sn[k] = 0;
+            return;
+        }
+        if (!t->arp_phys) {
+            latch_release(t);
+            latch_key[ti] = (uint8_t)(k + 1u);
+        } else
+            latch_key[ti] = 0;
         t->arp_phys++;
         for (j = 0; j < n; j++) {
             for (i = 0; i < t->nheld && t->held[i] != kb_snd[k][j]; i++)
@@ -2084,6 +2096,27 @@ static uint32_t step_chord(const track_t *t, const step_t *s)
         return 0;
     return a % CHORD_NID + 1u;
 }
+/* (2026-11-17, the user's) playback: the plate follows the chord a step plays, as it follows the chord key played live
+ * (harp_cur): HARP / OMNI / PROG by the step's CHORD id and root, CHORD's own modes (recorded as notes) by a chord of
+ * two or more notes whose lowest note is a chord key's root. No chord key down (a live one rules) */
+static __attribute__((noinline)) void plate_follow(const track_t *t, const step_t *s, uint32_t c)
+{
+    uint32_t k, i, lo = 127;
+    if (!s->n)
+        return;
+    for (i = 0; i < s->n && i < 4u; i++)
+        if (s->note[i] < lo)
+            lo = s->note[i];
+    for (k = 0; k < 27u; k++) {
+        if (!harp_ck(t, k))
+            continue;
+        if (harp_cm(t) ? (c == 0u && s->n > 1u && harp_root(t, k) % 12u == lo % 12u) :
+                         (c && harp_id(t, k) + 1u == c && harp_root(t, k) % 12u == s->note[0] % 12u)) {
+            harp_cur[trk_index(t) % NTRK] = (uint8_t)k;
+            return;
+        }
+    }
+}
 /* (chord-harp) the notes step s plays into out (4 + NLANE), own[i]: which of the step's notes out[i] is (its skip bit).
  * A CHORD on a POLY part (not a kit): the chord whole from the step's first note, its root (each of them note 0), then
  * its other notes over it, any the chord sounds already left out; else the step's notes */
@@ -2094,6 +2127,8 @@ static __attribute__((noinline)) uint32_t step_notes(const track_t *t, const ste
     uint32_t c = kit || !s->n || !voice_poly((int)trk_vmode(t)) ? 0u : step_chord(t, s), ti = trk_index(t) % NTRK;
     hp_was[ti] = hp_now[ti];
     hp_now[ti] = (uint16_t)(c ? c | (uint32_t)s->note[0] << 8 : 0u);
+    if (!kit && harp_on(t) && !harp_held(t))
+        plate_follow(t, s, c);
     return step_expand(s, c, out, own);
 }
 /* (chord-harp) step s's notes into out with chord c (+ 1; 0: none) whole from its first note (step_notes; the roll) */

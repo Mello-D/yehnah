@@ -201,6 +201,11 @@ int main(void)
     assert(r == n - (n + 3u > voice_cap() ? n + 3u - voice_cap() : 0u));
     keys(1u << 1);                                      /* (back to MAJ8's chord 2 latched, as below expects) */
     keys(0);
+    n = t->nheld;
+    keys(1u << 1);                                      /* (2026-11-17) the same key again: the latched chord stops, nothing new sounds */
+    assert(t->nheld == 0 && noff == n && !non);
+    keys(0);
+    assert(!noff && !non);
     t->p[P_CVOI] = 7;
     keys(1u << 1);
     keys(0);
@@ -279,8 +284,10 @@ int main(void)
         char name[16];
         memcpy(all, want, n);
         all[n] = pl[0];
+        harp_cur[trk_index(t) % NTRK] = 0;
         seq_start();                                    /* played back: the chord whole and the plate note */
         events_block(CTL);
+        assert(harp_cur[trk_index(t) % NTRK] == 8u);    /* (2026-11-17) the plate follows the playing chord, as it does live */
         for (i = 0; i < t->seq_n; i++) got[i] = t->seq_notes[i];
         assert(same(got, t->seq_n, all, n + 1u));
         assert(same(got, sounding(t, got), all, n + 1u));   /* (their voices) */

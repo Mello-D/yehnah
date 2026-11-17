@@ -289,6 +289,9 @@ static int up_put(uint32_t k, const up_rec_t *r)
 #endif
     if (k >= UP_SLOTS)
         return 1;
+#ifdef YEHNAH_FAVORITES
+    favorites_gen++;                                   /* (PRESETS' sorted list is built again) */
+#endif
     if (transport_busy()) {                            /* no flash erase while playing (project_save) */
         ui_message("STOP TO SAVE");
         return 2;

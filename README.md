@@ -87,7 +87,7 @@ HOME is a row of pages, and you choose which one is **your home screen**: **DANC
 GLO > DEVICE > HOME PAGE. The unit opens on it at power-on; after that the HOME button, like every section's button, returns to the page you were last on. **DANCE** shows the selected
 track as a small robot that dances to what the track plays, on a city street at dusk or by night, with the track's four
 knobs under it (the engine decides which four). The pages of HOME are tabs along the foot:
-**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, the five **IDEAS** pages, **MORPH** (three morphs on one page), **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
+**DANCE** (the robot), **TRACKS** (every track's sound, length, key and pattern at a glance), **PRESETS**, **IDEAS** (five sub-pages), **MORPH** (three morphs on one page), **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER** (MIXER is one turn of SELECT left of DANCE). Turn ALGORITHM to move
 between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the last two.
 
 <table>
@@ -118,9 +118,9 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   strip that takes two laps to come back, eight constellations as stick figures; each dot stays in its own quarter of the screen) and you turn its knob to walk the sound
   round it. A held-HOME key shuffles every shape, or just the one you last turned.
 - **XYZ.** A pad you play with one dot: knobs 1 and 2 move it, and seven invisible lines through the centre each carry a parameter
-  (PAN, DIST, RES, CUT, PHASER and the engine's own two) that follows where the dot falls on it. Knob 3 rotates the lines, knob 4 is a
-  third axis, drawn as a zoom down a tunnel (REV, or DLY, CHORUS or LEVEL from the HOME layer's keys). The sound is unchanged when the page opens.
-- **IDEAS.** The five IDEAS tabs throw ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
+  (PAN, DIST, DRIFT, CHORUS, PHASER and the engine's own two) that follows where the dot falls on it. Knob 3 rotates the lines, knob 4 is a
+  third axis, drawn as a zoom down a tunnel (REV, or DLY, CUT or LEVEL from the HOME layer's keys). The sound is unchanged when the page opens.
+- **IDEAS.** IDEAS (one page, five sub-pages) throws ideas for the selected track, each heard at once: **TRACK** writes a pattern (a
   genre's progression, voicing and figures, a rhythm cell, a role: bass, chords, melody or arp), **SOUND** picks a preset
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
   effect (drive, space, movement), and **TEXTURE** makes what the track plays ambient: a pad, choir, hiss, sea or crackle

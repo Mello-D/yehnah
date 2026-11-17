@@ -55,8 +55,8 @@ Yehnah has no user samples: it synthesises everything.
 
 ### Your first idea and your first save
 
-1. On HOME turn **SELECT** right of PRESETS to the **IDEAS** pages (**I-TRK**, **I-SND**, **I-LFO**, **I-FX**, **I-TEX**). On
-   **I-TRK**, turn **KNOB 4** (IDEA): a new sequence for the selected track, heard at once. Turn it again for
+1. On HOME turn **SELECT** right of PRESETS to **IDEAS**: one page whose sub-pages (**TRACK**, **SOUND**, **LFO**, **FX**,
+   **TEXTURE**) SELECT scrolls, the name in a header chip at the foot of the panel. On **TRACK**, turn **KNOB 4** (IDEA): a new sequence for the selected track, heard at once. Turn it again for
    another. **OCT+** keeps what you hear, **OCT−** puts back what was there.
 2. Press **PLAY**. To record what you play, arm **REC** and play the keys while it runs.
 3. Like it? Press **SAVE**: at power-on it opens on **PROJECT** (later, on the SAVE page you were last on; SELECT goes back to PROJECT) (project number, section **A–D**, **LOAD**, **SAVE**). Turn
@@ -147,7 +147,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 | **GLO** | GLO (four lists of rows) |
 | **ENV** | ENV |
 | **LFO** | LFO |
-| **SCL** | SCALE · CHORD · HARP · OMNI · PROG · GUITAR · TUNE |
+| **SCL** | HARP · OMNI · GUITAR · CHORD · SCALE · TUNE · PROG |
 | **ARP** | ARP |
 | **SAVE** | PROJECT · ARRANGE (STRUCT) · TRIM |
 
@@ -155,7 +155,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 
 ## 4. HOME, sounds and IDEAS
 
-HOME is a row of pages: **DANCE**, **TRACKS**, **PRESETS**, the **IDEAS**, **MORPH**, **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER**.
+HOME is a row of pages: **DANCE**, **TRACKS**, **PRESETS**, **IDEAS**, **MORPH**, **SWARM**, **TRACE**, **XYZ**, **SENDS** and **MIXER**.
 Two of them, **DANCE** and **TRACKS**, are the ones you can make your own **home page**: the page the unit opens at power-on.
 **You choose which is your home screen** in **GLO > DEVICE > HOME PAGE** (**DANCE**, the default, or **TRACKS**); the choice is saved with the settings.
 After that the **HOME** button (and a section's button pressed again inside it) returns to the page of HOME you were last on, like every other button; a second tap of HOME stays where it is.
@@ -178,8 +178,10 @@ tracks that play show: four with **TRACKS 4**, six with **TRACKS 6**. **ALGORITH
 ### PRESETS
 
 One list over every engine's factory sounds, then your user presets. The columns are **#**, **NAME**, **TYPE** (bass,
-lead, pad…) and **ENGINE**. The knobs filter it: **KNOB 1 TYPE**, **KNOB 2 ENG** (an engine, or ALL), **KNOB 3 FAV**
-(favourites only) and **KNOB 4 LIST**. Turning the PRESETS encoder loads the next sound into the track on any page.
+lead, pad…) and **ENGINE**. **KNOB 1 TYPE** filters it (ALL, the types A to Z, INIT, USER and **FAV**, your favourites); **KNOB 2 ENG** jumps to the next or
+previous engine; **KNOB 3 LETTER** jumps to the next or previous first letter; **KNOB 4 SORT** orders the list by **ENGINE**
+(the engines A to Z, each its INIT then A to Z), **TYPE** (the types, each A to Z) or **A-Z** (the whole list); the sort is saved.
+Hold **HOME** and press **G#3** (the black key right of F#3) to mark or unmark the track's sound as a favourite. Turning the PRESETS encoder loads the next sound into the track on any page.
 Switching a track to another engine fades the old one out, and the notes you hold go on in the new one. Types, engines and each engine's sounds are all in A to Z order (ALL first on KNOB 1 and INIT, USER last; INIT first in each engine's sounds).
 
 **Every engine has an INIT sound**, its plain starting point, first in its list (a drum track's is the plain DRUM-X
@@ -287,7 +289,7 @@ edge, a 100 % end of one parameter is always next to a 0 % end of another (seven
   Z's name is written on it (faint at first, clear at the bottom). Turning back down brings the frames back. KNOB 4 moves Z two
   units a click. The dot throws a longer shadow as Z rises.
   The foot of the panel
-  shows X, Y, ROT and Z with its name. On the **HOME layer** the first four keys choose what Z is: **F3 REV, G3 DLY, A3 CHORUS,
+  shows X, Y, ROT and Z with its name. On the **HOME layer** the first four keys choose what Z is: **F3 REV, G3 DLY, A3 CUT,
   B3 LEVEL** (the chosen one is lit).
 - **One dot moves several lines at once.** A line at right angles to your move stays where it is; the lines along it follow, by
   their share. XYZ is a pad that morphs the sound, not seven faders: rotate it to change which parameters go together.
@@ -303,7 +305,7 @@ edge, a 100 % end of one parameter is always next to a 0 % end of another (seven
 
 ### IDEAS
 
-Five pages that throw ideas for the selected track, each heard at once. **KNOB 4** and the other knobs throw; **OCT+**
+One page with five sub-pages (**TRACK**, **SOUND**, **LFO**, **FX**, **TEXTURE**: turn **SELECT**; the ends go on along HOME) that throw ideas for the selected track, each heard at once. **KNOB 4** and the other knobs throw; **OCT+**
 keeps what you heard, **OCT−** puts back what was there before the page's first throw. A throw on another page or track
 keeps the one before: **UNDO** (REC held + D4) still brings it back.
 
@@ -433,7 +435,7 @@ keys walk the scale), SEQ (the sequencer snaps too). **ALL TR** moves every sequ
 
 ### The chord modes
 
-SCL has six chord pages, **CHORD**, **HARP**, **OMNI**, **PROG**, **GUITAR** and **TUNE**. They are one idea in five
+SCL has six chord pages, **HARP**, **OMNI**, **GUITAR**, **CHORD**, **TUNE** and **PROG** (and **SCALE**, between CHORD and TUNE). They are one idea in five
 flavours: a key plays a whole chord, and every flavour uses the **same layout**, so what you learn on one carries to the
 others. They suit holding the FM-1 in two hands like a console controller, **one thumb on the chord keys, the other
 thumb strumming the plate**, with the octave and bend keys under the strumming thumb.
@@ -454,7 +456,7 @@ thumb strumming the plate**, with the octave and bend keys under the strumming t
 | **F4, G4, A4, B4, C5, D5, E5, F5, G5** (the nine white keys above) | The **plate**: the notes of the chord you struck last, one string a key. A sweep of the other thumb strums it. If the chord has more notes than keys it goes round again an octave up |
 | **G#4** and **A#4** | **Octave bend** down and up, while held |
 | **C#5** and **D#5** | **Whole-tone bend** down and up, while held |
-| **F#5** (the top black key) | **Latch**: the chord keeps sounding after you let go (with the ARP off; with the ARP on it is the arp's HOLD). The plate's notes never latch |
+| **F#5** (the top black key) | **Latch**: the chord keeps sounding after you let go (with the ARP off; with the ARP on it is the arp's HOLD). Press the same chord key again to stop it. The plate's notes never latch |
 | **F#4** | Silent, except on PROG, where it picks **WRITE** |
 
 In **CHORD** the chord keys are the lowest eight (F3 to C4: the scale's degrees I to VII and I an octave up), and the plate is
@@ -631,7 +633,7 @@ the arrangement or the transport is running (the screen says STOP TO EDIT).
 | **G4** | **SAVE SND** | Saves the selected track's sound: over the user slot it came from, or into the first free slot (you name it). |
 | **A4** | **ERASE SND** | Erases that user sound slot. |
 
-On XYZ the keys are **F3 Z REV, G3 Z DLY, A3 Z CHORUS, B3 Z LEVEL** (what KNOB 4 turns), **C4 XYZ** (on / off), **D4 CAPTURE** and **E4 RE-FIT**. On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
+On XYZ the keys are **F3 Z REV, G3 Z DLY, A3 Z CUT, B3 Z LEVEL** (what KNOB 4 turns), **C4 XYZ** (on / off), **D4 CAPTURE** and **E4 RE-FIT**. On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
 turned last), **B3** CAPTURE, **C4** TRACE (on / off).
 
 The four knobs do nothing on this layer.

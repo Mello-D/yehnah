@@ -651,6 +651,10 @@ static void layer_key(uint32_t l, uint32_t k)
             swarm_act(p);
         else if (key_black(k) && p == 0u)               /* (2026-11-17) F#3: IDEA ALL, IDEAS > TRACK's throw on every track */
             ix_all();
+        else if (key_black(k) && p == 1u) {             /* (2026-11-17, the user's) G#3: the track's sound a favourite, or not */
+            preset_mark(!preset_favorite());
+            ui_message(preset_favorite() ? "FAVORITE" : "NOT A FAVORITE");
+        }
     }
 }
 /* each pass: the keys the layer got now; the solo: HOME > MIXER's (perform.c) */
@@ -733,6 +737,9 @@ static uint32_t layer_leds(uint32_t *br)
             can = (uint32_t)swarm_act_ok(p);
         } else if (l == LAYER_HOME && b && p == 0u) {   /* IDEA ALL: breathes when it can be done */
             can = !chain_busy();
+        } else if (l == LAYER_HOME && b && p == 1u) {   /* FAVORITE: lit when the sound is one */
+            can = 1;
+            on = (uint32_t)preset_favorite();
         } else if (l == LAYER_REC && !b && p == RK_ALL) {
             can = !chain_busy();
         } else if (l == LAYER_REC && !b && p >= RK_PLAY && p <= RK_NAME) {   /* the section playing lit, the saved
@@ -800,10 +807,14 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     if (l == LAYER_HOME) {                              /* SWARM */
         static const char *const SN[SWA_N] = {"FREEZE", "REVERSE", "THROW", "CAPTURE", "SWARM", "", ""};
         static const char *const TN[SWA_N] = {"FREEZE", "RANDOM", "REROLL", "CAPTURE", "TRACE", "", ""};   /* (TRACE: the shapes) */
-        static const char *const XN[SWA_N] = {"Z REV", "Z DLY", "Z CHORUS", "Z LEVEL", "XYZ", "CAPTURE", "RE-FIT"};          /* (XY) */
+        static const char *const XN[SWA_N] = {"Z REV", "Z DLY", "Z CUT", "Z LEVEL", "XYZ", "CAPTURE", "RE-FIT"};          /* (XY) */
         if (blk && p == 0u) {                           /* F#3: IDEA ALL */
             str_cpy(nm, "IDEA ALL", 12);
             return chain_busy() ? LS_DIM : LS_OFF;
+        }
+        if (blk && p == 1u) {                           /* G#3: FAVORITE */
+            str_cpy(nm, "FAVORITE", 12);
+            return preset_favorite() ? LS_SEL : LS_OFF;
         }
         if (blk || p >= SWA_N)
             return LS_OFF;

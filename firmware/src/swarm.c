@@ -34,6 +34,8 @@ enum { SWA_FREEZE, SWA_REVERSE, SWA_THROW, SWA_CAPTURE, SWA_ONOFF, SWA_X5, SWA_X
 static const char *const SW_ROW[SWR_N] = {"POSITION", "SHAPE", "SIZE", "SPEED", "GAIN"};
 static const char *const SW_SHAPE[SWS_N] = {"ORBIT", "DRIFT", "CHAOS", "THROW"};
 
+/* (2026-11-17, the user's: too much volume lost) no parameter that takes the level down as it moves: no cutoff, resonance, damping,
+ * mute, decay, sustain or low-pass gate (CUT is Z's in XYZ now). */
 /* per engine (ENGI_ number): dot 0's X and Y parameter, dot 1's, dot 2's, dot 3's. A parameter is an engine slot (E(k), the
  * engine's .edit[k]) or a common one (P_DETUNE, P_FCUT ..: TP[]); SWN = none. Only smooth parameters that keep what the sound
  * is (no waveform, material, model, ratio, algorithm or chorus type: a stepped setting jumps, and SWARM cannot fade it), the
@@ -42,36 +44,36 @@ static const char *const SW_SHAPE[SWS_N] = {"ORBIT", "DRIFT", "CHAOS", "THROW"};
 #define SWN 0xFFFFu
 #define E(k) (P_E0 + (k))
 static const uint16_t SW_TAB[NENGINES][8] = {
-    /*  0 ANALOG  */ {E(1), E(3), E(4), E(5), E(6), E(2), P_VINT, P_PHAMT},         /* DTN NOIS | CUT RES | DRV MIX */
-    /*  1 DIGITAL */ {E(4), E(6), E(5), P_FCUT, P_DETUNE, P_VINT, P_DIST, P_PHAMT}, /* IDX FB | MDEC */
-    /*  2 PHASE   */ {E(2), E(7), E(3), E(4), E(6), P_FCUT, P_DETUNE, P_DIST},      /* DCW DCW2 | ENV DTN | SUB */
+    /*  0 ANALOG  */ {E(1), E(3), E(6), E(2), P_VINT, P_PHAMT, P_DRIFT, P_CHOR},            /* DTN NOIS | DRV MIX */
+    /*  1 DIGITAL */ {E(4), E(6), E(5), P_DRIFT, P_DETUNE, P_VINT, P_DIST, P_PHAMT},            /* IDX FB | MDEC */
+    /*  2 PHASE   */ {E(2), E(7), E(3), E(4), E(6), P_VINT, P_DETUNE, P_DIST},            /* DCW DCW2 | ENV DTN | SUB */
     /*  3 LOFI    */ {E(3), E(7), E(2), E(4), E(5), P_DETUNE, P_DIST, P_REV},       /* CRSH TONE | DUTY SWP | VIB */
-    /*  4 SAMPLE  */ {P_FCUT, P_FRES, P_DIST, P_DETUNE, P_VINT, P_DRIFT, P_PHAMT, P_REV},
-    /*  5 VOICE   */ {E(0), E(1), E(2), E(4), E(5), E(6), E(7), P_DRIFT},           /* VOWEL VOWEL2 | TALK BUZZ | BREATH Q | RAND */
-    /*  6 TRIO    */ {P_FCUT, P_FRES, P_DIST, P_DETUNE, P_VINT, P_DRIFT, P_PHAMT, P_REV},
-    /*  7 WHEEL   */ {E(1), E(2), E(3), E(5), E(6), P_VINT, P_PHAMT, P_FCUT},       /* SUB BODY | TOP CLICK | DRV */
-    /*  8 GRAIN   */ {P_FCUT, P_FRES, P_DIST, P_DETUNE, P_VINT, P_DRIFT, P_PHAMT, P_REV},
-    /*  9 PHYS    */ {P_FCUT, P_FRES, P_DIST, P_DETUNE, P_VINT, P_DRIFT, P_PHAMT, P_REV},
-    /* 10 DRUM    */ {E(0), E(2), E(3), E(4), E(5), E(6), E(7), P_REV},            /* MORPH TONE | DECAY NOISE | FM ENV FOLD | DRIVE */
-    /* 11 NOISE   */ {E(1), E(2), E(3), E(5), E(6), E(7), E(4), P_REV},            /* COLR FREQ | RES DENS | DRFT CRSH | TRK */
-    /* 12 FM6     */ {E(1), E(2), E(4), E(5), E(6), P_FCUT, P_VINT, P_DIST},       /* FB MOD | MEG VMOD | DETUNE */
-    /* 13 SLICE   */ {P_FCUT, P_FRES, P_DIST, P_DETUNE, P_VINT, P_DRIFT, P_PHAMT, P_REV},
-    /* 14 ANIMAL  */ {E(1), E(2), E(3), E(4), E(5), P_DRIFT, P_REV, P_FCUT},       /* PRESS CHAOS | SIZE SWEEP | RATE */
-    /* 15 JUNO    */ {E(1), E(2), E(3), P_DETUNE, E(5), E(6), P_VINT, P_PHAMT},    /* PW SUB | NOIS | CUT RES */
-    /* 16 OMNI    */ {E(1), E(2), E(4), E(6), E(3), E(7), E(5), P_FCUT},          /* HARP1 HARP2 | SHIM BRIT | SUS DAMP | RATE */
-    /* 17 KALIMBA */ {E(1), E(3), E(5), E(4), E(6), E(7), E(2), P_REV},            /* HARD TONE | WORN GLID | DAMP CLIK | DECY */
-    /* 18 MINI    */ {E(0), E(1), E(2), E(6), E(3), E(4), E(5), E(7)},             /* CUT EMPH | CNTR MOD | F.ATK F.DEC | F.SUS KBD */
-    /* 19 GUITAR  */ {E(1), E(2), E(4), E(5), E(6), E(7), E(3), P_FCUT},           /* PICK PLUCK | TONE BODY | MUTE DAMP | DECY */
-    /* 20 ACID    */ {E(1), E(2), E(3), E(4), E(5), E(6), E(7), P_VINT},           /* CUT RES | ENV DEC | ACC DIST | SWP */
+    /*  4 SAMPLE  */ {P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_DRIFT, P_REV, P_CHOR, P_DLY},            /* commons */
+    /*  5 VOICE   */ {E(0), E(1), E(2), E(4), E(5), P_DETUNE, E(7), P_DRIFT},            /* VOWEL VOWEL2 | TALK BUZZ | BREATH | RAND */
+    /*  6 TRIO    */ {P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_DRIFT, P_REV, P_CHOR, P_DLY},            /* commons */
+    /*  7 WHEEL   */ {E(1), E(2), E(3), E(5), E(6), P_VINT, P_PHAMT, P_DRIFT},            /* SUB BODY | TOP CLICK | DRV */
+    /*  8 GRAIN   */ {P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_DRIFT, P_REV, P_CHOR, P_DLY},            /* commons */
+    /*  9 PHYS    */ {P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_DRIFT, P_REV, P_CHOR, P_DLY},            /* commons */
+    /* 10 DRUM    */ {E(0), E(2), P_PHAMT, E(4), E(5), E(6), E(7), P_REV},            /* MORPH TONE | PHASER NOISE | FM ENV FOLD | DRIVE */
+    /* 11 NOISE   */ {E(1), E(5), E(6), E(7), E(4), P_PHAMT, P_DRIFT, P_REV},            /* COLR DENS | DRFT CRSH | TRK PHASER */
+    /* 12 FM6     */ {E(1), E(2), E(4), E(5), E(6), P_DRIFT, P_VINT, P_DIST},            /* FB MOD | MEG VMOD | DETUNE */
+    /* 13 SLICE   */ {P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_DRIFT, P_REV, P_CHOR, P_DLY},            /* commons */
+    /* 14 ANIMAL  */ {E(1), E(2), E(3), E(4), E(5), P_DRIFT, P_REV, P_DETUNE},            /* PRESS CHAOS | SIZE SWEEP | RATE */
+    /* 15 JUNO    */ {E(1), E(2), E(3), P_DETUNE, P_DRIFT, P_CHOR, P_VINT, P_PHAMT},            /* PW SUB | NOIS */
+    /* 16 OMNI    */ {E(1), E(2), E(4), E(6), E(5), P_DETUNE, P_DRIFT, P_VINT},            /* HARP1 HARP2 | SHIM BRIT | RATE */
+    /* 17 KALIMBA */ {E(1), E(3), E(5), E(4), E(7), P_DETUNE, P_VINT, P_REV},            /* HARD TONE | WORN GLID | CLIK */
+    /* 18 MINI    */ {E(2), E(6), E(3), E(4), E(7), P_DETUNE, P_DRIFT, P_VINT},            /* CNTR MOD | F.ATK F.DEC | KBD */
+    /* 19 GUITAR  */ {E(1), E(2), E(4), E(5), P_DETUNE, P_DRIFT, P_VINT, P_CHOR},            /* PICK PLUCK | TONE BODY */
+    /* 20 ACID    */ {E(3), E(4), E(5), E(6), E(7), P_VINT, P_DETUNE, P_DRIFT},            /* ENV DEC | ACC DIST | SWP */
     /* 21 DRIFT   */ {E(1), E(2), E(3), E(4), E(5), E(6), E(7), P_REV},            /* TILT DRIFT | SPEED FLICK | DETUNE BLOOM | BREATH */
-    /* 22 PLAITS  */ {E(1), E(2), E(3), E(4), E(5), E(6), P_FCUT, P_DETUNE},       /* HARM TIMB | MORPH AUX | TONE LPG */
-    /* 23 STRINGS */ {E(0), E(1), E(2), E(3), E(4), E(7), E(5), E(6)},             /* 16' 8' | 4' ENS | CUT RES | RATE SHP */
-    /* 24 VPS     */ {E(0), E(1), E(2), E(3), E(4), E(5), E(6), E(7)},             /* D V | VENV OSC2 | CUT RES | DTN SUB */
-    /* 25 MODAL   */ {E(1), E(3), E(4), E(5), E(6), E(7), E(2), P_FCUT},           /* HARD TONE | BARK TREM | DAMP CLIK | DECY */
-    /* 26 WSEQ    */ {E(1), E(2), E(4), E(6), E(7), P_DETUNE, P_DIST, P_VINT},     /* RATE XFADE | START CUT | RES */
-    /* 27 TERRAIN */ {E(2), E(3), E(1), E(4), E(5), E(6), E(7), P_DETUNE},         /* X Y | RAD ORB | DRIFT CUT | RES */
-    /* 28 VECTOR  */ {E(4), E(5), E(7), P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_REV}, /* X Y | CUT */
-    /* 29 HYBRID  */ {E(0), E(1), E(2), P_DETUNE, P_DIST, P_VINT, P_PHAMT, P_REV}, /* CUT RES | FENV */
+    /* 22 PLAITS  */ {E(1), E(2), E(3), E(4), E(5), P_DETUNE, P_DRIFT, P_VINT},            /* HARM TIMB | MORPH AUX | TONE */
+    /* 23 STRINGS */ {E(0), E(1), E(2), E(3), E(5), E(6), P_DETUNE, P_DRIFT},            /* 16' 8' | 4' ENS | RATE SHP */
+    /* 24 VPS     */ {E(0), E(1), E(2), E(3), E(6), E(7), P_DRIFT, P_VINT},            /* D V | VENV OSC2 | DTN SUB */
+    /* 25 MODAL   */ {E(1), E(3), E(4), E(5), E(7), P_DETUNE, P_DRIFT, P_VINT},            /* HARD TONE | BARK TREM | CLIK */
+    /* 26 WSEQ    */ {E(1), E(2), E(4), P_DETUNE, P_DIST, P_VINT, P_DRIFT, P_REV},            /* RATE XFADE | START */
+    /* 27 TERRAIN */ {E(2), E(3), E(1), E(4), E(5), P_DETUNE, P_DRIFT, P_VINT},            /* X Y | RAD ORB | DRIFT */
+    /* 28 VECTOR  */ {E(4), E(5), P_DETUNE, P_VINT, P_DIST, P_PHAMT, P_DRIFT, P_REV},            /* X Y */
+    /* 29 HYBRID  */ {E(2), P_DETUNE, P_DIST, P_VINT, P_PHAMT, P_REV, P_DRIFT, P_CHOR},            /* FENV */
 };
 
 typedef struct {
@@ -114,6 +116,7 @@ static void swarm_graph(void);
 static void swarm_cards(void);
 static void swarm_knob(uint32_t slot, int32_t steps);
 static void swarm_select(int32_t s);
+static void idea_select(int32_t s);                         /* (2026-11-17) IDEAS: SELECT scrolls its sub-pages (ui_swarm.c) */
 static int swarm_page_on(void);
 static void swarm_draw(void);
 static int summary_page_on(void);                       /* (ui_summary.c: HOME > TRACKS) */
@@ -632,9 +635,9 @@ static void swarm_tick(void)
  * ------------------------------------------------------------------------------------------------------------------------ */
 #define XY_NL 7u
 #define XY_NZ 4u
-static const uint16_t XY_ZID[XY_NZ] = {P_REV, P_DLY, P_CHOR, P_LEVEL};
-static const char *const XY_ZNAME[XY_NZ] = {"REV", "DLY", "CHORUS", "LEVEL"};
-static const char *const XY_LNAME[XY_NL] = {"PAN", "DIST", "RES", "CUT", "", "", "PHASER"};   /* (the two blanks: the engine's own, by its parameter) */
+static const uint16_t XY_ZID[XY_NZ] = {P_REV, P_DLY, P_FCUT, P_LEVEL};
+static const char *const XY_ZNAME[XY_NZ] = {"REV", "DLY", "CUT", "LEVEL"};
+static const char *const XY_LNAME[XY_NL] = {"PAN", "DIST", "DRIFT", "CHORUS", "", "", "PHASER"};   /* (the two blanks: the engine's own, by its parameter) */
 static struct {
     uint8_t on, trk, rot, zsel, manual_off, inited;
     uint16_t id[XY_NL];                                 /* each line's parameter */
@@ -653,8 +656,8 @@ static void xy_ids(const track_t *t)
     uint32_t k, n = 0;
     xy.id[0] = P_PAN;
     xy.id[1] = P_DIST;
-    xy.id[2] = P_FRES;
-    xy.id[3] = P_FCUT;
+    xy.id[2] = P_DRIFT;                                 /* (2026-11-17: RES and CUT took the level down: CUT is Z's) */
+    xy.id[3] = P_CHOR;
     xy.id[6] = P_PHAMT;
     for (k = 0; k < 8u && n < 2u; k++)
         if (tab[k] >= P_E0 && tab[k] < P_E0 + 8u)

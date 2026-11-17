@@ -1555,22 +1555,24 @@ static uint32_t preset_all_at(uint32_t n, uint32_t *k) { return preset_all_at_in
  * USER the user presets; 0 ALL. With LIST FAV it narrows the list to the starred. Not saved */
 static const char PTYPE[] = "BLPKIOUGHEMSRWVADXN";   /* (N: INIT, an engine's plain starting point) */
 #define PT_USER 20u
-static const char *const PTYPE_NAME[PT_USER + 2u] = {"ALL", "BASS", "LEAD", "PAD", "KEYS", "PIANO", "ORGAN", "PLUCK",
+#define PT_FAV 21u                                       /* (2026-11-17, the user's) the favourites, a type like INIT and USER */
+#define PT_N (PT_FAV + 1u)
+static const char *const PTYPE_NAME[PT_N] = {"ALL", "BASS", "LEAD", "PAD", "KEYS", "PIANO", "ORGAN", "PLUCK",
                                                      "GUITAR", "HARP", "BELL", "MALLET", "STRINGS", "BRASS", "WIND",
-                                                     "VOICE", "ARP", "DRUM", "FX", "INIT", "USER", 0};
+                                                     "VOICE", "ARP", "DRUM", "FX", "INIT", "USER", "FAV"};
 static const char *const PTYPE_ABBR[PT_USER + 1u] = {"", "BASS", "LEAD", "PAD", "KEYS", "PNO", "ORGN", "PLCK", "GTR",
                                                      "HARP", "BELL", "MLLT", "STR", "BRAS", "WIND", "VOX", "ARP", "DRUM",
                                                      "FX", "INIT", "USER"};   /* (a list row's) */
 _Static_assert(sizeof PTYPE == PT_USER, "a name a type");
 static uint8_t ptype_sel;
 /* (2026-11-17, the user's) KNOB 1 walks the types A to Z after ALL, INIT and USER last: ids by name (ptype_sel stays the id; PTYPE's order is the stored one) */
-static const uint8_t PTYPE_AZ[PT_USER + 1u] = {0, 16, 1, 10, 13, 17, 18, 8, 9, 4, 2, 11, 6, 3, 5, 7, 12, 15, 14, 19, 20};
+static const uint8_t PTYPE_AZ[PT_N] = {0, 16, 1, 10, 13, 17, 18, 8, 9, 4, 2, 11, 6, 3, 5, 7, 12, 15, 14, 19, 20, PT_FAV};   /* (FAV last, after INIT and USER) */
 static uint32_t ptype_pos(uint32_t id)                  /* the place of type id in that walk */
 {
     uint32_t i;
-    for (i = 0; i <= PT_USER && PTYPE_AZ[i] != id; i++)
+    for (i = 0; i < PT_N && PTYPE_AZ[i] != id; i++)
         ;
-    return i <= PT_USER ? i : 0u;
+    return i < PT_N ? i : 0u;
 }
 static uint32_t preset_type(uint32_t e, uint32_t k)   /* engine e's preset k's type (1..), a user preset's USER; 0 none */
 {
@@ -1585,44 +1587,258 @@ static uint32_t preset_type(uint32_t e, uint32_t k)   /* engine e's preset k's t
         ;
     return PTYPE[i] ? i + 1u : 0u;
 }
-static int preset_in(uint32_t e, uint32_t k)            /* in the list PRESETS shows: its TYPE, LIST FAV */
+static int preset_in(uint32_t e, uint32_t k)            /* in the list PRESETS shows: its TYPE (ALL, a type, USER, FAV) */
 {
-    return (!ptype_sel || preset_type(e, k) == ptype_sel) && (!favorites.filter || favorite_has(e, k));
+    return ptype_sel == PT_FAV ? favorite_has(e, k) : !ptype_sel || preset_type(e, k) == ptype_sel;
 }
 
-static uint32_t preset_pos(uint32_t *total)
+/* (2026-11-17, the user's) PRESETS' list, sorted: SORT (KNOB 4, kept in favorites.filter's bits 1..2, saved with the settings)
+ * ENGINE (the engines A to Z, each its INIT then A to Z), TYPE (the types as KNOB 1 walks them, each A to Z) or A-Z (the
+ * whole list). A sound is engine << 8 | preset (the engine NENGINES a user preset: its slot). No list is kept (the RAM is
+ * full): each question (how many, which place, the next one, the eight shown) is one pass over the sounds that fit the TYPE,
+ * pb_cmp their total order; the answers of the last asked are cached (pb_c) */
+enum { PB_ENG, PB_TYPE, PB_AZ, PB_N };
+#define PB_NONE 0xFFFFFFFFu
+static uint32_t pb_mode;
+static uint32_t pb_sort(void) { uint32_t m = favorites.filter >> 1 & 3u; return m < PB_N ? m : PB_ENG; }
+static const char *pb_name(uint32_t v, char *b)       /* the sound's name (b: 13 bytes, for a user preset's) */
 {
-    uint32_t all, current = preset_all_pos(&all), n = 0, pos = 0xFFFFFFFFu;
-    if (!favorites.filter && !ptype_sel) { *total = all; return current; }
-    for (uint32_t i = 0; i < all; i++) {
-        uint32_t k, e = preset_all_at(i, &k);
-        if (!preset_in(e, k)) continue;
-        if (i == current) pos = n;
-        n++;
+    if (v >> 8 == NENGINES) {
+        up_name(v & 255u, b);
+        return b;
     }
-    *total = n;
-    return pos == 0xFFFFFFFFu ? n : pos; /* current sound need not be in the list */
+    return ENGINES[v >> 8]->presets[v & 255u].name;
 }
-/* the list's n-th sound: its engine (NENGINES a user preset), *k its preset (slot), *g (if asked) its place among all */
-static uint32_t preset_at_g(uint32_t n, uint32_t *k, uint32_t *g)
+static const char *pb_eng_name(uint32_t e) { return e == NENGINES ? "USER" : ENGINES[e]->name; }
+static int pb_cmp_s(const char *x, const char *y)
 {
-    uint32_t all;
-    if (g)
-        *g = n;
-    if (!favorites.filter && !ptype_sel) return preset_all_at(n, k);
-    preset_all_pos(&all);
-    for (uint32_t i = 0; i < all; i++) {
-        uint32_t e = preset_all_at(i, k);
-        if (preset_in(e, *k) && !n--) {
-            if (g)
-                *g = i;
-            return e;
+    while (*x && *x == *y)
+        x++, y++;
+    return (int)(uint8_t)*x - (int)(uint8_t)*y;
+}
+static int pb_cmp(uint32_t a, uint32_t b)
+{
+    char na[13], nb[13];
+    uint32_t ea = a >> 8, eb = b >> 8;
+    int c = 0;
+    if (a == b)
+        return 0;
+    if (pb_mode == PB_TYPE)
+        c = (int)ptype_pos(preset_type(ea, a & 255u)) - (int)ptype_pos(preset_type(eb, b & 255u));
+    else if (pb_mode == PB_ENG && ea != eb)
+        c = pb_cmp_s(pb_eng_name(ea), pb_eng_name(eb));
+    if (!c && pb_mode == PB_ENG && ea == eb && ea != NENGINES)   /* (an engine's own: INIT first, then A to Z) */
+        return (int)preset_rank(ENGINES[ea], a & 255u) - (int)preset_rank(ENGINES[ea], b & 255u);
+    if (!c)
+        c = pb_cmp_s(pb_name(a, na), pb_name(b, nb));
+    if (!c)
+        c = pb_cmp_s(pb_eng_name(ea), pb_eng_name(eb));
+    return c ? c : (int)(a & 255u) - (int)(b & 255u);
+}
+typedef void (*pb_fn)(uint32_t it, void *c);
+static void pb_each(pb_fn f, void *c)                   /* every sound of the TYPE (the order of the engines' own lists) */
+{
+    uint32_t r, i;
+    pb_mode = pb_sort();
+    for (r = 0; r < NENG_SHOWN; r++) {
+        uint32_t e = eng_vis(r);
+        for (i = 0; i < preset_shown(e); i++) {
+            uint32_t k = preset_nth(ENGINES[e], i);
+            if (k < 256u && preset_in(e, k))
+                f(e << 8 | k, c);
         }
     }
-    *k = UP_SLOTS;
-    return NENGINES;
+    for (i = 0; i < up_count(); i++) {
+        uint32_t k = up_nth(i);
+        if (preset_in(NENGINES, k))
+            f(NENGINES << 8 | k, c);
+    }
+}
+static uint32_t pb_cur(void)                            /* the selected track's sound */
+{
+    uint32_t e = user_of(TSEL) < UP_SLOTS ? NENGINES : TSEL->eng_req;
+    return e << 8 | (e == NENGINES ? user_of(TSEL) :
+                     preset_orig(ENGINES[e], TSEL->preset % (ENG_NP(ENGINES[e]) ? ENG_NP(ENGINES[e]) : 1u)));
+}
+static uint32_t pb_key_of(uint32_t v)                   /* a run: the engine, the type or none, and the first letter */
+{
+    char b[13];
+    const char *s = pb_name(v, b);
+    uint32_t c = (uint8_t)s[0], gr = pb_mode == PB_ENG ? v >> 8 : pb_mode == PB_TYPE ? preset_type(v >> 8, v & 255u) : 0u;
+    c = c >= 'a' && c <= 'z' ? c - 32u : c >= 'A' && c <= 'Z' ? c : '#';
+    return gr << 8 | c;
+}
+static uint32_t pb_eng_of(uint32_t v) { return v >> 8; }
+/* how many, which place: one pass */
+typedef struct { uint32_t cur, total, less, found; } pb_sc_t;
+static void pb_f_scan(uint32_t it, void *c)
+{
+    pb_sc_t *s = c;
+    s->total++;
+    if (it == s->cur)
+        s->found = 1;
+    else if (pb_cmp(it, s->cur) < 0)
+        s->less++;
+}
+/* the best of the sounds past (after) or before a bound (none: all), not one of a run (kf: its key is nk): the smallest or the
+ * largest; and w[0..7], the eight smallest past it / eight largest before it, ascending */
+typedef struct {
+    uint32_t after, bound, strict, nk, best, n;
+    uint32_t (*kf)(uint32_t);
+    uint16_t w[8];
+} pb_pk_t;
+static void pb_f_pick(uint32_t it, void *c)
+{
+    pb_pk_t *p = c;
+    uint32_t j;
+    if (p->bound != PB_NONE) {
+        int d = pb_cmp(it, p->bound);
+        if (p->after ? (d < 0 || (d == 0 && p->strict)) : (d > 0 || (d == 0 && p->strict)))
+            return;
+    }
+    if (p->kf && p->kf(it) == p->nk)
+        return;
+    if (p->after) {                                     /* (the eight smallest) */
+        if (p->n == 8u && pb_cmp(it, p->w[7]) > 0)
+            return;
+        for (j = p->n < 8u ? p->n : 7u; j > 0u && pb_cmp(it, p->w[j - 1u]) < 0; j--)
+            p->w[j] = p->w[j - 1u];
+        p->w[j] = (uint16_t)it;
+        p->n += p->n < 8u;
+    } else {                                            /* (the eight largest) */
+        if (p->n == 8u && pb_cmp(it, p->w[0]) < 0)
+            return;
+        if (p->n == 8u) {
+            for (j = 0; j < 7u; j++)
+                p->w[j] = p->w[j + 1u];
+            p->n = 7u;
+        }
+        for (j = p->n; j > 0u && pb_cmp(it, p->w[j - 1u]) < 0; j--)
+            p->w[j] = p->w[j - 1u];
+        p->w[j] = (uint16_t)it;
+        p->n++;
+    }
+    p->best = p->after ? p->w[0] : p->w[p->n - 1u];
+}
+static void pb_pick(pb_pk_t *p, uint32_t after, uint32_t bound, uint32_t strict, uint32_t (*kf)(uint32_t), uint32_t nk)
+{
+    memset(p, 0, sizeof *p);
+    p->after = after;
+    p->bound = bound;
+    p->strict = strict;
+    p->kf = kf;
+    p->nk = nk;
+    p->best = PB_NONE;
+    pb_each(pb_f_pick, p);
+}
+/* the answers of the last asked */
+static struct { uint32_t sig, cur, total, pos, found, first, nwin; uint16_t win[8]; uint8_t have, havew; } pb_c;
+static uint32_t pb_sig(void)
+{
+    return pb_sort() | (uint32_t)ptype_sel << 2 | up_count() << 8 | (uint32_t)favorites_gen << 16;
+}
+static uint32_t preset_pos(uint32_t *total)             /* the place of the selected track's sound in the list; total if it is not in it */
+{
+    pb_sc_t s = {pb_cur(), 0, 0, 0};
+    if (pb_c.have && pb_c.sig == pb_sig() && pb_c.cur == s.cur) {
+        *total = pb_c.total;
+        return pb_c.pos;
+    }
+    pb_each(pb_f_scan, &s);
+    pb_c.sig = pb_sig(), pb_c.cur = s.cur, pb_c.total = s.total, pb_c.found = s.found, pb_c.pos = s.found ? s.less : s.total;
+    pb_c.have = 1, pb_c.havew = 0;
+    *total = s.total;
+    return pb_c.pos;
+}
+/* the sound at place n of the list: engine (NENGINES a user preset), *k its preset (slot), *g its place. Made for the places
+ * the page shows (its eight rows start at the place before the sound loaded, or 0 when it is not in the list) */
+static uint32_t preset_at_g(uint32_t n, uint32_t *k, uint32_t *g)
+{
+    uint32_t total, pos = preset_pos(&total);
+    if (g)
+        *g = n;
+    if (!pb_c.havew || n < pb_c.first || n >= pb_c.first + pb_c.nwin) {
+        pb_pk_t p;
+        uint32_t start = PB_NONE, first = 0;
+        if (pb_c.found && n <= pos && pos - n < 8u) {   /* (the eight before the sound loaded, it last) */
+            pb_pick(&p, 0, pb_cur(), 0, 0, 0);
+            start = p.n > pos - n ? p.w[p.n - 1u - (pos - n)] : PB_NONE;
+            first = n;
+        } else if (n) {
+            *k = UP_SLOTS;
+            return NENGINES;
+        }
+        pb_pick(&p, 1, start, 0, 0, 0);
+        memcpy(pb_c.win, p.w, sizeof pb_c.win);
+        pb_c.first = first, pb_c.nwin = p.n, pb_c.havew = 1;
+    }
+    if (n < pb_c.first || n >= pb_c.first + pb_c.nwin) {
+        *k = UP_SLOTS;
+        return NENGINES;
+    }
+    *k = pb_c.win[n - pb_c.first] & 255u;
+    return pb_c.win[n - pb_c.first] >> 8;
 }
 static uint32_t preset_at(uint32_t n, uint32_t *k) { return preset_at_g(n, k, 0); }
+static void preset_load(uint32_t e, uint32_t k);
+/* the next / previous sound (it wraps; not in the list: the first / last), loaded */
+static void pb_step_item(int32_t dir)
+{
+    pb_pk_t p;
+    uint32_t cur = pb_cur(), total, pos = preset_pos(&total), it;
+    if (!total)
+        return;
+    pb_pick(&p, dir > 0, pos < total ? cur : PB_NONE, 1, 0, 0);
+    it = p.best;
+    if (it == PB_NONE) {
+        pb_pick(&p, dir <= 0 ? 0 : 1, PB_NONE, 0, 0, 0);   /* (round: the first, or the last) */
+        it = p.best;
+    }
+    if (it != PB_NONE)
+        preset_load(it >> 8, it & 255u);
+}
+/* the first of the list, loaded (a TYPE just chosen) */
+static void pb_load_first(void)
+{
+    pb_pk_t p;
+    pb_pick(&p, 1, PB_NONE, 0, 0, 0);
+    if (p.best != PB_NONE)
+        preset_load(p.best >> 8, p.best & 255u);
+}
+/* the first of the next / previous run of kf's key (an engine, a first letter); round at the ends */
+static void pb_run_step(int32_t dir, uint32_t (*kf)(uint32_t))
+{
+    pb_pk_t p, q;
+    uint32_t cur = pb_cur(), total, pos = preset_pos(&total), start;
+    if (!total)
+        return;
+    if (pos >= total) {                                 /* (the sound loaded is not in the list: its start) */
+        pb_load_first();
+        return;
+    }
+    if (dir > 0) {
+        pb_pick(&p, 1, cur, 1, kf, kf(cur));
+        if (p.best == PB_NONE)
+            pb_pick(&p, 1, PB_NONE, 0, 0, 0);
+        start = p.best;
+    } else {
+        pb_pick(&p, 0, cur, 1, kf, kf(cur));            /* the last of the run before .. */
+        if (p.best == PB_NONE)
+            pb_pick(&p, 0, PB_NONE, 0, 0, 0);           /* (round: the last of all) */
+        if (p.best == PB_NONE)
+            return;
+        pb_pick(&q, 0, p.best, 1, kf, kf(p.best));      /* .. the sound before its run .. */
+        pb_pick(&p, 1, q.best, 1, 0, 0);                /* .. and the one after that: its first */
+        start = p.best;
+    }
+    if (start != PB_NONE)
+        preset_load(start >> 8, start & 255u);
+}
+static uint32_t pb_letter(void)                         /* the first letter of the sound loaded ('#' not a letter) */
+{
+    pb_mode = pb_sort();
+    return pb_key_of(pb_cur()) & 255u;
+}
 static int preset_favorite(void)
 {
     uint32_t k = user_of(TSEL);
@@ -1638,9 +1854,8 @@ static void preset_mark(int on)
     }
 }
 
-static void preset_go(uint32_t n)                    /* load list index n into the selected track (the sound only) */
+static void preset_load(uint32_t e, uint32_t k)       /* sound k of engine e (NENGINES: user slot k) into the selected track (the sound only) */
 {
-    uint32_t k, e = preset_at(n, &k);
     if (e == NENGINES) {
         up_load(k);
     } else {
@@ -1693,12 +1908,17 @@ static void midi_pc_poll(void)
 
 
 
-/* (chord-harp fork) PRESETS' KNOB 2: the next / previous engine, its first sound; with a TYPE or LIST FAV, the next one
- * that has a sound in the list, its first such */
+/* (chord-harp fork) PRESETS' KNOB 2: the next / previous engine, its first sound; sorted by ENGINE, the next engine in the list
+ * (A to Z, only those with a sound in it); else with a TYPE, the next one that has a sound in the list, its first such */
 static void preset_engine_step(int32_t direction)
 {
     uint32_t e = TSEL->eng_req, i, n, k;
-    if ((!ptype_sel && !favorites.filter) || ptype_sel == PT_USER) {
+    if (pb_sort() == PB_ENG) {
+        pb_mode = PB_ENG;
+        pb_run_step(direction, pb_eng_of);
+        return;
+    }
+    if (!ptype_sel || ptype_sel == PT_USER) {
         select_engine(eng_step(e, direction));
         return;
     }
@@ -1716,10 +1936,10 @@ static void preset_engine_step(int32_t direction)
 
 static void preset_step(int32_t direction)
 {
-    uint32_t total, cur = preset_pos(&total);
-    if (!total) { ui_message(favorites.filter ? "NO FAVORITES" : "NO SOUNDS"); return; }
-    preset_go(cur >= total ? (direction > 0 ? 0 : total - 1) :
-              (cur + (direction > 0 ? 1u : total - 1u)) % total);
+    uint32_t total;
+    (void)preset_pos(&total);
+    if (!total) { ui_message(ptype_sel == PT_FAV ? "NO FAVORITES" : "NO SOUNDS"); return; }
+    pb_step_item(direction);
 }
 
 
