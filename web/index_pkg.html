@@ -113,6 +113,13 @@
       <p class="small">Para conservar el sonido de antes, mové esas notas a la octava central (36–47, o el mapa GM 35–81) en tu DAW o secuenciador. Antes de instalar, guardá un backup completo de tus proyectos con el editor (Backup) o con «Volver al V15 oficial» abajo.</p>
     </div>
   </div>
+  <div id="foreign" hidden class="card step">
+    <h2 data-t="foreignTitle"></h2>
+    <p class="small" id="foreign-what"></p>
+    <p class="small"><strong data-t="foreignRec"></strong></p>
+    <p class="small" data-t="foreignRisk"></p>
+    <p class="small"><label><input id="foreign-ok" type="checkbox"> <span data-t="foreignOk"></span></label></p>
+  </div>
   <p style="margin:0"><button id="go" disabled data-t="install"></button></p>
   </div>
   <details id="stock" class="card">
@@ -156,6 +163,10 @@ const TEXT = {
     firstStock: "先に公式V15へ戻す",
     firstOk: "インストールの前に、接続された FM-1 のファームウェアを自動で確認します。公式V15 か Yehnah のときだけ書き込みます。",
     checking: "FM-1 のファームウェアを確認中…",
+    foreignTitle: "他のカスタムファームウェアが入っています", foreignFound: "この FM-1 は次のファームウェアだと名乗っています: ",
+    foreignRec: "おすすめ: 先に下の「公式 V15 に戻す」で公式 V15 に戻し、そこから Yehnah をインストールしてください。",
+    foreignRisk: "他のカスタムファームウェアの上への書き込みは、動作確認していません。そのアップデートモードが違う動きをして失敗することがあり、最悪の場合 FM-1 が起動せず、復旧に Transporter が必要です。必要なデータは先に保存してください。自己責任でお願いします。作者は一切の責任を負いません。",
+    foreignOk: "リスクを理解したうえで、このファームウェアの上にそのまま書き込みます。", foreignTick: "上のチェックボックスで確認してから、もう一度インストールを押してください。",
     otherfw: "この FM-1 には公式V15 でも Yehnah でもないファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に戻してから、もう一度インストールしてください。 ",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
     verLabel: "バージョン:", verOld: "以前のバージョンにも戻せます（最新が一番上）。新しい版で保存したプロジェクトは古い版で正しく開けないことがあります。先にエディタでバックアップしてください。", latest: "最新", manual: "マニュアル:",
@@ -204,6 +215,10 @@ const TEXT = {
     firstStock: "Return to official V15 first",
     firstOk: "Before installing, the installer checks the connected FM-1's firmware by itself: it writes only over official V15 or Yehnah.",
     checking: "Checking the FM-1's firmware…",
+    foreignTitle: "Another custom firmware is installed", foreignFound: "This FM-1 reports: ",
+    foreignRec: "We recommend going from official V15: first use \"Return to official V15\" below, then install Yehnah from there.",
+    foreignRisk: "Installing over another custom firmware is untested. Its update mode may behave differently and the install can fail. In the worst case the FM-1 does not start and recovering it needs a Transporter. Save anything you need first. This is your decision and your risk; the authors accept no responsibility.",
+    foreignOk: "I understand the risk and want to install over this firmware anyway.", foreignTick: "Tick the box above to confirm, then press Install again.",
     otherfw: "This FM-1 runs a firmware that is neither official V15 nor Yehnah: nothing was written. Return to official V15 first with the button below, then install again. Found: ",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
     verLabel: "Version:", verOld: "You can go back to an earlier version too (newest on top). Projects saved by a newer version may not open right in an older one: back them up with the editor first.", latest: "latest", manual: "Manual:",
@@ -344,10 +359,11 @@ async function fwKind(up) {
   const text = dev.id.text;
   if (text === "FM-1_015") { dev.link.close(); return { kind: "stock", text }; }
   if (!/^FM-1_(?:9\d\d|069)$/.test(text)) { dev.link.close(); return { kind: "other", text }; }
+  /* FM-1_9xx / 069 that does not answer as Yehnah: another custom firmware (installing over it is the user's risk, confirmed) */
   const input = dev.link.input, output = dev.link.output; dev.link.close();
   const link = new BackupConnection(input, output);
-  try { return isYehnahInfo(await link.request([1, []], { timeout: 2000 })) ? { kind: "yehnah", text } : { kind: "other", text }; }
-  catch (e) { return { kind: "other", text: text + " (no answer)" }; }
+  try { return isYehnahInfo(await link.request([1, []], { timeout: 2000 })) ? { kind: "yehnah", text } : { kind: "foreign", text }; }
+  catch (e) { return { kind: "foreign", text: text + " (no answer)" }; }
   finally { link.close(); }
 }
 /* (chord-harp fork, 2026-11-04) the resource region (fm1res.js): the update loader writes it from the package; when it
@@ -407,6 +423,12 @@ $("go").addEventListener("click", async () => {
       log(`firmware: ${fw.kind} ${fw.text || ""}`);
       if (fw.kind === "none") { sayK("notfound", up.seen()); lockInstaller(false); return; }
       if (fw.kind === "other") { sayK("otherfw", fw.text); $("stock").open = true; lockInstaller(false); return; }
+      if (fw.kind === "foreign") {
+        $("foreign-what").textContent = t("foreignFound") + fw.text;
+        $("foreign").hidden = false;
+        if (!$("foreign-ok").checked) { sayK("foreignTick"); $("foreign").scrollIntoView({ behavior: "smooth" }); lockInstaller(false); return; }
+        log(`foreign firmware ${fw.text}: the user confirmed the risk`);
+      } else { $("foreign").hidden = true; $("foreign-ok").checked = false; }
       await up.install(image, meta.product, step);
       await finishRes(up);
     }
