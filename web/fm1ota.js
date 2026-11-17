@@ -12,6 +12,15 @@ const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
 const MAXDATA = 512;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const IS_OTA = (id) => /^ota-/i.test(id.model);
+// the MIDI port names the installer probes by name (never other gear); a deep search also tries the rest
+export const FM1_PORT = /fm-1|yehnah|vitamin|yeh|ota|composite|sinco|usb-midi/i;
+
+// every MIDI port the browser lists, one line each, for the log and the "Show MIDI ports" button
+export function describePorts(access) {
+  const line = (kind, p) => `${kind}: ${p.name || "?"} | ${p.manufacturer || "-"} | ${p.state}/${p.connection || "?"} | ${p.id || "?"}`;
+  const rows = [...access.inputs.values()].map((p) => line("in ", p)).concat([...access.outputs.values()].map((p) => line("out", p)));
+  return rows.length ? rows.join("\n") : "(no MIDI ports)";
+}
 
 // errors carry a code the pages translate: notfound, model, stopped, noloader, lost, noreturn,
 // mismatch (detail: the identity the device reports), badreq
@@ -114,27 +123,56 @@ export class Updater {
     this.log = log || (() => {});
   }
 
-  // every in/out pair with the same port name that answers the handshake
-  async find(filter) {
-    const outs = [...this.access.outputs.values()];
-    for (const input of this.access.inputs.values()) {
-      if (input.state === "disconnected") continue;
-      if (!/fm-1|yehnah|vitamin|yeh|ota|composite|sinco|usb-midi/i.test(input.name || "")) continue;   // never probe other gear
-      const output = outs.find((o) => o.name === input.name && o.state !== "disconnected");
-      if (!output) continue;
+  // one input against its candidate outputs: the matching port first (same name, or one name contains the
+  // other: some hosts add a suffix or prefix to one of them), then any live output (the names of an input
+  // and its output need not agree: CoreMIDI / MIDIWeb). A pair counts only when it answers the FM-1
+  // handshake and passes the filter; ports stay open (a close then re-open between candidates is racy).
+  async probe(input, outs, filter, tries = 3) {
+    if (input.state === "disconnected") return null;
+    const live = outs.filter((o) => o.state !== "disconnected");
+    const nm = input.name || "";
+    const named = live.filter((o) => o.name === nm || (nm && o.name && (o.name.includes(nm) || nm.includes(o.name))));
+    for (const output of (named.length ? named : live)) {
       try { await input.open(); await output.open(); } catch (_) { continue; }
       const link = new Link(input, output);
-      const id = await handshake(link, 2);
+      const id = await handshake(link, tries);
       if (id && (!filter || filter(id))) return { link, id, name: input.name };
       link.close();
     }
     return null;
   }
 
-  async waitFor(filter, ms) {
+  // the FM-1 (or its update loader) among the MIDI ports. Named ports first (other gear is never touched).
+  // With deep = true, if no named port answered, the other ports are probed too and accepted SOLELY when
+  // they answer the FM-1 handshake (other gear returns no valid identity): a host may name the FM-1, or its
+  // re-enumerated update loader, generically.
+  async find(filter, deep = false) {
+    const outs = [...this.access.outputs.values()];
+    const inputs = [...this.access.inputs.values()].filter((i) => i.state !== "disconnected");
+    for (const input of inputs)
+      if (FM1_PORT.test(input.name || "")) {
+        const dev = await this.probe(input, outs, filter);
+        if (dev) return dev;
+      }
+    if (deep)
+      for (const input of inputs)
+        if (!FM1_PORT.test(input.name || "")) {
+          const dev = await this.probe(input, outs, filter, 1);
+          if (dev) return dev;
+        }
+    return null;
+  }
+
+  // the ports there are, for the "not found" message: " (MIDI: a, b)" (a port the installer skipped shows)
+  seen() {
+    const names = [...this.access.inputs.values()].filter((p) => p.state !== "disconnected").map((p) => p.name || "?");
+    return names.length ? ` (MIDI: ${names.join(", ")})` : " (MIDI: none)";
+  }
+
+  async waitFor(filter, ms, deep = false) {
     const end = Date.now() + ms;
     while (Date.now() < end) {
-      const dev = await this.find(filter);
+      const dev = await this.find(filter, deep);
       if (dev) return dev;
       await sleep(1000);
     }
@@ -173,8 +211,8 @@ export class Updater {
   // full install: running firmware -> loader -> new firmware
   async install(image, product, onStep) {
     const step = onStep || (() => {});
-    const dev = await this.find((id) => !IS_OTA(id));
-    if (!dev) throw fail("notfound", "FM-1 not found (USB cable, and no other app using it?)");
+    const dev = await this.find((id) => !IS_OTA(id), true);
+    if (!dev) throw fail("notfound", "FM-1 not found (USB cable, and no other app using it?)", this.seen());
     const [model] = product.split("_");
     if (dev.id.model !== model) { dev.link.close(); throw fail("model", `the device is ${dev.id.text}, the package is for ${product}`); }
     step("start", dev.id.text);
@@ -185,13 +223,13 @@ export class Updater {
     if (!s1.finished) throw fail(s1.lost ? "lost" : "stopped", `the device ${s1.lost ? "was disconnected" : "stopped"} after ${s1.served} requests: nothing was written`);
     step("loader");
     await sleep(3000);
-    const ota = await this.waitFor((id) => id.model === "ota-" + model, 30000);
-    if (!ota) throw fail("noloader", "the update loader did not appear. Replug the USB cable and press Install again: the device stays in update mode until it is finished.");
+    const ota = await this.waitFor((id) => id.model === "ota-" + model, 60000, true);
+    if (!ota) throw fail("noloader", "the update loader did not appear. Replug the USB cable and press Install again: the device stays in update mode until it is finished.", this.seen());
     const s2 = await this.write(ota, image, step);
     if (!s2.finished) throw fail(s2.lost ? "lost" : "stopped", `the loader ${s2.lost ? "was disconnected" : "stopped"} after ${s2.served} requests. Replug and press Install again to resume.`);
     step("reboot");
     await sleep(3000);
-    const back = await this.waitFor((id) => !IS_OTA(id), 40000);
+    const back = await this.waitFor((id) => !IS_OTA(id), 60000, true);
     if (!back) throw fail("noreturn", "the device did not come back: power-cycle it");
     back.link.close();
     if (back.id.text !== product) throw fail("mismatch", `installed, but the device reports ${back.id.text}`, back.id.text);
@@ -211,7 +249,7 @@ export class Updater {
   // resume: the device is already in update mode (loader) -> true when the write finished
   async resume(image, onStep, product = null) {
     const model = product && product.split("_")[0];
-    const ota = await this.find((id) => model ? id.model === "ota-" + model : IS_OTA(id));
+    const ota = await this.find((id) => model ? id.model === "ota-" + model : IS_OTA(id), true);
     if (!ota) return false;
     const step = onStep || (() => {});
     const result = await this.write(ota, image, step);
@@ -219,7 +257,7 @@ export class Updater {
     if (product) {
       step("reboot");
       await sleep(3000);
-      const back = await this.waitFor((id) => id.model === model, 40000);
+      const back = await this.waitFor((id) => id.model === model, 60000, true);
       if (!back) throw fail("noreturn", "The FM-1 did not return after resuming the write.");
       back.link.close();
       if (back.id.text !== product) throw fail("mismatch", "The FM-1 reports a different firmware after resuming.", back.id.text);

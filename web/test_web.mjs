@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import vm from "node:vm";
 import { logicalImage, productOf } from "./fm1pkg.js";
-import { Updater, pack7, unpack7 } from "./fm1ota.js";
+import { Updater, pack7, unpack7, describePorts } from "./fm1ota.js";
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${what.padEnd(64)} ${cond ? "ok" : "FAIL"}`); if (!cond) failed++; };
@@ -1419,6 +1419,23 @@ async function updater() {
   ok(e && e.code === "lost", "fm1ota.js: unplugged in step 1 -> error code 'lost'");
   const e2 = await new Updater({ inputs: new Map(), outputs: new Map() }).install(image, "FM-1_069").then(() => null, (x) => x);
   ok(e2 && e2.code === "notfound", "fm1ota.js: no device -> error code 'notfound'");
+  ok(e2.detail === " (MIDI: none)" && describePorts({ inputs: new Map(), outputs: new Map() }) === "(no MIDI ports)",
+    "fm1ota.js: notfound lists the ports (none)");
+
+  /* a host that names the output differently from the input (CoreMIDI / MIDIWeb), or the FM-1 generically */
+  const dev4 = new FakeFM1(image);
+  for (const o of dev4.access.outputs.values()) o.name = "FM-1 Output";
+  const f4 = await new Updater(dev4.access).find((id) => id.model === "FM-1", true);
+  ok(f4 && f4.id.text === "FM-1_015", "fm1ota.js: the output's name differs from the input's: still paired");
+  const dev5 = new FakeFM1(image);
+  for (const p of [...dev5.access.inputs.values(), ...dev5.access.outputs.values()]) p.name = "Bridge 1";
+  const f5 = await new Updater(dev5.access).find((id) => id.model === "FM-1", true);
+  ok(f5 && f5.id.text === "FM-1_015", "fm1ota.js: a generic port name found by the handshake (deep)");
+  const f6 = await new Updater(dev5.access).find((id) => id.model === "FM-1");
+  ok(f6 === null, "fm1ota.js: a generic port name is not probed without deep");
+  const e7 = await new Updater({ inputs: new Map([["i", { name: "Other Synth", state: "connected", open: async () => {} }]]), outputs: new Map() })
+    .install(image, "FM-1_069").then(() => null, (x) => x);
+  ok(e7 && e7.code === "notfound" && e7.detail === " (MIDI: Other Synth)", "fm1ota.js: notfound names the ports it saw");
 }
 
 {   /* (chord-harp fork) the id width as the editor's load() sets it: from the INFO of the device connected */
