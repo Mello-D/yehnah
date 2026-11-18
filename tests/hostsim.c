@@ -120,8 +120,13 @@ static void host_preset_values(track_t *t, uint32_t e, uint32_t pi, const preset
         ENGINES[e]->pset(t->p, pi);
     if (ENGINES[e] == &ENG_DRUM)                  /* (chord-harp fork) its MACHINE (the kit itself stays the one loaded:
                                                    * DRUM-X's renders as before) */
-        dx_mach_req = (uint8_t)(pi >= DX_NKIT ? pi - DX_NKIT + 1u : DXK_DRUMX), drum_mach_block(0);   /* (at once: a
-                                                   * render's first hit comes in its first block) */
+    {
+        if (pi >= DX_NKIT0 + DXK_N - 1u)              /* (2026-11-18) the newer DRUM-X kits (after the MACHINEs): the kit itself too */
+            dx_kit_load(pi);
+        else
+            dx_mach_req = (uint8_t)(pi >= DX_NKIT0 ? pi - DX_NKIT0 + 1u : DXK_DRUMX);
+        drum_mach_block(0);                           /* (at once: a render's first hit comes in its first block) */
+    }
     fm6_track_loaded(t);                          /* FM6: the preset's patch (ui.c apply_preset_to) */
 }
 static void host_preset_req(track_t *t, uint32_t e, uint32_t pi)

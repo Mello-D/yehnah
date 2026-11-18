@@ -7710,7 +7710,7 @@ static int test_drum_kits(void)
     for (i = 0; i < NTRK; i++)                          /* (0.8.1: this track the only DRUM one: the kit is its to load) */
         if (&trk[i] != TSEL && trk[i].eng_req == ENGI_DRUM) set_engine_of(&trk[i], ENGI_ANALOG);
     set_engine(ENGI_DRUM);
-    ok = kk == 6u && ENG_DRUM.npresets == 9u + DXK_N - 1u && DX_NKIT == 9u && TSEL->preset == 0 &&
+    ok = kk == 6u && ENG_DRUM.npresets == DX_NKIT + DXK_N - 1u && DX_NKIT0 == 9u && DX_NKIT == 21u && TSEL->preset == 0 &&
          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD];
     TSEL->preset = (uint8_t)preset_nth(&ENG_DRUM, preset_rank(&ENG_DRUM, kk) - 1u);   /* (the one shown before it) */
     turn(EN_PRESET, 1);                                 /* browsing (HOME): TECHNO RAW */
@@ -7723,14 +7723,19 @@ static int test_drum_kits(void)
     ok = TSEL->preset == 0 && !memcmp(dx_kit, DX_KITS[kk].lane, sizeof dx_kit);
     init_sound_of(TSEL, ENGI_DRUM);                     /* INIT SOUND: the knobs, the kit as the section has it */
     ok &= !memcmp(dx_kit, DX_KITS[kk].lane, sizeof dx_kit);
-    for (i = 1; i < DX_NKIT; i++) {                     /* every kit loads whole and differs from the factory one */
+    for (i = 1; i < DX_NKIT0; i++) {                    /* every kit loads whole and differs from the factory one */
         apply_preset(i);
         ok &= TSEL->preset == i && !memcmp(dx_kit, DX_KITS[i].lane, sizeof dx_kit) && memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit) != 0 &&
               dx_kit_ok(DX_KITS[i].lane) && dx_mach_req == DXK_DRUMX;   /* (every value in range: the project would take it) */
     }
-    for (i = DX_NKIT; i < ENG_DRUM.npresets; i++) {     /* (chord-harp fork) LCD-4's: their MACHINE, the DRUM-X kit kept */
+    for (i = DX_NKIT0; i < DX_NKIT0 + DXK_N - 1u; i++) {   /* (chord-harp fork) LCD-4's, HORT's: their MACHINE, the DRUM-X kit kept */
         apply_preset(i);
-        ok &= TSEL->preset == i && dx_mach_req == i - DX_NKIT + 1u && !memcmp(dx_kit, DX_KITS[DX_NKIT - 1u].lane, sizeof dx_kit);
+        ok &= TSEL->preset == i && dx_mach_req == i - DX_NKIT0 + 1u && !memcmp(dx_kit, DX_KITS[DX_NKIT0 - 1u].lane, sizeof dx_kit);
+    }
+    for (i = DX_NKIT0 + DXK_N - 1u; i < ENG_DRUM.npresets; i++) {   /* (2026-11-18) the newer DRUM-X kits, after the MACHINEs */
+        apply_preset(i);
+        ok &= TSEL->preset == i && !memcmp(dx_kit, DX_KITS[i - (DXK_N - 1u)].lane, sizeof dx_kit) && memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit) != 0 &&
+              dx_kit_ok(DX_KITS[i - (DXK_N - 1u)].lane) && dx_mach_req == DXK_DRUMX;
     }
     apply_preset(0);
     ok &= !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit) && dx_mach_req == DXK_DRUMX;
@@ -7757,7 +7762,7 @@ static int test_drum_kits(void)
         uint32_t k, n = 0, l;
         int32_t peak = 0;
         uint32_t mq = song.master_q12, mu = (uint32_t)TSEL->p[P_MUTE];
-        apply_preset(DX_NKIT + 1u);                     /* 909 SWEEP */
+        apply_preset(DX_NKIT0 + 1u);                    /* 909 SWEEP */
         frame();
         ok = dx_mach_req == DXK_909;
         for (k = 0; k < NPAGES; k++)

@@ -184,9 +184,10 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
 </table>
 
 - **DRUM-X** is a synthesised kit of eight sounds (BD SD CP CH OH TM RS CB) generated in real time. Every sound has two
-  sides, **A** and **B**, and **MORPH** moves the whole kit between them: the knob to play live. There are twenty kit
+  sides, **A** and **B**, and **MORPH** moves the whole kit between them: the knob to play live. There are thirty-two kit
   presets, among them 808 BOOM, LOFI DUST, INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, ROCK KIT, JAZZ KIT, 808 CIRCUIT,
-  909 SWEEP, ARCADE CHIP, RHYTHM BOX and PUNCH KIT.
+  909 SWEEP, ARCADE CHIP, RHYTHM BOX and PUNCH KIT, and twelve more kits (SUB DEEP to SUB TAIL, from tight and metallic to long sub tails) with a wider range of
+  kicks, snares, hats and toms.
 - **HORT** is a second drum machine built from [Hortator](https://github.com/deadactive/hortator)'s drum models, with
   seven kit presets (808 MODEL, 909 MODEL, DIGITAL KIT, FM KIT, PUNCH KIT, BIG BOOM and BASIC KIT); **LCD-4** is a third.
   Every sound has its own tune and decay, layers and sends.

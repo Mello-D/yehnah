@@ -383,9 +383,12 @@ section** and in user presets; the editor shows them as lists too.
 **DRUM-X** is a synthesised kit of eight sounds, **BD SD CP CH OH TM RS CB**, generated in real time.
 
 - Every sound has two sides, **A** and **B**. **MORPH** (KIT, KNOB 1) moves the whole kit between them.
-- **Kit presets:** the DRUM engine has twenty: DRUM-X (the factory kit), 808 BOOM, LOFI DUST, INDUSTRIAL, ACOUSTIC, DUB
+- **Kit presets:** the DRUM engine has thirty-two: DRUM-X (the factory kit), 808 BOOM, LOFI DUST, INDUSTRIAL, ACOUSTIC, DUB
   ROOTS, TECHNO RAW, ROCK KIT, JAZZ KIT, 808 CIRCUIT, 909 SWEEP, ARCADE CHIP, RHYTHM BOX, 808 MODEL, 909 MODEL, DIGITAL
-  KIT, FM KIT, PUNCH KIT, BIG BOOM and BASIC KIT. Loading one loads the whole kit into the section.
+  KIT, FM KIT, PUNCH KIT, BIG BOOM and BASIC KIT, then twelve more DRUM-X kits: SUB DEEP, DARK ROOM, THUD, FAT BEAT, BODY, TIGHT, PUNCHY, SNAPPY and CRISP (new kicks, snares, claps, hats and toms: a deep sub kick, a snare with body, dark and bright hats), then three kits aimed at other styles: SPARK GAP (a tight, metallic kit), RAGGA CUT (a short punchy kick with long snares and toms) and SUB TAIL (a very long sub kick). Loading one loads the whole kit into the section.
+- **One kit per section.** The kit is the section's, not a track's: a second track on the DRUM engine plays the same kit, and
+  loading a drum sound there leaves the kit as it is and says KIT OF T? KEPT. Give each track its own pattern, level, pan and
+  effects, but not its own kit.
 - **Machines:** DRUM-X, **HORT** (drum models from Hortator, with seven kit presets) and **LCD-4**.
 - **SOUND on a drum track** begins with the kit: **KIT** (MORPH, TUNE, TONE · DECAY, NOISE, FM ENV · FOLD, DRIVE),
   **LEVELS** (KICK, SNARE, CLAP, HATCL · HATOP, TOM, RIM, BELL), then **KIT 3** (IMAGE), **X-MOD**, and one group per

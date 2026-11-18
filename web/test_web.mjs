@@ -394,9 +394,9 @@ function mockTables() {
     ok(ph.name === "-" && ph.presets.length === 0,
        "editor: engine 9 reserved (PHYS retired in TONIC), no presets");
     ok(dr.name === "DRUM" && dr.edit.map((d) => d.label).join() === "MORPH,TUNE,TONE,DECAY,NOISE,FM ENV,FOLD,DRIVE" &&
-       dr.presets.length === 20 && dr.presets.every((p) => p.pat === 12) && dr.presets[1].name === "808 BOOM" &&
+       dr.presets.length === 32 && dr.presets.every((p) => p.pat === 12) && dr.presets[1].name === "808 BOOM" &&
        dr.presets[9].name === "808 CIRCUIT" && dr.presets[13].name === "808 MODEL",
-       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), nine kits, LCD-4's four and the seven HORT kits suggesting BEAT");
+       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), nine kits, LCD-4's four, the seven HORT kits and twelve more DRUM-X kits suggesting BEAT");
   }
   const dj = DESC;
   if (!existsSync(dj)) { console.log("editor: mock tables == firmware (no build/host/desc.json)        skip"); return; }

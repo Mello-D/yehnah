@@ -1,0 +1,41 @@
+// DRUM-X kits BRIGHT, GLASS and SIZZLE (DX_KITS entries, firmware/src/drumx_voice.c), replaced on 2026-11-19 by three test kits (resource region room).
+// To bring them back: paste them over the last three entries (and the names in eng_drum.c DRUM_PRESETS).
+    {   /* BRIGHT */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DXM_LONG << 5, {7, 87, 34, 44, 100}, {11, 93, 42, 50, 106}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {78, 54, 69, 108, 115}, {82, 60, 77, 114, 121}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {70, 0, 18, 116, 127}, {74, 6, 26, 122, 127}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {103, 1, 31, 112, 123}, {107, 7, 39, 118, 127}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {89, 1, 51, 82, 87}, {93, 7, 59, 88, 93}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 0) | DXM_LONG << 5, {14, 0, 30, 60, 90}, {18, 6, 38, 66, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 16, 46}, {70, 24, 20, 30, 60}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {62, 0, 56, 34, 44}, {66, 0, 66, 46, 56}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 196, 196, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* GLASS */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DXM_LONG << 5, {2, 121, 34, 44, 100}, {6, 127, 42, 50, 106}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {21, 0, 55, 105, 121}, {25, 6, 63, 111, 127}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {74, 0, 18, 116, 127}, {78, 6, 26, 122, 127}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {107, 1, 31, 112, 123}, {111, 7, 39, 118, 127}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {91, 1, 53, 96, 85}, {95, 7, 61, 102, 91}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 0), {14, 0, 31, 60, 90}, {18, 6, 39, 66, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 16, 46}, {70, 24, 20, 30, 60}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {66, 0, 32, 34, 30}, {70, 0, 42, 46, 42}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* SIZZLE */
+        {
+            {DX_MODE(DXW_FM, DXF_LP, 0) | DXM_LONG << 5, {6, 9, 47, 3, 79}, {10, 15, 55, 9, 85}},   /* KICK */
+            {DX_MODE(DXW_BELL, DXF_BP, 0), {71, 30, 35, 54, 127}, {75, 36, 43, 60, 127}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {70, 0, 43, 127, 127}, {74, 6, 51, 127, 127}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {98, 1, 45, 114, 95}, {102, 7, 53, 120, 101}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {91, 1, 53, 96, 85}, {95, 7, 61, 102, 91}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 1) | DXM_LONG << 5, {53, 24, 76, 60, 90}, {57, 30, 84, 66, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {65, 10, 14, 16, 38}, {72, 24, 20, 30, 52}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1) | DXM_NOISE << 5, {64, 0, 48, 46, 74}, {68, 0, 58, 58, 86}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },

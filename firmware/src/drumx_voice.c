@@ -510,7 +510,167 @@ static const dx_kit_t DX_KITS[] YEHNAH_RES = {   /* (chord-harp fork: the resour
         },
         {0, 4, 0, 6, 6, 0, 0, 8}, {0, 214, 210, 198, 200, 206, 202, 206},   /* the layers; the sends (bus << 6 | amount) */
     },
+    /* (2026-11-18) twelve more kits, dark to bright: each kick, snare, clap, hat, open hat and tom is a DRUM-X sound found by search
+     * (a host fit of the lane's settings to the spread of kicks, snares .. of a wide library: pitch, sweep, length, brightness, body
+     * and click; nothing copied), the rim and bell the older kits'. They sit after the MACHINE presets in DRUM's list (eng_drum.c) */
+    {   /* SUB DEEP */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {6, 1, 53, 0, 76}, {10, 7, 61, 6, 82}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {23, 76, 54, 89, 44}, {27, 82, 62, 95, 50}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 1), {45, 1, 68, 119, 58}, {49, 7, 76, 125, 64}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {107, 0, 47, 125, 35}, {111, 6, 55, 127, 41}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {87, 1, 49, 97, 88}, {91, 7, 57, 103, 94}},   /* HAT OP */
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {14, 0, 68, 0, 80}, {18, 6, 76, 6, 86}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 16, 46}, {70, 24, 20, 30, 60}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* DARK ROOM */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 1) | DXM_LONG << 5 | DX_DRIVE, {9, 0, 26, 0, 83}, {13, 6, 34, 6, 89}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_BP, 1) | DX_DRIVE, {27, 10, 72, 61, 49}, {31, 16, 80, 67, 55}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 1), {41, 0, 74, 123, 72}, {45, 6, 82, 127, 78}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {85, 0, 13, 79, 12}, {89, 6, 21, 85, 18}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {113, 0, 61, 60, 29}, {117, 6, 69, 66, 35}},   /* HAT OP */
+            {DX_MODE(DXW_SINE, DXF_LP, 0), {14, 0, 35, 0, 80}, {18, 6, 43, 6, 86}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 16, 46}, {70, 24, 20, 30, 60}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 196, 196, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* THUD */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DXM_LONG << 5 | DX_DRIVE, {7, 0, 43, 0, 46}, {11, 6, 51, 6, 52}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {25, 0, 49, 100, 43}, {29, 6, 57, 106, 49}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 1), {73, 1, 60, 126, 80}, {77, 7, 68, 127, 86}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {100, 0, 29, 80, 7}, {104, 6, 37, 86, 13}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {101, 1, 63, 120, 115}, {105, 7, 71, 126, 121}},   /* HAT OP */
+            {DX_MODE(DXW_FM, DXF_LP, 0) | DX_DRIVE, {14, 95, 50, 41, 80}, {18, 101, 58, 47, 86}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {65, 10, 14, 16, 38}, {72, 24, 20, 30, 52}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {62, 0, 56, 34, 44}, {66, 0, 66, 46, 56}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 202, 200, 0, 0, 202, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* FAT BEAT */
+        {
+            {DX_MODE(DXW_FM, DXF_LP, 1) | DXM_LONG << 5 | DX_DRIVE, {0, 0, 50, 12, 38}, {4, 6, 58, 18, 44}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_LP, 0), {33, 50, 35, 52, 106}, {37, 56, 43, 58, 112}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 1), {60, 0, 28, 125, 107}, {64, 6, 36, 127, 113}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {117, 1, 23, 60, 37}, {121, 7, 31, 66, 43}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {105, 1, 63, 120, 115}, {109, 7, 71, 126, 121}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 1) | DXM_LONG << 5 | DX_DRIVE, {18, 4, 71, 3, 63}, {22, 10, 79, 9, 69}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {69, 10, 8, 16, 30}, {76, 24, 14, 30, 44}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {66, 0, 32, 34, 30}, {70, 0, 42, 46, 42}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 196, 196, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* BODY */
+        {
+            {DX_MODE(DXW_FM, DXF_LP, 0) | DXM_LONG << 5 | DX_DRIVE, {1, 0, 49, 0, 37}, {5, 6, 57, 6, 43}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {26, 21, 61, 104, 50}, {30, 27, 69, 110, 56}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {40, 1, 2, 123, 95}, {44, 7, 10, 127, 101}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {110, 0, 42, 122, 118}, {114, 6, 50, 127, 124}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {87, 1, 43, 84, 86}, {91, 7, 51, 90, 92}},   /* HAT OP */
+            {DX_MODE(DXW_FM, DXF_LP, 1) | DX_DRIVE, {30, 0, 69, 60, 90}, {34, 6, 77, 66, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1) | DXM_NOISE << 5, {63, 22, 20, 28, 70}, {70, 36, 26, 42, 84}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1) | DXM_NOISE << 5, {64, 0, 48, 46, 74}, {68, 0, 58, 58, 86}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 196, 196, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* TIGHT */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {14, 0, 46, 0, 83}, {18, 6, 54, 6, 89}},   /* KICK */
+            {DX_MODE(DXW_SINE, DXF_LP, 1), {20, 0, 66, 116, 86}, {24, 6, 74, 122, 92}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {44, 1, 2, 123, 95}, {48, 7, 10, 127, 101}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {89, 1, 31, 113, 94}, {93, 7, 39, 119, 100}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {91, 1, 43, 84, 86}, {95, 7, 51, 90, 92}},   /* HAT OP */
+            {DX_MODE(DXW_FM, DXF_LP, 0) | DXM_LONG << 5 | DX_DRIVE, {45, 100, 54, 40, 90}, {49, 106, 62, 46, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {61, 10, 16, 16, 26}, {68, 24, 22, 30, 40}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {62, 0, 46, 34, 30}, {66, 0, 56, 46, 42}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* PUNCHY */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DXM_LONG << 5 | DX_DRIVE, {5, 0, 58, 0, 52}, {9, 6, 66, 6, 58}},   /* KICK */
+            {DX_MODE(DXW_METAL, DXF_LP, 1) | DX_DRIVE, {40, 39, 67, 58, 56}, {44, 45, 75, 64, 62}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {62, 0, 0, 120, 109}, {66, 6, 8, 126, 115}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {93, 1, 31, 113, 94}, {97, 7, 39, 119, 100}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {87, 1, 53, 96, 85}, {91, 7, 61, 102, 91}},   /* HAT OP */
+            {DX_MODE(DXW_FM, DXF_LP, 0) | DXM_LONG << 5 | DX_DRIVE, {48, 100, 54, 40, 90}, {52, 106, 62, 46, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {59, 10, 24, 16, 46}, {66, 24, 30, 30, 60}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 52, 34, 40}, {68, 0, 62, 46, 52}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* SNAPPY */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 1) | DX_DRIVE, {16, 105, 30, 13, 55}, {20, 111, 38, 19, 61}},   /* KICK */
+            {DX_MODE(DXW_BELL, DXF_LP, 0), {23, 70, 68, 71, 54}, {27, 76, 76, 77, 60}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {66, 0, 0, 120, 109}, {70, 6, 8, 126, 115}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {92, 1, 32, 60, 101}, {96, 7, 40, 66, 107}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {91, 1, 53, 96, 85}, {95, 7, 61, 102, 91}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 0) | DXM_LONG << 5, {19, 49, 31, 60, 90}, {23, 55, 39, 66, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {65, 10, 10, 22, 58}, {72, 24, 16, 36, 72}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* CRISP */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 0) | DX_DRIVE, {13, 5, 74, 13, 100}, {17, 11, 82, 19, 106}},   /* KICK */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {22, 11, 36, 27, 121}, {26, 17, 44, 33, 127}},   /* SNARE */
+            {DX_MODE(DXW_SINE, DXF_BP, 0), {66, 0, 43, 127, 127}, {70, 6, 51, 127, 127}},   /* CLAP */
+            {DX_MODE(DXW_METAL, DXF_HP, 0), {94, 1, 45, 114, 95}, {98, 7, 53, 120, 101}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {85, 1, 51, 82, 87}, {89, 7, 59, 88, 93}},   /* HAT OP */
+            {DX_MODE(DXW_BELL, DXF_LP, 0) | DXM_LONG << 5, {16, 100, 62, 60, 90}, {20, 106, 70, 66, 96}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {61, 10, 16, 16, 26}, {68, 24, 22, 30, 40}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {0, 6, 0, 9, 9, 0, 0, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* SPARK GAP */
+        {
+            {DX_MODE(DXW_FM, DXF_LP, 0) | DX_DRIVE, {0, 85, 54, 0, 35}, {2, 91, 62, 3, 41}},   /* KICK */
+            {DX_MODE(DXW_METAL, DXF_LP, 0) | DXM_LONG << 5 | DX_DRIVE, {28, 120, 48, 0, 115}, {32, 126, 56, 4, 121}},   /* SNARE */
+            {DX_MODE(DXW_METAL, DXF_LP, 1) | DXM_LONG << 5 | DX_DRIVE, {50, 27, 64, 114, 99}, {54, 33, 72, 120, 105}},   /* CLAP */
+            {DX_MODE(DXW_BELL, DXF_BP, 0) | DXM_LONG << 5, {118, 78, 26, 92, 38}, {122, 84, 34, 98, 44}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_HP, 1), {83, 0, 48, 92, 122}, {87, 3, 56, 98, 127}},   /* HAT OP */
+            {DX_MODE(DXW_FM, DXF_BP, 0) | DXM_LONG << 5 | DX_DRIVE, {5, 37, 65, 90, 44}, {9, 43, 73, 96, 50}},   /* TOM */
+            {DX_MODE(DXW_BELL, DXF_HP, 0) | DX_DRIVE, {11, 105, 48, 0, 0}, {15, 111, 56, 6, 5}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {9, 13, 15, 11, 13, 0, 14, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* RAGGA CUT */
+        {
+            {DX_MODE(DXW_FM, DXF_LP, 1) | DX_DRIVE, {19, 122, 38, 0, 39}, {23, 127, 46, 3, 45}},   /* KICK */
+            {DX_MODE(DXW_METAL, DXF_HP, 0) | DXM_LONG << 5 | DX_DRIVE, {13, 42, 66, 23, 115}, {17, 48, 74, 29, 121}},   /* SNARE */
+            {DX_MODE(DXW_BELL, DXF_HP, 0), {125, 30, 38, 85, 14}, {127, 36, 46, 91, 20}},   /* CLAP */
+            {DX_MODE(DXW_BELL, DXF_HP, 1) | DXM_LONG << 5 | DX_DRIVE, {73, 4, 21, 0, 20}, {77, 10, 29, 6, 26}},   /* HAT CL */
+            {DX_MODE(DXW_METAL, DXF_BP, 0) | DX_DRIVE, {67, 120, 43, 32, 87}, {71, 126, 51, 38, 93}},   /* HAT OP */
+            {DX_MODE(DXW_SINE, DXF_LP, 1) | DXM_LONG << 5, {16, 0, 93, 44, 65}, {20, 4, 101, 50, 71}},   /* TOM */
+            {DX_MODE(DXW_FM, DXF_HP, 0) | DX_DRIVE, {20, 102, 62, 15, 40}, {24, 108, 70, 21, 46}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {12, 15, 15, 12, 6, 0, 13, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
+    {   /* SUB TAIL */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 1) | DXM_LONG << 5 | DX_DRIVE, {0, 4, 107, 112, 55}, {2, 10, 115, 118, 61}},   /* KICK */
+            {DX_MODE(DXW_METAL, DXF_HP, 0) | DXM_LONG << 5 | DX_DRIVE, {48, 60, 56, 0, 14}, {52, 66, 64, 3, 20}},   /* SNARE */
+            {DX_MODE(DXW_METAL, DXF_HP, 1) | DXM_LONG << 5 | DX_DRIVE, {25, 96, 0, 120, 122}, {29, 102, 4, 126, 127}},   /* CLAP */
+            {DX_MODE(DXW_FM, DXF_HP, 0) | DXM_LONG << 5, {3, 81, 30, 114, 60}, {7, 87, 38, 120, 66}},   /* HAT CL */
+            {DX_MODE(DXW_FM, DXF_HP, 1) | DXM_LONG << 5, {73, 102, 47, 96, 63}, {77, 108, 55, 102, 69}},   /* HAT OP */
+            {DX_MODE(DXW_SINE, DXF_LP, 1), {20, 4, 80, 84, 40}, {24, 10, 88, 90, 46}},   /* TOM */
+            {DX_MODE(DXW_FM, DXF_BP, 1) | DX_DRIVE, {22, 22, 64, 72, 8}, {26, 28, 72, 78, 14}},   /* RIM */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},   /* BELL */
+        },
+        {0, 11, 6, 11, 11, 4, 8, 11}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
 };
+#define DX_NKIT0 9u                                      /* (the first kits: DRUM's first nine presets; the MACHINEs follow them, the newer kits after) */
 #define DX_NKIT ((uint32_t)(sizeof DX_KITS / sizeof DX_KITS[0]))
 /* a stored kit as the voice takes it: values 0..127, the mode's fields in range (wave 0..3, filter 0..2, snap) */
 static int dx_kit_ok(const dx_lane_t *k)

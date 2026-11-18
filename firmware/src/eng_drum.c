@@ -676,23 +676,39 @@ static const preset_t DRUM_PRESETS[] YEHNAH_RES = {                /* (0.7.2) on
     {"BIG BOOM", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 24), PAT(12)},
     {"BASIC KIT", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 16), PAT(12)},   /* (kicks, snares, hats, toms: no clap / rim / cowbell) */
 #endif
+    /* (2026-11-18) DRUM-X kits 10..21, dark to bright (drumx_voice.c DX_KITS, after the first nine) */
+    {"SUB DEEP", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 10), PAT(12)},
+    {"DARK ROOM", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 24), PAT(12)},
+    {"THUD", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 28), PAT(12)},
+    {"FAT BEAT", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 22), PAT(12)},
+    {"BODY", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 26), PAT(12)},
+    {"TIGHT", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 14), PAT(12)},
+    {"PUNCHY", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 16), PAT(12)},
+    {"SNAPPY", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 14), PAT(12)},
+    {"CRISP", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 12), PAT(12)},
+    {"SPARK GAP", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), PAT(12)},
+    {"RAGGA CUT", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 12), PAT(12)},
+    {"SUB TAIL", {64, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 10), PAT(12)},
 };
 static const char DRUM_PT[] = "DDDDDDDDDDDDD"
 #if YEHNAH_HORT
                               "DDDDDDD"
 #endif
+                              "DDDDDDDDDDDD"
     ;
 _Static_assert(sizeof DRUM_PT == NELEM(DRUM_PRESETS) + 1u, "a type a preset");
-_Static_assert(NELEM(DRUM_PRESETS) == NELEM(DX_KITS) + DXK_N - 1u, "a DRUM preset a kit, then LCD-4's MACHINEs");
+_Static_assert(NELEM(DRUM_PRESETS) == NELEM(DX_KITS) + DXK_N - 1u, "a DRUM preset a kit: the first DX_NKIT0 DRUM-X kits, then the MACHINEs, then the newer DRUM-X kits");
 /* (0.7.2) a factory kit into the section's: the sounds, their LAYERs, their SENDs (the project saves them); (chord-harp
  * fork) the last four LCD-4's MACHINEs (the DRUM-X kit kept for DRUM-X) */
 static void dx_kit_load(uint32_t k)
 {
     if (!RES_OK())                                   /* (chord-harp fork) the kits in the resource region (res.c): kept */
         return;
-    const dx_kit_t *K = &DX_KITS[k % NELEM(DRUM_PRESETS) < DX_NKIT ? k % NELEM(DRUM_PRESETS) : 0u];
-    if (k % NELEM(DRUM_PRESETS) >= DX_NKIT) {
-        dx_mach_req = (uint8_t)(k % NELEM(DRUM_PRESETS) - DX_NKIT + 1u);
+    k %= NELEM(DRUM_PRESETS);                        /* (2026-11-18) the first DX_NKIT0 kits, then the MACHINEs (DXK_N - 1), then the newer kits: the numbers
+                                                      * of the older presets stay (projects, favourites, PROGRAM CHANGE) */
+    const dx_kit_t *K = &DX_KITS[k < DX_NKIT0 ? k : k >= DX_NKIT0 + DXK_N - 1u ? k - (DXK_N - 1u) : 0u];
+    if (k >= DX_NKIT0 && k < DX_NKIT0 + DXK_N - 1u) {
+        dx_mach_req = (uint8_t)(k - DX_NKIT0 + 1u);
         memset(dx_snd, 0, sizeof dx_snd);
         ht_sends(dx_mach_req, dx_snd);                /* (the lanes' SENDs are the section's, whatever MACHINE plays: the last DRUM-X
                                                           * kit's reverb sends stayed on LCD-4's, HORT's lanes: none of theirs) */
