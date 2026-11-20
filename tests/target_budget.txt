@@ -18,7 +18,7 @@ drum_side_add 30
 drum_mix 125
 drum_bus 104
 slicer_bus 824
-fm1_alnk0_irq 412
+fm1_alnk0_irq 491
 fm1_timer5_irq 30148
 click_render 30
 mod_begin 176

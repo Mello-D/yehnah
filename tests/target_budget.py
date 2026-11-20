@@ -31,8 +31,10 @@ FUNCS = ["analog_render", "digital_render", "phase_render", "lofi_render", "form
          "animal_render",                                   # (0.8.3) ANIMAL (eng_animal.c): its five sources (one loop a voice)
          "djf_block"]                                      # (0.9.1) the master DJ FILTER (fx.c), while it is off the middle
 # absent from some builds: skipped; present, checked against these
-OPTIONAL = {"uac_rs_run": 558,          # (absent from a YEHNAH_UAC_48K=0 or YEHNAH_UAC=0 build; 0.8.9: four taps a pass, so
-                                        # the static count is up, ~185 instructions an output frame run against ~230)
+OPTIONAL = {"uac_rs_run": 741,          # (absent from a YEHNAH_UAC_48K=0 or YEHNAH_UAC=0 build; 0.8.9: four taps a pass, so
+                                        # the static count is up, ~185 instructions an output frame run against ~230;
+                                        # 2026-11-20: 741, was 558: the smaller filter (-13 KB of flash, fewer taps in the
+                                        # table, more work a tap); recorded USB audio of JUNO chords with plate keys: clean)
             "noise_render": 301, "animal_render": 731}   # (chord-harp fork: absent unless YEHNAH_NOISE=1 / YEHNAH_ANIMAL=1;
                                         # NOISE 301: Clipper's, since the hybrid step 2, was 256)
 TOL = 0.10                      # exact (no noise): small edits pass, a grown render loop does not
