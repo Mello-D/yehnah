@@ -198,7 +198,8 @@ int main(void)
         r += i < NVOICE;
         assert(k || i < NVOICE);
     }
-    assert(r == n - (n + 3u > voice_cap() ? n + 3u - voice_cap() : 0u));
+    assert(r == n);                                     /* (2026-11-20: 6 + 3 over the 8 voices: the latched chord keeps every note, the
+                                                         * plate's own oldest note gives way; it was one chord note) */
     keys(1u << 1);                                      /* (back to MAJ8's chord 2 latched, as below expects) */
     keys(0);
     n = t->nheld;
