@@ -132,7 +132,6 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #include "../firmware/src/ui_input.c"
 #include "../firmware/src/ui_swarm.c"
 #include "../firmware/src/ui_summary.c"
-#include "../firmware/src/ui_hmenu.c"
 #include "../firmware/src/ui_layer.c"
 #include "../firmware/src/upreset.c"
 #include "../firmware/src/project.c"
@@ -254,6 +253,7 @@ static void press(uint32_t label)                 /* a tap: down, a frame, up, a
     fm1_in.buttons &= ~(1u << panel.btn[label]);
     frame();
 }
+static void drop_other_kits(void);                           /* (below: the section has one kit) */
 static void frames(uint32_t ms) { uint32_t i; for (i = 0; i < ms / 16u; i++) frame(); }
 static uint32_t glo_kn;                                 /* (the knob glo_id last found: the row's setting) */
 static uint32_t glo_row(uint32_t r);                    /* (2026-11-02: the MENU's rows on GLO's pages) */
@@ -1779,6 +1779,7 @@ static int test_favorites(void)
     bad += check("FAVORITE and the FAV type mark/filter the current sound without loading or touching its steps",
                  preset_favorite() && ptype_sel == PT_FAV && total == 1 && pos == 0 &&
                  !memcmp(TSEL, &before, sizeof before));
+    drop_other_kits();
     select_engine(ENGI_DRUM);
     before = *TSEL;
     preset_mark(!preset_favorite());
@@ -2734,6 +2735,14 @@ static uint32_t gates(void)                        /* voices of every track with
         for (i = 0; i < NVOICE; i++)
             n += trk[p].v[i].gate != 0;
     return n;
+}
+/* (2026-11-20) the section has one kit: a test that puts the selected track on DRUM through the UI first frees the other kit tracks */
+static void drop_other_kits(void)
+{
+    uint32_t k;
+    for (k = 0; k < NTRK; k++)
+        if (&trk[k] != TSEL && trk[k].eng_req == ENGI_DRUM)
+            set_engine_of(&trk[k], ENGI_ANALOG);
 }
 static uint32_t white(uint32_t w) { return key_at(0, w); }
 
@@ -3706,10 +3715,10 @@ static int test_quick_layers(void)
      * REC + D4 and GLO + PLAY) */
     ui_power_on(); go_home(); frame();
     btn_down(B_GLO); frames(800);
-    ok = !ui.layer && !ui.hm;
+    ok = !ui.layer;
     btn_up(B_GLO); frame();
-    ok &= ui.home && !ui.hm;
-    bad += check("2026-11-17: GLO held: no layer, no menu (the GLO page has the lists), no page", ok && !ui.hm);
+    ok &= ui.home;
+    bad += check("2026-11-17: GLO held: no layer, no menu (the GLO page has the lists), no page", ok);
     go_home(); frame();
     undo_ok = 0;
     btn_down(B_REC); frames(800);
@@ -3749,43 +3758,32 @@ static int test_quick_layers(void)
     ui_power_on();
     TSEL->p[P_ROOT] = 0; TSEL->p[P_SCALE] = 1; TSEL->p[P_QUANT] = 0; TSEL->p[P_CSTR] = 0;
     btn_down(B_SCL); frame();
-    ok = !ui.hm && !ui.layer;
+    ok = !ui.layer;
     frames(512);
-    ok &= !ui.hm && !ui.layer;
+    ok &= !ui.layer;
     btn_up(B_SCL); frame(); frame();
-    ok &= !ui.hm && ui.home;                                        /* (no menu, no page: held past HOLD is swallowed) */
+    ok &= ui.home;                                                  /* (no menu, no page: held past HOLD is swallowed) */
     key_down(white(4)); frame();
     ok &= gates() > 0 && TSEL->p[P_ROOT] == 0;                      /* (a note, not a ROOT key) */
     key_up(white(4)); frame();
     bad += check("SCL held: nothing opens (STRUM moved to ARP LIST), no page; the keys play", ok);
     press(B_ENV); frame();
-    ok = !ui.hm && cur_page()->fam == FAM_ENV;
+    ok = cur_page()->fam == FAM_ENV;
     bad += check("  another button's tap acts as ever", ok);
     TSEL->p[P_CSTR] = 0;
     ui_power_on();
     btn_down(B_EDIT); frames(512); btn_up(B_EDIT); frame();
-    ok = ui.hm == HM_EDIT;
-    {
-        hrow_t r[HM_MAXR];
-        uint32_t n = hm_rows(r);
-        int16_t e0 = TSEL->p[P_E0];
-        ok &= n >= 1u && r[0].kind == HR_TRK && r[n - 1u].kind == HR_TRK;
-        hm_pos[1] = 0;
-        turn(EN_K2, 1); frame();
-        ok &= TSEL->p[P_E0 + (r[0].id - P_E0)] != e0 || n > 0;
-    }
-    bad += check("EDIT held: the engine's named parameters (KNOB 1 the row, KNOB 2 the value)", ok);
-    oct_back();
-    ok = !ui.hm;
+    ok = !ui.layer && ui.home;                                      /* (2026-11-19: EDIT held opens nothing: the held menu is gone) */
+    bad += check("EDIT held: nothing opens, no page (the old held menu is gone)", ok);
     ui_power_on(); go_title("SYSTEM"); frame();
     sets_cur[3] = 1;
     turn(EN_K2, 1); frames(64);
-    ok = ui.menu == 3 && !ui.hm;
+    ok = ui.menu == 3;
     oct_back();
     bad += check("GLO > SYSTEM > CPU: a turn right opens the CPU page (graph, load figures); OCT- back", ok && !ui.menu);
     ui_power_on(); ui.confirm = CF_CLEAR_SEQ;
     btn_down(B_SCL); frames(512); btn_up(B_SCL); frame();
-    bad += check("  no held menu in a dialog", ok && !ui.hm);
+    bad += check("  no layer in a dialog", ok && !ui.layer);
     ui.confirm = 0;
     TSEL->p[P_CSTR] = 0;
 
@@ -3814,16 +3812,6 @@ static int test_quick_layers(void)
     ok = !ui.layer;
     btn_up(B_SCL); frame();
     bad += check("in a dialog: SCL held shows no map and taps nothing", ok && ui.confirm == CF_CLEAR_SEQ);
-    /* one held menu at a time: a second button's hold is ignored while one is open; the keys play */
-    ui_power_on();
-    btn_down(B_EDIT); frames(512); btn_up(B_EDIT); frame();
-    btn_down(B_GLO); frames(512);
-    ok = ui.hm == HM_EDIT && TSEL->eng_req == trk[0].eng_req;
-    key_down(white(5)); frame();
-    ok &= gates() > 0 && TSEL->p[P_ROOT] == 0;
-    key_up(white(5)); btn_up(B_GLO); frame();
-    oct_back();
-    bad += check("EDIT menu open, GLO held: the second one ignored (its keys notes, no page)", ok && !ui.hm && ui.home);
     return bad;
 }
 
@@ -6181,7 +6169,6 @@ static int test_lente(void)
         ok &= (BT[q] == B_HOME ? ui.layer == LAYER_HOME : !ui.layer) && ui.page == pg && !ui.home;   /* (2026-11-15: HOME held: SWARM's layer) */
         btn_up(BT[q]); frame();
         ok &= !ui.layer && ui.page == pg && !ui.home;
-        if (ui.hm) { ok &= BT[q] == B_EDIT; oct_back(); }   /* (EDIT held: its menu, 2026-11-09) */
         press(BT[q]); frame();
         ok &= ui.page != pg || ui.home;                 /* (a tap still goes) */
     }
@@ -9879,6 +9866,102 @@ static int test_uchord(void)
     ui_power_on();
     return bad;
 }
+/* (2026-11-20) HARP LATCH: the latched chord keeps all its notes under quick, overlapping plate keys (the voice budget took the oldest
+ * held voices, the chord's, once the plate's own were still down), on the heavier engines (the cost budget holds five voices), and
+ * with PLATE down, where a plate key's pitch is one of the chord's (its let go must not release the chord's note) */
+static int test_latch_plate(void)
+{
+    static const uint8_t ENGS[4] = {0, ENGI_JUNO, ENGI_DRIFT, ENGI_FM6};
+    static const uint8_t KEYS[10] = {14, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+    static int32_t o[2u * CTL];
+    int bad = 0, ok = 1;
+    uint32_t ei, pl, i, k, b, h0 = 0;
+    for (pl = 0; pl < 3u; pl++)
+        for (ei = 0; ei < 4u; ei++) {
+            ui_power_on(); frame();
+            set_engine_of(TSEL, ENGS[ei]); TSEL->engine = TSEL->eng_req;
+            for (b = 0; b < 64u; b++) mix_block(o, CTL);
+            TSEL->p[P_HPLATE] = (int16_t)pl; TSEL->p[P_CHRD] = CD_HARP; TSEL->p[P_VOICE] = V_POLY; TSEL->p[P_AMODE] = 0;
+            TSEL->p[P_AHOLD] = 0; TSEL->p[P_CVOI] = 3;
+            key_down(25); events_block(CTL); frame(); key_up(25); events_block(CTL); frame();   /* LATCH on */
+            key_down(2); events_block(CTL); frame(); key_up(2); events_block(CTL); frame();     /* the chord */
+            for (b = 0; b < 8u; b++) mix_block(o, CTL);
+            for (h0 = i = 0; i < NVOICE; i++) h0 += TSEL->v[i].active && TSEL->v[i].gate;
+            ok &= h0 >= 3u;
+            for (k = 0; k < 10u; k++) {                                 /* quick plate keys, two down at a time */
+                uint32_t h = 0;
+                key_down(KEYS[k]); events_block(CTL); frame();
+                for (b = 0; b < 4u; b++) mix_block(o, CTL);
+                if (k) { key_up(KEYS[k - 1u]); events_block(CTL); }
+                for (b = 0; b < 4u; b++) mix_block(o, CTL);
+                for (i = 0; i < NVOICE; i++)
+                    h += TSEL->v[i].active && TSEL->v[i].gate && TSEL->v[i].stage != 4u && TSEL->v[i].note < 70u;
+                ok &= h >= h0;
+            }
+            key_up(KEYS[9]); events_block(CTL);
+        }
+    bad += check("HARP LATCH: the latched chord keeps its notes under quick overlapping plate keys (ANALOG, JUNO, DRIFT, FM6; PLATE down, mid, up)", ok);
+    ui_power_on();
+    return bad;
+}
+/* (2026-11-20, the user's) the section has one kit: another track on DRUM, a track that is not cannot become a second kit track: the
+ * message "TRACK n ALREADY HAS THE KIT", the sound it had stays; browsing past the kits (PRESETS, the engine knob) goes on beyond them;
+ * the kit track itself can still browse its kits */
+static int test_one_kit(void)
+{
+    int bad = 0, ok;
+    uint32_t e0, p0, k, hits = 0;
+    ui_power_on(); frame();
+    song.sel = 0;
+    ok = trk[3].eng_req == ENGI_DRUM && trk[0].eng_req != ENGI_DRUM;
+    e0 = TSEL->eng_req; p0 = TSEL->preset;
+    ui.msg[0] = 0;
+    ok &= !set_engine(ENGI_DRUM) && TSEL->eng_req == e0 && TSEL->preset == p0 && !strncmp(ui.msg, "TRACK 4 ALREADY HAS THE KIT", 27);
+    ui.msg[0] = 0;
+    preset_load(ENGI_DRUM, 3);
+    ok &= TSEL->eng_req == e0 && TSEL->preset == p0 && !strncmp(ui.msg, "TRACK 4 ALREADY HAS THE KIT", 27);
+    ui.msg[0] = 0;
+    select_engine(ENGI_DRUM);
+    ok &= TSEL->eng_req == e0 && !strncmp(ui.msg, "TRACK 4 ALREADY HAS THE KIT", 27);
+    bad += check("a second kit track: refused with the message, the track keeps its sound (set_engine, preset_load, select_engine)", ok);
+    ok = 1;
+    for (k = 0; k < 400u; k++) {                                    /* PRESETS KNOB: all the way round, never a kit, never stuck */
+        turn(EN_PRESET, 1); frame();
+        ok &= TSEL->eng_req != ENGI_DRUM;
+        hits += TSEL->eng_req == ENGI_DRIFT || TSEL->eng_req == ENGI_FM6;   /* (the engines either side of DRUM's place) */
+    }
+    ok &= hits > 0u;
+    bad += check("a second kit track: browsing past the kits goes on beyond them (never a kit, never stuck)", ok);
+    song.sel = 3;                                                   /* the kit's own track still browses its kits */
+    e0 = TSEL->eng_req;
+    ok = e0 == ENGI_DRUM && set_engine(ENGI_DRUM) && TSEL->eng_req == ENGI_DRUM;
+    bad += check("the kit track itself stays on its kits", ok);
+    song.sel = 0;
+    ui_power_on();
+    return bad;
+}
+/* (2026-11-20, the user's) the audio pushed (a late half while playing, a voice the overload guard shed): one message, at most every 10 s */
+static int test_cpu_msg(void)
+{
+    int bad = 0, ok;
+    ui_power_on(); frame();
+    ui.msg[0] = 0;
+    frame();
+    ok = !strstr(ui.msg, "CPU PUSHED");
+    load_diag.late_play++;
+    frame();
+    ok &= !strncmp(ui.msg, "CPU PUSHED: AUDIO MAY GLITCH", 28);
+    ui.msg[0] = 0; ui.msg_t = 0;
+    load_diag.shed++;
+    fm1_ms += 2000u; frame();
+    ok &= !strstr(ui.msg, "CPU PUSHED");                        /* (within 10 s: not again) */
+    load_diag.shed++;
+    fm1_ms += 11000u; frame();
+    ok &= !strncmp(ui.msg, "CPU PUSHED: AUDIO MAY GLITCH", 28);
+    bad += check("the audio pushed: the message CPU PUSHED once, at most every 10 s", ok);
+    ui_power_on();
+    return bad;
+}
 /* SCL and ARP (0.9.2): two sections, two buttons. SCL: KEY (SCL) . CHORD . HARP . OMNI . PROG; ARP: ARP, ARP 2, ARP 3;
  * each button its first page, a tap on it TRACKS (held notes a b). KNOB 1 the ROOT on KEY; PRESETS a sound on both (was the ROOT, the track) */
 static int test_lz_key(void)
@@ -11469,6 +11552,7 @@ static int test_engine_order_099(void)
         ok &= proj_pack(&st2, &proj_scratch) && !memcmp(&st, &st2, sizeof st);
         bad += check("  a project of 0.9.8's parts loads unchanged after the new power-on (engines, sounds, saved again byte for byte)", ok);
     }
+    drop_other_kits();
     for (e = 0, ok = 1; e < NENGINES; e++)                         /* an engine switch: its first shown (2026-10-26: ACID */
         if (!eng_gone(e) && ENGINES[e]->npresets && e != ENGI_DIGITAL) {   /* went to ACID LINE, stored 0) */
             set_engine(e);
@@ -11527,6 +11611,7 @@ static int test_pattern_gen(void)
         if (ty == 2u) ok &= ix_role(t) == RL_LEAD;
     }
     bad += check("IDEAS > TRACK ROLE AUTO: a BASS preset a bass, PAD and KEYS chords, LEAD a melody", ok);
+    drop_other_kits();
     set_engine(ENGI_DRUM);
     for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
     t->p[P_SLEN] = 32;
@@ -11658,6 +11743,9 @@ int main(void)
     bad += test_midi();
     bad += test_save();
     bad += test_uchord();
+    bad += test_latch_plate();
+    bad += test_one_kit();
+    bad += test_cpu_msg();
     bad += test_actions();
     bad += test_tracks();
     bad += test_grid();

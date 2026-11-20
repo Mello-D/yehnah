@@ -874,8 +874,7 @@ static const page_t PAGES[] = {
     {"MASTER LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"PUNCH LIST", FAM_FX, SC_GLOBAL, GR_RLIST, {0xFF, 0xFF, 0xFF, 0xFF}},   /* PUNCH: the lane's picture, LEN RES; its CLEAR is the REC layer's */
     {"ARP LIST", FAM_ARP, SC_TRACK, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* ARP, ARP 2, ARP 3, AMBIENT and the STRUM of SCL held */
-    {"GLO", FAM_GLO, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) GLO's four lists as one page of rows (ui_fxall.c); the four GR_SETS
-                                                         * pages stay for the held GLO menu (ui_hmenu.c) */
+    {"GLO", FAM_GLO, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) GLO's four lists as one page of rows (ui_fxall.c); the four GR_SETS */
     {"FX ALL", FAM_FX, SC_GLOBAL, GR_FXALL, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-13) every effect's rows on one scrollable page (ui_fxall.c) */
     {"SWARM", FAM_SAVE, SC_GLOBAL, GR_SWARM, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) HOME's four moving dots (swarm.c, ui_swarm.c): K1..K4 the dots, SELECT the row */
     {"TRACE", FAM_SAVE, SC_GLOBAL, GR_TRACE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (2026-11-15) SWARM's second page: the dots walk shapes the knobs steer (swarm.c) */

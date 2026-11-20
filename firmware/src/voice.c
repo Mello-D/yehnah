@@ -365,8 +365,12 @@ static uint32_t voices_busy(void)                       /* sounding voices of al
 #define VCOST_ANALOG 4u
 #define UCAP_BASE 40u
 #define UCAP_FULL 56u
+static int harp_on(const track_t *t);                   /* (seq.c) */
 static uint32_t vcost(const track_t *t)
 {
+    if (harp_on(t))                                     /* (2026-11-20) a part playing chords and the plate counts as ANALOG whatever
+                                                         * its engine: the player wants all of them (the load guard still sheds) */
+        return VCOST_ANALOG;
     switch (t->engine) {
     case ENGI_JUNO: case ENGI_DRIFT: return 8u;
     case ENGI_FM6: case ENGI_PLAITS: return 7u;
@@ -403,12 +407,26 @@ static uint32_t lowest_held(const track_t *t)           /* index of the lowest h
     return low;
 }
 
+/* (2026-11-20) a voice of the part's latched chord (HARP's LATCH: the chord's notes are in t->held while the keys are up): the
+ * last to give up. Playing the plate over a latched chord took its oldest notes (the oldest held voice goes) once the budget
+ * was full and the plate's own were still down: the chord dropped out */
+static int voice_latched(const track_t *t, const voice_t *v)
+{
+    uint32_t j;
+    if (!t->p[P_AHOLD] || t->p[P_AMODE])
+        return 0;
+    for (j = 0; j < t->nheld; j++)
+        if (t->held[j] == v->note)
+            return 1;
+    return 0;
+}
+
 /* the voice to give up for a new one (see the top); soft: only released voices and
  * extra voices of other non-POLY parts (also ones left after a mode change).
  * Returns its index, *pp its part; NVOICE = none */
 static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
 {
-    uint32_t p, i, best = NVOICE, cat = 4;
+    uint32_t p, i, best = NVOICE, cat = 5;
     for (p = 0; p < NPART; p++) {
         track_t *t = &trk[p];
         uint32_t mode = trk_vmode(t);
@@ -425,7 +443,7 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
             else if (!voice_poly((int)mode) && i > 0)
                 c = 2;                                  /* extra UNISON, or a voice left by a mode / cap change */
             else if (!soft && voice_poly((int)mode) && i != low)
-                c = 3;                                  /* held, not the bass */
+                c = voice_latched(t, v) ? 4u : 3u;      /* held, not the bass (a latched chord's: after the others) */
             else
                 continue;
             /* (2026-11-09) among the released the quietest tail goes (its cut is the smallest click), the oldest of equals;
@@ -572,7 +590,11 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
         if (!t->v[i].gate && t->v[i].stage != 4u && (best == np || t->v[i].age < t->v[best].age))
             best = i;
     if (best == np)
-        for (i = 0; i < np; i++)                         /* oldest held, not the bass */
+        for (i = 0; i < np; i++)                         /* oldest held, not the bass, not the latched chord's */
+            if (i != low && !voice_latched(t, &t->v[i]) && (best == np || t->v[i].age < t->v[best].age))
+                best = i;
+    if (best == np)
+        for (i = 0; i < np; i++)                         /* .. else the latched chord's too */
             if (i != low && (best == np || t->v[i].age < t->v[best].age))
                 best = i;
     return voice_reuse(t, &t->v[best == np ? 0 : best]);

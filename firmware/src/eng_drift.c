@@ -214,5 +214,5 @@ static const engine_t ENG_DRIFT = {
     .note_on = drift_note_on,
     .render = drift_render,
     .knob = {P_E1, P_E2, P_E4, P_E7},
-    .poly = 6,
+    .poly = 8,                  /* (2026-11-20: 6) */
 };

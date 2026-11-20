@@ -119,6 +119,7 @@ static void shed_voice(void)
 {
     uint32_t p, i;
     voice_t *best = 0;
+    const track_t *bt = 0;
     for (p = 0; p < NPART; p++)
         for (i = 0; i < NVOICE; i++) {
             voice_t *v = &trk[p].v[i];
@@ -137,8 +138,10 @@ static void shed_voice(void)
             voice_t *v = &trk[p].v[i];
             if (v->active && v->gate && v->stage != 4u &&
                 ((voice_poly((int)mode) && i != low) || (!voice_poly((int)mode) && i > 0u))) {
-                if (!best || v->age < best->age)
-                    best = v;
+                if (!best || v->age + (voice_latched(t, v) ? 0x40000000u : 0u) < best->age + (voice_latched(bt, best) ? 0x40000000u : 0u)) {
+                    best = v;                           /* (a latched chord's notes last: HARP's LATCH) */
+                    bt = t;
+                }
             }
         }
     }

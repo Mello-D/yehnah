@@ -19,7 +19,7 @@
  * Voice state: ph[0] the DCO, ph[1] the sub, ph[2] the noise; s[0..3] the ladder, s[4] the HPF's low-pass, s[5] the
  * bass boost's
  * (chord-harp fork) 4 voices a part (Clipper: 8): a voice costs ~2.2 ANALOG voices (host); as FM6's cap */
-#define JUNO_POLY 4u
+#define JUNO_POLY 8u               /* (2026-11-20: 4, was too few for a chord and the plate; a part has NVOICE slots anyway) */
 enum { JW_SAW, JW_PLS, JW_SP };
 static const char *const N_JWAVE[] = {"SAW", "PLS", "S+P"};
 static const char *const N_JHPF[] = {"0", "1", "2", "3"};

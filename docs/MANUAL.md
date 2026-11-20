@@ -391,9 +391,9 @@ section** and in user presets; the editor shows them as lists too.
 - **Kit presets:** the DRUM engine has thirty-two: DRUM-X (the factory kit), 808 BOOM, LOFI DUST, INDUSTRIAL, ACOUSTIC, DUB
   ROOTS, TECHNO RAW, ROCK KIT, JAZZ KIT, 808 CIRCUIT, 909 SWEEP, ARCADE CHIP, RHYTHM BOX, 808 MODEL, 909 MODEL, DIGITAL
   KIT, FM KIT, PUNCH KIT, BIG BOOM and BASIC KIT, then twelve more DRUM-X kits: SUB DEEP, DARK ROOM, THUD, FAT BEAT, BODY, TIGHT, PUNCHY, SNAPPY and CRISP (new kicks, snares, claps, hats and toms: a deep sub kick, a snare with body, dark and bright hats), then three kits aimed at other styles: SPARK GAP (a tight, metallic kit), RAGGA CUT (a short punchy kick with long snares and toms) and SUB TAIL (a very long sub kick). Loading one loads the whole kit into the section.
-- **One kit per section.** The kit is the section's, not a track's: a second track on the DRUM engine plays the same kit, and
-  loading a drum sound there leaves the kit as it is and says KIT OF T? KEPT. Give each track its own pattern, level, pan and
-  effects, but not its own kit.
+- **One kit per section.** The kit is the section's, not a track's, so only one track can be on the DRUM engine. Trying to put
+  a second track on it (a drum sound in PRESETS, the engine knob, a program change) says TRACK n ALREADY HAS THE KIT and the track
+  keeps the sound it had; browsing with the PRESETS knob or the engine knob goes on past the kits.
 - **Machines:** DRUM-X, **HORT** (drum models from Hortator, with seven kit presets) and **LCD-4**.
 - **SOUND on a drum track** begins with the kit: **KIT** (MORPH, TUNE, TONE · DECAY, NOISE, FM ENV · FOLD, DRIVE),
   **LEVELS** (KICK, SNARE, CLAP, HATCL · HATOP, TOM, RIM, BELL), then **KIT 3** (IMAGE), **X-MOD**, and one group per
@@ -681,11 +681,7 @@ The key is lit while the action is on.
 
 The four knobs do nothing on this layer.
 
-### Held menu: EDIT
-
-Hold **EDIT** past the hold time and a **list menu** opens and stays open after you let go. It lists the sound's named
-parameters (E1–E8). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−** or by tapping the button.
-(GLO has no held menu: its page already has the four lists, MAIN, DEVICE, CONTROL and SYSTEM, and holding it does nothing.)
+EDIT and GLO have no held menu: holding them does nothing (the sound's named parameters are on the EDIT page, and GLO's page has the four lists, MAIN, DEVICE, CONTROL and SYSTEM).
 
 ---
 

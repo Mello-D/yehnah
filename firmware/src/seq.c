@@ -1915,8 +1915,14 @@ static void key_off(uint32_t k, track_t *t)
         return;
     }
     for (i = 0; i < n; i++) {
-        uint32_t x = kb_snd[k][i];
+        uint32_t x = kb_snd[k][i], j = 0;
         if (midi_local_held(t, x))
+            continue;
+        if (key_latch(t))                               /* (2026-11-20) a plate key on a note the latched chord holds: it lets go of its own
+                                                         * press, not the chord's note */
+            for (j = 0; j < t->nheld && t->held[j] != x; j++)
+                ;
+        if (key_latch(t) && j < t->nheld)
             continue;
         input_off(t, x);
         mo_key(t, 0x08u | (0x80u | mc) << 8 | drum_oct_note(x, kb_oct[k]) << 16);

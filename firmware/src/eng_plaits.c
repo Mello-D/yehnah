@@ -53,7 +53,7 @@
 #define AINL static inline __attribute__((always_inline))
 #endif
 
-#define PL_POLY 4
+#define PL_POLY 8                /* (2026-11-20: 4) */
 #define PL_POOL 8                                        /* (chord-harp fork) the voices' states, all parts */
 #define PL_NH 24                                         /* ADDTV's harmonics */
 #define PL_NO 8                                          /* its organ (AUX) */

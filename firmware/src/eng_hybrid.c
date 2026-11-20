@@ -120,7 +120,7 @@ typedef struct {
     int32_t nz;                  /* noise state */
 } hy_voice_t;
 #define HY_POOL 12u              /* (chord-harp fork) voices sounding at once, all parts (voice.c FULL_VOICES 12) */
-#define HY_POLY 4u               /* (chord-harp fork) a part's voices (as JUNO's) */
+#define HY_POLY 8u               /* (chord-harp fork) a part's voices (as JUNO's) */
 static hy_voice_t hy_pool[HY_POOL] __attribute__((section(".pool")));   /* (zeroed at boot) */
 static uint8_t hy_owner[HY_POOL] __attribute__((section(".pool")));     /* part + 1 (0 free) */
 static uint8_t hy_vslot[HY_POOL] __attribute__((section(".pool")));     /* its voice */

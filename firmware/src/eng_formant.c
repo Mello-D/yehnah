@@ -25,7 +25,7 @@
  * the chord-harp fork, 2026-11-02.) */
 #define FMT_FOLOW 30
 #ifndef VOICE_POLY
-#define VOICE_POLY 4             /* engine_t.poly (chord-harp fork: a test build may set 6) */
+#define VOICE_POLY 8             /* engine_t.poly (chord-harp fork: a test build may set 6) */
 #endif
 #define FMT_TALK_MASK 0x01FFFFFF
 

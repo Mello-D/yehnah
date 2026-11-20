@@ -44,7 +44,6 @@ static uint32_t cur_fam(void) { return SEC_FAM[nav_sec()]; }
 
 /* (0.9.2) a section's button held + SELECT or PRESETS (2026-11-02: nothing but GLO's tempo): the button let go stays
  * there (its tap, its layer: not now) */
-static uint8_t hm_btn;                                   /* the held menu's button (ui_hmenu.c) */
 static uint8_t ly_used;                                  /* the held layer's knobs or keys used: PRESETS stays its */
 static int song_open(uint32_t n);                         /* (song_main.c: SAVE > PROJECT's KNOB 1) */
 static uint8_t pj_btn = 0xFFu;                           /* the button a SELECT combo was made with: no layer while held */
@@ -422,8 +421,6 @@ static void ui_leds(void)
         led_put(nl, panel.btn[B_FX], 1);                /* FX LATCH: lit while an effect or a macro is on */
     if (ui.layer)                                       /* the layer's button breathes while its map is up */
         led_put(nb, panel.btn[layer_btn()], 1);
-    if (ui.hm)                                          /* .. and a held menu's while it is open */
-        led_put(nb, panel.btn[hm_btn], 1);
     led_put(nl, panel.btn[B_REC], (song.rec != 0u || rp_state) && ui.layer != LAYER_REC);   /* (its layer: it breathes;
                                                          * chord-harp fork: a ONE PASS waiting for step 1 lit too) */
     k = oct_leds();
@@ -2072,11 +2069,6 @@ static uint32_t btn_hold(uint32_t *t0, uint32_t label, uint32_t now, int hold)
 
 /* the quick layers: ui_layer.c (included after this file) */
 static void layer_masks(void);
-static void hm_tick(void);
-static void hm_close(void);
-static void hm_hold(uint32_t b);
-static void hm_knob(uint32_t k, int32_t s);
-static uint32_t hm_btn_is(uint32_t b);
 static void macro_dice(uint32_t mode);                  /* (0.4) */
 static void layer_arm(uint32_t pressed, uint32_t now);
 static uint32_t layer_held(void);
@@ -2179,6 +2171,18 @@ static void ui_input_frame(void)
         rp_done = 0;
         ui_message("ONE PASS RECORDED");
     }
+    {   /* (2026-11-20, the user's) the audio is being pushed: a late half while playing, or a voice the overload guard shed, since
+         * the last look: one message, at most every 10 s */
+        static uint32_t cpu_ev, cpu_t;
+        uint32_t ev = load_diag.late_play + load_diag.shed;
+        if (ev != cpu_ev) {
+            cpu_ev = ev;
+            if (!cpu_t || (uint32_t)(fm1_ms - cpu_t) > 10000u) {
+                cpu_t = fm1_ms | 1u;
+                ui_message("CPU PUSHED: AUDIO MAY GLITCH");
+            }
+        }
+    }
     fm6_poll();                                         /* FM6: PTCH turned -> its patch */
     {   /* (0.6.5) RESO's PITCH and FOLW live in PRE's and DAMP's slots: into RESO a ROOM's values become theirs
          * (DAMP past FOLW's T6: OFF; PRE past 14: 14), out of it the reverb's own defaults back */
@@ -2260,13 +2264,8 @@ static void ui_input_frame(void)
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
         ui.rec_t0 |= 2u;                                /* (REC is its layer's button now: its tap is layer_tap's) */
     layer_oct_open(pressed);                            /* (OCT± with a SET layer's button down: it opens now) */
-    hm_tick();
-    oct = oct_taps(pressed, ui.menu || ui.confirm || act_oct() || name_on() || layer_set_open() || ui.hm);
-    if (ui.hm && !dlg_on() && !name_on()) {              /* a held menu: OCT- closes it, OCT+ nothing */
-        if (oct & 1u)
-            hm_close();
-        oct = 0;
-    }
+    cpu_sample();
+    oct = oct_taps(pressed, ui.menu || ui.confirm || act_oct() || name_on() || layer_set_open());
     oct = layer_oct(pressed, oct);                      /* (a SET layer's OCT-: put back) */
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
     {   /* (0.6.67) a button held + SELECT: (2026-11-02, the redesign) nothing: its chain (nav_jump) and HOME + SELECT's
@@ -2481,8 +2480,6 @@ static void ui_input_frame(void)
         enc_drop();
         return;
     }
-    if (ui.hm && (home == BT_TAP || seq == BT_TAP || lytap))   /* (a held menu: any of these closes it) */
-        hm_close();
     if (lytap)                                          /* a layer's button acts on release (held: the layer) */
         layer_tap(lytap);
     if (seq == BT_TAP)
@@ -2551,19 +2548,12 @@ static void ui_input_frame(void)
     for (id = 0; id < 14u; id++)                        /* (2026-11-03) held past HOLD: let go, nothing */
         if (((ui.pg_down & fm1_in.buttons) >> id) & 1u && (uint16_t)(fm1_ms - pg_ms[id]) >= HOLD_MS[settings_hold % 4u]) {
             ui.pg_down &= (uint16_t)~(1u << id);
-            hm_hold(panel_btn_of(id));                  /* EDIT: the held menu opens */
         }
     b = ui.pg_down & ~fm1_in.buttons;
     ui.pg_down &= (uint16_t)~b;
     for (id = 0; b; id++, b >>= 1)
         if (b & 1u) {
             uint32_t pb = panel_btn_of(id);
-            if (ui.hm) {                                /* a held menu open: the tap closes it (its own button: only that) */
-                uint32_t same = hm_btn_is(pb);
-                hm_close();
-                if (same)
-                    continue;
-            }
             page_tap(pb);
         }
     if (gen_on() && (oct & 2u)) {                       /* (chord-harp fork) IDEAS, HOME's pages: OCT+ KEEP, OCT- BACK */
@@ -2584,13 +2574,13 @@ static void ui_input_frame(void)
     song.grid = (uint8_t)keys_mode();                 /* (seq.c: the keys are the grid's) */
     seq_fill = (uint8_t)((fm1_in.buttons >> panel.btn[B_FX]) & 1u);   /* (0.6.42) FILL steps: FX held */
     lock_keys();                                        /* (a grid key on a hit let go: the hit goes) */
-    if (uc_w && !ui.home && !ui.hm && UCH_PAGE(cur_page()) && (notes & 0xFFFu))   /* (2026-11-19) SCL > USER: the key hit takes the chord */
+    if (uc_w && !ui.home && UCH_PAGE(cur_page()) && (notes & 0xFFFu))   /* (2026-11-19) SCL > USER: the key hit takes the chord */
         uc_key((uint32_t)__builtin_ctz(notes & 0xFFFu));
     if (!ui.home && cur_page()->graph == GR_PROG && harp_prog(TSEL) && (notes >> HARP_KWRITE) & 1u)
         ui.act = ui.act ? 0u : 4u;                      /* (chord-harp fork) SCL > PROG: F#4 picks WRITE (OCT+ does it) */
     if (song.grid) {
         grid_keys(notes);
-    } else if (!ui.hm && song.seq_mode && cur_page()->graph == GR_ROLL) {   /* STEP (not CHANCE: its knobs only) */
+    } else if (song.seq_mode && cur_page()->graph == GR_ROLL) {   /* STEP (not CHANCE: its knobs only) */
         if (live_rec_sel() || !((song.rec >> song.sel) & 1u))   /* armed and playing: the keys record live, not
                                                          * into the cursor step too; not armed (1.2, #133): they
                                                          * only play, being on STEP writes nothing */
@@ -2633,10 +2623,6 @@ static void ui_input_frame(void)
         uint64_t held;
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
-        if (ui.hm) {                                    /* a held menu: its rows and values */
-            hm_knob(k, s);
-            continue;
-        }
         if (gen_on()) {                                 /* GEN: its settings */
             gen_knob(k, s);
             continue;

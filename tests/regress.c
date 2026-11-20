@@ -515,10 +515,10 @@ static int chk_budget(char *msg, uint32_t n)
                 trk_note_off(&trk[p], k);
     rel_at = fpos;
     finish();
-    snprintf(msg, n, "4 POLY parts, random notes: at most %u voices active (budget %u), VOICE part at most %u (cap 4), "
+    snprintf(msg, n, "4 POLY parts, random notes: at most %u voices active (budget %u), VOICE part at most %u (cap %u), "
              "%u voices taken (each faded over ~4 ms), %u blocks of a fade past 6, all free %.2f s after the note-offs",
-             worst, NVOICE, vworst, voice_kills - kills0, fading, R.free_s);
-    return worst <= NVOICE && vworst <= 4u && !fading && R.free_s >= 0 && voice_kills > kills0;
+             worst, NVOICE, vworst, (uint32_t)ENG_FORMANT.poly, voice_kills - kills0, fading, R.free_s);
+    return worst <= NVOICE && vworst <= (uint32_t)ENG_FORMANT.poly && !fading && R.free_s >= 0 && voice_kills > kills0;
 }
 
 /* MIDI packets in one audio block can reuse a voice before its stolen tail fades. */
@@ -874,9 +874,9 @@ static int chk_voice_cap(char *msg, uint32_t n)
         if (!parts_free())
             most[mode] = 99;
     }
-    snprintf(msg, n, "VOICE engine, 8 keys: at most %u voices in POLY, %u in UNISON (cap 4); freed after release",
-             most[0], most[1]);
-    return most[0] == 4u && most[1] == 4u;
+    snprintf(msg, n, "VOICE engine, 8 keys: at most %u voices in POLY, %u in UNISON (cap %u); freed after release (the cost budget: 6)",
+             most[0], most[1], (uint32_t)ENG_FORMANT.poly);
+    return most[0] >= 6u && most[0] <= (uint32_t)ENG_FORMANT.poly && most[1] >= 6u && most[1] <= (uint32_t)ENG_FORMANT.poly;   /* (the cost budget holds six VOICE voices: 40 / 6; HARP chord keys count as ANALOG) */
 }
 
 /* no hanging notes: 6 s of random MIDI note-ons / offs on channels 1..4 (the parts), 5, 10 and 16 (ignored

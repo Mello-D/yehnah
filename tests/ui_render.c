@@ -554,7 +554,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_ABOUT, S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_UBOOT, S_CALIBRATION, S_SPLASH,
        S_BATT0, S_BATT1, S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME, S_HOME_REC32, S_HOME_SNAKE,
        S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_REVERB, S_REVERB_RESO,
-       S_REC_PEEK, S_REC_UNDO, S_REC_EXT, S_SCL_PEEK, S_CPU_PAGE, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
+       S_REC_PEEK, S_REC_UNDO, S_REC_EXT, S_CPU_PAGE, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
        S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
@@ -577,7 +577,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
        S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_WHEEL, S_V6_WHEEL_FAST, S_V6_WHEEL_HOME, S_V6_WHEEL_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_V6_ANIMAL_FULL, S_HOME_FACES,
-       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_XY, S_XY_ACT, S_XY_R1, S_XY_R2, S_XY_Z0, S_XY_Z1, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
+       S_MIXER_T4, S_HOME_T4, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_XY, S_XY_ACT, S_XY_R1, S_XY_R2, S_XY_Z0, S_XY_Z1, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
        S_TOAST_ENV, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH,
        S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
@@ -588,7 +588,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "confirm_motion", "confirm_erase", "gen", "gen_parts", "about", "about_rec", "about_credits", "about_end", "uboot", "calibration", "splash",
     "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home", "home_rec32", "home_snake",
     "perform_peek", "perform_held", "perform_wait", "perform_harm", "reverb_spring", "reverb_reso",
-    "layer_rec_peek", "layer_rec_undo", "layer_rec_ext", "layer_scl_peek", "cpu_page", 
+    "layer_rec_peek", "layer_rec_undo", "layer_rec_ext", "cpu_page", 
     "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
     "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
@@ -613,7 +613,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
     "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_wheel", "v6_wheel_fast", "v6_wheel_home", "v6_wheel_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full", "v6_voice_full", "v6_animal_full", "home_faces",
-    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "xy", "xy_layer", "xy_r1", "xy_r2", "xy_z0", "xy_z1", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
+    "mixer_tracks4", "home_tracks4", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "xy", "xy_layer", "xy_r1", "xy_r2", "xy_z0", "xy_z1", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
     "toast_env", "toast_motion", "toast_motion_locks", "toast_punch",
     "toast_pattern", "toast_fm6_op", "toast_analog"};
 
@@ -1225,8 +1225,6 @@ static void setup(int s)
         perf_k[3] = 60; ui.hot_col = 3; ui.hot_t = 30;
         break;
     /* (2026-11-09, held menus) the lists that stay open after SCL / EDIT / GLO is held; FX and SAVE held as grids */
-    case S_HM_SCL: go_home(); ui.hm = HM_SCL; break;
-    case S_HM_EDIT: go_home(); ui.hm = HM_EDIT; hm_pos[1] = 1; break;
     case S_LAYER_FX_GRID: go_home(); ui.layer = LAYER_FX; break;
     case S_LAYER_SAVE_GRID: go_home(); ui.layer = LAYER_SAVE; break;
     case S_REVERB: go_fx("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
@@ -1239,7 +1237,6 @@ static void setup(int s)
     case S_REC_EXT: go_home(); ui.layer = LAYER_REC; song.g[G_CLOCK] = 1; song.playing = 1; break;
 
 
-    case S_SCL_PEEK: go_title("ENV"); ui.hm = HM_SCL; break;
     case S_CPU_PAGE: {
         uint32_t i;
         go_home(); ui.menu = 3; song.cpu_q8 = 120u * 256u / 100u; load_diag.peak = 91; load_diag.late = 3;

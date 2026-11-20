@@ -74,7 +74,7 @@ static struct {
 /* (0.6.44) FX LATCH: FX held open and let go locks its layer open, as the macros latch: its keys, knobs and map stay
  * until FX is pressed again (or another layer is held over it, for as long as it is) */
 static uint8_t fx_lock;
-static int layer_allowed(void) { return !ui.menu && !dlg_on() && !ui.uboot && !name_on() && !ui.hm; }   /* (GEN: a page) */
+static int layer_allowed(void) { return !ui.menu && !dlg_on() && !ui.uboot && !name_on(); }   /* (GEN: a page) */
 static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
 static uint32_t ly_down(uint32_t l) { return l && (fm1_in.buttons & ly_bit(l)) != 0u; }
 static uint32_t layer_bits(void)

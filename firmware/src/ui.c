@@ -27,7 +27,6 @@ static uint32_t lib_scan(uint32_t n, char *b);           /* (0.8.5) project.c: S
 static uint32_t lib_gen(void);
 static int undo_sound(uint32_t k);                 /* (0.6.65) project.c: the sound dice's CANCEL */
 static int project_recall_slot(void);
-static void hm_draw(void);
 static uint32_t chain_prepare(void);
 static uint32_t section_preview(uint32_t s);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
@@ -250,7 +249,6 @@ static struct {
     uint32_t ly_t0;              /* the layer button's press time | 1, LY_* bits (ui_layer.c layer_gesture) */
     uint8_t ly;                  /* the layer whose button is down (LAYER_*), 0 = none */
     uint8_t layer;               /* the layer whose map is shown (LAYER_*), 0 = none */
-    uint8_t hm;                  /* the held menu open (HM_*: SCL EDIT GLO; ui_hmenu.c), 0 = none; it stays open after the button is let go */
     uint16_t pg_down;            /* page buttons down (panel ids) that act when let go */
     uint32_t layer_sig;          /* drawn-state cache of the map */
     char msg[40];                /* (0.9.0: 40, was 24 and cut the long ones silently; longer: ellipsised, ui_say) */
@@ -438,7 +436,7 @@ static uint32_t graph_y(void) { return TF_SC_Y; }
 #endif
 static int sets_full(void);
 static int fxall_on(void);
-static uint32_t graph_h(void) { return fxall_on() ? 240u - TF_SC_Y - 4u : sets_full() || ui.hm ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
+static uint32_t graph_h(void) { return fxall_on() ? 240u - TF_SC_Y - 4u : sets_full() ? TF_PG_Y - TF_SC_Y - 4u : TF_SC_H; }
 
 /* the quick layers (ui_layer.c): a button held, the keys and KNOB 1..4 are its shortcuts, its map over the page */
 enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_SEQ, LAYER_HOME, LAYER_N };   /* (2026-11-15: HOME held: SWARM's keys) */   /* (2026-11-02: EDIT's and LFO's MACRO, GLO's SET gone,
@@ -1022,7 +1020,7 @@ static void step_clear(step_t *st)
  * down / up. KNOB 1 STEP, 2 LANE, 3 HIT, 4 ACC edit the cursor step. A sound load never converts the
  * steps: the grid shows a step's notes on their lanes (eng_drum.c step_lanes) and an edit makes the lane its
  * own (grid_own). Live recording on a DRUM track writes hits (seq.c rec_note) */
-static int grid_on(void) { return !ui.hm && !ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_ROLL && drum_track(TSEL); }   /* (STEP only: CHANCE is SC_STEP too) */
+static int grid_on(void) { return !ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_ROLL && drum_track(TSEL); }   /* (STEP only: CHANCE is SC_STEP too) */
 
 /* black key place p (seq.c key_place) held, 0 = not */
 static int black_held(uint32_t p)
@@ -1476,7 +1474,27 @@ static void apply_preset(uint32_t pi)                 /* the selected track's so
         }
     }
 }
-static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
+/* (2026-11-20, the user's) the section has one kit: a track that is not on DRUM cannot become a second kit track while another one is
+ * (drum_elsewhere, below): "TRACK 3 ALREADY HAS THE KIT", and the track keeps the sound it had. 0 = free to go */
+static uint32_t drum_elsewhere(const track_t *t);
+static int kit_taken(uint32_t ei)
+{
+    char m[32];                                         /* (the stack: a static one would be RAM that is spare for nothing) */
+    uint32_t o;
+    if (ei != ENGI_DRUM || trk_eng(TSEL) == ENGI_DRUM || !(o = drum_elsewhere(TSEL)))
+        return 0;
+    str_cpy(m, "TRACK ? ALREADY HAS THE KIT", sizeof m);
+    m[6] = (char)('0' + o);
+    ui_message(m);
+    return 1;
+}
+static int set_engine(uint32_t ei)
+{
+    if (kit_taken(ei))
+        return 0;
+    set_engine_of(TSEL, ei);
+    return 1;
+}
 /* (0.6.46) INIT SOUND, NEW PROJECT, (0.6.49) the power-on: the engine's own defaults (its EDIT values as the engine
  * declares them, not its first preset's colour; the envelope, VOICE and the filter envelope as a new track has them),
  * dry (no DIST CHOR DLY REV send: the effects are the player's to add), on FM6 the init voice */
@@ -1537,7 +1555,8 @@ static void power_on_parts(void)
 /* switch engine (its defaults + first preset) and say so */
 static void select_engine(uint32_t e)
 {
-    set_engine(e);
+    if (!set_engine(e))
+        return;
     ui_say("ENGINE ", ENGINES[TSEL->eng_req]->name);
     ui.force = 1;
 }
@@ -1812,13 +1831,17 @@ static void preset_load(uint32_t e, uint32_t k);
 static void pb_step_item(int32_t dir)
 {
     pb_pk_t p;
-    uint32_t cur = pb_cur(), total, pos = preset_pos(&total), it;
+    uint32_t cur = pb_cur(), total, pos = preset_pos(&total), it, n;
     if (!total)
         return;
     pb_pick(&p, dir > 0, pos < total ? cur : PB_NONE, 1, 0, 0);
     it = p.best;
     if (it == PB_NONE) {
         pb_pick(&p, dir <= 0 ? 0 : 1, PB_NONE, 0, 0, 0);   /* (round: the first, or the last) */
+        it = p.best;
+    }
+    for (n = 0; it != PB_NONE && (it >> 8) == ENGI_DRUM && kit_taken(ENGI_DRUM) && n < 64u; n++) {   /* (a second kit track: past the kits) */
+        pb_pick(&p, dir > 0, it, 1, 0, 0);
         it = p.best;
     }
     if (it != PB_NONE)
@@ -1836,7 +1859,7 @@ static void pb_load_first(void)
 static void pb_run_step(int32_t dir, uint32_t (*kf)(uint32_t))
 {
     pb_pk_t p, q;
-    uint32_t cur = pb_cur(), total, pos = preset_pos(&total), start;
+    uint32_t cur = pb_cur(), total, pos = preset_pos(&total), start, skip = 0;
     if (!total)
         return;
     if (pos >= total) {                                 /* (the sound loaded is not in the list: its start) */
@@ -1856,6 +1879,10 @@ static void pb_run_step(int32_t dir, uint32_t (*kf)(uint32_t))
             return;
         pb_pick(&q, 0, p.best, 1, kf, kf(p.best));      /* .. the sound before its run .. */
         pb_pick(&p, 1, q.best, 1, 0, 0);                /* .. and the one after that: its first */
+        start = p.best;
+    }
+    for (; start != PB_NONE && (start >> 8) == ENGI_DRUM && kit_taken(ENGI_DRUM) && skip < 64u; skip++) {   /* (a second kit track: past the kits) */
+        pb_pick(&p, dir > 0, start, 1, 0, 0);
         start = p.best;
     }
     if (start != PB_NONE)
@@ -1889,7 +1916,8 @@ static void preset_load(uint32_t e, uint32_t k)       /* sound k of engine e (NE
         if (e != TSEL->eng_req) {                       /* (chord-harp fork: no "ENGINE .." over the sound's name while
                                                          * browsing; the header numbers the sound, the footer names the
                                                          * engine) */
-            set_engine(e);
+            if (!set_engine(e))                         /* (a second kit track: refused, the sound stays) */
+                return;
             ui.force = 1;
         }
         apply_preset(k);
@@ -1923,9 +1951,8 @@ static void midi_pc_poll(void)
                 if (e == NENGINES) {
                     up_load(k);
                 } else {
-                    if (e != TSEL->eng_req)
-                        set_engine(e);
-                    apply_preset(k);
+                    if (e == TSEL->eng_req || set_engine(e))   /* (a second kit track: refused) */
+                        apply_preset(k);
                 }
                 ui.force = 1;
             }
@@ -1946,14 +1973,21 @@ static void preset_engine_step(int32_t direction)
         return;
     }
     if (!ptype_sel || ptype_sel == PT_USER) {
-        select_engine(eng_step(e, direction));
+        uint32_t e2 = eng_step(e, direction);
+        if (kit_taken(e2)) {                            /* (the message stays: on to the engine past the kit) */
+            set_engine(eng_step(e2, direction));
+            ui.force = 1;
+        } else {
+            select_engine(e2);
+        }
         return;
     }
     for (i = 0; i < NENG_SHOWN; i++) {
         e = eng_step(e, direction);
         for (n = 0; n < preset_shown(e); n++)
             if (preset_in(e, k = preset_nth(ENGINES[e], n))) {
-                set_engine(e);
+                if (!set_engine(e))
+                    continue;                           /* (a second kit track: on to the next engine) */
                 apply_preset(k);
                 ui.force = 1;
                 return;

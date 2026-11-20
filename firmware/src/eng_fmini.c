@@ -480,6 +480,6 @@ static const engine_t ENG_MINI = {
     .block = fmini_block,
     .pset = fmini_pset,
     .knob = {P_E0, P_E1, P_E2, P_E4},
-    .poly = 4,
+    .poly = 8,                  /* (2026-11-20: 4) */
     .keep = 0x13,            /* the ladder's first two stages and the lag pole (s[0], s[1], s[4]) */
 };

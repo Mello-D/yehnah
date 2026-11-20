@@ -1904,18 +1904,6 @@ static void ui_draw_body(uint32_t counting)
         name_draw();
         return;
     }
-    if (ui.hm) {                                        /* a held menu (ui_hmenu.c) */
-        hm_draw();
-        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {
-            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
-            ui.msg2[0] = 0;
-            ui.msg_t = 60;
-        }
-        if (ui.bpm_t)
-            ui.bpm_t--;
-        ui.force = 0;
-        return;
-    }
     if (ui.layer) {                                     /* a layer's map over the page (ui_layer.c) */
         if (ui.force)
             draw_frame();
