@@ -28,7 +28,7 @@ IDEAS, which write a pattern, a sound, an LFO, an effect or an ambient texture f
 synthesised in real time: there are no samples. It comes with a web installer, a web editor and an emulator that runs
 the firmware itself in the browser.
 
-> **Status:** a development release (`v0.1.0`). It is custom firmware: install it at your own risk, and read
+> **Status:** a development release (`v0.2.0`). It is custom firmware: install it at your own risk, and read
 > [Install](#install) first. Your music is backed up before the installer writes anything, and the way back to the
 > official firmware is one click.
 

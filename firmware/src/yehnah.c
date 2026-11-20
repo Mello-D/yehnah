@@ -39,7 +39,7 @@
 #define YEHNAH_ID "FM-1_069"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef YEHNAH_VERSION
-#define YEHNAH_VERSION "v0.1.0"      /* (chord-harp fork) Yehnah's own numbering (was VitaminDSDC); based on JIANT 0.9.9-cpu2 */
+#define YEHNAH_VERSION "v0.2.0"      /* (chord-harp fork) Yehnah's own numbering (was VitaminDSDC); based on JIANT 0.9.9-cpu2 */
 #endif
 #ifndef YEHNAH_RESREGION
 #define YEHNAH_RESREGION 1      /* (chord-harp fork, 2026-11-04) the resource region (res.c, core.h YEHNAH_RES) */

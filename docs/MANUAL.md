@@ -1,6 +1,6 @@
 # Yehnah — User Manual
 
-**Firmware v0.1.0 for the M-VAVE FM-1**
+**Firmware v0.2.0 for the M-VAVE FM-1**
 
 This manual is for musicians who have just installed Yehnah. It names every button, knob and page as the screen shows
 it. It was rewritten from the firmware's source and checked against it: if you find something here that the unit does
