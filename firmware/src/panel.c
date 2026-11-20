@@ -84,25 +84,36 @@ static uint32_t hold_to_stored(uint32_t old, uint32_t i)
 }
 static int hold_stored_ok(uint32_t v) { return v <= 1u || (v & ~3u) == HOLD_TAG; }
 
-/* LEDS (menu): OFF, DIM LO, DIM HI, HIGH, INV. HIGH (the default, the user 2026-11-10): the idle buttons and keys glow at
- * twice DIM HI's mid level (hal/fm1_input.h FM1_LED_MID_N_HIGH), the active ones are lit; DIM HI the idle glow dim (~1/30
- * pulse + the mid level 1 in 8, #35); DIM LO the same, darker (~1/60, FM1_LED_DIM_LO_NS); OFF no glow, the active
- * ones lit (as 1.0); INV the idle ones lit and the active ones dark, as the stock firmware (ui_input.c ui_leds).
- * Saved in the settings record's retired zoom field: 0 is the default (HIGH), else LEDS_TAG | mode, the modes
- * append-only: DIM 0 (now DIM HI) INV 1 OFF 2 DIM LO 3 HIGH 4. LEDS_MENU: the menu's order, darkest first */
+/* LEDS (menu, 2026-11-17): a number 0 .. 5, the brightness of the idle glow (the keys and buttons nothing is happening on); the lit
+ * and breathing ones are always at full. 0 no glow (the grid's beats and a layer's mid keys still show), 1 the pulse alone (~1/60,
+ * FM1_LED_DIM_LO_NS), 2 the idle glow dim (~1/30 pulse + the mid level 1 frame in 8, was DIM HI), 3 1 in 6, 4 1 in 5, 5 1 in 4 (was
+ * HIGH, the default; hal/fm1_input.h fm1_led_dim_level: leds_hal). (INV, the stock firmware's inverted LEDs, is gone.)
+ * Saved in the settings record's retired zoom field: 0 is the default (5), else LEDS_TAG | 8 | level. Older records: LEDS_TAG | mode
+ * with DIM 0 INV 1 OFF 2 DIM LO 3 HIGH 4, read as 2, 5, 0, 1, 5 (leds_from_stored) */
 #define LEDS_TAG 0x4C454400u                    /* "LED" */
-enum { LEDS_DIM, LEDS_INV, LEDS_OFF, LEDS_DIM_LO, LEDS_HIGH, LEDS_COUNT };
-#define LEDS_DEF LEDS_HIGH
-static const uint8_t LEDS_MENU[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_HIGH, LEDS_INV};
-static const char *const LEDS_NAME[LEDS_COUNT] = {"DIM HI", "INV", "OFF", "DIM LO", "HIGH"};
+#define LEDS_COUNT 6u
+#define LEDS_DEF 5u
+static const char *const LEDS_NAME[LEDS_COUNT] = {"0", "1", "2", "3", "4", "5"};
 static uint8_t settings_leds = LEDS_DEF;
-static uint32_t leds_from_stored(uint32_t v) { return (v & ~7u) == LEDS_TAG && (v & 7u) < LEDS_COUNT ? v & 7u : LEDS_DEF; }
+static uint32_t leds_hal(uint32_t lvl) { static const uint8_t H[LEDS_COUNT] = {0, 1, 0, 3, 4, 2}; return H[lvl % LEDS_COUNT]; }   /* the HAL's levels */
+static uint32_t leds_from_stored(uint32_t v)
+{
+    static const uint8_t OLD[5] = {2, 5, 0, 1, 5};      /* DIM, INV, OFF, DIM LO, HIGH */
+    uint32_t x = v & 15u;
+    if ((v & ~15u) != LEDS_TAG)
+        return LEDS_DEF;
+    return x >= 8u ? (x - 8u < LEDS_COUNT ? x - 8u : LEDS_DEF) : x < 5u ? OLD[x] : LEDS_DEF;
+}
 static uint32_t leds_to_stored(uint32_t old, uint32_t m)
 {
     (void)old;
-    return m != LEDS_DEF && m < LEDS_COUNT ? LEDS_TAG | m : 0u;
+    return m != LEDS_DEF && m < LEDS_COUNT ? LEDS_TAG | 8u | m : 0u;
 }
-static int leds_stored_ok(uint32_t v) { return v <= 1u || ((v & ~7u) == LEDS_TAG && (v & 7u) < LEDS_COUNT); }
+static int leds_stored_ok(uint32_t v)
+{
+    uint32_t x = v & 15u;
+    return v <= 1u || ((v & ~15u) == LEDS_TAG && (x < 5u || (x >= 8u && x - 8u < LEDS_COUNT)));
+}
 
 static void settings_init(void)
 {

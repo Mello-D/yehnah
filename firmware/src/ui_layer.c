@@ -301,7 +301,7 @@ static void rec_clear(void)
         ui_message("NOTHING TO CLEAR");
         return;
     }
-    undo_mark();                                        /* (0.6.21) UNDO: REC + D4 */
+    undo_mark();                                        /* (0.6.21) UNDO: REC + A3 */
     load_begin(t, LOAD_PAT);
     track_defaults_steps(t);
     load_end(t);
@@ -310,7 +310,7 @@ static void rec_clear(void)
         char cb[16] = "T1 CLEARED";
         cb[1] = (char)('1' + (t - trk));
         ui_say(cb, "");
-        str_cpy(ui.msg2, "REC+G5: CLEAR ALL", sizeof ui.msg2);
+        str_cpy(ui.msg2, "REC+F5: CLEAR ALL", sizeof ui.msg2);
     }
     ui.force = 1;
 }
@@ -319,17 +319,20 @@ static void rec_clear(void)
  * a REC tap records, ui.c rec_loop), B3 TAP (the tempo), KNOB 3 BPM, C4 / KNOB 4 COUNT-IN (OFF 1 BAR 2 BARS,
  * MENU > AUDIO's); (2026-11-02, were GLO + G4, GLO + PLAY, GLO + B4) D4 UNDO, E4 RESTART, F4 REVERT ALL; (2026-11-03,
  * SAVE held's until then) G4..C5 PLAY A..D, D5 LOOP / SONG, E5 SONG REC, F5 NAME (song_key) */
-#define RK_MODE 2u                                     /* the layer's white keys: F3 CLEAR, G3 CLICK, A3 MODE, B3 TAP, */
-#define RK_TAP 3u                                      /* C4 COUNT-IN, D4 UNDO, E4 RESTART, F4 REVERT ALL */
-#define RK_CIN 4u
-#define RK_UNDO 5u
-#define RK_RST 6u
-#define RK_RVA 7u                                      /* F4: CLEAR FX, the punch-in lane (2026-11-12; was REVERT ALL, gone with MUTATE) */
-#define RK_PLAY 8u                                     /* G4 A4 B4 C5: PLAY A..D */
-#define RK_LOOP 12u                                    /* D5: LOOP / SONG (what PLAY plays) */
-#define RK_SREC 13u                                    /* E5: SONG REC */
-#define RK_ALL 15u                                     /* G5: CLEAR ALL (every track, the lane: it asks first) */
-#define RK_NAME 14u                                    /* F5: NAME (USER's slot, PROJECT's project or section) */
+/* REC's white keys, packed into as few rows of four as there are keys (2026-11-17): F3 G3 A3 B3 MODE TAP UNDO RESTART | C4 D4 E4 F4
+ * PLAY A..D | G4 A4 B4 LOOP / SONG, SONG REC, NAME | D5 E5 F5 CLEAR, CLR FX (the punch-in lane, asks first), CLEAR ALL (every track
+ * and the lane, asks first). (G3 CLICK and C4 COUNT-IN are gone: GLO > MAIN has them; MODE is also KNOB 2) */
+#define RK_MODE 0u
+#define RK_TAP 1u
+#define RK_UNDO 2u
+#define RK_RST 3u
+#define RK_PLAY 4u                                     /* C4 D4 E4 F4: PLAY A..D */
+#define RK_LOOP 8u                                     /* G4: LOOP / SONG (what PLAY plays) */
+#define RK_SREC 9u                                     /* A4: SONG REC */
+#define RK_NAME 10u                                    /* B4: NAME (USER's slot, PROJECT's project or section) */
+#define RK_CLR 12u                                     /* D5 */
+#define RK_RVA 13u                                     /* E5: CLEAR FX, the punch-in lane (2026-11-12; was REVERT ALL, gone with MUTATE) */
+#define RK_ALL 14u                                     /* F5: CLEAR ALL (every track, the lane: it asks first) */
 static const char *const REC_MODE_N[2] = {"1 PASS", "LOOP"};
 #define RL_N 2u                                        /* the menu's settings here: row 0 CLICK (KNOB 1), 1 COUNT-IN (KNOB 4) */
 static const uint8_t RL_F[RL_N] = {RP_CLICK, RP_COUNTIN};
@@ -383,9 +386,9 @@ static void song_key(uint32_t p)
 /* (2026-11-06) SAVE held: the generic save tools that were SAVE > TOOLS, ERASE and USER, white keys (each asks first, as before):
  * F3 CLEAR PAT, G3 CLEAR SONG, A3 DELETE ROW (SONG EDIT / ARRANGE's row), C4 ERASE SECTION (PROJECT's section), D4 ERASE
  * PROJECT, E4 NEW PROJECT, G4 SAVE SOUND (the user slot the track's sound came from, else the first free one), A4 ERASE SOUND */
-enum { SK_CLRPAT = 0, SK_CLRSONG = 1, SK_DELROW = 2, SK_ERASEC = 4, SK_ERAPRJ = 5, SK_NEW = 6, SK_SAVSND = 8, SK_ERASND = 9 };
-static const char *const SK_NAME[10] = {"CLEAR PAT", "CLEAR SONG", "DEL ROW", "", "ERASE SECT", "ERASE PROJ", "NEW PROJ", "",
-                                        "SAVE SND", "ERASE SND"};
+enum { SK_CLRPAT = 0, SK_CLRSONG = 1, SK_DELROW = 2, SK_ERASEC = 3, SK_ERAPRJ = 4, SK_NEW = 5, SK_SAVSND = 6, SK_ERASND = 7 };
+static const char *const SK_NAME[8] = {"CLEAR PAT", "CLEAR SONG", "DEL ROW", "ERASE SECT", "ERASE PROJ", "NEW PROJ",
+                                       "SAVE SND", "ERASE SND"};
 static uint32_t sv_free_slot(void)
 {
     uint32_t k;
@@ -412,7 +415,7 @@ static int sv_ok(uint32_t p)
 static void sv_key(uint32_t p)
 {
     uint32_t k = (uint32_t)song.g[G_SLOT] - 1u, u;
-    if (p >= 10u || !SK_NAME[p][0])
+    if (p >= 8u || !SK_NAME[p][0])
         return;
     if (!sv_ok(p)) {
         ui_message(chain_busy() || song.playing ? "STOP TO EDIT" : "NOTHING TO DO");
@@ -434,15 +437,15 @@ static void sv_key(uint32_t p)
     default: confirm_open(CF_ERASE_USER, user_of(TSEL)); break;
     }
 }
-/* SEQ held (2026-11-10): the pattern tools (ui_tools.c) on the selected track, white keys: F3 REVERSE, G3 SHIFT <, A3 SHIFT >,
- * B3 BEAT (DRUM), G4 CLR LANE, A4 REV LANE, B4 FILL LANE (the lane: the DRUM black keys 1..8), G5 CLR STEP (the cursor step and its
- * locks, the cursor on to the next). Each at once, a message; none has an undo */
+/* SEQ held (2026-11-10): the pattern tools (ui_tools.c) on the selected track, white keys, four to a row (2026-11-17): F3 REVERSE, G3 SHIFT <, A3 SHIFT >,
+ * B3 CLR STEP (the cursor step and its locks, the cursor on to the next) / C4 BEAT, D4 CLR LANE, E4 REV LANE, F4 FILL LANE (DRUM
+ * only; the lane: the DRUM black keys 1..8). Each at once, a message; none has an undo */
 enum { LS_OFF, LS_SEL, LS_HELD, LS_WAIT, LS_DIM, LS_MUTE };
-#define SQ_STEP 15u
+#define SQ_STEP 3u                                      /* (2026-11-17: B3, was G5; row 1 the sequence, row 2 the DRUM tools) */
 static int sq_tool(uint32_t p)                          /* white key p -> TL_*, or 0xFF */
 {
-    return p == 0u ? TL_REV : p == 1u ? TL_LEFT : p == 2u ? TL_RIGHT : p == 3u ? TL_BEAT :
-           p == 8u ? TL_LCLR : p == 9u ? TL_LREV : p == 10u ? TL_LFILL : 0xFF;
+    return p == 0u ? TL_REV : p == 1u ? TL_LEFT : p == 2u ? TL_RIGHT : p == 4u ? TL_BEAT :
+           p == 5u ? TL_LCLR : p == 6u ? TL_LREV : p == 7u ? TL_LFILL : 0xFF;
 }
 static int sq_ok(uint32_t k)
 {
@@ -457,8 +460,7 @@ static int sq_ok(uint32_t k)
 }
 static uint32_t sq_keyname(int blk, uint32_t p, char *nm)
 {
-    static const char *const N[16] = {"REVERSE", "SHIFT <", "SHIFT >", "BEAT", "", "", "", "", "CLR LN", "REV LN", "FILL LN",
-                                      "", "", "", "", "CLR STP"};
+    static const char *const N[8] = {"REVERSE", "SHIFT <", "SHIFT >", "CLR STP", "BEAT", "CLR LN", "REV LN", "FILL LN"};
     uint32_t busy = chain_busy() ? LS_DIM : LS_OFF;
     if (blk) {
         if (!drum_track(TSEL) || p >= NLANE)
@@ -466,7 +468,7 @@ static uint32_t sq_keyname(int blk, uint32_t p, char *nm)
         str_cpy(nm, drum_lane_abbr(TSEL, p), 12);
         return ui.lane % NLANE == p ? LS_SEL : LS_OFF;
     }
-    if (p >= 16u || !N[p][0])
+    if (p >= 8u)
         return LS_OFF;
     str_cpy(nm, N[p], 12);
     if (p == SQ_STEP)
@@ -534,11 +536,11 @@ static void rec_key(uint32_t p)
         else confirm_open(CF_CLEAR_ALL, song.sel);
         return;
     }
-    if (p >= RK_PLAY) {
+    if (p >= RK_PLAY && p <= RK_NAME) {
         song_key(p);
         return;
     }
-    if (p == 0u) {
+    if (p == RK_CLR) {
         rec_clear();
         return;
     }
@@ -635,6 +637,11 @@ static void session_dice(uint32_t seed)
     macro_dice(0);
 }
 
+/* HOME's white keys (2026-11-17, rows of four, the same keys in every mode): F3 .. C4 SWARM's / TRACE's / XYZ's actions (swarm_act: SWA 0..4),
+ * D4 IDEA ALL, E4 FAVORITE, G4 and A4 XYZ's CAPTURE and RE-FIT (SWA_X5, SWA_X6: only on XYZ) */
+#define HK_IDEA 5u
+#define HK_FAV 6u
+static uint32_t hk_act(uint32_t p) { return p < 5u ? p : p == 7u ? SWA_X5 : p == 8u ? SWA_X6 : 0xFFu; }
 static void layer_key(uint32_t l, uint32_t k)
 {
     uint32_t p = key_place(k);
@@ -647,11 +654,11 @@ static void layer_key(uint32_t l, uint32_t k)
     } else if (l == LAYER_SEQ) {
         sq_key(k);
     } else if (l == LAYER_HOME) {                       /* SWARM: F3 FREEZE, G3 REVERSE, A3 THROW, B3 CAPTURE, C4 SWARM on / off */
-        if (!key_black(k) && p < SWA_N)
-            swarm_act(p);
-        else if (key_black(k) && p == 0u)               /* (2026-11-17) F#3: IDEA ALL, IDEAS > TRACK's throw on every track */
+        if (!key_black(k) && hk_act(p) < SWA_N)
+            swarm_act(hk_act(p));
+        else if (!key_black(k) && p == HK_IDEA)         /* (2026-11-17) G4: IDEA ALL, IDEAS > TRACK's throw on every track */
             ix_all();
-        else if (key_black(k) && p == 1u) {             /* (2026-11-17, the user's) G#3: the track's sound a favourite, or not */
+        else if (!key_black(k) && p == HK_FAV) {        /* (2026-11-17, the user's) A4: the track's sound a favourite, or not */
             preset_mark(!preset_favorite());
             ui_message(preset_favorite() ? "FAVORITE" : "NOT A FAVORITE");
         }
@@ -718,42 +725,32 @@ static uint32_t layer_oct(uint32_t pressed, uint32_t oct)
 /* lit = in effect now (held, the value, a track sounding), breathing = can be pressed (*br: dark .. ~60 % and
  * back, ~1.1 s, hal/fm1_input.h fm1_led_breath; was a hard 250 ms blink, #119), dark = nothing there */
 static int rec_clearable(void) { return !seq_is_empty(TSEL) || motion_count(TSEL) != 0u; }
+/* (2026-11-17) The keys follow the map: ly_keyname is the one table (name, state), so a key's LED is its cell. Rows of four white
+ * keys (F3 G3 A3 B3 / C4 .. F4 / G4 .. C5 / D5 .. G5): the first of a row breathes (a key that can be pressed) to mark the row,
+ * the others of the row glow at the mid level, one that cannot be pressed now (DIM) at the lowest glow, one on or held lit, a key
+ * with no function in the layer dark. A black key with a function (FX's mutes and tracks, SEQ's DRUM lanes) is as the others of a
+ * row. *br: the breathing keys; ly_mid, ly_glow: the other two levels (ui_leds) */
+static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm);
 static uint32_t layer_leds(uint32_t *br)
 {
-    uint32_t k, m = 0, n = 0, l = ui.layer, held = perf_held | perf_latched, ok = perf_avail();
+    uint32_t k, m = 0, n = 0, l = ui.layer;
+    char nm[12];
+    ly_mid = ly_glow = 0;
     for (k = 0; k < 27u; k++) {
-        uint32_t p = key_place(k), b = (uint32_t)key_black(k), on = 0, can = 0, e;
-        if (l == LAYER_FX) {                            /* effects breathe, held lit, a too-long REPEAT dark */
-            e = perf_key(k);
-            can = e < PF_N && ((ok >> e) & 1u);
-            on = can && ((held >> e) & 1u);
-        } else if (l == LAYER_SAVE && !b && p < 10u && SK_NAME[p][0]) {   /* the tools that would do something breathe */
-            can = (uint32_t)sv_ok(p);
-        } else if (l == LAYER_SEQ) {                    /* the tools that would do something breathe; the lane picked lit */
-            can = sq_ok(k);
-            on = b && drum_track(TSEL) && p < NLANE && ui.lane % NLANE == p;
-        } else if (l == LAYER_HOME && !b && p < SWA_N) {   /* SWARM's keys: on lit, what can be done breathes */
-            on = (uint32_t)swarm_act_on(p);
-            can = (uint32_t)swarm_act_ok(p);
-        } else if (l == LAYER_HOME && b && p == 0u) {   /* IDEA ALL: breathes when it can be done */
-            can = !chain_busy();
-        } else if (l == LAYER_HOME && b && p == 1u) {   /* FAVORITE: lit when the sound is one */
-            can = 1;
-            on = (uint32_t)preset_favorite();
-        } else if (l == LAYER_REC && !b && p == RK_ALL) {
-            can = !chain_busy();
-        } else if (l == LAYER_REC && !b && p >= RK_PLAY && p <= RK_NAME) {   /* the section playing lit, the saved
-                                                         * ones and the actions breathe */
-            on = (p - RK_PLAY < 4u && live.cur == (int8_t)(p - RK_PLAY)) || (p == RK_SREC && live.srec) ||
-                 (p == RK_LOOP && live.mode);
-            can = p - RK_PLAY < 4u ? project_used(p - RK_PLAY) : p == RK_NAME ? name_here() : 1;
-        } else if (l == LAYER_REC && !b && p <= RK_RVA) {   /* the click / count-in on, LOOP: lit, else they breathe; CLEAR: */
-            on = p == RK_MODE && rec_loop;   /* something to clear, not
-                                                         * while a song plays; TAP breathes; UNDO: one to undo */
-            can = p == RK_RVA ? pfx_lane_used() && !chain_busy() : p == RK_UNDO ? undo_ok && !chain_busy() : p == RK_RST ? restart_ok() : p == 1u || p == RK_CIN ? 0u : p ? 1u : !chain_busy() && rec_clearable();
-        }
-        m |= on << k;
-        n |= (can & !on) << k;
+        int blk = key_black(k);
+        uint32_t p = key_place(k), st = ly_keyname(l, blk, p, nm);
+        if (!nm[0])
+            continue;
+        if ((kb_layer >> k) & 1u)                       /* held down: lit */
+            m |= 1u << k;
+        else if (st == LS_DIM)
+            ly_glow |= 1u << k;
+        else if (st == LS_SEL || st == LS_HELD || st == LS_MUTE || (st == LS_WAIT && l == LAYER_FX))
+            m |= 1u << k;
+        else if (st == LS_WAIT || (!blk && (p & 3u) == 0u))
+            n |= 1u << k;
+        else
+            ly_mid |= 1u << k;
     }
     if (br)
         *br = n;
@@ -779,25 +776,29 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     uint32_t busy = chain_busy() ? LS_DIM : LS_OFF;
     nm[0] = 0;
     if (l == LAYER_FX) {
-        uint32_t held = perf_kill ? 0u : perf_held | perf_latched, e = blk ? PF_M1 + p : p;
+        uint32_t held = perf_kill ? 0u : perf_held | perf_latched, e = blk ? PF_M1 + p : p < 16u ? PF_KEY[p] : PF_N;
         static const char *const TG[3] = {"TRK ALL", "TRK SYN", "TRK DRM"};
         if (blk && p == 7u) {
             str_cpy(nm, TG[pfx_tgt % 3u], 12);
             return LS_OFF;
         }
-        if (blk ? p >= NTRK : p >= PF_M1)
+        if (blk ? p >= NTRK : e >= PF_M1 && e != PF_CLR)
             return LS_OFF;
+        if (e == PF_CLR) {                              /* G5: erase the punch-in lane where it passes (hold) */
+            str_cpy(nm, "CLR PUNCH", 12);
+            return pfx_clr ? LS_HELD : pfx_lane_used() ? LS_OFF : LS_DIM;
+        }
         if (blk) {
             str_cpy(nm, "MUTE T1", 12);
             nm[6] = (char)('1' + p);
             return (held >> e) & 1u ? LS_MUTE : LS_OFF;
         }
-        str_cpy(nm, PF_NAME[p], 12);
+        str_cpy(nm, PF_NAME[e], 12);
         return !((perf_avail() >> e) & 1u) ? LS_DIM : !((held >> e) & 1u) ? LS_OFF :
                ((perf_act >> e) & 1u) || ((PF_MIDI >> e) & 1u) ? LS_HELD : LS_WAIT;
     }
     if (l == LAYER_SAVE) {
-        if (blk || p >= 10u || !SK_NAME[p][0])
+        if (blk || p >= 8u || !SK_NAME[p][0])
             return LS_OFF;
         str_cpy(nm, SK_NAME[p], 12);
         return sv_ok(p) ? LS_OFF : LS_DIM;
@@ -808,16 +809,17 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         static const char *const SN[SWA_N] = {"FREEZE", "REVERSE", "THROW", "CAPTURE", "SWARM", "", ""};
         static const char *const TN[SWA_N] = {"FREEZE", "RANDOM", "REROLL", "CAPTURE", "TRACE", "", ""};   /* (TRACE: the shapes) */
         static const char *const XN[SWA_N] = {"Z REV", "Z DLY", "Z CUT", "Z LEVEL", "XYZ", "CAPTURE", "RE-FIT"};          /* (XY) */
-        if (blk && p == 0u) {                           /* F#3: IDEA ALL */
+        if (!blk && p == HK_IDEA) {                     /* G4: IDEA ALL */
             str_cpy(nm, "IDEA ALL", 12);
             return chain_busy() ? LS_DIM : LS_OFF;
         }
-        if (blk && p == 1u) {                           /* G#3: FAVORITE */
+        if (!blk && p == HK_FAV) {                      /* A4: FAVORITE */
             str_cpy(nm, "FAVORITE", 12);
             return preset_favorite() ? LS_SEL : LS_OFF;
         }
-        if (blk || p >= SWA_N)
+        if (blk || hk_act(p) >= SWA_N)
             return LS_OFF;
+        p = hk_act(p);
         str_cpy(nm, sw.mode == 2u ? XN[p] : sw.mode ? TN[p] : SN[p], 12);
         if (!nm[0])
             return LS_OFF;
@@ -860,8 +862,6 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             str_cpy(nm, "CLR FX", 12);
             return pfx_lane_used() && !chain_busy() ? LS_OFF : LS_DIM;
         }
-        if (p == RK_CIN || p == 1u)                     /* (CLICK, COUNT-IN: GLO > MAIN) */
-            return LS_OFF;
         if (p == RK_MODE) {
             str_cpy(nm, REC_MODE_N[rec_loop & 1u], 12);
             return rec_loop ? LS_SEL : LS_OFF;
@@ -870,6 +870,8 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             str_cpy(nm, "TAP", 12);
             return song.g[G_CLOCK] ? LS_DIM : LS_OFF;
         }
+        if (p != RK_CLR)
+            return LS_OFF;
         str_cpy(nm, "CLEAR", 12);
         return chain_busy() || !rec_clearable() ? LS_DIM : LS_OFF;
     }
@@ -891,35 +893,43 @@ static uint16_t pk_fill(uint32_t st, int blk, int n, uint16_t *ink)
 static void ly_grid(uint32_t l)
 {
     static const char NN[12][3] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    uint32_t k, n = 0, i = 0, cols, rows;
+    uint32_t k, n = 0, nb = 0, wrows = 0, i, cols = 4u, rows;
     int32_t cw, ch, ph = (int32_t)graph_h() - 8;
     char nm[12], nt[6];
-    for (k = 0; k < 27u; k++) {
-        (void)ly_keyname(l, key_black(k), key_place(k), nm);
-        n += nm[0] != 0;
+    for (k = 0; k < 27u; k++) {                         /* (2026-11-17) the white keys where they are on the keyboard: four to a row */
+        int blk = key_black(k);
+        (void)ly_keyname(l, blk, key_place(k), nm);
+        if (!nm[0])
+            continue;
+        n++;
+        if (blk)
+            nb++;
+        else if (key_place(k) / 4u + 1u > wrows)
+            wrows = key_place(k) / 4u + 1u;
     }
     if (!n)
         return;
-    cols = n <= 4u ? 2u : n <= 9u ? 3u : 4u;
-    rows = (n + cols - 1u) / cols;
+    rows = wrows + (nb + cols - 1u) / cols;             /* (the black keys with a function: rows below) */
     cw = (224 - (int32_t)(cols - 1u) * 3) / (int32_t)cols;
     ch = (ph - (int32_t)(rows - 1u) * 3) / (int32_t)rows;
     if (ch > 36)
         ch = 36;
-    for (k = 0; k < 27u; k++) {
+    for (k = 0, i = 0; k < 27u; k++) {
         int blk = key_black(k);
-        uint32_t st = ly_keyname(l, blk, key_place(k), nm), semi = 53u + k;
+        uint32_t st = ly_keyname(l, blk, key_place(k), nm), semi = 53u + k, slot;
         uint16_t ink, fill;
         int32_t x, y;
         if (!nm[0])
             continue;
-        x = 8 + (int32_t)(i % cols) * (cw + 3);
-        y = 4 + (int32_t)(i / cols) * (ch + 3);
-        i++;
+        if ((kb_layer >> k) & 1u)                       /* (2026-11-17) held down: as a setting that is on, while it is down */
+            st = LS_SEL;
+        slot = blk ? wrows * cols + i++ : key_place(k);
+        x = 8 + (int32_t)(slot % cols) * (cw + 3);
+        y = 4 + (int32_t)(slot / cols) * (ch + 3);
         fill = pk_fill(st, blk, 1, &ink);
         cv_rrect(x, y, cw, ch, 4, fill, T_SURF);
         if (ch >= 28) {                                 /* roomy: the name above, the note in the corner */
-            cv_clip_text(x + 5, y + 4 - (cols < 4u ? AF_S_CAP_Y : AF_X_CAP_Y), cols < 4u ? &AF_S : &AF_X, nm, ink, fill, cw - 8);
+            cv_clip_text(x + 5, y + 4 - AF_X_CAP_Y, &AF_X, nm, ink, fill, cw - 8);
             str_cpy(nt, NN[semi % 12u], sizeof nt);
             {
                 uint32_t e = str_len(nt);
@@ -928,7 +938,7 @@ static void ly_grid(uint32_t l)
             }
             cv_text_r(x + cw - 4, y + ch - 4 - AF_X_CAP_H - AF_X_CAP_Y, &AF_X, nt, ink == T_INK ? ink : T_DIM, fill);
         } else {                                        /* tight: the name alone, centred */
-            cv_clip_text(x + 5, y + (cols < 4u ? CAP_IN(S, ch) : CAP_IN(X, ch)), cols < 4u ? &AF_S : &AF_X, nm, ink, fill, cw - 8);
+            cv_clip_text(x + 5, y + CAP_IN(X, ch), &AF_X, nm, ink, fill, cw - 8);
         }
     }
 }
@@ -1114,6 +1124,7 @@ static void draw_layer(void)
     else if (l == LAYER_SAVE)
         sig += (uint32_t)chain_busy() * 3u + song.playing * 5u + chain_config.count * 7u + ui.song_row * 11u + (uint32_t)rec_clearable() * 13u +
                (uint32_t)song.g[G_SLOT] * 17u + (user_of(TSEL) < UP_SLOTS) * 19u + up_gen * 37u + (uint32_t)project_used((uint32_t)song.g[G_SLOT] - 1u) * 23u;
+    sig += (uint32_t)kb_layer * 40503u + (uint32_t)pfx_tgt * 6151u;   /* (a key down; FX's TRK ALL / SYN / DRM: A#4) */
     sig += (ui.lylv & 1u) * 0x9E3779B1u + (ui.lylv & 1u ? str_hash(7u, ly_card[0].v) + str_hash(9u, ly_card[1].v) * 3u +
                                      str_hash(11u, ly_card[2].v) * 5u + str_hash(13u, ly_card[3].v) * 7u : 0u);
     if (ui.force || sig != ui.layer_sig) {

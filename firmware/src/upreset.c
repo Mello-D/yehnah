@@ -248,6 +248,31 @@ static int up_parse(const uint8_t *a, uint32_t na, up_rec_t *r, uint32_t *slot)
 }
 
 #ifndef UP_HOST
+/* (2026-11-18) SCL > USER's chord sets (harp.c harp_usr, 6 x 12 x 2 bytes) are the tail of the second user preset object: bank
+ * UCH_BANK's bytes, then the chords. An object of the old length reads as before (no chords); older firmware reads the
+ * longer one as an empty bank (len != sizeof) and loses that bank's 16 presets when it next saves it */
+#define UCH_BANK 1u
+#if YEHNAH_FLASH
+static int st_save_x(uint32_t obj, const void *src, uint32_t len, const void *src2, uint32_t len2, int to);   /* (storage.c) */
+static int st_load2(uint32_t obj, void *d1, uint32_t n1, void *d2, uint32_t n2);
+static int up_flush(uint32_t b)                  /* bank b into flash (st_save's result) */
+{
+    return b == UCH_BANK ? st_save_x(OBJ_UPRESET0 + b, &up_bank[b], sizeof up_bank[b], harp_usr, sizeof harp_usr, -1) :
+                           st_save(OBJ_UPRESET0 + b, &up_bank[b], sizeof up_bank[b]);
+}
+#endif
+static int uch_save(void)                        /* SCL > USER's chord sets into flash: 0 done, 2 not now (nothing written), 3 no flash */
+{
+    if (transport_busy()) {
+        ui_message("STOP TO SAVE");
+        return 2;
+    }
+#if YEHNAH_FLASH
+    if (flash_ok)
+        return up_flush(UCH_BANK) ? 2 : 0;
+#endif
+    return 3;
+}
 static void up_values(const up_rec_t *r, int16_t *v)   /* mapped and clamped for its engine */
 {
     int16_t def[P_COUNT];
@@ -266,8 +291,11 @@ static void up_boot(void)                      /* persist_boot: the banks from f
 {
 #if YEHNAH_FLASH
     uint32_t b;
-    for (b = 0; b < UP_SLOTS / UP_PER_BANK; b++)
-        up_bank_check(b, flash_ok ? st_load(OBJ_UPRESET0 + b, &up_bank[b], sizeof up_bank[b]) : -1);
+    for (b = 0; b < UP_SLOTS / UP_PER_BANK; b++) {
+        int n = flash_ok ? (b == UCH_BANK ? st_load2(OBJ_UPRESET0 + b, &up_bank[b], sizeof up_bank[b], harp_usr, sizeof harp_usr) :
+                                            st_load(OBJ_UPRESET0 + b, &up_bank[b], sizeof up_bank[b])) : -1;
+        up_bank_check(b, n == (int)(sizeof up_bank[b] + sizeof harp_usr) ? (int)sizeof up_bank[b] : n);   /* (the user chord sets follow bank UCH_BANK) */
+    }
 #endif
     upf_boot();                                  /* (after the banks: it may move the retired FM6 bank's patches) */
     fvb_boot();                                  /* FM6's voice bank: a staged one finished, its voices */
@@ -313,7 +341,7 @@ static int up_put(uint32_t k, const up_rec_t *r)
     else
         memset(up_rec(k), 0, sizeof(up_rec_t));
 #if YEHNAH_FLASH
-    if (flash_ok && st_save(OBJ_UPRESET0 + k / UP_PER_BANK, bk, sizeof *bk)) {
+    if (flash_ok && up_flush(k / UP_PER_BANK)) {
         *up_rec(k) = old;
         bk->magic = magic;
         bk->rsize = rsize;

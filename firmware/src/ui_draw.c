@@ -1182,7 +1182,12 @@ static void draw_cards(void)
     if (cur_page()->graph == GR_BROWSE) {                /* (chord-harp fork) KNOB 1 the TYPE; the numbers by the list */
         char lt[2] = {0, 0}, tot;
         static const char *const SORTN[PB_N] = {"ENGINE", "TYPE", "A-Z"};
-        draw_column(0, "TYPE", PTYPE_NAME[ptype_sel % PT_N], "", VAL(0u), pick_of(PT_N, ptype_pos(ptype_sel)), ICON_NONE);
+        {                                               /* (2026-11-18, the user's) ALL: the unit names the type of the sound loaded, which
+                                                         * follows the track (the filter is KNOB 1's, ENG follows the track) */
+            uint32_t lt0 = ptype_sel ? 0u : user_of(TSEL) < UP_SLOTS ? PT_USER : preset_type(TSEL->eng_req, TSEL->preset);
+            draw_column(0, "TYPE", PTYPE_NAME[ptype_sel % PT_N], lt0 && lt0 <= PT_USER ? PTYPE_ABBR[lt0] : "", VAL(0u),
+                        pick_of(PT_N, ptype_pos(ptype_sel)), ICON_NONE);
+        }
         draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), pick_of(NENG_SHOWN, eng_rank(TSEL->eng_req)),
                     engine_icon(ENGINES[TSEL->eng_req]->name));   /* (2026-11-03, the user's: all four their grids) */
         lt[0] = (char)pb_letter();
@@ -1408,6 +1413,13 @@ static void draw_cards(void)
             draw_column(c, "", "", "", T_DIM, -1, ICON_NONE);
             continue;
         }
+        if (UCH_PAGE(cur_page())) {                     /* (2026-11-18) SCL > USER: the cards (ui_uchord.c) */
+            const char *lb, *vl, *un;
+            uint32_t pn, pi;
+            uc_col(c, &lb, &vl, &un, &pn, &pi);
+            draw_column(c, lb, vl, un, VAL(c), pn ? pick_of(pn, pi) : -1, ICON_NONE);
+            continue;
+        }
         if (c == 1u && GTR_PAGE(cur_page())) {          /* (2026-11-10) SCL > GUITAR: KNOB 2 the style's family */
             uint32_t g = GT_GEN[(uint32_t)clamp(TSEL->p[P_GSET], 0, (int32_t)GT_NSET - 1)];
             draw_column(1, "GENRE", GT_GNAME[g], "", VAL(1u), pick_of(GT_NGEN, g), ICON_AUTO);
@@ -1423,7 +1435,7 @@ static void draw_cards(void)
         }
         if (c == 1u && HARP_PAGE(cur_page())) {         /* (2026-10-27) SCL > HARP: KNOB 2 the set's genre */
             uint32_t g = harp_genre((uint32_t)clamp(TSEL->p[P_CVOI], 0, (int32_t)HARP_NALL - 1));
-            draw_column(1, "GENRE", J6_GNAME[g], "", VAL(1u), pick_of(J6_NGEN, g), ICON_AUTO);
+            draw_column(1, "GENRE", harp_gname(g), "", VAL(1u), pick_of(HARP_NGEN, g), ICON_AUTO);
             continue;
         }
         if (c == 2u && HARP_PAGE(cur_page()) && d && vp) {   /* (2026-11-09) KNOB 3 the set within the genre: a grid as GENRE's */

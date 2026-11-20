@@ -134,8 +134,8 @@ static void yehnah_init(void)
 /* The power-on LED sweep (1.1, hal/fm1_led_anim.h: a soft light over the keys left to right, then the buttons swell
  * and settle on the glow; ~0.70 s), started before the scan and run by it: nothing waits for it, the splash's ~2 s (0.5: the signature written, then held)
  * and the first ~0.27 s of the UI go by under it (the UI's LEDs from its end, or at once on a key or a button down).
- * Every LEDS setting: it is no idle glow; with DIM HI / DIM LO it ends on that glow (and is drawn over that glow
- * level), with OFF / INV dark. Not with MENU > ANIM OFF (no motion: the LEDs as the UI has them at once), not after a crash (a crash record newer than the last boot saw: the crash screen's
+ * Every LEDS setting: it is no idle glow; with LEDS 1 .. 5 it ends on that glow (and is drawn over that glow
+ * level), with 0 dark. Not with MENU > ANIM OFF (no motion: the LEDs as the UI has them at once), not after a crash (a crash record newer than the last boot saw: the crash screen's
  * reset), a hang (a WDT reset) or a failed boot (bootguard: the last one died within its first 30 s): straight to the
  * UI. The UBOOT paths never get here. */
 static uint32_t crash_seen __attribute__((section(".noinit")));   /* fm1_crash.count at the last boot */
@@ -146,9 +146,9 @@ static void boot_leds(void)
     uint32_t crashed = fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count != crash_seen;
     crash_seen = fm1_crash.count;
     boot_clean = !crashed && !bootguard.failed && !(fm1_boot.p3_rst & 4u);
-    fm1_led_dim_level(settings_leds == LEDS_DIM_LO ? 1u : settings_leds == LEDS_HIGH ? 2u : 0u);
+    fm1_led_dim_level(leds_hal(settings_leds));
     if (boot_clean)
-        fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO || settings_leds == LEDS_HIGH);
+        fm1_led_anim_start(settings_leds != 0u);
 }
 
 static void fm1_main(void)

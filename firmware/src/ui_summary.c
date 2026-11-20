@@ -129,7 +129,17 @@ static void summary_graph(void)
             cv_text_r(229, y + 3, &AF_X, "MUTE", T_DIM, bg);
         else if ((ui.msolo >> c) & 1u)
             cv_text_r(229, y + 3, &AF_X, "SOLO", T_ACCENT, bg);
-        else if (!drum_track(t) && !e->oneshot) {
+        else if (trk_eng(t) == ENGI_DRUM) {              /* (2026-11-18, the user's) the kit: the section has one, the lowest DRUM
+                                                         * track's; another DRUM track plays that one and says whose */
+            uint32_t o = drum_elsewhere(t);
+            if (o && o < c + 1u) {
+                str_cpy(b, "KIT T", 6);
+                b[5] = (char)('0' + o);
+                b[6] = 0;
+                cv_text_r(229, y + 3, &AF_X, b, T_DIM, bg);
+            } else
+                cv_text_r(229, y + 3, &AF_X, "KIT", T_ACCENT, bg);
+        } else if (!drum_track(t) && !e->oneshot) {
             str_cpy(b, N_NOTE[(uint32_t)t->p[P_ROOT] % 12u], 4);
             str_cpy(b + str_len(b), " ", 2);
             str_cpy(b + str_len(b), N_SCALE[(uint32_t)t->p[P_SCALE] % 8u], 5);

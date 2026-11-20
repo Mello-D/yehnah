@@ -116,7 +116,7 @@ static const menu_flag_t *menu_flag(uint32_t row)
     return 0;
 }
 
-/* a row's value as 0..menu_n(row) - 1 in the order the menu steps it (LEDS: OFF DIM LO DIM HI INV, LEDS_MENU) */
+/* a row's value as 0..menu_n(row) - 1 in the order the menu steps it (LEDS: 0 .. 5) */
 static uint32_t menu_n(uint32_t row)
 {
     return row == MI_COLOR ? NPALETTES : row == MI_LOWCUT || (row >= MI_CLICK && row <= MI_COUNTIN) || row == MI_LOAD ? 3u :
@@ -142,9 +142,7 @@ static uint32_t menu_get(uint32_t row)
     case MI_MIDIOUT: return midi_out_mode & 3u;
     case MI_MLEARN: return midi_learn ? 1u : 0u;
     case MI_LEDS:
-        while (i + 1u < LEDS_COUNT && LEDS_MENU[i] != settings_leds)
-            i++;
-        return i;
+        return settings_leds;
     }
     return 0;
 }
@@ -167,7 +165,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
     case MI_MIDIOUT: return MIDIOUT_N[v & 3u];
     case MI_MLEARN: return MLEARN_N[v % 3u];
     case MI_SCROFF: return SCROFF_N[v % NELEM(SCROFF_N)];
-    case MI_LEDS: return LEDS_NAME[LEDS_MENU[v % LEDS_COUNT]];
+    case MI_LEDS: return LEDS_NAME[v % LEDS_COUNT];
     }
     return "";
 }
@@ -205,7 +203,7 @@ static void menu_put(uint32_t row, uint32_t v)
         break;
     case MI_HOLD: settings_hold = (uint8_t)v; break;
     case MI_SCROFF: scr_put(v); break;                 /* (read every frame: ui.c scr_frame) */
-    case MI_LEDS: settings_leds = LEDS_MENU[v]; break;
+    case MI_LEDS: settings_leds = (uint8_t)(v % LEDS_COUNT); break;
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: rp_put(row - MI_CLICK, v); break;   /* (at once: click.c, seq.c) */
     case MI_LOAD: load_put(v % 3u); break;
     case MI_TRACKS: trks_put(v % NTRK); break;

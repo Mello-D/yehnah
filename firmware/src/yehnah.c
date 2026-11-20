@@ -104,6 +104,7 @@ static void tab_scr_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_
 #include "menu_items.c"          /* MENU's rows and settings (ui_menu.c, editor_menu.c) */
 #include "icons.c"               /* parameter icons (YEHNAH_ICONS), used by ui_draw.c */
 #include "ui_graph.c"
+#include "ui_uchord.c"           /* (2026-11-18) SCL > USER: the chord list and the player's chord sets */
 #include "ui_draw.c"
 #include "ui_menu.c"
 #include "ui_input.c"

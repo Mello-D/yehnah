@@ -925,6 +925,7 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
 /* (0.6.61) the panels' cytoplasm: a few granules drifting behind the graph, as HOME's, so the screen breathes. LOAD
  * FULL and ANIM ON only, not on HOME (its own), the lists and the dense grids (the roll, the steps); (0.6.64) no
  * redraw of their own: they move when the panel redraws anyway (a knob, the LFO, the envelope), so they cost nothing */
+static void graph_uchord(void);                  /* (2026-11-19) SCL > USER's chord list (ui_uchord.c, included after this file) */
 #ifndef UI_NO_DRIFT
 #define UI_NO_DRIFT 0                                /* (tests/ui_test.c: 1, its frames compared pixel by pixel) */
 #endif
@@ -936,7 +937,7 @@ static int drift_on(void)
     return !ui.home && !sys_load && !roll_view(cur_page()) &&
            g != GR_ROLL && g != GR_SHAPE && g != GR_COMP &&   /* (0.8.3: LENTE's step, the heads) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS &&
-           g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && !GR_IS_SWARM(g) && g != GR_SUMMARY;
+           !UCH_PAGE(cur_page()) && g != GR_SETS && g != GR_SONG && g != GR_SEDIT && g != GR_TOOLS && g != GR_ERASE && !GR_IS_SWARM(g) && g != GR_SUMMARY;
 }
 static void graph_drift(void)
 {
@@ -1045,6 +1046,8 @@ static uint32_t graph_signature(void)
         uint32_t pc = play_pcs(t);
         h ^= pc * 3266489917u ^ (pc ? ui.frame / 2u * 2246822519u : 0u);
     }
+    if (UCH_PAGE(pg) && !ui.home)                    /* (2026-11-19) SCL > USER: the list's filter, root, row and prompt */
+        h ^= ((uint32_t)uc_row * 40503u + uc_r * 104729u + uc_w * 977u + uc_bs * 7919u + uc_tot * 31u) * 2654435761u;
     if (t->p[P_CHRD])                                /* (chord-harp) HARP OMNI PROG, CHORD's modes: the chord the
                                                          * plate follows, the keys down */
         h ^= (harp_cur[trk_index(t) % NTRK] + 1u) * 40503u ^ harp_held(t) * 2654435761u;
@@ -1496,6 +1499,9 @@ static void draw_graph(void)
         cv_oy = 0;
         graph_home_lz();                             /* (0.8.5: HOME's lens, ECO / BEING; 0.5: the system's
                                                       * beings, was the scope) */
+    } else if (UCH_PAGE(pg)) {                       /* (2026-11-19) SCL > USER: the chord list (ui_uchord.c) */
+        cv_oy = 0;
+        graph_uchord();
     } else if (pg->graph == GR_PLIST) {              /* (2026-11-11) EDIT > PATCH (FMINI): the list */
         cv_oy = 0;
         graph_plist(t);

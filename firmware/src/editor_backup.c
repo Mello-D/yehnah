@@ -170,7 +170,7 @@ static uint32_t ed_bk_commit(void)
         obj = ed_bk_song_obj(s, k);
     } else return 1;
 #if YEHNAH_FLASH
-    if (!flash_ok || st_save(obj, raw, ed_bk_len)) return 4;
+    if (!flash_ok || (obj == OBJ_UPRESET0 + UCH_BANK ? st_save_x(obj, raw, ed_bk_len, harp_usr, sizeof harp_usr, -1) : st_save(obj, raw, ed_bk_len))) return 4;   /* (a restored bank keeps the user chord sets) */
 #else
     (void)obj;
 #endif

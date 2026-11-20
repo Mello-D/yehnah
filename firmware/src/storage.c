@@ -144,13 +144,27 @@ static int st_load(uint32_t obj, void *dst, uint32_t max)
     return (int)h.len;
 }
 
+/* (2026-11-18) an object of two pieces (SAVE's user presets: the bank, then the user chord sets): its first n1 bytes into d1,
+ * any more (up to n2) into d2; returns its length, or -1 if it does not fit both */
+static int st_load2(uint32_t obj, void *d1, uint32_t n1, void *d2, uint32_t n2)
+{
+    uint32_t i;
+    st_hdr_t h;
+    if (obj >= OBJ_COUNT || st_current(obj, &h) < 0 || h.len > n1 + n2)
+        return -1;
+    for (i = 0; i < h.len; i++)
+        if (i < n1) ((uint8_t *)d1)[i] = st_buf[i];
+        else ((uint8_t *)d2)[i - n1] = st_buf[i];
+    return (int)h.len;
+}
+
 /* save into copy `to` (0 A, 1 B; -1: the one that is not the current copy, as st_save) */
-static int st_save_to(uint32_t obj, const void *src, uint32_t len, int to)
+static int st_save_x(uint32_t obj, const void *src, uint32_t len, const void *src2, uint32_t len2, int to)
 {
     uint32_t seq, base, off;
     int cur, rc;
     st_hdr_t h;
-    if (obj >= OBJ_COUNT || len > ST_PAYLOAD_MAX || to > 1)
+    if (obj >= OBJ_COUNT || len > ST_PAYLOAD_MAX || len2 > ST_PAYLOAD_MAX - len || to > 1)
         return -1;
     cur = st_current(obj, &h);
     seq = cur < 0 ? 0u : h.seq;
@@ -159,6 +173,9 @@ static int st_save_to(uint32_t obj, const void *src, uint32_t len, int to)
     base = st_sector(obj, (uint32_t)to);
     for (off = 0; off < len; off++)
         st_buf[off] = ((const uint8_t *)src)[off];    /* the driver wants RAM sources */
+    for (off = 0; off < len2; off++)                  /* (2026-11-18) a second piece after the first: the object is both */
+        st_buf[len + off] = ((const uint8_t *)src2)[off];
+    len += len2;
     if ((rc = st_erase(base)) != 0)
         return rc;
     for (off = 0; off < len; off += 256u) {
@@ -185,6 +202,7 @@ static int st_save_to(uint32_t obj, const void *src, uint32_t len, int to)
     return 0;
 }
 
+static int st_save_to(uint32_t obj, const void *src, uint32_t len, int to) { return st_save_x(obj, src, len, 0, 0, to); }
 static int st_save(uint32_t obj, const void *src, uint32_t len) { return st_save_to(obj, src, len, -1); }
 
 /* (2026-11-05) an object taken out of the flash: both copies' sectors erased, so st_load finds nothing (SAVE > ERASE) */

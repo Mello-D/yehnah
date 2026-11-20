@@ -37,31 +37,36 @@ static const struct { uint32_t set, ch; const char *name; int8_t pc[HARP_NMAX + 
 
 static void check_all(void)
 {
-    uint32_t s, i, k, r;
+    uint32_t s, i, k, r, q;
     uint8_t nt[HARP_NMAX], pl[HARP_NPLATE];
-    for (s = 0; s < HARP_NSET; s++)
+    for (i = 0; i < HARP_NCH; i++)                       /* (2026-11-18) USER's sets: some chords, whatever shape */
+        harp_usr_put(1, i, (harp_ch_t){(uint8_t)(i * 5u % 12u), (uint8_t)(i * 3u % HQ_N), (uint8_t)(i % 3u ? HB_NONE : (i + 4u) % 12u)});
+    for (q = 0; q < HARP_NSET + HARP_NDARK + 2u; q++)
         for (i = 0; i < HARP_NCH; i++)
             for (r = 0; r < 12u; r++) {
-                const harp_ch_t *c = harp_get(s, i);
-                uint32_t n = harp_chord(s, i, (int32_t)r, nt), seen = 0, lo = HARP_LO + (harp_get(s, 0)->root + r) % 12u;
+                uint32_t set = q < HARP_NSET ? q : q < HARP_NSET + HARP_NDARK ? HARP_X0 + (q - HARP_NSET) : HARP_U0 + (q - HARP_NSET - HARP_NDARK);
+                harp_ch_t c = harp_get(set, i);
+                uint32_t n, seen = 0, lo = HARP_LO + (harp_get(set, 0).root + r) % 12u;
+                s = set;                                              /* (the messages and the rest as before) */
+                n = harp_chord(s, i, (int32_t)r, nt);
                 if (lo > HARP_LO + 6u) lo -= 12u;                   /* chord 1's root G2..F#3, */
-                lo += (c->root - harp_get(s, 0)->root + 12u) % 12u;   /* the others in the octave up from it */
+                lo += (c.root - harp_get(s, 0).root + 12u) % 12u;   /* the others in the octave up from it */
                 CHECK(n >= 3u && n <= HARP_NMAX, "set %u chord %u root %u: %u notes", s, i + 1u, r, n);
                 for (k = 0; k < n; k++) {
                     CHECK(!k || nt[k] > nt[k - 1u], "set %u chord %u root %u: not low to high", s, i + 1u, r);
-                    CHECK(!((seen >> (nt[k] % 12u)) & 1u), "set %u chord %u root %u: a pitch class twice", s, i + 1u, r);
+                    CHECK(!((seen >> (nt[k] % 12u)) & 1u) || c.q == HQ_5, "set %u chord %u root %u: a pitch class twice", s, i + 1u, r);   /* (the power chord doubles its root) */
                     seen |= 1u << (nt[k] % 12u);
                     CHECK(nt[k] >= 24u && nt[k] <= 96u, "set %u chord %u root %u: note %u", s, i + 1u, r, nt[k]);
                 }
-                CHECK((seen >> ((c->root + r) % 12u)) & 1u, "set %u chord %u root %u: no root", s, i + 1u, r);
-                if (c->bass < 12u)
-                    CHECK(nt[0] % 12u == (c->bass + r) % 12u && nt[0] < lo, "set %u chord %u root %u: bass", s, i + 1u, r);
+                CHECK((seen >> ((c.root + r) % 12u)) & 1u, "set %u chord %u root %u: no root", s, i + 1u, r);
+                if (c.bass < 12u)
+                    CHECK(nt[0] % 12u == (c.bass + r) % 12u && nt[0] < lo, "set %u chord %u root %u: bass", s, i + 1u, r);
                 else
                     CHECK(nt[0] == lo, "set %u chord %u root %u: root position", s, i + 1u, r);
                 harp_plate(s, i, (int32_t)r, pl);
                 CHECK(pl[0] > nt[n - 1u], "set %u chord %u root %u: plate not above the chord (a note shared)", s, i + 1u, r);
                 for (k = nt[n - 1u] + 1u; k < pl[0]; k++)       /* .. its first tone above the chord's top: as low as can be */
-                    CHECK(!((seen >> (k % 12u)) & 1u) || (c->bass < 12u && k % 12u == (c->bass + r) % 12u),
+                    CHECK(!((seen >> (k % 12u)) & 1u) || (c.bass < 12u && k % 12u == (c.bass + r) % 12u),
                           "set %u chord %u root %u: plate higher than it needs", s, i + 1u, r);
                 for (k = 0; k < HARP_NPLATE; k++) {
                     CHECK(!k || pl[k] > pl[k - 1u], "set %u chord %u root %u: plate not low to high", s, i + 1u, r);
@@ -158,11 +163,64 @@ static void check_tunings(void)
     printf("harp: %u guitar shapes checked, slowest search %.0f us on this host\n", nchk, tmax);
 }
 
+/* (2026-11-18) USER and DARK: the genres' places, a zeroed user chord is C major, the 14-bit packing round trips, the list's
+ * conversion of a J-6 chord keeps its root and a shape with its tones */
+static void check_user(void)
+{
+    uint32_t s, i, q, r, nsets = 0;
+    harp_ch_t c;
+    uint8_t nt[HARP_NMAX];
+    CHECK(HARP_NALL == 128u && harp_genre(HARP_X0) == HARP_GDARK && harp_genre(HARP_U0) == HARP_GUSER, "the genres' places");
+    CHECK(harp_genre_set(HARP_GDARK) == HARP_X0 && harp_genre_set(HARP_GUSER) == HARP_U0 && harp_genre_set(2) == HARP_NSET + 10u,
+          "the genres' first sets");
+    for (s = 0; s < HARP_NALL; s++) nsets += harp_genre(s) == HARP_GUSER;
+    CHECK(nsets == HARP_NUSR, "USER's sets");
+    memset(harp_usr, 0, sizeof harp_usr);
+    c = harp_usr_get(3, 4);
+    CHECK(c.root == 0 && c.q == HQ_MAJ && c.bass == HB_NONE, "a zeroed user chord: C major, no bass");
+    CHECK(!harp_usr_has(3, 4), "a zeroed user chord is empty");
+    { uint8_t a[HARP_NMAX], b[HARP_NMAX]; uint32_t na, nb;   /* the preview of a chord on its own: its tones, the root in G2..F#3 */
+      c = (harp_ch_t){7, HQ_MIN, 3};
+      na = harp_preview(c, 0, a); nb = harp_preview(c, 5, b);
+      CHECK(na >= 4u && a[1] % 12 == 7 && a[0] % 12 == 3, "preview: bass first, then the root");
+      CHECK(a[1] >= HARP_LO - 5 + 0 && a[1] <= HARP_LO + 6 && nb == na && b[1] % 12 == (7 + 5) % 12, "preview: the root's place, ROOT moves it"); }
+    c = (harp_ch_t){0, HQ_MAJ, HB_NONE};
+    harp_usr_put(3, 4, c);
+    CHECK(harp_usr_has(3, 4) && !harp_usr_has(3, 5) && harp_usr_get(3, 4).q == HQ_MAJ, "a written C major is not empty");
+    memset(harp_usr, 0, sizeof harp_usr);
+    for (s = 0; s < HARP_U0; s++)                       /* the list's fast root is the converted chord's */
+        for (i = 0; i < HARP_NCH; i++)
+            CHECK(harp_root_of(s, i) == harp_user_from(s, i).root, "harp_root_of %u %u", s, i);
+    for (r = 0; r < 12u; r++)
+        for (q = 0; q < HQ_N; q++) {
+            harp_usr_put(2, 5, (harp_ch_t){(uint8_t)r, (uint8_t)q, (uint8_t)((r + q) % 13u < 12u ? (r + q) % 13u : HB_NONE)});
+            c = harp_usr_get(2, 5);
+            CHECK(c.root == r && c.q == q && c.bass == ((r + q) % 13u < 12u ? (r + q) % 13u : HB_NONE), "user chord round trip %u %u", r, q);
+        }
+    harp_usr[2][5] = 0xFFFFu;                          /* flash may hold anything: clamped */
+    c = harp_usr_get(2, 5);
+    CHECK(c.root < 12u && c.q < HQ_N && (c.bass < 12u || c.bass == HB_NONE), "a damaged user chord is clamped");
+    CHECK(harp_chord(HARP_U0 + 2u, 5, 0, nt) >= 3u, "a user chord sounds");
+    c = harp_user_from(HARP_NSET + 10u, 0);            /* a J-6 chord: its root is one of its tones */
+    CHECK(c.root < 12u && c.q < HQ_N, "a J-6 chord converts");
+    for (s = HARP_NSET; s < HARP_X0; s += 7u)
+        for (i = 0; i < HARP_NCH; i++) {
+            uint8_t a[HARP_NMAX], b[HARP_NMAX];
+            uint32_t na = harp_chord(s, i, 0, a), nb, k, pa = 0, pb = 0;
+            harp_usr_put(0, i, harp_user_from(s, i));
+            nb = harp_chord(HARP_U0, i, 0, b);
+            for (k = 0; k < na; k++) pa |= 1u << a[k] % 12u;
+            for (k = 0; k < nb; k++) pb |= 1u << b[k] % 12u;
+            CHECK(__builtin_popcount(pa ^ pb) <= 3, "set %u chord %u: the copy's tones near the original's", s, i + 1u);
+        }
+}
+
 int main(void)
 {
     check_tunings();
     const char *md = getenv("HARP_MD");
     check_all();
+    check_user();
     check_known();
     if (md)
         write_md(md);

@@ -211,9 +211,10 @@ static struct {
     uint32_t tone;
 #endif
 } rs;
-/* (chord-harp fork, 2026-11-04) all 160 phases in the flash (uac_fir.h UAC_TAB, 15 KiB; 0.8.9 built them at boot into
- * the pool): one forward loop. Core 1 runs it outside the audio ISR, so the flash is never turned off while it does:
- * every flash access waits for its half first (uac_flash_quiet, fm1_flash.h FL_QUIET) */
+/* (2026-11-18) the 80 stored phases in the flash (uac_fir.h UAC_TAB, 1,920 B; was all 160 phases of 24 Q30 taps, 15 KiB):
+ * phase 159 - p is phase p read backwards (uac_rs_run). Core 1 runs it outside the audio ISR, so the flash is never turned
+ * off while it does: every flash access waits for its half first (uac_flash_quiet, fm1_flash.h FL_QUIET) */
+_Static_assert((int64_t)UAC_FIR_ABS * 32768 < ((int64_t)1 << 31), "the 32-bit sums of the FIR cannot overflow");
 #define rs_tab UAC_TAB
 static uint32_t rs_in[HALF_FRAMES] __attribute__((section(".pool")));            /* a half (CORES 2) or a block, 16-bit L | R */
 static struct {
@@ -1536,9 +1537,9 @@ static inline int32_t uac_s16(int32_t v)
 #define UAC_CLIP(v) ((v) > 32767 ? 32767 : (v) < -32768 ? -32768 : (v))
 /* 44.1 -> 48 kHz (x 160 / 147): n input frames (16-bit L | R << 16) into the ring from frame w; each input frame enters
  * the history, then the 1 or 2 output frames whose newest input it is: phase ph, the window of UAC_FIR_N frames ending
- * at it, phase ph's taps (rs_tab), Q30 into 64-bit sums, four taps a pass. Returns the frames written. (0.8.9) In RAM
- * and calling nothing: core 1 runs it outside the audio ISR (uac_rs_job), core 0 with one core; bit for bit the
- * resampler of 0.7 .. 0.8.8 */
+ * at it, phase ph's taps (rs_tab: the stored half, the other read backwards), Q15 into 32-bit sums, four taps a pass. Returns the frames written. (0.8.9) In RAM
+ * and calling nothing: core 1 runs it outside the audio ISR (uac_rs_job), core 0 with one core; tests/uac_test.c holds it to
+ * a plain reference loop bit for bit */
 static UAC_C1_TEXT uint32_t uac_rs_run(const uint32_t *in, uint32_t n, uint32_t w)
 {
     uint32_t i, j, k = 0, h = rs.w, ph = rs.ph;
@@ -1552,19 +1553,20 @@ static UAC_C1_TEXT uint32_t uac_rs_run(const uint32_t *in, uint32_t n, uint32_t 
         s = (h - UAC_FIR_N) & (RS_H - 1u);              /* the window: oldest .. this frame */
         do {
             const int16_t *x = &rs.l[s];                /* R: x[2 * RS_H] */
-            const int32_t *c = rs_tab[ph];
-            int64_t al = 0, ar = 0;
+            const int16_t *c = ph < UAC_FIR_H ? rs_tab[ph] : &rs_tab[UAC_FIR_L - 1u - ph][UAC_FIR_N - 1u];
+            int32_t st = ph < UAC_FIR_H ? 1 : -1;       /* the second half: phase 159 - ph backwards */
+            int32_t al = 0, ar = 0;
             int32_t yl, yr;
-            for (j = UAC_FIR_N / 4u; j; j--, x += 4, c += 4) {
-                int32_t c0 = c[0], c1 = c[1], c2 = c[2], c3 = c[3];
-                al += (int64_t)c0 * x[0];
-                ar += (int64_t)c0 * x[2u * RS_H];
-                al += (int64_t)c1 * x[1];
-                ar += (int64_t)c1 * x[2u * RS_H + 1u];
-                al += (int64_t)c2 * x[2];
-                ar += (int64_t)c2 * x[2u * RS_H + 2u];
-                al += (int64_t)c3 * x[3];
-                ar += (int64_t)c3 * x[2u * RS_H + 3u];
+            for (j = UAC_FIR_N / 4u; j; j--, x += 4, c += 4 * st) {
+                int32_t c0 = c[0], c1 = c[st], c2 = c[2 * st], c3 = c[3 * st];
+                al += c0 * x[0];
+                ar += c0 * x[2u * RS_H];
+                al += c1 * x[1];
+                ar += c1 * x[2u * RS_H + 1u];
+                al += c2 * x[2];
+                ar += c2 * x[2u * RS_H + 2u];
+                al += c3 * x[3];
+                ar += c3 * x[2u * RS_H + 3u];
             }
             yl = (int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q);
             yr = (int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q);

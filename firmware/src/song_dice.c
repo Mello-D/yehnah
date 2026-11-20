@@ -25,7 +25,7 @@
  * refinement. Sounds: a preset whose name fits the role and is not a bright one, its envelope shaped for the role and
  * the energy, filtered by role with an envelope on the filter, a TYPE that changes, an LFO of its own shape; the kit
  * (0.6.35: back to 0.6.33's, it sounded better) the DRUM-X kit diced around the factory one, through a soft low-pass. No automation and no
- * modulation matrix beyond the macros' routes. UNDO (REC + D4) brings back what was there */
+ * modulation matrix beyond the macros' routes. UNDO (REC + A3) brings back what was there */
 
 enum { RL_DRUM, RL_BASS, RL_PAD, RL_LEAD, RL_ARP, RL_TEX, RL_N };
 enum { DS_MOTORIK, DS_ELECTRO, DS_BREAK, DS_BROKEN, DS_MINIMAL, DS_DEEP, DS_HARD, DS_PUNK, DS_INDIE, DS_SPARSE,
@@ -720,7 +720,7 @@ static int32_t dsounding(const track_t *t, uint32_t i)  /* the note sounding at 
  * (USB console status: audio_max_us, audio_late, voices_shed) and to listen for clicks. Every live track: chords of four
  * on every step at 160 BPM, gliding into each other (GLIDE, POLY), two step components on each (ARP SEQ / ECHO x8 and
  * RAND / OCT, DIV, LEN); the last live track the DRUM kit, every lane on every step, OCT / ARP on its steps; every FX
- * on (DIST, CHORUS, DLY with PITCH, the CLOUD reverb). UNDO (REC + D4) brings the music back */
+ * on (DIST, CHORUS, DLY with PITCH, the CLOUD reverb). UNDO (REC + A3) brings the music back */
 __attribute__((unused)) static void cpu_test_song(void)   /* (no longer on SAVE > TOOLS; tests/cpu_vg.c) */
 {
     uint32_t k, i, n = trk_live;

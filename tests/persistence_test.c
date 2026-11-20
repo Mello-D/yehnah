@@ -548,19 +548,19 @@ int main(void)
         song.playing = 1;
         ed_repn = 0; ed_menu_handle(ED_MENU_SET, leds_off, 3);
         bad += check("MENU_SET while playing: applied, rc 4 (queued until STOP), no erase",
-                     ed_repn == 4 && ed_rep[0] == 4 && ed_rep[1] == 4 && settings_leds == LEDS_OFF && persist_pending == 1 && !erases);
+                     ed_repn == 4 && ed_rep[0] == 4 && ed_rep[1] == 4 && settings_leds == 0u && persist_pending == 1 && !erases);
         song.playing = 0;
         settings_poll();
         bad += check("STOP commits the MENU setting (LEDS OFF in the settings record)",
                      !persist_pending && erases == 1 && st_load(OBJ_SETTINGS, &q, sizeof q) == (int)sizeof q &&
-                     leds_from_stored(q.zoom) == LEDS_OFF);
+                     leds_from_stored(q.zoom) == 0u);
         ed_repn = 0; ed_menu_handle(ED_MENU_SET, latch_on, 3);
         ok = ed_rep[0] == 0 && (ui_prefs & PREF_LATCH);
         ed_repn = 0; ed_menu_handle(ED_MENU_SET, hold_06, 3);
         ok &= ed_rep[0] == 0 && settings_hold == 3u;
         ed_repn = 0; ed_menu_handle(ED_MENU_SET, eq_bass, 3);
         ok &= ed_rep[0] == 0 && st_load(OBJ_SETTINGS, &q, sizeof q) == (int)sizeof q && q.lowcut == 2u &&
-              hold_from_stored(q.bold) == 3u && (q.favorites.factory[15][30] & PREF_LATCH) && leds_from_stored(q.zoom) == LEDS_OFF;
+              hold_from_stored(q.bold) == 3u && (q.favorites.factory[15][30] & PREF_LATCH) && leds_from_stored(q.zoom) == 0u;
         bad += check("MENU_SET stopped: rc 0, saved at once (FX LATCH, HOLD, SPEAKER EQ), the others kept", ok);
         before = erases;
         ed_repn = 0; ed_menu_handle(ED_MENU_SET, hold_06, 3);
@@ -572,12 +572,12 @@ int main(void)
             const uint8_t leds_inv[] = {4, 4, 64};
             ed_repn = 0; ed_menu_handle(ED_MENU_SET, leds_inv, 3);
         }
-        ok &= ed_rep[0] == 3 && settings_leds == LEDS_INV && persist_pending == 2 && leds_from_stored(persist_saved.zoom) == LEDS_OFF;
+        ok &= ed_rep[0] == 3 && settings_leds == 4u && persist_pending == 2 && leds_from_stored(persist_saved.zoom) == 0u;
         bad += check("MENU_SET with a failing flash: applied, rc 3, the saved setting kept", ok);
         erase_error = 0;
         fm1_ms += 1000;
         settings_poll();
-        bad += check("... and retried by the settings path", !persist_pending && leds_from_stored(persist_saved.zoom) == LEDS_INV);
+        bad += check("... and retried by the settings path", !persist_pending && leds_from_stored(persist_saved.zoom) == 4u);
         settings_hold = HOLD_DEF; settings_leds = LEDS_DEF;
     }
     reset();

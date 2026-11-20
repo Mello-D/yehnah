@@ -1,24 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* (2026-11-09, held menus) SCL, EDIT and GLO held past HOLD open a list menu (the GLO lists' look: names left, the row's
+/* (2026-11-09, held menus) EDIT held past HOLD opens a list menu (the GLO lists' look: names left, the row's
  * choices or its range right) that STAYS open after the button is let go. Left with OCT- or a tap of the button (any other
  * button's tap closes it and acts). The piano keys play as normal: no key shortcuts here.
  *   (SCL: its STRUM is ARP LIST's row now (2026-11-12); SCL held does nothing)
  *   EDIT  the sound's named parameters (E1..E8)
- *   GLO   the four GLO lists (MAIN DEVICE CONTROL SYSTEM): KNOB 3 picks the list, the rows are the GLO pages' own
+ *   (2026-11-17: GLO's held menu is gone: the GLO page has the same four lists; GLO held does nothing, as the other buttons)
  * KNOB 1 the row, KNOB 2 its value (an action: a turn right asks). A tap of the button is still its page (ui_input.c).
  * Included after ui_menu.c (the list's drawing) and ui_input.c (edit_param). */
-enum { HM_NONE, HM_SCL /* retired */, HM_EDIT, HM_GLO };
-enum { HR_TRK, HR_ALLTR, HR_GLB };
+enum { HM_NONE, HM_SCL /* retired */, HM_EDIT };
+enum { HR_TRK, HR_ALLTR };
 typedef struct {
     const char *nm;
-    uint16_t id;                       /* HR_TRK: the track parameter; HR_GLB: the list row (SETS) */
+    uint16_t id;                       /* HR_TRK: the track parameter */
     uint8_t kind;
 } hrow_t;
 #define HM_MAXR 10u
 static uint8_t hm_btn;                 /* the button that opened it */
-static uint8_t hm_pos[3], hm_list;     /* the row KNOB 1 is on (SCL, EDIT); GLO: the list (its rows: sets_cur) */
+static uint8_t hm_pos[3];               /* the row KNOB 1 is on (SCL, EDIT) */
 static uint32_t hm_sig;
-static const char *const HM_LISTS[4] = {"MAIN", "DEVICE", "CONTROL", "SYSTEM"};
 
 static uint32_t hm_rows(hrow_t *r)
 {
@@ -32,19 +31,12 @@ static uint32_t hm_rows(hrow_t *r)
                 r[n++].kind = HR_TRK;
             }
         }
-    } else if (ui.hm == HM_GLO) {
-        uint32_t ln = sets_n(hm_list & 3u);
-        for (; n < ln; n++) {
-            r[n].id = SETS[hm_list & 3u][n];
-            r[n].nm = sets_label(r[n].id);
-            r[n].kind = HR_GLB;
-        }
     }
     return n;
 }
 static uint32_t hm_cur(uint32_t n)
 {
-    uint8_t *c = ui.hm == HM_GLO ? &sets_cur[hm_list & 3u] : &hm_pos[ui.hm - 1u];
+    uint8_t *c = &hm_pos[ui.hm - 1u];
     if (*c >= n)
         *c = (uint8_t)(n ? n - 1u : 0u);
     return *c;
@@ -68,10 +60,6 @@ static void hm_valstr(const hrow_t *r, char *v)
     const param_desc_t *d;
     const char *unit = "";
     v[0] = 0;
-    if (r->kind == HR_GLB) {
-        sets_val(r->id, v);
-        return;
-    }
     if ((d = hm_desc(r, &vp)) != 0 && vp)
         param_format(d, *vp, v, &unit);
 }
@@ -81,10 +69,6 @@ static void hm_detail(const hrow_t *r)
     const param_desc_t *d;
     char v[24], lo[16], hi[16];
     const char *unit = "";
-    if (r->kind == HR_GLB) {
-        sets_detail(r->id);
-        return;
-    }
     if ((d = hm_desc(r, &vp)) == 0 || !vp)
         return;
     if ((d->fmt == F_ENUM || d->fmt == F_ONOFF) && d->max > d->min && d->max - d->min < 8) {
@@ -124,17 +108,10 @@ static void hm_panel(void)
 }
 static void hm_pagerow(void)
 {
-    const char *mid = ui.hm == HM_EDIT ? "EDIT" : HM_LISTS[hm_list & 3u];
+    const char *mid = "EDIT";
     cv_begin(240, TF_PG_H, T_BG);
     cv_rrect(86, 1, PG_MID_W, TF_PG_H - 2, (TF_PG_H - 2) / 2, T_THEME, T_BG);
     cv_text_in(86, 1 + CAP_IN(B, TF_PG_H - 2), PG_MID_W, &AF_B, mid, T_INK, T_THEME);
-    if (ui.hm == HM_GLO) {
-        const char *l = HM_LISTS[(hm_list + 3u) & 3u], *rr = HM_LISTS[(hm_list + 1u) & 3u];
-        cv_rrect(43, 4, PG_SIDE_W, 15, 7, T_RAISE, T_BG);
-        cv_text_in(43, 4 + CAP_IN(X, 15), PG_SIDE_W, &AF_X, pg_short(l), T_TEXT, T_RAISE);
-        cv_rrect(157, 4, PG_SIDE_W, 15, 7, T_RAISE, T_BG);
-        cv_text_in(157, 4 + CAP_IN(X, 15), PG_SIDE_W, &AF_X, pg_short(rr), T_TEXT, T_RAISE);
-    }
     cv_blit(0, TF_PG_Y);
 }
 static void hm_draw(void)
@@ -142,7 +119,7 @@ static void hm_draw(void)
     hrow_t r[HM_MAXR];
     uint32_t n = hm_rows(r), cur = hm_cur(n), k, sig, pass, h0 = graph_h() / 2u;
     char v[24];
-    sig = ui.hm * 131u + cur * 17u + hm_list * 7u + settings.palette * 8191u + ux.gen * 7u;
+    sig = ui.hm * 131u + cur * 17u + settings.palette * 8191u + ux.gen * 7u;
     for (k = 0; k < n; k++) {
         hm_valstr(&r[k], v);
         sig = sig * 31u + str_hash(7u, v) + (uint32_t)(uintptr_t)r[k].nm * 3u;
@@ -182,10 +159,10 @@ static void hm_tick(void)
         hm_close();
 }
 static uint32_t hm_btn_is(uint32_t b) { return ui.hm && b == hm_btn; }
-/* a page button held past HOLD (ui_input.c): EDIT, GLO open their menu */
+/* a page button held past HOLD (ui_input.c): EDIT opens its menu */
 static void hm_hold(uint32_t b)
 {
-    uint32_t w = b == B_EDIT ? HM_EDIT : b == B_GLO ? HM_GLO : 0u;
+    uint32_t w = b == B_EDIT ? HM_EDIT : 0u;
     if (!w || ui.hm || ui.ly || !layer_allowed())
         return;
     ui.hm = (uint8_t)w;
@@ -193,17 +170,6 @@ static void hm_hold(uint32_t b)
     hm_sig = 0;
     ui.force = 1;
     ui.pg_down = 0;
-}
-static uint32_t hm_glo_page(void)
-{
-    uint32_t k, s = 0;
-    for (k = 0; k < NPAGES; k++)
-        if (PAGES[k].graph == GR_SETS) {
-            if (s == (hm_list & 3u))
-                return k;
-            s++;
-        }
-    return ui.page;
 }
 static void hm_knob(uint32_t k, int32_t s)
 {
@@ -214,26 +180,14 @@ static void hm_knob(uint32_t k, int32_t s)
     ui.hot_col = (uint8_t)k;
     ui.hot_t = 40;
     if (k == 0u) {
-        uint8_t *c = ui.hm == HM_GLO ? &sets_cur[hm_list & 3u] : &hm_pos[ui.hm - 1u];
+        uint8_t *c = &hm_pos[ui.hm - 1u];
         *c = (uint8_t)wrap_add((int32_t)cur, s > 0 ? 1 : -1, (int32_t)n);
-        ui.force = 1;
-        return;
-    }
-    if (k == 2u && ui.hm == HM_GLO) {
-        hm_list = (uint8_t)wrap_add((int32_t)hm_list, s > 0 ? 1 : -1, 4);
         ui.force = 1;
         return;
     }
     if (k != 1u || !n)
         return;
     switch (r[cur].kind) {
-    case HR_GLB: {                                      /* the GLO page's own edit (TRACKS, LOAD, the MENU rows, the dialogs) */
-        uint8_t sp = ui.page;
-        ui.page = (uint8_t)hm_glo_page();
-        edit_param(1, s);
-        ui.page = sp;
-        break;
-    }
     default:
         d = hm_desc(&r[cur], &vp);
         if (!d || !vp || d->max == d->min)

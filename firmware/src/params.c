@@ -856,6 +856,8 @@ static const page_t PAGES[] = {
                                                          * styles on HARP's keys; KNOB 2 GENRE, KNOB 3 the style within it */
     {"TUNE", FAM_SCL, SC_TRACK, GR_NONE, {P_GTUN, P_GSHP, 0xFF, P_HPLATE}},   /* (2026-11-10) SCL > TUNE: GUITAR's tuning
                                                          * (14) and the shape (1..6) of each chord in it; a tab of GUITAR's mode */
+    {"USER", FAM_SCL, SC_TRACK, GR_NONE, {P_CVOI, 0xFF, 0xFF, 0xFF}},   /* (2026-11-18) SCL > USER: the player's chord sets, a chord of one
+                                                         * (the chord list: SET, ROOT, FILTER, ROW; OCT+ writes; ui_uchord.c) */
     {"PROG", FAM_SCL, SC_TRACK, GR_PROG, {P_ROOT, P_PROG, 0xFF, P_HPLATE}},   /* (chord-harp fork) SCL > PROG: the chord
                                                          * keys a progression's chords (STRUM: HARP's); KNOB 3 RATE, KNOB 4
                                                          * PLATE (HARP's); F#4 WRITE, OCT+ writing it on the track
@@ -888,6 +890,7 @@ static const page_t PAGES[] = {
 #define GTU_PAGE(pg) ((pg)->id[0] == P_GTUN)          /* (2026-11-10) SCL > TUNE */          /* (2026-11-10) SCL > GUITAR: KNOB 2 GENRE, KNOB 3 STYLE */
 #define HARP_PAGE(pg) ((pg)->id[3] == P_HPLATE && (pg)->id[1] == 0xFFu && !GTR_PAGE(pg))   /* (chord-harp fork) SCL > HARP: KNOB 2 GENRE
                                                          * (CHORD has PLATE too) */
+#define UCH_PAGE(pg) ((pg)->fam == FAM_SCL && (pg)->id[0] == P_CVOI && (pg)->id[3] == 0xFFu)   /* USER */
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 /* (2026-11-11) the SOUND page (the PATCH entry of PAGES, GR_PLIST): every engine's settings as a list of rows. KNOB 1 picks the row,
  * KNOB 2..4 are its (up to) three settings; the page cur_page() hands out is a copy with the row's ids in slots 1..3. The rows

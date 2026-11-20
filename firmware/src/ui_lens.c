@@ -74,8 +74,9 @@ static const nv_t CE_FX[] = {NV("FX ALL", "FX", 0, FXL_TRACK)};   /* (2026-11-13
 static const nv_t CE_GLO[] = {NV("GLO", 0, 0, 1)};   /* (2026-11-13: MAIN DEVICE CONTROL SYSTEM are GLO's rows) */
 static const nv_t CE_ENV[] = {NV("ENV LIST", "ENV", 1, 1)};   /* (this track's; STAGE is a row of ENV LIST; 2026-11-15: ALL ENV and ALL DEST, the six tracks' pictures, gone) */
 static const nv_t CE_LFO[] = {NV("LFO LIST", "LFO", 1, 1)};   /* (MSEQ and MOD are rows of LFO LIST now) */
-static const nv_t CE_SCL[] = {NV("HARP", 0, 0, 1), NV("OMNI", 0, 1, 1), NV("GUITAR", 0, 2, 1), NV("CHORD", 0, 3, 1),
-                              NV("SCL", "SCALE", 4, 0), NV("TUNE", 0, 5, 1), NV("PROG", 0, 6, 1)};   /* (2026-11-17, the user's order) HARP OMNI GUITAR CHORD SCALE TUNE PROG */
+static const nv_t CE_SCL[] = {NV("HARP", 0, 0, 1), NV("OMNI", 0, 1, 1),
+                              NV("GUITAR", 0, 2, 1), NV("CHORD", 0, 3, 1), NV("SCL", "SCALE", 4, 0), NV("TUNE", 0, 5, 1),
+                              NV("PROG", 0, 6, 1), NV("USER", 0, 7, 1)};   /* (2026-11-19) HARP OMNI GUITAR CHORD SCALE TUNE PROG USER (USER: the chord browser, last: left of HARP; COPY is gone) */
 static const nv_t CE_ARP[] = {NV("ARP LIST", "ARP", 0, 2)};
 static const nv_t CE_SAVE[] = {NV("PROJECT", 0, 2, SV_LIB), NV("ARRANGE", "STRUCT", 1, SV_PROJ),   /* (2026-11-06: TOOLS, ERASE, USER went to the
                                                          * SAVE held layer; PRESETS, MORPH are HOME's) */
@@ -89,7 +90,7 @@ CH_OK(CE_HOME); CH_OK(CE_SYN); CH_OK(CE_SEQ); CH_OK(CE_FX); CH_OK(CE_GLO); CH_OK
 CH_OK(CE_ARP); CH_OK(CE_SAVE); CH_OK(CE_FM6); CH_OK(CE_DRM);
 #define NAV_KEYS (SEC_N + 2u)                           /* the sections' memories: EDIT's synth one, then FM6 DRUM */
 static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, 4), CH(CE_SYN, 3), CH(CE_SEQ, 5), CH(CE_FX, 1), CH(CE_GLO, 1),
-                                      CH(CE_ENV, 3), CH(CE_LFO, 1), CH(CE_SCL, 7), CH(CE_ARP, 1), CH(CE_SAVE, 2),
+                                      CH(CE_ENV, 3), CH(CE_LFO, 1), CH(CE_SCL, 8), CH(CE_ARP, 1), CH(CE_SAVE, 2),
                                       CH(CE_FM6, 1), CH(CE_DRM, 1)};
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }

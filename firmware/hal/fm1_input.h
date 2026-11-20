@@ -130,6 +130,12 @@
 #ifndef FM1_LED_MID_N
 #define FM1_LED_MID_N 8u              /* the steady mid level: lit 1 frame in N (DIM HI, OFF, INV) */
 #endif
+#ifndef FM1_LED_MID_N_3
+#define FM1_LED_MID_N_3 6u            /* (2026-11-17, LEDS 3 and 4, between DIM HI and HIGH) 1 frame in 6 */
+#endif
+#ifndef FM1_LED_MID_N_4
+#define FM1_LED_MID_N_4 5u            /* 1 frame in 5 */
+#endif
 #ifndef FM1_LED_MID_N_HIGH
 #define FM1_LED_MID_N_HIGH 4u         /* with HIGH (MENU > LEDS): the idle glow twice as bright (1 frame in 4) */
 #endif
@@ -423,11 +429,11 @@ static uint8_t fm1__br_sel;                       /* FM1__BR_K[it]: 0 DIM HI (OF
 static uint8_t fm1__mid_n = FM1_LED_MID_N, fm1__mid_ph;   /* the mid level: 1 frame lit in fm1__mid_n; this frame's */
 /* the glow (main loop, any time; fm1__dim_k follows it in a few frames): 0 FM1_LED_DIM_NS, 1 FM1_LED_DIM_LO_NS;
  * and the breath's peak with it: 0 FM1_LED_BREATH_PK, 1 FM1_LED_BREATH_PK_LO */
-static void fm1_led_dim_level(uint32_t lo)   /* 0 DIM HI, 1 DIM LO, 2 HIGH (DIM HI's pulse, the mid level at 1 in 4) */
+static void fm1_led_dim_level(uint32_t lo)   /* 0 DIM HI, 1 DIM LO, 2 HIGH (DIM HI's pulse, the mid level at 1 in 4), 3 and 4 the mid level at 1 in 6 and 1 in 5, 5 DIM LO's pulse with HIGH's mid level (a held layer's, ui_input.c leds_hal_now) */
 {
-    fm1__dim_t = (uint16_t)(lo == 1u ? FM1__DIM_T(FM1_LED_DIM_LO_NS) : FM1__DIM_T(FM1_LED_DIM_NS));
-    fm1__br_sel = lo == 1u;
-    fm1__mid_n = (uint8_t)(lo == 1u ? FM1_LED_MID_N_LO : lo == 2u ? FM1_LED_MID_N_HIGH : FM1_LED_MID_N);
+    fm1__dim_t = (uint16_t)(lo == 1u || lo == 5u ? FM1__DIM_T(FM1_LED_DIM_LO_NS) : FM1__DIM_T(FM1_LED_DIM_NS));
+    fm1__br_sel = lo == 1u || lo == 5u;
+    fm1__mid_n = (uint8_t)(lo == 1u ? FM1_LED_MID_N_LO : lo == 2u || lo == 5u ? FM1_LED_MID_N_HIGH : lo == 3u ? FM1_LED_MID_N_3 : lo == 4u ? FM1_LED_MID_N_4 : FM1_LED_MID_N);
 }
 /* (0.7.3) the mid level's phase of column c this frame: the frame count shifted a frame a column, so the mid frames
  * of the columns are spread over the N frames (one or two columns lit a frame) instead of every column lit in the

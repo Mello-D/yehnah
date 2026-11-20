@@ -569,7 +569,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_OPERATOR,
-       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_HARP, S_KEY_HARP2, S_KEY_HARP3, S_KEY_OMNI, S_KEY_PROG, S_EDIT_GUITAR, S_EDIT_ELEC, S_EDIT_ACID, S_EDIT_NOISE, S_EDIT_DRIFT, S_EDIT_FMINI, S_EDIT_PATCH, S_SCL_PLAY, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_LY_FX_MAP, S_LY_FX_STATE, S_LY_REC_STATE, S_LY_SAVE_MAP, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_REC_LAYER_LOOP,
+       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_HARP, S_KEY_HARP2, S_KEY_HARP3, S_UCH, S_UCH_W, S_KEY_OMNI, S_KEY_PROG, S_EDIT_GUITAR, S_EDIT_ELEC, S_EDIT_ACID, S_EDIT_NOISE, S_EDIT_DRIFT, S_EDIT_FMINI, S_EDIT_PATCH, S_SCL_PLAY, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_LY_FX_MAP, S_LY_FX_STATE, S_LY_REC_STATE, S_LY_SAVE_MAP, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_REC_LAYER_LOOP,
        S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_CHORD, S_ROLL_CHORD, S_GEN_EXPLORE,
        S_VX_HEAD_VOWEL,
        S_VX_HEAD_HOME, S_VX_HEAD_QUIET, S_VX_BIRD, S_VX_CMOS, S_VX_INSECT, S_VX_WING, S_VX_MAMMAL, S_VX_MORPH_IB, S_VX_MORPH_BM,
@@ -577,7 +577,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
        S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_WHEEL, S_V6_WHEEL_FAST, S_V6_WHEEL_HOME, S_V6_WHEEL_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_V6_ANIMAL_FULL, S_HOME_FACES,
-       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_HM_GLO, S_HM_GLO_SYS, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_XY, S_XY_ACT, S_XY_R1, S_XY_R2, S_XY_Z0, S_XY_Z1, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
+       S_MIXER_T4, S_HOME_T4, S_HM_SCL, S_HM_EDIT, S_LAYER_FX_GRID, S_LAYER_SAVE_GRID, S_SWARM, S_SWARM_ACT, S_TRACE, S_TRACE_ACT, S_XY, S_XY_ACT, S_XY_R1, S_XY_R2, S_XY_Z0, S_XY_Z1, S_TRACKS, S_MORPH3, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, 
        S_TOAST_ENV, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH,
        S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
@@ -605,7 +605,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "fx_effect_slicer", "fx_effect_master",
     "home_macros", "home_being", "home_routes", "gen_lead",
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_operator",
-    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_harp", "key_harp2", "key_harp3", "key_omni", "key_prog", "edit_guitar", "edit_elec", "edit_acid", "edit_noise", "edit_drift", "edit_fmini", "edit_patch", "scl_play", "key_arp", "key_arp2", "glo_sends", "ly_fx_map", "ly_fx_state", "ly_rec_state", "ly_save_map", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "rec_layer_loop",
+    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_harp", "key_harp2", "key_harp3", "uchord", "uchord_write", "key_omni", "key_prog", "edit_guitar", "edit_elec", "edit_acid", "edit_noise", "edit_drift", "edit_fmini", "edit_patch", "scl_play", "key_arp", "key_arp2", "glo_sends", "ly_fx_map", "ly_fx_state", "ly_rec_state", "ly_save_map", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "rec_layer_loop",
     "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_chord", "roll_chord", "gen_explore",
     "vx_head_vowel",
     "vx_head_home", "vx_head_quiet", "vx_bird", "vx_cmos", "vx_insect", "vx_wing", "vx_mammal", "vx_morph_insect_bird", "vx_morph_bird_mammal",
@@ -613,7 +613,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
     "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_wheel", "v6_wheel_fast", "v6_wheel_home", "v6_wheel_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full", "v6_voice_full", "v6_animal_full", "home_faces",
-    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "hm_glo", "hm_glo_sys", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "xy", "xy_layer", "xy_r1", "xy_r2", "xy_z0", "xy_z1", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
+    "mixer_tracks4", "home_tracks4", "hm_scl", "hm_edit", "layer_fx_grid", "layer_save_grid", "swarm", "swarm_layer", "trace", "trace_layer", "xy", "xy_layer", "xy_r1", "xy_r2", "xy_z0", "xy_z1", "tracks", "morph3", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", 
     "toast_env", "toast_motion", "toast_motion_locks", "toast_punch",
     "toast_pattern", "toast_fm6_op", "toast_analog"};
 
@@ -1065,6 +1065,10 @@ static void setup(int s)
     case S_SCL_PLAY: TSEL->p[P_CHRD] = CD_TRI; kb_sn[7] = 3; kb_trk[7] = song.sel; key_rpc[song.sel % NTRK] = 5;   /* (chord-harp
                                                     * fork) SCL's circle, chord IV of C (F) held: F lit */
         go_title("SCL"); break;
+    case S_UCH: TSEL->p[P_CHRD] = CD_HARP; TSEL->p[P_CVOI] = (int16_t)HARP_U0 + 1; go_title("USER");   /* (2026-11-19) the chord list: C, ALL sets, row 5 */
+        harp_usr_put(1, 2, harp_user_from(3, 2)); uc_r = 0; uc_row = 4; uc_tot = 0xFFFFu; uc_w = 0; break;
+    case S_UCH_W: TSEL->p[P_CHRD] = CD_HARP; TSEL->p[P_CVOI] = (int16_t)HARP_U0 + 1; go_title("USER");   /* .. the write prompt armed, one key written */
+        harp_usr_put(1, 2, harp_user_from(3, 2)); uc_r = 2; uc_row = 2; uc_tot = 0xFFFFu; uc_w = 1; break;
     case S_KEY_HARP3: TSEL->p[P_CHRD] = CD_HARP; TSEL->p[P_CVOI] = 0; harp_cur[song.sel % NTRK] = 3; go_title("HARP"); break;   /* MAJ1:
                                                     * short names, big */
     case S_KEY_OMNI: TSEL->p[P_CHRD] = CD_OMNI; TSEL->p[P_CVOI] = 4; TSEL->p[P_ROOT] = 1;   /* (chord-harp) OMNI's M7 row in C#: */
@@ -1223,8 +1227,6 @@ static void setup(int s)
     /* (2026-11-09, held menus) the lists that stay open after SCL / EDIT / GLO is held; FX and SAVE held as grids */
     case S_HM_SCL: go_home(); ui.hm = HM_SCL; break;
     case S_HM_EDIT: go_home(); ui.hm = HM_EDIT; hm_pos[1] = 1; break;
-    case S_HM_GLO: go_home(); ui.hm = HM_GLO; hm_list = 0; sets_cur[0] = 1; break;
-    case S_HM_GLO_SYS: go_home(); ui.hm = HM_GLO; hm_list = 3; sets_cur[3] = 2; break;
     case S_LAYER_FX_GRID: go_home(); ui.layer = LAYER_FX; break;
     case S_LAYER_SAVE_GRID: go_home(); ui.layer = LAYER_SAVE; break;
     case S_REVERB: go_fx("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */

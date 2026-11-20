@@ -217,6 +217,11 @@ static uint32_t cm_chord(const track_t *t, uint32_t k, uint8_t *out);
 static void cm_name(const track_t *t, uint32_t k, char *buf);
 static void cm_plate(const track_t *t, uint32_t k, uint8_t *out);
 static uint8_t harp_cur[NTRK];                  /* the chord key each track's plate follows */
+/* (2026-11-19) SCL > USER's preview: while the page is shown the LATCH key (the top F#) plays harp_pv, the chord picked in the
+ * list, on the selected track (ui_uchord.c); no latch, no plate */
+static harp_ch_t harp_pv;
+static uint8_t harp_pv_on;
+#define HARP_PV(k) (harp_pv_on && (k) == HARP_KLATCH)
 /* (chord-harp) recording, a HARP chord key held (POLY): its chord + 1 (0 none), root, the step struck (org), the step the
  * hold reached (last), the steps since (span), the plate notes the hold's step sounds now (pn). seq.c harp_over, harp_hold */
 static uint8_t hh_id[NTRK], hh_root[NTRK], hh_org[NTRK], hh_last[NTRK], hh_span[NTRK], hh_pn[NTRK][3], hh_pnn[NTRK];
@@ -331,9 +336,9 @@ static uint32_t harp_map(const track_t *t, uint32_t k)   /* the note key k plays
 static __attribute__((noinline)) uint32_t harp_build(const track_t *t, uint32_t k, uint8_t *out)
 {
     uint8_t nt[HARP_NMAX];
-    uint32_t n, i, j = 0;
+    uint32_t n, i, j = 0, pv = HARP_PV(k);
     if (!voice_poly(t->p[P_VOICE])) {
-        out[0] = (uint8_t)harp_inkey(t, harp_root(t, k));
+        out[0] = (uint8_t)harp_inkey(t, pv ? harp_oct(harp_pv_lo(harp_pv, t->p[P_ROOT])) : harp_root(t, k));
         return 1;
     }
     if (harp_cm(t)) {                               /* (LEAD: the track's last chord, as the keys always did) */
@@ -345,9 +350,9 @@ static __attribute__((noinline)) uint32_t harp_build(const track_t *t, uint32_t 
                 out[j++] = out[i];
         return j;
     }
-    n = harp_j6(t) ? harp_chord(harp_set(t), k, t->p[P_ROOT], nt) : hc_chord(harp_id(t, k), harp_rt(t), nt);
+    n = pv ? harp_preview(harp_pv, t->p[P_ROOT], nt) : harp_j6(t) ? harp_chord(harp_set(t), k, t->p[P_ROOT], nt) : hc_chord(harp_id(t, k), harp_rt(t), nt);
     {
-        int32_t dt = harp_dt(t, k) + 12 * song.octave;   /* (PROG: its root; the octave) */
+        int32_t dt = (pv ? 0 : harp_dt(t, k)) + 12 * song.octave;   /* (PROG: its root; the octave) */
         for (i = 0; i < n; i++)
             if (nt[i] + dt >= 0 && nt[i] + dt <= 127) {
                 uint32_t x = harp_inkey(t, (uint32_t)(nt[i] + dt));
@@ -356,7 +361,7 @@ static __attribute__((noinline)) uint32_t harp_build(const track_t *t, uint32_t 
             }
     }
     if (!j)
-        out[j++] = (uint8_t)harp_inkey(t, harp_root(t, k));
+        out[j++] = (uint8_t)harp_inkey(t, pv ? harp_oct(harp_pv_lo(harp_pv, t->p[P_ROOT])) : harp_root(t, k));
     return j;
 }
 
@@ -1624,12 +1629,12 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
     }
 }
 
-/* the effect of key k in the FX layer (PF_N none): the first PF_M1 white keys (F3 .. A4) in order, black keys
+/* the effect of key k in the FX layer (PF_N none): the white keys F3 .. G5 by PF_KEY (perform.c), black keys
  * 1..4 (F#3 G#3 A#3 C#4) the track mutes */
 static uint32_t perf_key(uint32_t k)
 {
     uint32_t p = key_place(k);
-    return !key_black(k) ? (p < PF_M1 ? p : p == PF_M1 ? PF_CLR : PF_N) : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : PF_N;
+    return !key_black(k) ? (p < 16u ? PF_KEY[p] : PF_N) : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : PF_N;
 }
 
 /* (0.6.14) LATCH: ARP OFF and ARP 2's HOLD ON, the keys' notes keep sounding when let go; the first key of the next
@@ -1742,7 +1747,7 @@ static __attribute__((noinline)) void key_on(uint32_t k, track_t *t)   /* (chord
                                                                          * RAM code: a key going down, not every block) */
 {
     int hp = harp_on(t);
-    uint32_t n = hp && harp_ck(t, k) ? harp_build(t, k, kb_snd[k]) : hp ? (kb_snd[k][0] = kb_note[k], 1u) :   /* (a plate
+    uint32_t n = hp && (harp_ck(t, k) || HARP_PV(k)) ? harp_build(t, k, kb_snd[k]) : hp ? (kb_snd[k][0] = kb_note[k], 1u) :   /* (a plate
                                                      * key: its note; CHORD's too) */
                  chord_build(t, kb_note[k], kb_snd[k]);
     uint32_t gap = n > 1u && t->p[P_AMODE] < AM_STRDN ? chord_gap(t) : 0u, i;   /* (2026-11-11: the strokes sweep it themselves; a key that
@@ -1868,6 +1873,8 @@ static __attribute__((noinline)) uint32_t harp_key(track_t *t, uint32_t k)
         harp_cur[trk_index(t) % NTRK] = (uint8_t)k;
         return harp_root(t, k);
     }
+    if (HARP_PV(k))                                     /* (the preview: its root, no LATCH) */
+        return harp_oct(harp_pv_lo(harp_pv, t->p[P_ROOT]));
     if (k == harp_lk(t))
         harp_latch(t);
     return harp_map(t, k);

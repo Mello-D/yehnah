@@ -212,21 +212,24 @@ int main(void)
     bad += check("settings with an unknown HOLD value are refused, nothing written",
                  put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 2u && erases == before);
     ps.bold = 0;
-    ps.zoom = LEDS_TAG | LEDS_INV;                       /* LEDS INV */
-    bad += check("settings with LEDS INV restore",
-                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_INV);
+    ps.zoom = LEDS_TAG | 8u | 4u;                        /* LEDS 4 (2026-11-17: the levels 0 .. 5) */
+    bad += check("settings with LEDS 4 restore",
+                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == 4u);
+    ps.zoom = LEDS_TAG | 1u;                             /* an older record: INV, read as the default */
+    bad += check("settings of an older record with LEDS INV restore as the default",
+                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_DEF);
     ps.zoom = 1;                                         /* an older backup (its large readout): LEDS DIM */
-    bad += check("settings of an older backup restore with LEDS HIGH",
+    bad += check("settings of an older backup restore with LEDS 5",
                  put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_DEF);
     before = erases;
-    ps.zoom = LEDS_TAG | LEDS_DIM_LO;                    /* LEDS DIM LO, OFF (appended) */
-    bad += check("settings with LEDS DIM LO restore",
-                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_DIM_LO);
-    ps.zoom = LEDS_TAG | LEDS_OFF;
-    bad += check("settings with LEDS OFF restore",
-                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == LEDS_OFF);
+    ps.zoom = LEDS_TAG | 3u;                             /* an older record's DIM LO: LEDS 1 */
+    bad += check("settings of an older record with LEDS DIM LO restore as 1",
+                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == 1u);
+    ps.zoom = LEDS_TAG | 8u;
+    bad += check("settings with LEDS 0 restore",
+                 put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 0 && settings_leds == 0u);
     before = erases;
-    ps.zoom = LEDS_TAG + 5u;
+    ps.zoom = LEDS_TAG | 8u | 6u;
     bad += check("settings with an unknown LEDS value are refused, nothing written",
                  put_all(1, &ps, sizeof ps, st_crc32(&ps, sizeof ps)) == 2u && erases == before);
     ps.zoom = 0;

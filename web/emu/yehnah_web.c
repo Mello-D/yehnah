@@ -157,6 +157,7 @@ static void lcd_init(void) {}
 #include "../../firmware/src/menu_items.c"
 #include "../../firmware/src/icons.c"
 #include "../../firmware/src/ui_graph.c"
+#include "../../firmware/src/ui_uchord.c"
 #include "../../firmware/src/ui_draw.c"
 #include "../../firmware/src/ui_menu.c"
 #include "../../firmware/src/ui_input.c"

@@ -447,6 +447,7 @@ enum { LAYER_NONE, LAYER_FX, LAYER_REC, LAYER_SAVE, LAYER_SEQ, LAYER_HOME, LAYER
 static void draw_layer(void);
 static const char *layer_head(void);
 static uint32_t layer_leds(uint32_t *br);
+static uint32_t ly_mid, ly_glow;                        /* the layer's keys at the mid and the lowest glow (layer_leds) */
 static uint32_t layer_btn(void);
 
 /* FM operator pages belong to DIGITAL; they never appear on other instruments (without YEHNAH_FM4: never). LANES /
@@ -716,7 +717,7 @@ static uint32_t lock_id(uint32_t k)
 #define CT_SCL 127                                      /* (chord_tab_of: the SCL tab, chords off) */
 static int chord_tab_of(const page_t *pg)            /* 0 CHORD, CD_HARP, CD_OMNI, CD_PROG, CT_SCL; -1 another page */
 {
-    return pg->fam != FAM_SCL ? -1 : pg->graph == GR_SCALE ? CT_SCL : GTR_PAGE(pg) || GTU_PAGE(pg) ? CD_GTR : HARP_PAGE(pg) ? CD_HARP :
+    return pg->fam != FAM_SCL ? -1 : pg->graph == GR_SCALE ? CT_SCL : UCH_PAGE(pg) ? CD_HARP : GTR_PAGE(pg) || GTU_PAGE(pg) ? CD_GTR : HARP_PAGE(pg) ? CD_HARP :
            pg->id[3] == P_OSTR ? CD_OMNI : pg->id[1] == P_PROG ? CD_PROG : pg->id[1] == P_CHRD ? 0 : -1;
 }
 static void chord_tab(const page_t *pg)
@@ -745,10 +746,36 @@ static void chord_tab(const page_t *pg)
     t->p[P_HPLATE] = t->p[P_OSTR] = 1;                  /* (2026-10-26) the plate's octave back to 0 on a mode change (HARP's
                                                          * and PROG's PLATE, OMNI's STRINGS: the user's ask) */
 }
+/* (2026-11-18) SCL > USER (ui_uchord.c): the track plays one of the user sets while they are shown; the edited sets
+ * go to flash when the page is left */
+static uint8_t uc_dirty;                                /* edited since saved */
+static uint8_t uc_r, uc_w, uc_bs;                       /* the list's root (the pitch class); the write prompt is up; the bass override (0 as listed, 1 none, 2 + pitch class) */
+static void uc_pv_sync(void);                           /* (ui_uchord.c: the preview key's chord) */
+static uint16_t uc_row, uc_tot = 0xFFFFu;               /* the row picked; the rows (0xFFFF: not counted since the filter or the sets changed) */
+static int uch_save(void);                              /* upreset.c: the chord sets into flash (0 done, 2 not now, 3 no flash) */
+static void uc_enter(void)
+{
+    uint32_t s = harp_set(TSEL);
+    if (RES_OK() && !(s >= HARP_U0 && s < HARP_NALL))
+        TSEL->p[P_CVOI] = (int16_t)HARP_U0;
+    uc_pv_sync();                                       /* (the top F# previews the row's chord) */
+}
+static void uc_left(void)
+{
+    harp_pv_on = 0;
+    if (uc_dirty && uch_save() != 2)
+        uc_dirty = 0;
+}
 static void page_entered(void)
 {
     const page_t *pg = cur_page();
     chord_tab(pg);
+    uc_w = 0;
+    uc_tot = 0xFFFFu;
+    if (!ui.home && UCH_PAGE(pg))
+        uc_enter();
+    else
+        uc_left();
     if (!ui.home && pg->fam == FAM_FX && fx_trk_k(ui.page) < 0 && pg->graph != GR_BUSES)
         ui.fxmod = (uint8_t)fx_mod_of(ui.page);  /* (FX: the effect shown, BUSES' tile lit) */
     if (!ui.home && lock_page_ok(ui.page))
@@ -1992,6 +2019,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     uint32_t c, m = 0;
     if (ui.home)
         return 0;
+    if (UCH_PAGE(pg)) return 8u;                         /* (2026-11-19) SCL > USER: OCT+ arms the write; no column is an action */
     if (pg->graph == GR_MOTION || pg->graph == GR_PUNCH) return 8u;   /* (0.6.99) PUNCH: KNOB 4 CLEAR */
     if (pg->graph == GR_TOOLS) return 15u;
     if (pg->graph == GR_PROG) return ui.act ? 8u : 0u;   /* (chord-harp fork) SCL > PROG: F#4 WRITE, OCT+ does it
@@ -2020,6 +2048,7 @@ static uint32_t shp_rep(void) { return shp_r == 0u ? 1u : shp_r < 8u ? shp_r + 1
 static uint32_t act_col(void)
 {
     if (!ui.home && cur_page()->graph == GR_SONG) return 4u;
+    if (!ui.home && UCH_PAGE(cur_page())) return 4u;     /* (2026-11-19) SCL > USER: OCT+ arms the write (ui_uchord.c) */
     return ui.act;
 }
 
@@ -2032,6 +2061,7 @@ static int act_ready(void)
     if (!c--)
         return 0;
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
+    if (UCH_PAGE(cur_page())) return RES_OK() && !uc_w;   /* (the prompt up: OCT+ rests) */
     if (cur_page()->graph == GR_PROG) return !chain_busy();
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, DELETE ROW, CLEAR SONG, NEW PROJECT */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 3u ? 1 :

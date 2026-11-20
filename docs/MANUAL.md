@@ -108,6 +108,11 @@ the page of HOME you were last on (at power-on, your home page: **DANCE** or **T
 27 keys from F3 to G5 (16 white, 11 black). They play the selected track. With a layer held they become that layer's
 shortcuts; on the drum grid they are steps and lanes; on the NAME screen they type.
 
+In a layer the white keys sit four to a row (F3 to B3, C4 to F4, G4 to C5, D5 to G5), and the on-screen map shows the same rows.
+The key LEDs follow the map: the **first key of each row pulses**, the other keys of the row glow, a key that cannot do
+anything right now (the screen shows it dim) glows least, a key that is on or held is lit, and a key with no function in
+that layer is dark. FX's mutes and tracks, and SEQ's drum lanes, are on black keys, which glow the same way.
+
 ### Other combinations
 
 | Combination | Result |
@@ -147,7 +152,7 @@ drawn as a grid with the picked one lit. SOUND, FX, ENV, LFO, ARP and GLO are pa
 | **GLO** | GLO (four lists of rows) |
 | **ENV** | ENV |
 | **LFO** | LFO |
-| **SCL** | HARP · OMNI · GUITAR · CHORD · SCALE · TUNE · PROG |
+| **SCL** | HARP · OMNI · GUITAR · CHORD · SCALE · TUNE · PROG · USER |
 | **ARP** | ARP |
 | **SAVE** | PROJECT · ARRANGE (STRUCT) · TRIM |
 
@@ -181,7 +186,7 @@ One list over every engine's factory sounds, then your user presets. The columns
 lead, pad…) and **ENGINE**. **KNOB 1 TYPE** filters it (ALL, the types A to Z, INIT, USER and **FAV**, your favourites); **KNOB 2 ENG** jumps to the next or
 previous engine; **KNOB 3 LETTER** jumps to the next or previous first letter; **KNOB 4 SORT** orders the list by **ENGINE**
 (the engines A to Z, each its INIT then A to Z), **TYPE** (the types, each A to Z) or **A-Z** (the whole list); the sort is saved.
-Hold **HOME** and press **G#3** (the black key right of F#3) to mark or unmark the track's sound as a favourite. Turning the PRESETS encoder loads the next sound into the track on any page.
+Hold **HOME** and press **E4** to mark or unmark the track's sound as a favourite. Turning the PRESETS encoder loads the next sound into the track on any page.
 Switching a track to another engine fades the old one out, and the notes you hold go on in the new one. Types, engines and each engine's sounds are all in A to Z order (ALL first on KNOB 1 and INIT, USER last; INIT first in each engine's sounds).
 
 **Every engine has an INIT sound**, its plain starting point, first in its list (a drum track's is the plain DRUM-X
@@ -307,7 +312,7 @@ edge, a 100 % end of one parameter is always next to a 0 % end of another (seven
 
 One page with five sub-pages (**TRACK**, **SOUND**, **LFO**, **FX**, **TEXTURE**: turn **SELECT**; the ends go on along HOME) that throw ideas for the selected track, each heard at once. **KNOB 4** and the other knobs throw; **OCT+**
 keeps what you heard, **OCT−** puts back what was there before the page's first throw. A throw on another page or track
-keeps the one before: **UNDO** (REC held + D4) still brings it back.
+keeps the one before: **UNDO** (REC held + A3) still brings it back.
 
 | Page | What it throws |
 | --- | --- |
@@ -321,7 +326,7 @@ keeps the one before: **UNDO** (REC held + D4) still brings it back.
 
 ## 5. Engines and the SOUND page
 
-**25 engines**, all synthesis, any on any track. Pick one by loading one of its sounds with PRESETS (or KNOB 2 ENG on
+**25 engines**, all synthesis, any on any track (one exception: the section has **one drum kit**, see [6](#6-drums)). Pick one by loading one of its sounds with PRESETS (or KNOB 2 ENG on
 the PRESETS page). There are over 700 factory sounds and 32 user preset slots.
 
 | Engine | What it is |
@@ -438,7 +443,7 @@ keys walk the scale), SEQ (the sequencer snaps too). **ALL TR** moves every sequ
 
 ### The chord modes
 
-SCL has six chord pages, **HARP**, **OMNI**, **GUITAR**, **CHORD**, **TUNE** and **PROG** (and **SCALE**, between CHORD and TUNE). They are one idea in five
+SCL has chord pages **HARP**, **OMNI**, **GUITAR**, **CHORD**, **TUNE**, **PROG** and **USER** (and **SCALE**, between CHORD and TUNE). They are one idea in five
 flavours: a key plays a whole chord, and every flavour uses the **same layout**, so what you learn on one carries to the
 others. They suit holding the FM-1 in two hands like a console controller, **one thumb on the chord keys, the other
 thumb strumming the plate**, with the octave and bend keys under the strumming thumb.
@@ -446,7 +451,7 @@ thumb strumming the plate**, with the octave and bend keys under the strumming t
 | Mode | What the chord keys play | Chord sets | From |
 | --- | --- | --- | --- |
 | **CHORD** | The chord on each scale degree, built by the mode you pick (TRIAD, 7TH, ADD9, SUS2, SUS4 in key; MAJ, MIN, 7, MAJ7, MIN7, POWER on any key) | one set: the scale's degrees I–VII, then I an octave up | built in |
-| **HARP** | Whole chords from a set of twelve | 116 sets: HARP's own **MAJ1–MAJ8** and **MIN1–MIN8**, then the **J-6's 100 sets** in 16 genres (POP, JAZZ, BOSSA, BLUES, FUNK, R&B, NEOSOUL, TRAD, CLASSIC, CINEMA, SYNTH, HOUSE, EDM, MODERN, STACKS, UTILITY) | HARP's own sets come from Native Instruments' chord sets; the J-6 sets after benbadio's hera-fm1 |
+| **HARP** | Whole chords from a set of twelve | 128 sets: HARP's own **MAJ1–MAJ8** and **MIN1–MIN8**, then the **J-6's 100 sets** in 16 genres (POP, JAZZ, BOSSA, BLUES, FUNK, R&B, NEOSOUL, TRAD, CLASSIC, CINEMA, SYNTH, HOUSE, EDM, MODERN, STACKS, UTILITY), then **DARK** (6 sets: JUNGLE, LIQUID, NEURO power chords, PHRYGIAN, ANDALUSIAN, RAVE) and **USER** (6 sets you build, below) | HARP's own sets come from Native Instruments' chord sets; the J-6 sets after benbadio's hera-fm1; DARK after TwistedGenetics' FM1-Chord |
 | **OMNI** | The Omnichord's chord keys: major, minor and seventh chords | 5 sets: **FOMNI** (the Omnichord's own layout), **MAJ**, **MIN**, **7**, **M7** | FoMni by Charles Vestal |
 | **PROG** | The chords of a progression, in order, one a key | 32 progressions (I V vi IV, vi IV I V, I vi IV V and so on) | built in |
 | **GUITAR** | Chords as a guitar plays them, up to six strings | 50 chord styles in 9 families (GT ORIG, JAZZ, LOFI, ROCK, BLUES, POP, SOUL, FOLK, AMB), in 14 tunings and 6 shapes | guitchordi by stoogs |
@@ -476,6 +481,7 @@ the eleven white keys from D4. The keys light to show what they are, and a chord
 
 - **CHORD:** KNOB 2 CHORD (the mode: OFF, the in-key and any-key chords, or HARP, OMNI, PROG, GUITAR), KNOB 3 **VOICING** (CLOSE, LEAD for voice leading, OPEN, +BASS).
 - **HARP:** KNOB 2 **GENRE** picks a family of sets, KNOB 3 **SET** the set within it.
+- **USER:** your own chord sets, written from a list of the chords on a root, as the PRESETS browser lists sounds. It is the last page of SCL (turn SELECT left from HARP). The track plays one of six user sets (**U1–U6**, HARP's USER genre), so the keys play it as you write. Each row is a chord: its number, the chord and the first set that has it (each chord shows once; a J-6 chord as the nearest of the 35 shapes, its root and slash bass kept). **KNOB 1 CHORD** scrolls the list (nothing sounds as you scroll), **KNOB 2 ROOT** picks the root (only the chords on it show), **KNOB 3 SET** the user set written to (with how many of its twelve keys hold a chord). **The top F# key** (always lit) plays the chord picked, as a preview. **OCT+** does not write at once: it asks **HIT A KEY** and lights the twelve chord keys, the ones that already hold a chord solid and the empty ones breathing. The key you hit takes the chord. **OCT-**, a knob or leaving the page cancels. The other keys' lights are off on this page. A new set is empty (twelve C major chords until you write). The sets are saved in flash when you leave the page (the transport stopped: otherwise it says STOP TO SAVE and tries again on the next page change); they sit beside the user presets (the editor's backup does not carry them yet).
 - **OMNI:** KNOB 2 **SET**, KNOB 3 **AUTO**, how loud the chord voice is under the strings.
 - **PROG:** KNOB 2 **PROG** (1–32) picks the progression, KNOB 3 **RATE** (2 BAR, 1 BAR, 1/2 BAR) how long each chord lasts when written. **OCT+** (or F#4 then OCT+) **writes the progression onto the track** as chord steps; it says TOO LONG if it would not fit in 64 steps.
 - **GUITAR:** KNOB 2 **GENRE** picks a family of styles, KNOB 3 **SET** the style. The voicings are a guitar's in standard tuning; **TUNE** changes that.
@@ -564,9 +570,10 @@ leaves out the chorus and the slicer.
 
 ### Punch-in effects (the FX layer)
 
-Hold **FX**: the white keys are effects that act while held and go back exactly when you let go: repeats (1/8, 1/16,
-1/32), low-pass and high-pass sweeps, an octave down or up, half tempo, short or long decays, stutters (1/8, 1/16), a
-slow attack, an arpeggio or a fill, and random notes. They come in on the next 1/16. The note effects are **recorded
+Hold **FX**: the white keys are effects that act while held and go back exactly when you let go. They sit four to a row:
+**F3 G3 A3 B3** repeats 1/8, 1/16, 1/32 and half tempo; **C4 D4 E4 F4** stutters 1/8, 1/16, an arpeggio and random notes;
+**G4 A4 B4 C5** low-pass and high-pass sweeps, an octave down and up; **D5 E5 F5 G5** a slow attack, short and long decays,
+and **CLR PUNCH** (held: erases the punch-in lane where it passes). They come in on the next 1/16. The note effects are **recorded
 into the punch-in lane** (REC armed and playing): the lane holds 64 steps of 1/16, saved with the section. The knobs
 are **FILTER**, **CRUSH**, **THROW** and **DEPTH**. See [12](#12-the-layers).
 
@@ -601,7 +608,7 @@ eight values (E1–E8), CLIP, PUNCH and the delay and reverb settings.
 Hold a button past the hold time and the keys and the four knobs change job, while the screen draws a map of what they
 do. Press a key or turn a knob while holding for the map at once. Keys pressed under a layer are the layer's: silent,
 never recorded. Five buttons have a layer: **FX**, **REC**, **SAVE**, **SEQ** and **HOME**. Every other button, held, does
-nothing (EDIT and GLO open menus, below). Only one layer is open at a time.
+nothing (EDIT opens a menu, below). Only one layer is open at a time.
 
 ### FX: punch-in effects
 
@@ -612,13 +619,12 @@ without touching anything: the layer stays open (**[FX] LOCKED**), with both han
 
 ### REC
 
-White keys from F3: **CLEAR** (F3: the selected track's steps and automation), **CLICK** (G3: OFF, REC, ON, each press
-the next), **MODE** (A3: what a REC tap records, one pass or loop; also **KNOB 2**), **TAP** (B3: tap tempo),
-**COUNT-IN** (C4: OFF, 1 BAR, 2 BARS), **UNDO** (D4: the last big change; again: redo), **RESTART** (E4: from the top,
-playing on), **CLR FX** (F4: the punch-in lane; it asks first), **PLAY A–D** (G4–C5: the section on the next bar; two
-or more in one hold: a quick chain), **LOOP / SONG** (D5: what PLAY plays), **SONG REC** (E5), **NAME** (F5: the
-project or section on the PROJECT page, or the user sound slot) and **CLEAR ALL** (G5: every track and the lane; it asks
-first).
+White keys, packed into rows of four. **F3 G3 A3 B3**: **MODE** (what a REC tap records, one pass or loop; also **KNOB 2**),
+**TAP** (tap tempo), **UNDO** (the last big change; again: redo) and **RESTART** (from the top, playing on). **C4 D4 E4 F4**:
+**PLAY A–D** (the section on the next bar; two or more in one hold: a quick chain). **G4 A4 B4**: **LOOP / SONG** (what PLAY
+plays), **SONG REC** and **NAME** (the project or section on the PROJECT page, or the user sound slot). **D5 E5 F5**:
+**CLEAR** (the selected track's steps and automation), **CLR FX** (the punch-in lane) and **CLEAR ALL** (every track and the
+lane); the last two ask first. CLICK and COUNT-IN are in GLO > MAIN.
 
 ### SAVE: clear, erase, new
 
@@ -630,13 +636,13 @@ the arrangement or the transport is running (the screen says STOP TO EDIT).
 | **F3** | **CLEAR PAT** | Empties the selected track's pattern and automation. |
 | **G3** | **CLEAR SONG** | Empties the project's arrangement (the ARRANGE rows). |
 | **A3** | **DEL ROW** | Deletes the arrangement row ARRANGE or TRIM is on. |
-| **C4** | **ERASE SECT** | Erases the section the PROJECT page is on (not while playing). |
-| **D4** | **ERASE PROJ** | Erases the whole project: its four sections and its song. No undo. |
-| **E4** | **NEW PROJ** | Everything back as at power-on. Undo: REC layer, D4. |
-| **G4** | **SAVE SND** | Saves the selected track's sound: over the user slot it came from, or into the first free slot (you name it). |
-| **A4** | **ERASE SND** | Erases that user sound slot. |
+| **B3** | **ERASE SECT** | Erases the section the PROJECT page is on (not while playing). |
+| **C4** | **ERASE PROJ** | Erases the whole project: its four sections and its song. No undo. |
+| **D4** | **NEW PROJ** | Everything back as at power-on. Undo: REC layer, A3. |
+| **E4** | **SAVE SND** | Saves the selected track's sound: over the user slot it came from, or into the first free slot (you name it). |
+| **F4** | **ERASE SND** | Erases that user sound slot. |
 
-On XYZ the keys are **F3 Z REV, G3 Z DLY, A3 Z CUT, B3 Z LEVEL** (what KNOB 4 turns), **C4 XYZ** (on / off), **D4 CAPTURE** and **E4 RE-FIT**. On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
+On XYZ the keys are **F3 Z REV, G3 Z DLY, A3 Z CUT, B3 Z LEVEL** (what KNOB 4 turns), **C4 XYZ** (on / off), **F4 CAPTURE** and **G4 RE-FIT**. **D4 IDEA ALL** and **E4 FAVORITE** are the same in every mode. On TRACE the keys change: **F3** FREEZE, **G3 RANDOM** (a new shape for every dot), **A3 REROLL** (a new shape for the dot you
 turned last), **B3** CAPTURE, **C4** TRACE (on / off).
 
 The four knobs do nothing on this layer.
@@ -650,18 +656,18 @@ layer's UNDO covers big changes).
 | --- | --- | --- |
 | **F3** | **REVERSE** | Plays the pattern backwards. |
 | **G3 / A3** | **SHIFT <  /  SHIFT >** | Moves the pattern one step earlier or later. |
-| **B3** | **BEAT** | (drum track) replaces the pattern with a basic beat: kick on the beat, snare on the backbeat, closed hats on the eighths. |
-| **G4** | **CLR LN** | (drum track) empties the lane. |
-| **A4** | **REV LN** | (drum track) reverses the lane. |
-| **B4** | **FILL LN** | (drum track) fills the lane. |
-| **G5** | **CLR STP** | Clears the step under the cursor and its parameter locks, and moves on to the next. |
+| **B3** | **CLR STP** | Clears the step under the cursor and its parameter locks, and moves on to the next. |
+| **C4** | **BEAT** | (drum track) replaces the pattern with a basic beat: kick on the beat, snare on the backbeat, closed hats on the eighths. |
+| **D4** | **CLR LN** | (drum track) empties the lane. |
+| **E4** | **REV LN** | (drum track) reverses the lane. |
+| **F4** | **FILL LN** | (drum track) fills the lane. |
 
 On a drum track the **black keys** pick the lane (1–8) the lane tools act on. The tools refuse while the arrangement plays.
 
 ### HOME: SWARM's and TRACE's actions, IDEA ALL
 
 Hold **HOME** on any page (a tap is still HOME) and the keys run **SWARM** (see [4](#swarm)), or **TRACE** (see [TRACE](#trace)) if that was the last of the two you opened, whatever page you are on.
-The key is lit while the action is on, and breathes when it can be used.
+The key is lit while the action is on.
 
 | Key | Action | What it does |
 | --- | --- | --- |
@@ -670,15 +676,16 @@ The key is lit while the action is on, and breathes when it can be used.
 | **A3** | **THROW** | Throws every THROW dot at once. |
 | **B3** | **CAPTURE** | The sound as it is now becomes the track's own, and SWARM stops. |
 | **C4** | **SWARM** | Turns SWARM on; off puts the sound back as it was. |
-| **F♯3** (the black key) | **IDEA ALL** | The [I-TRK](#ideas) throw on every track that plays: its **GENRE** and **RHYTHM** settings, one genre and one chord progression for all of them (so they fit together) and each track its own role. Only the steps, length and key change. One **UNDO** (REC held + D4) puts it back. Refused while a song plays. |
+| **D4** | **IDEA ALL** | The [I-TRK](#ideas) throw on every track that plays: its **GENRE** and **RHYTHM** settings, one genre and one chord progression for all of them (so they fit together) and each track its own role. Only the steps, length and key change. One **UNDO** (REC held + A3) puts it back. Refused while a song plays. |
+| **E4** | **FAVORITE** | Marks or unmarks the track's sound as a favourite. |
 
 The four knobs do nothing on this layer.
 
-### Held menus: EDIT and GLO
+### Held menu: EDIT
 
-Hold **EDIT** or **GLO** past the hold time and a **list menu** opens and stays open after you let go. **EDIT** lists the
-sound's named parameters (E1–E8); **GLO** shows the four GLO lists (MAIN, DEVICE, CONTROL, SYSTEM; **KNOB 3** picks the
-list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−** or by tapping the button.
+Hold **EDIT** past the hold time and a **list menu** opens and stays open after you let go. It lists the sound's named
+parameters (E1–E8). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−** or by tapping the button.
+(GLO has no held menu: its page already has the four lists, MAIN, DEVICE, CONTROL and SYSTEM, and holding it does nothing.)
 
 ---
 
@@ -689,7 +696,7 @@ list). **KNOB 1** picks the row, **KNOB 2** sets its value. Leave with **OCT−*
 | List | Rows |
 | --- | --- |
 | **MAIN** | **BPM**, **SWING**, **TRACKS** (1–6), **USB LEVEL** (MASTER: follows the MASTER knob; FIXED; or −6 to −24 dB, for a phone or computer whose input clips) · **CLICK** (OFF, REC, ON), **CLICK LEVEL**, **COUNT-IN** (OFF, 1 BAR, 2 BARS) |
-| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE (greys only), DUSK, CREAM, POP (black with red, blue, green and yellow), YELLOW, RED or PURPLE (black with shades of one colour)), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on opens; after that the HOME button returns to the page of HOME you were last on) |
+| **DEVICE** | **THEME** (the colour theme: VAP DK, VAP LT, NOIRE (greys only), DUSK, CREAM, POP (black with red, blue, green and yellow), YELLOW, RED or PURPLE (black with shades of one colour)), **SCREEN OFF**, **FILL** (RANDOM or SNAKE), **LEDS** (0 to 5: how brightly the idle keys and buttons glow; 0 is no glow, 5 the brightest and the default; lit and pulsing LEDs are always at full) · **SCALE LEDS** · **HOME PAGE** (your home screen, **DANCE** (the default) or **TRACKS**: the page power-on opens; after that the HOME button returns to the page of HOME you were last on) |
 | **CONTROL** | **HOLD** (the layer threshold), **KNOB ACCEL**, **FX LATCH**, **CLOCK** (INT, USB, TRS) · **ROUTE** (CH1-6, SEL), **MIDI OUT** (KEYS, CLOCK, ALL, OFF), **SPEAKER EQ** (FLAT, LOWCUT, BASS+), **TUNE** |
 | **SYSTEM** | **LOAD** (ECO, LITE, FULL), **CPU**, **USB** (the USB mode), **RESTORE LAST** · **CALIBRATION**, **INIT SYSTEM**, **ABOUT**, **MIDI LEARN** (OFF, LEARN, CLEAR) |
 

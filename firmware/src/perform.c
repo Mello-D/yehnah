@@ -25,6 +25,10 @@ enum { PF_R8, PF_R16, PF_R32, PF_LPF, PF_HPF,
        PF_OCTD, PF_OCTU, PF_HALF, PF_DSHT, PF_DLNG, PF_S8, PF_S16, PF_ATK, PF_ARP, PF_RND,   /* the MIDI ones: pfx.c */
        PF_M1, PF_N = PF_M1 + NTRK, PF_TGT = PF_N + 1,     /* PF_TGT: A#4, the MIDI effects' tracks (pfx_tgt) */
        PF_CLR = PF_N + 2 };                                /* PF_CLR: G5, erases the punch-in lane (pfx.c) */
+/* the FX layer's white keys, F3 .. G5, four to a row (2026-11-17, the held layers' LEDs: ui_layer.c): row 1 the repeat / tempo,
+ * row 2 the stutters and the MIDI patterns, row 3 the tone (the filters, the octaves), row 4 the envelope and G5's CLR */
+static const uint8_t PF_KEY[16] = {PF_R8, PF_R16, PF_R32, PF_HALF, PF_S8, PF_S16, PF_ARP, PF_RND,
+                                   PF_LPF, PF_HPF, PF_OCTD, PF_OCTU, PF_ATK, PF_DSHT, PF_DLNG, PF_CLR};
 #define PF_BIT(e) (1u << (e))
 #define PF_REPEAT 0x7u                                         /* the three REPEAT rates */
 #define PF_Q PF_REPEAT                                         /* start on the 1/16 */

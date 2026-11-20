@@ -125,7 +125,7 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   or varies the sound (PRESET, VARY, WILD, and ENGINE: the same engine or any), **LFO** and **FX** throw an LFO or an
   effect (drive, space, movement), and **TEXTURE** makes what the track plays ambient: a pad, choir, hiss, sea or crackle
   sound, softer and longer notes, a wider space. OCT+ keeps an idea, OCT− puts back what was there before; and UNDO
-  (REC held + D4) brings back the one before. On the HOME layer the black key **F♯3 (IDEA ALL)** throws TRACK's idea on every
+  (REC held + A3) brings back the one before. On the HOME layer the key **D4 (IDEA ALL)** throws TRACK's idea on every
   track at once, with one genre and progression for all of them and each track its own role.
 
 ### Sequencer
@@ -167,8 +167,9 @@ between the tracks: **TRACKS 4** is the default, and **TRACKS 6** brings in the 
   one string a key), and the black keys between the plate keys bend the track while held (an octave down or up, a whole tone
   down or up) with the top black key latching the chord. **PLATE** moves the strings an octave down or up and OCT− / OCT+
   moves everything. The tabs draw the chord keys as a strip.
-- **Five chord flavours on that layout:** **HARP** (116 sets: its own MAJ1-8 and MIN1-8, then the Roland J-6's 100 sets in 16
-  genres), **OMNI** (the Omnichord's chords: FOMNI, MAJ, MIN, 7, M7), **PROG** (32 chord progressions, which can be written
+- **Five chord flavours on that layout:** **HARP** (128 sets: its own MAJ1-8 and MIN1-8, the Roland J-6's 100 sets in 16
+  genres, a DARK genre of jungle / liquid / neuro / phrygian / Andalusian / rave sets after TwistedGenetics' FM1-Chord, and a USER genre: six
+  sets of your own, written from a browsable list of every chord on the USER page), **OMNI** (the Omnichord's chords: FOMNI, MAJ, MIN, 7, M7), **PROG** (32 chord progressions, which can be written
   onto a track), **GUITAR** (guitchordi's 50 chord styles in 9 families, 14 tunings and 6 shapes) and **CHORD** (the chord on each
   scale degree). The strum modes of the arpeggiator play any of them like a guitarist's hand.
 - **16 scales** with a root that is global for the song, a QUANT mode (off, snap, white keys walk the scale, or the
@@ -261,7 +262,7 @@ GLO settings. Nine colour themes change the look (NOIRE is greys only; POP is bl
 
 ## Engines
 
-Any engine can go on any track. **25 engines**, all synthesis:
+Any engine can go on any track (one kit per section: a second DRUM track plays the same kit). **25 engines**, all synthesis:
 
 | Engine | What it is |
 | --- | --- |
@@ -410,6 +411,7 @@ Yehnah is made by Mello-D, and stands on a lot of other people's work. Thank you
 - **Native Instruments**: HARP's own sixteen chord sets (MAJ1 to MAJ8 and MIN1 to MIN8) come from its chord sets. Yehnah is
   not affiliated with or endorsed by Native Instruments.
 - **[hera-fm1](https://github.com/benbadio/hera-fm1)** by benbadio (GPL-3.0): the J-6 chord sets of HARP.
+- **[FM1-Chord](https://github.com/TwistedGenetics/FM1-Chord)** by TwistedGenetics (GPL-3.0): the ideas of HARP's DARK sets (its factory dark jungle, liquid, neuro, phrygian, Andalusian and rave chord sets, re-keyed to C and cut to twelve chords).
 - **[FMini-1](https://github.com/ruppert/fmini-1)** by Guilherme Ruppert (GPL-3.0): FMINI, the Minimoog engine: its ladder
   filter, oscillators, mixer and its 200 factory patches (`firmware/src/eng_fmini.c`, `eng_fmini_data.h`,
   `eng_fmini_filter.h`; `tools/gen_fmini_data.py` made the data files, `eng_fmini_data.h` has been edited by hand since: INIT and nine patches of ours).

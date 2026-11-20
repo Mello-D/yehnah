@@ -312,7 +312,7 @@ int main(int argc, char **argv)
     check("every message well formed", bad_msgs == 0);
     printf("       FRAME: %u whole and the screen, %u whole and not, %u not whole\n", frames_ok, frames_bad, frames_part);
     check("every FRAME a whole picture, the screen as it was (the tablet never shows a part)",
-          frames_ok > 500u && !frames_bad && !frames_part);
+          frames_ok > 450u && !frames_bad && !frames_part);   /* (was 500: SCL's SELECT turns now land on USER, whose knobs redraw less: 478) */
     if (rec)
         fclose(rec), rec = 0;
     printf("       %u ROAD (HOME's scene drawn by the tablet), %u snapshots lost\n", roads, road_lost);

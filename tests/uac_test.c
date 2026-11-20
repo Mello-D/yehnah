@@ -47,7 +47,6 @@ static int32_t stem_buf[7][HALF_FRAMES], stem_fx[2][HALF_FRAMES];   /* ((0.8.0) 
 static int32_t uin_l[HALF_FRAMES > 64 ? HALF_FRAMES : 64], uin_r[HALF_FRAMES > 64 ? HALF_FRAMES : 64];
 static volatile uint8_t uin_on;
 #define UIN_SRC 1
-#define UAC_FIR_DELTAS                   /* uac_fir.h: the 0.8.9 form too (the table as boot built it) */
 #include "../firmware/src/usb.c"
 
 static int fails;
@@ -549,7 +548,7 @@ static void test_rate(void)
 /* --------------------------------------------------------------- the resampler --- */
 /* the prototype computed here (as tools/gen_uac_fir.py describes it), not read from the table */
 #define RL 160
-#define RN 24
+#define RN 12
 static double H[RL * RN];
 
 static double bessel_i0(double x)
@@ -566,7 +565,7 @@ static double bessel_i0(double x)
 static void proto_init(void)
 {
     const int n = RL * RN;
-    const double fc = 22000.0 / (44100.0 * RL), beta = 9.0;
+    const double fc = 20000.0 / (44100.0 * RL), beta = 7.5;
     double sum = 0;
     int i;
     for (i = 0; i < n; i++) {
@@ -777,7 +776,7 @@ static uint32_t old_block(const int32_t *in, uint32_t n, int32_t *l, int32_t *r)
         do {
             int64_t al = 0, ar = 0;
             for (j = 0; j < UAC_FIR_N; j++) {
-                int32_t c = ph < UAC_FIR_L / 2u ? rs_tab[ph][j] : rs_tab[UAC_FIR_L - 1u - ph][UAC_FIR_N - 1u - j];
+                int32_t c = ph < UAC_FIR_H ? rs_tab[ph][j] : rs_tab[UAC_FIR_L - 1u - ph][UAC_FIR_N - 1u - j];
                 al += (int64_t)c * old_l[s + j];
                 ar += (int64_t)c * old_r[s + j];
             }
@@ -802,43 +801,34 @@ static void test_resampler(void)
     char s[160];
 
     proto_init();
-    /* the table (0.8.9: built in RAM from the flash's differences, all 160 phases): each phase sums to 1 << 30 and is
-     * the prototype computed here (oldest input first); phases 0..79 the generator's exactly (its checksum) */
+    /* the table (the 80 stored phases in the flash; phase 159 - p read backwards): each phase sums to 1 << 15 and is the
+     * prototype computed here (oldest input first) within one LSB of Q15; the generator's checksum */
     rs_reset();
     {
         uint64_t chk = 0;
+        double maxdev = 0;
         for (i = 0; i < UAC_FIR_L; i++) {
             int64_t t = 0;
             for (k = 0; k < UAC_FIR_N; k++) {
-                double want = H[i + RL * (RN - 1u - k)] * (1 << 30);
-                t += rs_tab[i][k];
-                if (fabs(rs_tab[i][k] - want) > 2e-5 * (1 << 30))
-                    tab_ok = 0;
-                if (i < UAC_FIR_L / 2u)
+                double want = H[i + RL * (RN - 1u - k)] * (1 << UAC_FIR_Q);
+                int32_t c = i < UAC_FIR_H ? rs_tab[i][k] : rs_tab[UAC_FIR_L - 1u - i][UAC_FIR_N - 1u - k];
+                t += c;
+                if (fabs(c - want) > maxdev)
+                    maxdev = fabs(c - want);
+                if (fabs(c - want) > 8.0)
+                    tab_ok = 0;   /* the rounding, and the sum made exact on the largest tap */
+                if (i < UAC_FIR_H)
                     chk += (uint64_t)(i * UAC_FIR_N + k + 1u) * (uint64_t)(int64_t)rs_tab[i][k];
             }
-            sum_ok &= t == (int64_t)1 << 30;
+            sum_ok &= t == (int64_t)1 << UAC_FIR_Q;
         }
-        check("FIR table = sinc x Kaiser (24 x 160 taps, beta 9, 22 kHz); phases sum to 1.0", tab_ok && sum_ok);
-        check("  the flash table: exactly the generator's (UAC_FIR_CHK)", chk == UAC_FIR_CHK);
-    }
-    {   /* (chord-harp fork, 2026-11-04) the table in the flash (UAC_TAB) = the one 0.8.9's uac_rs_init built at boot from
-         * the third differences, all 160 phases, bit for bit */
-        static int32_t boot[UAC_FIR_L][UAC_FIR_N];
-        uint32_t p;
-        for (i = 0; i < UAC_FIR_N; i++) {
-            int32_t x = UAC_FIR0[0][i], a = UAC_FIR0[1][i], b = UAC_FIR0[2][i];
-            for (p = 0; p < UAC_FIR_L / 2u; p++) {
-                boot[p][i] = x;
-                boot[UAC_FIR_L - 1u - p][UAC_FIR_N - 1u - i] = x;
-                x += a;
-                a += b;
-                if (p < UAC_FIR_L / 2u - 3u)
-                    b += UAC_FIR3[i][p];
-            }
-        }
-        check("  the flash table (UAC_TAB) = the boot-built one of 0.8.9, all 160 phases, byte for byte",
-              !memcmp(boot, UAC_TAB, sizeof boot));
+        check("FIR table = sinc x Kaiser (12 x 160 taps, beta 7.5, 20 kHz, Q15); phases sum to 1.0", tab_ok && sum_ok);
+        check("  the flash table: exactly the generator's (UAC_FIR_CHK, 80 phases = 1,920 B)", chk == UAC_FIR_CHK);
+        printf("  the table is within %.2f LSB (Q15) of the prototype\n", maxdev);
+        for (i = 0; i < UAC_FIR_L; i++)         /* from here on the reference uses the stored taps (the Q15 ones) */
+            for (k = 0; k < UAC_FIR_N; k++)
+                H[i + RL * (RN - 1u - k)] = (double)(i < UAC_FIR_H ? rs_tab[i][k] : rs_tab[UAC_FIR_L - 1u - i][UAC_FIR_N - 1u - k]) /
+                                            (1 << UAC_FIR_Q);
     }
 
     /* every frame against the double-precision resampler: noise (period 1000), +-1 LSB */
@@ -900,17 +890,17 @@ static void test_resampler(void)
         if (FQ[i] >= 100 && FQ[i] <= 15000 && (worst == 0 || sb < worst))
             worst = sb;
         if (FQ[i] == 1000)
-            check(s, sb >= 90.0);
+            check(s, sb >= 80.0);                       /* (12 taps, Q15: the taps' rounding is the floor) */
         else if (FQ[i] <= 15000)
-            check(s, sb >= 88.0);
+            check(s, sb >= 72.0 && g > -0.7);
         else if (FQ[i] == 18000)
-            check(s, sb >= 80.0 && g > -0.2);
+            check(s, sb >= 72.0 && g > -3.0);
         else
-            check(s, g > -1.5);                         /* 20 kHz: the transition band */
+            check(s, g > -6.5);                         /* 20 kHz: the transition band */
     }
     snprintf(s, sizeof s, "  flat 20 Hz .. 18 kHz within %+.3f .. %+.3f dB; SNR 100 Hz .. 15 kHz >= %.1f dB", gmin,
              gmax, worst);
-    check(s, gmin > -0.2 && gmax < 0.05);
+    check(s, gmin > -3.0 && gmax < 0.05);
     {   /* (0.8.9) THD and aliasing: the largest single spur in 20 Hz .. 20 kHz (harmonics, images folded back) under a
          * -1 dBFS sine, at the bins of a 65536-point Hann FFT; and tones above 20 kHz, whose only content in band is
          * their aliases */
@@ -922,10 +912,10 @@ static void test_resampler(void)
             if (spur_db > worst_s)
                 worst_s = spur_db;
             snprintf(s, sizeof s, "  %5.0f Hz -1 dBFS: the largest spur in band %.1f dB under it", FS2[i], -spur_db);
-            check(s, spur_db < -95.0);
+            check(s, spur_db < -80.0);
         }
         snprintf(s, sizeof s, "  THD + aliasing: no spur above %.1f dB of the tone (the 16-bit input's own quantisation spurs)", worst_s);
-        check(s, worst_s < -95.0);
+        check(s, worst_s < -80.0);
     }
 
     /* the cost: 10 s of stereo input through uac_tap (48 kHz) */

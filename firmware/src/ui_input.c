@@ -375,6 +375,7 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
     uint32_t c;
     if (br)
         *br = 0;
+    ly_mid = ly_glow = 0;
     c = name_on() && !ui.menu ? name_leds() : ui.layer ? layer_leds(br) : grid_on() ? grid_leds() :
                  (fm1_in.notes & ~kb_layer) | play_leds() | step_leds() | voice_leds();
     return c;
@@ -383,12 +384,10 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
 /* The LEDs: lit = active (the page's family, PLAY / REC running, the keys held or playing, a map's keys), the ARP
  * beat flashes, the ones that can be pressed breathe (#119: the open layer's button, OCT+ when it would act, a
  * layer's keys; dark .. ~60 % of lit and back, hal/fm1_input.h fm1_led_breath, in every mode: never a hard blink in
- * a dark room; DIM LO up to ~30 %, DIM HI OFF INV ~60 %; with LEDS OFF it is the only glow; INV leaves it as it is,
- * between the dark active ones and the lit idle ones), every other button and key glows dim (#35: the
+ * a dark room; LEDS 1 up to ~30 %, 2 .. 5 ~60 %; with LEDS 0 it is the only glow), every other button and key glows dim (#35: the
  * buttons of the black FM-1 can be found in the dark; hal/fm1_input.h fm1_led_dim, a short pulse each frame).
- * MENU > LEDS: DIM HI (default) that glow, DIM LO a darker one (fm1_led_dim_level), OFF no glow (as 1.0); INV
- * turns it around, as the stock firmware: the idle ones fully lit, the active ones dark, no glow (the ARP beat:
- * lit / dark). The keys' own maps (keys_own) stay lit or dark in every mode: their dark keys read as dark; only the
+ * MENU > LEDS (2026-11-17): a number 0 .. 5, the idle glow: 1 the pulse alone, 2 .. 5 the mid level brighter each (panel.c;
+ * fm1_led_dim_level), 0 no glow (as 1.0). INV is gone. The ARP beat: lit / dark). The keys' own maps (keys_own) stay lit or dark in every mode: their dark keys read as dark; only the
  * DRUM grid's keys that do something (grid_glow) glow under it, so STEP on a DRUM track is never a dark
  * keyboard (the steps of an empty pattern); on it the first step of each four (grid_beats: 1 5 9 13 of a page, where
  * no hit shows) glows steadier and brighter, so a bar's beats can be counted: DIM HI / DIM LO the mid level
@@ -399,12 +398,14 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
  * rest: the root's keys lit, the scale's at the mid level, the others glowing; the keys held and playing as ever
  * (lit, INV dark). Each picture is built off-line and copied one byte per column, the
  * glow first: an LED going from lit to dim never has a dark frame */
+/* the HAL's glow level now: a held layer's keys at the mid level are at the top one (HIGH's) whatever LEDS is (2026-11-17); LEDS 1 keeps its faint pulse */
+static uint32_t leds_hal_now(uint32_t lvl) { return ui.layer ? (lvl == 1u ? 5u : 2u) : leds_hal(lvl); }
 static void ui_leds(void)
 {
     uint8_t nl[FM1_NCOL] = {0}, nd[FM1_NCOL] = {0}, own[FM1_NCOL] = {0}, og[FM1_NCOL] = {0}, nb[FM1_NCOL] = {0};
     uint8_t nm[FM1_NCOL] = {0}, sg[FM1_NCOL] = {0}, sm[FM1_NCOL] = {0};
     uint32_t k, c, g, br, beat, sc, sr = 0, full;
-    uint32_t fam = cur_fam(), mode = settings_leds;
+    uint32_t fam = cur_fam(), lvl = settings_leds;   /* (2026-11-17) 0 .. 5: the idle glow: 0 none, 1 the pulse alone, 2 .. 5 the mid level, brighter each */
     int keys_map = keys_own();
     static uint8_t ready;
     if (fm1_led_anim_on())                              /* the power-on sweep has them (main.c boot_leds) */
@@ -431,18 +432,23 @@ static void ui_leds(void)
     led_put(nb, panel.btn[B_OCTUP], (int)(k & OCT_BREATH));
     led_put(nb, panel.btn[B_OCTDN], (k & OCT_BREATH_DN) != 0u);
     c = key_leds(&br);
-    g = !keys_map ? 0u : grid_on() && !ui.layer && !name_on() ? grid_glow() : 0u;   /* (key_leds: the grid's map) */
-    beat = g ? grid_beats() & ~c : 0u;                  /* (the grid's empty beat starts: brighter than the glow) */
+    g = !keys_map ? 0u : ui.layer && !name_on() ? ly_glow : grid_on() && !name_on() ? grid_glow() : 0u;   /* (key_leds: the grid's map) */
+    beat = ui.layer && !name_on() ? ly_mid & ~c : g ? grid_beats() & ~c : 0u;                  /* (the grid's empty beat starts: brighter than the glow) */
     sc = keys_map ? 0u : scale_leds(&sr);               /* SCALE LEDS: the scale's keys glow, the root's brighter */
     if (!keys_map && harp_on(TSEL)) {                   /* (chord-harp) HARP's map in their place */
         c = harp_leds(TSEL, &sc, &sr);
+        if (!ui.home && UCH_PAGE(cur_page())) {         /* (2026-11-19) SCL > USER: the preview key lit, in the prompt the chord keys: with a
+                                                         * chord lit, the empty ones breathe; no harp map */
+            c = uc_leds(&br);
+            sc = sr = 0;
+        }
     }
-    full = sc && !keys_map && !harp_on(TSEL) && TSEL->p[P_QUANT] && mode != LEDS_INV;
+    full = sc && !keys_map && !harp_on(TSEL) && TSEL->p[P_QUANT];
     for (k = 0; k < 27u; k++) {
-        uint32_t in = (sc >> k) & 1u, rt = (sr >> k) & 1u, idle = !((c >> k) & 1u);
+        uint32_t in = (sc >> k) & 1u, rt = (sr >> k) & 1u;
         led_put(nm, 14u + k, (int)((beat >> k) & 1u));
         led_put(keys_map ? own : nl, 14u + k, (int)((c >> k) & 1u));
-        led_put(keys_map ? og : nd, 14u + k, keys_map ? (int)((g >> k) & 1u) : !sc || (mode == LEDS_INV && rt));
+        led_put(keys_map ? og : nd, 14u + k, keys_map ? (int)((g >> k) & 1u) : !sc);
         led_put(nb, 14u + k, (int)((br >> k) & 1u));
         if (!sc)
             continue;
@@ -451,36 +457,34 @@ static void ui_leds(void)
             led_put(nb, 14u + k, (int)rt);
             continue;
         }
-        led_put(sg, 14u + k, mode == LEDS_INV ? !in && idle : (int)in);   /* (INV: the active ones dark) */
-        led_put(sm, 14u + k, mode == LEDS_INV ? in && !rt && idle : (int)rt);
+        led_put(sg, 14u + k, (int)in);
+        led_put(sm, 14u + k, (int)rt);
     }
     for (k = 0; k < NB; k++)
         led_put(nd, panel.btn[k], 1);
     if (song.playing || seq_counting())                 /* playing: PLAY's green, its own LED dark in every mode */
         led_clear(nd, panel.btn[B_PLAY]);
     for (c = 0; c < FM1_NCOL; c++) {
-        if (mode == LEDS_INV)                           /* INV: the active ones dark, the rest lit */
-            nl[c] = (uint8_t)(nd[c] & ~nl[c]);
-        nd[c] = mode == LEDS_DIM || mode == LEDS_DIM_LO || mode == LEDS_HIGH ? (uint8_t)(nd[c] | og[c]) : nm[c];   /* OFF, INV: no glow but */
-        if (mode != LEDS_DIM && mode != LEDS_DIM_LO && mode != LEDS_HIGH)    /* the grid's beats (the one level above dark there); DIM HI */
-            nm[c] = 0;                                  /* / LO: the beats at the mid level over the glow */
-        nd[c] |= sg[c];                                 /* SCALE LEDS: in every mode (INV: inverted above) */
+        nd[c] = lvl ? (uint8_t)(nd[c] | og[c]) : nm[c];   /* 0: no glow but */
+        if (!lvl)                                       /* the grid's beats (the one level above dark there); 1 .. 5: */
+            nm[c] = 0;                                  /* the beats at the mid level over the glow */
+        nd[c] |= sg[c];                                 /* SCALE LEDS: at every level */
         nm[c] |= sm[c];
         nm[c] &= (uint8_t)~(nb[c] | own[c]);
         nl[c] |= own[c];
-        nl[c] &= (uint8_t)~nb[c];                       /* breathing: neither lit (INV's idle) nor the glow */
+        nl[c] &= (uint8_t)~nb[c];                       /* breathing: neither lit nor the glow */
         nd[c] &= (uint8_t)~nb[c];
     }
     if (song.playing || (seq_counting() && cin_pos < click_beat_len() / 4u))   /* counting in: green on each beat */
         nl[LED_PLAY_GREEN >> 3] |= (uint8_t)(1u << (LED_PLAY_GREEN & 7u));
-    fm1_led_dim_level(mode == LEDS_DIM_LO ? 1u : mode == LEDS_HIGH ? 2u : 0u);
+    fm1_led_dim_level(leds_hal_now(lvl));
     for (c = 0; c < FM1_NCOL; c++) {                    /* (0.6.96) DIM HI: the idle glow at the mid level (the pulse
                                                          * alone was too dim to find the keys: ~1/30 of lit; now ~15 %),
                                                          * the beats and the scale's root a level above (fm1_led_hi) */
         fm1_led_dim[c] = nd[c];
         fm1_led_breath[c] = nb[c];
-        fm1_led_hi[c] = mode == LEDS_DIM || mode == LEDS_HIGH ? nm[c] : 0u;
-        fm1_led_mid[c] = mode == LEDS_DIM || mode == LEDS_HIGH ? (uint8_t)((nd[c] | nm[c]) & ~(nb[c] | nl[c])) : nm[c];
+        fm1_led_hi[c] = lvl >= 2u ? nm[c] : 0u;
+        fm1_led_mid[c] = lvl >= 2u ? (uint8_t)((nd[c] | nm[c]) & ~(nb[c] | nl[c])) : nm[c];
     }
     for (c = 0; c < FM1_NCOL; c++)
         fm1_led[c] = nl[c];
@@ -1111,7 +1115,7 @@ static void comp_knob(uint32_t slot, int32_t steps)
 }
 /* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x1, x2 .. x8; KNOB 2 REPEAT OFF, x2 .. x8, TO 64; (0.6.92) done as the
  * knob turns, always from the sequence as it was before the first turn (its base: the steps, LEN and automation,
- * kept while the result stays untouched; back to the middle = back to it; UNDO: REC + D4); KNOB 3 NUDGE: the whole
+ * kept while the result stays untouched; back to the middle = back to it; UNDO: REC + A3); KNOB 3 NUDGE: the whole
  * sequence a step left / right; KNOB 4 ROTATE: played from another step (P_SOFS). ui_tools.c tl_stretch, tl_repeat,
  * tl_shift */
 static uint32_t tl_len(const track_t *t);
@@ -1228,6 +1232,10 @@ static void edit_param(uint32_t slot, int32_t steps)
         cursor_set((int32_t)(at < len ? at : len - 1u));
         return;
     }
+    if (UCH_PAGE(pg)) {                                 /* (2026-11-19) SCL > USER (ui_uchord.c) */
+        uc_knob(slot, steps);
+        return;
+    }
     if (GTR_PAGE(pg) && slot < 3u && slot) {            /* (2026-11-10) GENRE: the next / last family's first style; STYLE: within it */
         uint32_t s = (uint32_t)clamp(TSEL->p[P_GSET], 0, (int32_t)GT_NSET - 1), g = GT_GEN[s], f = gt_genre_set(g), n = f;
         if (slot == 1u) {
@@ -1242,7 +1250,7 @@ static void edit_param(uint32_t slot, int32_t steps)
                                                          * SET: within its genre */
         uint32_t s = (uint32_t)clamp(TSEL->p[P_CVOI], 0, (int32_t)HARP_NALL - 1), g = harp_genre(s), f = harp_genre_set(g), n = f;
         if (slot == 1u) {
-            TSEL->p[P_CVOI] = (int16_t)harp_genre_set((uint32_t)clamp((int32_t)g + steps, 0, RES_OK() ? (int32_t)J6_NGEN : 0));   /* (the
+            TSEL->p[P_CVOI] = (int16_t)harp_genre_set((uint32_t)clamp((int32_t)g + steps, 0, RES_OK() ? (int32_t)HARP_GUSER : 0));   /* (the
                                                          * J-6's in the resource region) */
             return;
         }
@@ -1549,6 +1557,10 @@ static void act_do(void)
     if (cur_page()->graph == GR_MOTION) {
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         confirm_open(CF_CLEAR_MOTION, song.sel);
+        return;
+    }
+    if (UCH_PAGE(cur_page())) {                         /* (2026-11-19) SCL > USER: the write prompt */
+        uc_arm();
         return;
     }
     if (cur_page()->graph == GR_PROG) {                 /* (chord-harp fork) SCL > PROG: the progression on the track */
@@ -2457,7 +2469,7 @@ static void ui_input_frame(void)
                         char cb[16] = "T1 CLEARED";
                         cb[1] = (char)('1' + ui.confirm_trk % NTRK);
                         ui_say(cb, "");
-                        str_cpy(ui.msg2, "REC+G5: CLEAR ALL", sizeof ui.msg2);
+                        str_cpy(ui.msg2, "REC+F5: CLEAR ALL", sizeof ui.msg2);
                     }
                 }
             }
@@ -2539,7 +2551,7 @@ static void ui_input_frame(void)
     for (id = 0; id < 14u; id++)                        /* (2026-11-03) held past HOLD: let go, nothing */
         if (((ui.pg_down & fm1_in.buttons) >> id) & 1u && (uint16_t)(fm1_ms - pg_ms[id]) >= HOLD_MS[settings_hold % 4u]) {
             ui.pg_down &= (uint16_t)~(1u << id);
-            hm_hold(panel_btn_of(id));                  /* SCL / EDIT / GLO: the held menu opens */
+            hm_hold(panel_btn_of(id));                  /* EDIT: the held menu opens */
         }
     b = ui.pg_down & ~fm1_in.buttons;
     ui.pg_down &= (uint16_t)~b;
@@ -2562,7 +2574,9 @@ static void ui_input_frame(void)
     } else if (act_oct() && (oct & 2u)) {               /* action pages: OCT+ does the picked action, */
         act_do();
     } else if (act_oct() && (oct & 1u)) {               /* OCT- drops it, or (none picked) goes HOME */
-        if (ui.act)
+        if (UCH_PAGE(cur_page()) && uc_w)               /* (SCL > USER: the write prompt) */
+            uc_w = 0;
+        else if (ui.act)
             ui.act = 0;
         else
             go_home();
@@ -2570,6 +2584,8 @@ static void ui_input_frame(void)
     song.grid = (uint8_t)keys_mode();                 /* (seq.c: the keys are the grid's) */
     seq_fill = (uint8_t)((fm1_in.buttons >> panel.btn[B_FX]) & 1u);   /* (0.6.42) FILL steps: FX held */
     lock_keys();                                        /* (a grid key on a hit let go: the hit goes) */
+    if (uc_w && !ui.home && !ui.hm && UCH_PAGE(cur_page()) && (notes & 0xFFFu))   /* (2026-11-19) SCL > USER: the key hit takes the chord */
+        uc_key((uint32_t)__builtin_ctz(notes & 0xFFFu));
     if (!ui.home && cur_page()->graph == GR_PROG && harp_prog(TSEL) && (notes >> HARP_KWRITE) & 1u)
         ui.act = ui.act ? 0u : 4u;                      /* (chord-harp fork) SCL > PROG: F#4 picks WRITE (OCT+ does it) */
     if (song.grid) {

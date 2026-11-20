@@ -7,7 +7,7 @@
  *   B3 BEAT (DRUM)                         a basic beat
  *   G4 CLR LANE  A4 REV LANE  B4 FILL LANE the selected lane (DRUM: ui.lane, black keys 1..8 pick it)
  * Each works on the selected track's steps 1..LEN (the steps past LEN stay); the track's automation stays. No undo
- * (REC held + D4 UNDO for the last big change; the song layer's RECALL brings the section back as it was stored).
+ * (REC held + C4 UNDO for the last big change; the song layer's RECALL brings the section back as it was stored).
  * A step that held something and is empty after loses its locks (as EDIT's step clear); REVERSE and SHIFT move the
  * steps' automation and locks with them. A sequence of ties reversed keeps its note first: N T T -> N T T at the
  * mirrored place */

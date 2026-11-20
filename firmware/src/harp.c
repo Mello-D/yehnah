@@ -17,7 +17,7 @@
 /* the shapes: intervals over the root, low to high, -1 after the last; extensions above the octave (9 = 14) */
 enum { HQ_MAJ, HQ_MIN, HQ_SUS4, HQ_SUS2, HQ_ADD9, HQ_MADD9, HQ_6, HQ_M6, HQ_MAJ7, HQ_M7, HQ_7, HQ_7SUS4, HQ_AUG,
        HQ_MS5, HQ_DIM, HQ_DIM7, HQ_M7B5, HQ_MAJ9, HQ_M9, HQ_9, HQ_9S5, HQ_MAJ7A13, HQ_M11, HQ_11, HQ_7B9B13, HQ_7S9B13,
-       HQ_7S11, HQ_7S9, HQ_7B9, HQ_ADDB9, HQ_M69, HQ_MMAJ9, HQ_MAJ7S5, HQ_N };
+       HQ_7S11, HQ_7S9, HQ_7B9, HQ_ADDB9, HQ_M69, HQ_MMAJ9, HQ_MAJ7S5, HQ_5, HQ_N };
 static const int8_t HQ_IV[HQ_N][HARP_NMAX] = {
     {0, 4, 7, -1}, {0, 3, 7, -1}, {0, 5, 7, -1}, {0, 2, 7, -1},                    /* MAJ MIN SUS4 SUS2 */
     {0, 4, 7, 14, -1}, {0, 3, 7, 14, -1}, {0, 4, 7, 9, -1}, {0, 3, 7, 9, -1},      /* ADD9 MADD9 6 M6 */
@@ -28,11 +28,11 @@ static const int8_t HQ_IV[HQ_N][HARP_NMAX] = {
     {0, 3, 7, 10, 14, 17}, {0, 4, 7, 10, 14, 17},                                  /* M11 11 */
     {0, 4, 7, 10, 13, 20}, {0, 4, 7, 10, 15, 20},                                  /* 7(B9,B13) 7(#9,B13) */
     {0, 4, 7, 10, 18, -1}, {0, 4, 7, 10, 15, -1}, {0, 4, 7, 10, 13, -1},           /* 7#11 7#9 7B9 */
-    {0, 4, 7, 13, -1}, {0, 3, 7, 9, 14, -1}, {0, 3, 7, 11, 14, -1}, {0, 4, 8, 11, -1}};   /* ADDB9 M6/9 M9MAJ7 MAJ7#5 */
+    {0, 4, 7, 13, -1}, {0, 3, 7, 9, 14, -1}, {0, 3, 7, 11, 14, -1}, {0, 4, 8, 11, -1}, {0, 7, 12, -1}};   /* ADDB9 M6/9 M9MAJ7 MAJ7#5 5 */
 static const char *const HQ_NAME[HQ_N] = {
     "", "m", "sus4", "sus2", "add9", "madd9", "6", "m6", "Maj7", "m7", "7", "7sus4", "+", "m#5", "dim", "dim7",
     "m7b5", "Maj9", "m9", "9", "9#5", "Maj7add13", "m11", "11", "7(b9,b13)", "7(#9,b13)", "7#11", "7#9", "7b9",
-    "addb9", "m6/9", "m9Maj7", "Maj7#5"};
+    "addb9", "m6/9", "m9Maj7", "Maj7#5", "5"};
 static const char *const HARP_PC[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 static const char *const HARP_SET_NAME[HARP_NSET + 1] = {"MAJ1", "MAJ2", "MAJ3", "MAJ4", "MAJ5", "MAJ6", "MAJ7", "MAJ8",
                                                          "MIN1", "MIN2", "MIN3", "MIN4", "MIN5", "MIN6", "MIN7", "MIN8", 0};
@@ -83,7 +83,19 @@ static const harp_ch_t HARP_SETS[HARP_NSET][HARP_NCH] = {
  * SET label) in J6_GNAME: 0 HARP's own sets, then the J-6's genres */
 #include "res_decl.h"                   /* (chord-harp fork) YEHNAH_RES: the J-6 sets, PROGS in the resource region (harp_test.c builds this alone) */
 #include "harp_j6.h"
-#define HARP_NALL (HARP_NSET + J6_NSET)
+/* (2026-11-18) two genres after the J-6's: DARK (HARP_NDARK sets, after FM1-Chord's dark / DnB / phrygian sets) and USER
+ * (HARP_NUSR sets the player builds: SCL > USER, saved in flash). Both are HARP-table sets (harp_tab): a root, a shape and
+ * a bass a chord, relative to chord 1, moving with ROOT, recorded as notes (no chord id, as the J-6's). P_CVOI is a
+ * byte (-64..127, P_CTABS keeps 7 bits of it): the sets end at 127 */
+#define HARP_NDARK 6u
+#define HARP_NUSR 6u
+#define HARP_X0 (HARP_NSET + J6_NSET)                   /* DARK's first set */
+#define HARP_U0 (HARP_X0 + HARP_NDARK)                  /* USER's first set */
+#define HARP_NALL (HARP_U0 + HARP_NUSR)
+_Static_assert(HARP_NALL <= 128u, "HARP's sets: P_CVOI's byte");
+#define HARP_GDARK (J6_NGEN + 1u)
+#define HARP_GUSER (J6_NGEN + 2u)
+#define HARP_NGEN (J6_NGEN + 2u)                        /* the genres' last: 0 HARP, the J-6's, DARK, USER */
 #include "harp_gtr.h"
 /* (2026-11-10) SCL > GUITAR's 50 sets (harp_gtr.h: guitchordi's chord styles, GT_GNAME the families): in this file's set
  * numbers HARP_GT0 + n, the voicing of a guitar in standard tuning, in the style's key (C = ROOT C), moved with ROOT;
@@ -97,15 +109,68 @@ static uint32_t gt_genre_set(uint32_t g)    /* family g's first style (0 .. GT_N
             return i;
     return 0;
 }
-static uint32_t harp_genre(uint32_t set) { return set < HARP_NSET ? 0u : J6_GEN[(set - HARP_NSET) % J6_NSET]; }
+static uint32_t harp_genre(uint32_t set)
+{
+    return set < HARP_NSET ? 0u : set < HARP_X0 ? J6_GEN[set - HARP_NSET] : set < HARP_U0 ? HARP_GDARK : HARP_GUSER;
+}
 static uint32_t harp_genre_set(uint32_t g)   /* genre g's first set */
 {
     uint32_t i;
+    if (g >= HARP_GUSER)
+        return HARP_U0;
+    if (g >= HARP_GDARK)
+        return HARP_X0;
     for (i = 0; g && i < J6_NSET; i++)
         if (J6_GEN[i] >= g)
             return HARP_NSET + i;
     return 0;
 }
+static const char *harp_gname(uint32_t g) { return g <= J6_NGEN ? J6_GNAME[g] : g == HARP_GDARK ? "DARK" : "USER"; }
+/* a table set (HARP's own, DARK, USER: a root, a shape and a bass a chord), against the J-6's and GUITAR's (notes) */
+static int harp_tab(uint32_t set) { return set < HARP_NSET || (set >= HARP_X0 && set < HARP_GT0); }
+
+/* DARK's sets, after the factory sets of FM1-Chord (github.com/TwistedGenetics/FM1-Chord, GPL-3.0, itself after
+ * the Roland J-6 and Captain Chords): dark jungle / DnB, liquid, neuro, phrygian, Andalusian and the rave walk; each
+ * moved to C (its chord 1 on the tonic, ROOT moves it) and cut to 12 chords */
+#define HCH(r, q) {HN_##r, HQ_##q, HB_NONE}
+#define HSL(r, q, b) {HN_##r, HQ_##q, HN_##b}
+static const harp_ch_t HARP_XSETS[HARP_NDARK][HARP_NCH] = {
+    {HCH(C, M9), HCH(CS, MAJ7), HCH(D, M7B5), HSL(C, MIN, EB), HCH(EB, MAJ7), HCH(F, M9), HCH(F, M11), HCH(G, M7),      /* JUNGLE */
+     HCH(G, SUS4), HCH(FS, MAJ7), HCH(FS, MAJ9), HCH(AB, ADD9)},
+    {HCH(C, M9), HCH(D, M7B5), HCH(D, M7), HCH(EB, MAJ9), HCH(EB, MAJ7), HCH(F, M9), HCH(F, M11), HCH(G, M7),         /* LIQUID */
+     HCH(G, SUS4), HCH(AB, MAJ9), HCH(AB, MAJ7), HCH(BB, 6)},
+    {HCH(C, 5), HCH(CS, 5), HCH(C, MIN), HCH(CS, MAJ7), HCH(C, SUS4), HCH(EB, MIN), HCH(EB, 5), HCH(F, MIN),           /* NEURO */
+     HCH(F, 5), HCH(FS, 5), HCH(G, M7B5), HCH(AB, MAJ7)},
+    {HCH(C, M9), HCH(CS, MAJ7), HSL(CS, MAJ7, C), HCH(EB, MAJ7), HSL(C, MIN, EB), HCH(F, M9), HSL(F, MIN, AB),         /* PHRYGIAN */
+     HCH(G, M7B5), HCH(AB, MAJ7), HCH(C, SUS4), HCH(BB, M7), HSL(AB, MAJ, C)},
+    {HCH(C, MIN), HCH(CS, MAJ), HCH(BB, MAJ), HCH(EB, MAJ), HSL(C, MIN, G), HCH(F, MIN), HSL(G, MAJ, B), HCH(G, 7),    /* ANDALUSIAN */
+     HCH(AB, MAJ), HSL(AB, MAJ, C), HCH(BB, MIN), HSL(F, MIN, AB)},
+    {HCH(C, M7), HCH(CS, M7), HCH(D, M7), HCH(EB, M7), HCH(E, M7), HCH(F, M7), HCH(FS, M7), HCH(G, M7),                /* RAVE */
+     HCH(AB, M7), HCH(A, M7), HCH(BB, M7), HCH(B, M7)}};
+#undef HCH
+#undef HSL
+/* USER's sets: each chord 14 bits (root 0..11, shape, bass ^ 15: a zeroed chord is C major with no bass), the RAM copy of
+ * the flash object (upreset.c uch_*); zeroed at boot with the pool */
+#define HARP_UPOOL __attribute__((section(".pool")))
+static uint16_t harp_usr[HARP_NUSR][HARP_NCH] HARP_UPOOL;
+static harp_ch_t harp_usr_get(uint32_t slot, uint32_t idx)
+{
+    uint32_t v = harp_usr[slot % HARP_NUSR][idx % HARP_NCH];
+    harp_ch_t c = {(uint8_t)(v & 15u), (uint8_t)(v >> 4 & 63u), (uint8_t)((v >> 10 & 15u) ^ 15u)};
+    if (c.root > 11u) c.root = 0;
+    if (c.q >= HQ_N) c.q = 0;
+    if (c.bass > 11u) c.bass = HB_NONE;
+    return c;
+}
+static void harp_usr_put(uint32_t slot, uint32_t idx, harp_ch_t c)
+{
+    harp_usr[slot % HARP_NUSR][idx % HARP_NCH] =
+        (uint16_t)((c.root % 12u) | (uint32_t)(c.q % HQ_N) << 4 | (uint32_t)((c.bass < 12u ? c.bass : HB_NONE) ^ 15u) << 10 | 0x4000u);
+}
+/* (2026-11-19) bit 14: the key was written (SCL > USER's write prompt lights the keys that hold a chord solid and pulses the
+ * empty ones; a zeroed word is C major, which a written chord can be too) */
+static int harp_usr_has(uint32_t slot, uint32_t idx) { return (harp_usr[slot % HARP_NUSR][idx % HARP_NCH] >> 14 & 1u) != 0u; }
+
 /* (2026-11-10) TUNINGS and SHAPES (SCL > GUITAR): guitchordi's 14 tunings, and its scripts/tuning-voicings.py in C
  * (GPL-3.0-only, stoogs/guitchordi). gt_search: the pitch-class-preserving shapes of a chord on strings tuned to GT_TUN[tn]:
  * open strings plus a four-fret hand window (fret 0 .. 23), at most four distinct stopped frets, every pitch class sounding,
@@ -307,56 +372,111 @@ static void j6_name(uint32_t set, uint32_t idx, int32_t root, char *buf)
     buf[n] = 0;
 }
 
-static const harp_ch_t *harp_get(uint32_t set, uint32_t idx) { return &HARP_SETS[set % HARP_NSET][idx % HARP_NCH]; }
+static harp_ch_t harp_get(uint32_t set, uint32_t idx)
+{
+    if (set >= HARP_U0 && set < HARP_NALL)
+        return harp_usr_get(set - HARP_U0, idx);
+    if (set >= HARP_X0 && set < HARP_U0)
+        return HARP_XSETS[set - HARP_X0][idx % HARP_NCH];
+    return HARP_SETS[set % HARP_NSET][idx % HARP_NCH];
+}
+/* chord idx of set as a user chord (SCL > USER): a table set's own; a J-6 chord the nearest of the shapes (the fewest tones
+ * apart over its root), its slash bass kept (GUITAR's: not offered) */
+static harp_ch_t harp_user_from(uint32_t set, uint32_t idx)
+{
+    harp_ch_t c = {0, 0, HB_NONE};
+    uint32_t ty, lo, root, m = 0, i, r, bs = 99u;
+    if (harp_tab(set))
+        return harp_get(set, idx);
+    if (set >= HARP_GT0)
+        return c;
+    ty = j6_ty(set, idx);
+    lo = (uint32_t)j6_lo(set, idx, 0);
+    root = (lo + (ty >> 25 & 15u)) % 12u;
+    for (i = 0; i < 3u && (ty >> 6u * i & 63u); i++)
+        m |= 1u << ((lo + (ty >> 6u * i & 63u)) % 12u);
+    if (!(ty >> 29 & 1u))
+        m |= 1u << (lo % 12u);
+    m = ((m >> root) | (m << (12u - root))) & 0xFFFu;
+    for (i = 0; i < HQ_N; i++) {
+        uint32_t q = 0, k;
+        for (k = 0; k < HARP_NMAX && HQ_IV[i][k] >= 0; k++)
+            q |= 1u << (HQ_IV[i][k] % 12);
+        r = (uint32_t)__builtin_popcount(q ^ m);
+        if (r < bs) { bs = r; c.q = (uint8_t)i; }
+    }
+    c.root = (uint8_t)root;
+    c.bass = ty >> 29 & 1u ? (uint8_t)(lo % 12u) : (uint8_t)HB_NONE;
+    return c;
+}
+/* the root alone of chord idx of set: what harp_user_from(set, idx).root gives, without looking for the shape (SCL > USER's list) */
+static uint32_t harp_root_of(uint32_t set, uint32_t idx)
+{
+    uint32_t ty;
+    if (harp_tab(set) || set >= HARP_GT0)
+        return harp_get(set, idx).root;
+    ty = j6_ty(set, idx);
+    return ((uint32_t)j6_lo(set, idx, 0) + (ty >> 25 & 15u)) % 12u;
+}
 /* chord idx's root note: chord 1's G2..F#3, the others in the octave up from it (a J-6 chord's: its bass) */
 static int32_t harp_lo(uint32_t set, uint32_t idx, int32_t root)
 {
-    const harp_ch_t *c1 = harp_get(set, 0);
+    harp_ch_t c1 = harp_get(set, 0);
     if (set >= HARP_GT0) {
         uint8_t nt[6];
         gt_chord(set, idx, root, nt);
         return nt[0];
     }
-    if (set >= HARP_NSET)
+    if (!harp_tab(set))
         return j6_lo(set, idx, root);
-    int32_t r1 = HARP_LO + (c1->root + root % 12 + 12) % 12;
+    int32_t r1 = HARP_LO + (c1.root + root % 12 + 12) % 12;
     if (r1 > HARP_LO + 6)
         r1 -= 12;
-    return r1 + (harp_get(set, idx)->root - c1->root + 12) % 12;
+    return r1 + (harp_get(set, idx).root - c1.root + 12) % 12;
 }
 
-/* the chord's notes, low to high (bass first), into out (HARP_NMAX); root: the track's ROOT (0 C .. 11 B) */
-static uint32_t harp_chord(uint32_t set, uint32_t idx, int32_t root, uint8_t *out)
+/* a table chord's notes from its root note lo (bass first) */
+static uint32_t harp_tones(harp_ch_t c, int32_t lo, int32_t root, uint8_t *out)
 {
-    const harp_ch_t *c = harp_get(set, idx);
-    int32_t lo = harp_lo(set, idx, root), b = c->bass < 12u ? (c->bass + root % 12 + 12) % 12 : -1;
+    int32_t b = c.bass < 12u ? (c.bass + root % 12 + 12) % 12 : -1;
     uint32_t i, n = 0;
-    if (set >= HARP_GT0)
-        return gt_chord(set, idx, root, out);
-    if (set >= HARP_NSET)
-        return j6_chord(set, idx, root, out);
     if (b >= 0) {
         int32_t d = (lo - b + 120) % 12;
         out[n++] = (uint8_t)(lo - (d ? d : 12));   /* the first one below the root */
     }
-    for (i = 0; i < HARP_NMAX && HQ_IV[c->q][i] >= 0 && n < HARP_NMAX; i++)
-        if ((lo + HQ_IV[c->q][i]) % 12 != b)
-            out[n++] = (uint8_t)(lo + HQ_IV[c->q][i]);
+    for (i = 0; i < HARP_NMAX && HQ_IV[c.q][i] >= 0 && n < HARP_NMAX; i++)
+        if ((lo + HQ_IV[c.q][i]) % 12 != b)
+            out[n++] = (uint8_t)(lo + HQ_IV[c.q][i]);
     return n;
 }
+static uint32_t harp_chord(uint32_t set, uint32_t idx, int32_t root, uint8_t *out)
+{
+    if (set >= HARP_GT0)
+        return gt_chord(set, idx, root, out);
+    if (!harp_tab(set))
+        return j6_chord(set, idx, root, out);
+    return harp_tones(harp_get(set, idx), harp_lo(set, idx, root), root, out);
+}
+/* (2026-11-19) SCL > USER's preview: one chord on its own, its root in G2..F#3 as chord 1's; the root note back through *lo */
+static int32_t harp_pv_lo(harp_ch_t c, int32_t root)
+{
+    int32_t r = HARP_LO + (c.root + root % 12 + 12) % 12;
+    return r > HARP_LO + 6 ? r - 12 : r;
+}
+static uint32_t harp_preview(harp_ch_t c, int32_t root, uint8_t *out) { return harp_tones(c, harp_pv_lo(c, root), root, out); }
 
 /* the plate's 9 notes for the chord, low to high: its tones (the bass left out) from the first one above the chord's
  * top note on (as low as it goes without a note the chord sounds), round again an octave up */
 static void harp_plate(uint32_t set, uint32_t idx, int32_t root, uint8_t *out)
 {
-    const harp_ch_t *c = harp_get(set, idx);
+    harp_ch_t c = harp_get(set, idx);
     int32_t lo = harp_lo(set, idx, root), x;
     uint8_t nt[HARP_NMAX];
     uint32_t i, n = harp_chord(set, idx, root, nt), pcs = 0;
-    for (i = 0; set >= HARP_NSET && i < n; i++)         /* (a J-6 chord's: every note's) */
+    for (i = 0; !harp_tab(set) && i < n; i++)         /* (a J-6 chord's: every note's) */
         pcs |= 1u << nt[i] % 12u;
-    for (i = 0; set < HARP_NSET && i < HARP_NMAX && HQ_IV[c->q][i] >= 0; i++)   /* the tones' places in the octave */
-        pcs |= 1u << (uint32_t)((lo + HQ_IV[c->q][i]) % 12);
+    for (i = 0; harp_tab(set) && i < HARP_NMAX && HQ_IV[c.q][i] >= 0; i++)   /* the tones' places in the octave */
+        pcs |= 1u << (uint32_t)((lo + HQ_IV[c.q][i]) % 12);
     for (i = 0, x = nt[n - 1u] + 1; i < HARP_NPLATE; x++)
         if ((pcs >> (uint32_t)(x % 12)) & 1u)
             out[i++] = (uint8_t)x;
@@ -365,22 +485,22 @@ static void harp_plate(uint32_t set, uint32_t idx, int32_t root, uint8_t *out)
 /* the chord's name as the screen shows it, e.g. "Cm11/G" (buf: 16 bytes) */
 static void harp_name(uint32_t set, uint32_t idx, int32_t root, char *buf)
 {
-    const harp_ch_t *c = harp_get(set, idx);
+    harp_ch_t c = harp_get(set, idx);
     const char *s;
     uint32_t n = 0;
     if (set >= HARP_GT0) {
         gt_name(set, idx, root, buf);
         return;
     }
-    if (set >= HARP_NSET) {
+    if (!harp_tab(set)) {
         j6_name(set, idx, root, buf);
         return;
     }
-    for (s = HARP_PC[(c->root + root % 12 + 12) % 12]; *s; s++) buf[n++] = *s;
-    for (s = HQ_NAME[c->q]; *s && n < 15u; s++) buf[n++] = *s;
-    if (c->bass < 12u) {
+    for (s = HARP_PC[(c.root + root % 12 + 12) % 12]; *s; s++) buf[n++] = *s;
+    for (s = HQ_NAME[c.q]; *s && n < 15u; s++) buf[n++] = *s;
+    if (c.bass < 12u) {
         if (n < 15u) buf[n++] = '/';
-        for (s = HARP_PC[(c->bass + root % 12 + 12) % 12]; *s && n < 15u; s++) buf[n++] = *s;
+        for (s = HARP_PC[(c.bass + root % 12 + 12) % 12]; *s && n < 15u; s++) buf[n++] = *s;
     }
     buf[n] = 0;
 }
